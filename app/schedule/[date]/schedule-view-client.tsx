@@ -482,7 +482,7 @@ export function ScheduleViewClient({ date }: ScheduleViewClientProps) {
       {/* Date Navigation & Actions Bar */}
       <div className="border-b bg-muted/30">
         <div className="container mx-auto px-4 py-4">
-          <div className="flex flex-col lg:flex-row lg:items-center gap-4 justify-between">
+          <div className="flex flex-row items-center gap-4 justify-between flex-nowrap">
             {/* Date Navigation */}
             <DateNavigation 
               date={currentDate} 
@@ -494,7 +494,7 @@ export function ScheduleViewClient({ date }: ScheduleViewClientProps) {
             />
 
             {/* Actions */}
-            <div className="flex items-center gap-2 flex-nowrap">
+            <div className="flex items-center gap-2 flex-nowrap flex-shrink-0">
               {schedule && (
                 <>
                   <div className="flex items-center gap-1.5 text-muted-foreground text-sm max-w-[100px]">
@@ -503,6 +503,20 @@ export function ScheduleViewClient({ date }: ScheduleViewClientProps) {
                       {schedule._expedition_current_location ? formatLocation(schedule._expedition_current_location) : "No Location"}
                     </span>
                   </div>
+                  {schedule.staff_off && schedule.staff_off.length > 0 && staff && (
+                    <>
+                      <div className="h-6 w-px bg-border" />
+                      <span 
+                        className="inline-flex items-center h-8 text-sm font-medium px-3 rounded bg-orange-50 border border-orange-200 text-orange-700 truncate max-w-[180px]" 
+                        title={`Staff Off: ${schedule.staff_off.map((id: number) => staff?.find((s: any) => s.id === id)?.name || 'Unknown').join(', ')}`}
+                      >
+                        Off: {schedule.staff_off.map((id: number) => {
+                          const staffMember = staff?.find((s: any) => s.id === id)
+                          return staffMember?.name?.split(' ')[0] || 'Unknown'
+                        }).join(', ')}
+                      </span>
+                    </>
+                  )}
                   <div className="h-6 w-px bg-border" />
                 </>
               )}

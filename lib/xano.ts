@@ -109,9 +109,17 @@ export async function getStudentById(id: number) {
   return xanoFetch<any>(`/students/${id}`)
 }
 
+export async function getStudentsByExpedition(expeditionsId: number) {
+  return xanoFetch<any[]>(`/students_by_expedition?expeditions_id=${expeditionsId}`)
+}
+
 // ============ Teachers (Staff) ============
 export async function getTeachers() {
   return xanoFetch<any[]>("/teachers")
+}
+
+export async function getTeachersByExpedition(expeditionsId: number) {
+  return xanoFetch<any[]>(`/teachers_by_expedition?expeditions_id=${expeditionsId}`)
 }
 
 export async function getTeacherById(id: number) {

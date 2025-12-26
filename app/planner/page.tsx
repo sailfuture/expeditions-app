@@ -40,10 +40,13 @@ import { deleteExpeditionScheduleItem } from "@/lib/xano"
 import { mutate } from "swr"
 import { toast } from "sonner"
 import { Spinner } from "@/components/ui/spinner"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 
 export default function PlannerPage() {
   const router = useRouter()
   const [centerDate, setCenterDate] = useState(new Date())
+  const [calendarOpen, setCalendarOpen] = useState(false)
   const [selectedItem, setSelectedItem] = useState<any>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [addSheetOpen, setAddSheetOpen] = useState(false)
@@ -159,6 +162,15 @@ export default function PlannerPage() {
     return loc.port ? `${loc.port}` : "No Location"
   }
   
+  const getStaffOff = (schedule: any) => {
+    if (!schedule?.staff_off || schedule.staff_off.length === 0 || !staff) return null
+    const staffOffNames = schedule.staff_off.map((id: number) => {
+      const staffMember = staff?.find((s: any) => s.id === id)
+      return staffMember?.name?.split(' ')[0] || 'Unknown'
+    })
+    return staffOffNames.join(', ')
+  }
+  
   const handlePrevious = () => {
     setCenterDate(prev => subDays(prev, 1))
   }
@@ -267,14 +279,32 @@ export default function PlannerPage() {
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <Button
-                variant="outline"
-                onClick={handleToday}
-                className="h-9 px-4 cursor-pointer"
-              >
-                <Calendar className="h-4 w-4 mr-2" />
-                Today
-              </Button>
+              <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="h-9 px-4 cursor-pointer"
+                  >
+                    <Calendar className="h-4 w-4 mr-2" />
+                    {format(centerDate, "MMM d, yyyy")}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="center">
+                  <CalendarComponent
+                    mode="single"
+                    selected={centerDate}
+                    defaultMonth={centerDate}
+                    onSelect={(selectedDate) => {
+                      if (selectedDate) {
+                        setCenterDate(selectedDate)
+                        setCalendarOpen(false)
+                      }
+                    }}
+                    initialFocus
+                    className="rounded-md border shadow-md"
+                  />
+                </PopoverContent>
+              </Popover>
               <Button
                 variant="outline"
                 size="icon"
@@ -282,6 +312,13 @@ export default function PlannerPage() {
                 className="h-9 w-9 cursor-pointer"
               >
                 <ChevronRight className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleToday}
+                className="h-9 px-4 cursor-pointer"
+              >
+                Today
               </Button>
             </div>
           </div>
@@ -300,6 +337,7 @@ export default function PlannerPage() {
             const schedule = getScheduleForDate(dateStrings[index])
             const dayType = getDayType(schedule)
             const location = getLocation(schedule)
+            const staffOff = getStaffOff(schedule)
             
             return (
               <div 
@@ -310,7 +348,7 @@ export default function PlannerPage() {
                 )}
               >
                 {/* Day Header - fixed height */}
-                <div className="px-3 py-2.5 border-b bg-gray-50 flex-shrink-0 h-[88px]">
+                <div className="px-3 py-2.5 border-b bg-white flex-shrink-0 h-[88px]">
                   <div className="flex items-start justify-between">
                     <div className="min-w-0 flex-1">
                       <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400">
@@ -319,11 +357,19 @@ export default function PlannerPage() {
                       <p className="text-base font-bold text-gray-900">
                         {format(day, "MMM d")}
                       </p>
-                      <div className="flex items-center gap-1.5 mt-1">
-                        <Badge variant="outline" className="text-[10px] font-medium px-1.5 py-0 h-5 rounded bg-white border-gray-200 text-gray-600">
+                      <div className="flex items-center gap-1 mt-1 flex-wrap">
+                        <Badge variant="outline" className="text-[9px] font-medium px-1.5 py-0 h-5 rounded bg-white border-gray-200 text-gray-600 flex-shrink-0">
                           {dayType.label}
                         </Badge>
-                        <span className="text-[10px] text-gray-400 truncate" title={location}>
+                        {staffOff && (
+                          <span 
+                            className="inline-flex items-center text-[9px] font-medium px-1.5 py-0 h-5 rounded bg-orange-50 border border-orange-200 text-orange-700 truncate flex-shrink-0 max-w-[80px]" 
+                            title={`Staff Off: ${staffOff}`}
+                          >
+                            Off: {staffOff}
+                          </span>
+                        )}
+                        <span className="text-[9px] text-gray-400 truncate min-w-0" title={location}>
                           {location}
                         </span>
                       </div>
@@ -351,7 +397,7 @@ export default function PlannerPage() {
                 </div>
                 
                 {/* Events List - scrollable with subtle scrollbar */}
-                <div className="flex-1 min-h-0 relative">
+                <div className="flex-1 min-h-0 relative bg-gray-50">
                   <div 
                     className="h-full overflow-y-auto p-2 space-y-1.5 scrollbar-thin"
                     ref={(el) => {
@@ -426,14 +472,14 @@ export default function PlannerPage() {
                   </div>
                   {/* Bottom gradient when more content to scroll */}
                   <div 
-                    className={`absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white to-transparent pointer-events-none transition-opacity ${
+                    className={`absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-gray-50 to-transparent pointer-events-none transition-opacity ${
                       scrollGradients[index] !== false && sortedItems.length > 3 ? 'opacity-100' : 'opacity-0'
                     }`} 
                   />
                 </div>
                 
                 {/* Day Footer - Event Count */}
-                <div className="px-3 py-1.5 border-t bg-gray-50 text-[10px] text-gray-400 flex-shrink-0">
+                <div className="px-3 py-1.5 border-t bg-white text-[10px] text-gray-400 flex-shrink-0">
                   {isLoadingDay ? (
                     <Skeleton className="h-3 w-12" />
                   ) : (

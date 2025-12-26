@@ -19,12 +19,122 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import { Calendar, Plus, Check, X, ChevronDown, ChevronRight, ExternalLink } from "lucide-react"
-import { useExpeditionSchedules, useExpeditionLocations } from "@/lib/hooks/use-expeditions"
+import { useExpeditionSchedules, useExpeditionLocations, useTeachers } from "@/lib/hooks/use-expeditions"
 import { useExpeditionContext } from "@/lib/contexts/expedition-context"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { addAllDatesForExpedition, updateExpeditionSchedule } from "@/lib/xano"
 import { mutate } from "swr"
 import { toast } from "sonner"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+
+// Multi-select component for Staff Off
+function StaffOffMultiSelect({
+  staff,
+  selectedIds,
+  onUpdate,
+}: {
+  staff: any[]
+  selectedIds: number[]
+  onUpdate: (ids: number[]) => Promise<void>
+}) {
+  const [isOpen, setIsOpen] = useState(false)
+  const [isUpdating, setIsUpdating] = useState(false)
+  const [updatingId, setUpdatingId] = useState<number | null>(null)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
+
+  const selectedStaff = staff?.filter((s) => selectedIds?.includes(s.id)) || []
+
+  const toggleStaff = async (id: number) => {
+    setUpdatingId(id)
+    setIsUpdating(true)
+    try {
+      const newIds = selectedIds?.includes(id)
+        ? selectedIds.filter((i) => i !== id)
+        : [...(selectedIds || []), id]
+      await onUpdate(newIds)
+    } finally {
+      setIsUpdating(false)
+      setUpdatingId(null)
+    }
+  }
+
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full h-8 px-2 text-left text-sm rounded hover:bg-gray-100 flex items-center justify-between cursor-pointer"
+      >
+        {isUpdating && !isOpen ? (
+          <span className="flex items-center gap-2 text-gray-500">
+            <Spinner size="sm" className="h-3 w-3" />
+            <span>Updating...</span>
+          </span>
+        ) : selectedStaff.length === 0 ? (
+          <span className="text-gray-400">—</span>
+        ) : (
+          <span className="truncate text-gray-700">
+            {selectedStaff.length === 1 
+              ? selectedStaff[0].name 
+              : `${selectedStaff.length} staff`}
+          </span>
+        )}
+        <ChevronDown className={`h-3 w-3 text-gray-400 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+      </button>
+
+      {isOpen && (
+        <div className="absolute z-50 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
+          <div className="max-h-48 overflow-y-auto py-1">
+            {staff?.length === 0 && (
+              <div className="px-3 py-2 text-gray-500 text-sm">No staff available</div>
+            )}
+            {staff?.map((member) => {
+              const isSelected = selectedIds?.includes(member.id)
+              const isThisUpdating = updatingId === member.id
+              return (
+                <button
+                  key={member.id}
+                  type="button"
+                  onClick={() => toggleStaff(member.id)}
+                  disabled={isUpdating}
+                  className={`w-full px-3 py-1.5 text-left text-sm flex items-center gap-2 hover:bg-gray-50 cursor-pointer ${
+                    isSelected ? "bg-gray-100" : ""
+                  } ${isUpdating ? "opacity-50" : ""}`}
+                >
+                  <div className={`w-4 h-4 rounded border flex items-center justify-center ${
+                    isSelected ? "bg-gray-800 border-gray-800" : "border-gray-300"
+                  }`}>
+                    {isThisUpdating ? (
+                      <Spinner size="sm" className="h-2.5 w-2.5 text-white" />
+                    ) : isSelected ? (
+                      <Check className="h-3 w-3 text-white" />
+                    ) : null}
+                  </div>
+                  <Avatar className="h-5 w-5">
+                    <AvatarFallback className="text-[8px] bg-gray-200 text-gray-600">
+                      {member.name?.split(" ").map((n: string) => n[0]).join("")}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="truncate">{member.name}</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -32,6 +142,7 @@ export default function DashboardPage() {
   const { selectedExpedition, selectedExpeditionId } = useExpeditionContext()
   const { data: schedules, isLoading: loadingSchedules } = useExpeditionSchedules()
   const { data: locations } = useExpeditionLocations(selectedExpeditionId || undefined)
+  const { data: staff } = useTeachers()
   const [showOldDates, setShowOldDates] = useState(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('showOldDates')
@@ -145,6 +256,27 @@ export default function DashboardPage() {
       return scheduleDate >= today
     })
   }, [allFilteredSchedules, showOldDates, today])
+
+  // Calculate day type counts
+  const dayTypeCounts = useMemo(() => {
+    if (!schedules) return { anchored: 0, service: 0, offshore: 0 }
+    
+    let anchored = 0
+    let service = 0
+    let offshore = 0
+    
+    schedules.forEach((s: any) => {
+      if (s.isOffshore || s.is_offshore) {
+        offshore++
+      } else if (s.isService || s.is_service) {
+        service++
+      } else {
+        anchored++
+      }
+    })
+    
+    return { anchored, service, offshore }
+  }, [schedules])
 
   // Group schedules by location if enabled
   const schedulesByLocation = useMemo(() => {
@@ -371,6 +503,20 @@ export default function DashboardPage() {
                 selectedExpedition.startDate || selectedExpedition.start_date,
                 selectedExpedition.endDate || selectedExpedition.end_date
               )} days
+              <span className="flex items-center gap-1.5 ml-2">
+                <span className="inline-flex items-center gap-1.5 bg-white text-gray-600 px-2 py-0.5 rounded border border-gray-200 text-xs font-medium">
+                  <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                  {dayTypeCounts.anchored}
+                </span>
+                <span className="inline-flex items-center gap-1.5 bg-white text-gray-600 px-2 py-0.5 rounded border border-gray-200 text-xs font-medium">
+                  <span className="w-2 h-2 bg-pink-500 rounded-full"></span>
+                  {dayTypeCounts.service}
+                </span>
+                <span className="inline-flex items-center gap-1.5 bg-white text-gray-600 px-2 py-0.5 rounded border border-gray-200 text-xs font-medium">
+                  <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                  {dayTypeCounts.offshore}
+                </span>
+              </span>
             </p>
           </div>
         </div>
@@ -494,13 +640,14 @@ export default function DashboardPage() {
                       {/* Right scroll gradient indicator */}
                       <div className={`absolute top-0 right-0 bottom-0 w-8 bg-gradient-to-l from-white to-transparent pointer-events-none z-10 transition-opacity ${scrollState[locationKey]?.right !== false ? 'opacity-100' : 'opacity-0'}`} />
                       <div className="overflow-x-auto" ref={handleScrollRef(locationKey)}>
-                    <Table className="table-fixed w-full min-w-[1110px]">
+                    <Table className="table-fixed w-full min-w-[1310px]">
                       <TableHeader>
                         <TableRow className="border-b bg-gray-50/30 hover:bg-gray-50/30">
                           <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600" style={{ width: "100px" }}>Date</TableHead>
                           <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600" style={{ width: "230px" }}>Location</TableHead>
                           <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600" style={{ width: "150px" }}>Type</TableHead>
                           <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600" style={{ width: "230px" }}>Destination</TableHead>
+                          <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600" style={{ width: "200px" }}>Time Off</TableHead>
                           <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600" style={{ width: "300px" }}>Notes</TableHead>
                           <TableHead className="h-10 px-4 text-right text-xs font-semibold text-gray-600" style={{ width: "100px" }}>Actions</TableHead>
                         </TableRow>
@@ -621,6 +768,25 @@ export default function DashboardPage() {
                                   </SelectContent>
                                 </Select>
                               </TableCell>
+                              <TableCell className="h-14 px-4" style={{ width: "200px" }} onClick={(e) => e.stopPropagation()}>
+                                <StaffOffMultiSelect
+                                  staff={staff || []}
+                                  selectedIds={schedule.staff_off || []}
+                                  onUpdate={async (ids) => {
+                                    try {
+                                      await updateExpeditionSchedule(schedule.id, {
+                                        ...schedule,
+                                        expedition_schedule_id: schedule.id,
+                                        staff_off: ids
+                                      })
+                                      mutate("expedition_schedules")
+                                      toast.success("Staff off updated")
+                                    } catch (error) {
+                                      toast.error("Failed to update")
+                                    }
+                                  }}
+                                />
+                              </TableCell>
                               <TableCell className="h-14 px-4" style={{ width: "300px" }} onClick={(e) => e.stopPropagation()}>
                                 {editingNotesId === schedule.id ? (
                                   <div className="flex items-center gap-1" style={{ maxWidth: "280px" }}>
@@ -697,13 +863,14 @@ export default function DashboardPage() {
               {/* Right scroll gradient indicator */}
               <div className={`absolute top-0 right-0 bottom-0 w-8 bg-gradient-to-l from-white to-transparent pointer-events-none z-10 transition-opacity ${scrollState['main']?.right !== false ? 'opacity-100' : 'opacity-0'}`} />
               <div className="overflow-x-auto" ref={handleScrollRef('main')}>
-                    <Table className="table-fixed w-full min-w-[1110px]">
+                    <Table className="table-fixed w-full min-w-[1310px]">
                       <TableHeader>
                         <TableRow className="border-b bg-gray-50/30 hover:bg-gray-50/30">
                           <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600" style={{ width: "100px" }}>Date</TableHead>
                           <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600" style={{ width: "230px" }}>Location</TableHead>
                           <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600" style={{ width: "150px" }}>Type</TableHead>
                           <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600" style={{ width: "230px" }}>Destination</TableHead>
+                          <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600" style={{ width: "200px" }}>Time Off</TableHead>
                           <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600" style={{ width: "300px" }}>Notes</TableHead>
                           <TableHead className="h-10 px-4 text-right text-xs font-semibold text-gray-600" style={{ width: "100px" }}>Actions</TableHead>
                         </TableRow>
@@ -822,6 +989,25 @@ export default function DashboardPage() {
                                     ))}
                                   </SelectContent>
                                 </Select>
+                              </TableCell>
+                              <TableCell className="h-14 px-4" style={{ width: "200px" }} onClick={(e) => e.stopPropagation()}>
+                                <StaffOffMultiSelect
+                                  staff={staff || []}
+                                  selectedIds={schedule.staff_off || []}
+                                  onUpdate={async (ids) => {
+                                    try {
+                                      await updateExpeditionSchedule(schedule.id, {
+                                        ...schedule,
+                                        expedition_schedule_id: schedule.id,
+                                        staff_off: ids
+                                      })
+                                      mutate("expedition_schedules")
+                                      toast.success("Staff off updated")
+                                    } catch (error) {
+                                      toast.error("Failed to update")
+                                    }
+                                  }}
+                                />
                               </TableCell>
                               <TableCell className="h-14 px-4" style={{ width: "300px" }} onClick={(e) => e.stopPropagation()}>
                                 {editingNotesId === schedule.id ? (

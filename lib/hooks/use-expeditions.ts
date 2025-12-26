@@ -8,7 +8,9 @@ import {
   getExpeditionScheduleItemsByDate,
   getExpeditionScheduleItemTypes,
   getStudents,
+  getStudentsByExpedition,
   getTeachers,
+  getTeachersByExpedition,
   getExpeditionsProfessionalism,
   getExpeditionsProfessionalismByDate,
   getExpeditionBonus,
@@ -97,4 +99,18 @@ export function useExpeditionScheduleTemplates() {
 
 export function useExpeditionScheduleItemTypes() {
   return useSWR("expedition_schedule_item_types", getExpeditionScheduleItemTypes)
+}
+
+export function useTeachersByExpedition(expeditionsId: number | null) {
+  return useSWR(
+    expeditionsId ? `teachers_by_expedition_${expeditionsId}` : null,
+    expeditionsId ? () => getTeachersByExpedition(expeditionsId) : null
+  )
+}
+
+export function useStudentsByExpedition(expeditionsId: number | null) {
+  return useSWR(
+    expeditionsId ? `students_by_expedition_${expeditionsId}` : null,
+    expeditionsId ? () => getStudentsByExpedition(expeditionsId) : null
+  )
 }

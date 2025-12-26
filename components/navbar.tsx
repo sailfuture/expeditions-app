@@ -103,6 +103,21 @@ export function Navbar() {
                 Planner
               </Link>
             </NavigationMenuItem>
+
+            {currentUser?.role === "Admin" && (
+              <NavigationMenuItem>
+                <Link
+                  href="/expeditions"
+                  className={cn(
+                    navigationMenuTriggerStyle(),
+                    "cursor-pointer",
+                    pathname === "/expeditions" && "text-foreground",
+                  )}
+                >
+                  Manage Expeditions
+                </Link>
+              </NavigationMenuItem>
+            )}
           </NavigationMenuList>
         </NavigationMenu>
 

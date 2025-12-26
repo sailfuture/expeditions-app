@@ -3,6 +3,8 @@ import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
 import { Navbar } from "@/components/navbar"
+import { Providers } from "@/components/providers"
+import { Toaster } from "sonner"
 
 const fontSans = Inter({ subsets: ["latin"], variable: "--font-sans" })
 
@@ -20,8 +22,11 @@ export default function RootLayout({
   return (
     <html lang="en" className={fontSans.variable}>
       <body className="antialiased">
-        <Navbar />
-        {children}
+        <Providers>
+          <Navbar />
+          {children}
+          <Toaster position="bottom-right" />
+        </Providers>
       </body>
     </html>
   )

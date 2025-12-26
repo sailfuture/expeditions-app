@@ -11,6 +11,11 @@ async function xanoFetch<T>(endpoint: string, options?: RequestInit): Promise<T>
   })
 
   if (!res.ok) {
+    // Return empty array for date-specific endpoints that don't exist
+    if (res.status === 500 && endpoint.includes('_date?date=')) {
+      console.warn(`No data found for endpoint: ${endpoint}`)
+      return [] as T
+    }
     throw new Error(`Xano API error: ${res.status} ${res.statusText}`)
   }
 
@@ -31,6 +36,32 @@ export async function getExpeditionScheduleById(id: number) {
   return xanoFetch<any>(`/expedition_schedule/${id}`)
 }
 
+export async function updateExpeditionSchedule(id: number, data: Record<string, any>) {
+  return xanoFetch<any>(`/expedition_schedule/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  })
+}
+
+export async function deleteExpeditionSchedule(id: number) {
+  return xanoFetch<any>(`/expedition_schedule/${id}`, {
+    method: "DELETE",
+  })
+}
+
+export async function createExpeditionSchedule(data: Record<string, any>) {
+  return xanoFetch<any>("/expedition_schedule", {
+    method: "POST",
+    body: JSON.stringify(data),
+  })
+}
+
+export async function addAllDatesForExpedition() {
+  return xanoFetch<any>("/add_all_dates", {
+    method: "POST",
+  })
+}
+
 // ============ Expedition Schedule Items ============
 export async function getExpeditionScheduleItems() {
   return xanoFetch<any[]>("/expedition_schedule_items")
@@ -38,6 +69,22 @@ export async function getExpeditionScheduleItems() {
 
 export async function getExpeditionScheduleItemById(id: number) {
   return xanoFetch<any>(`/expedition_schedule_items/${id}`)
+}
+
+export async function getExpeditionScheduleItemsByDate(date: string) {
+  return xanoFetch<any[]>(`/expedition_schedule_items_date?date=${date}`)
+}
+
+export async function createExpeditionScheduleItem(data: Record<string, any>) {
+  return xanoFetch<any>("/expedition_schedule_items", {
+    method: "POST",
+    body: JSON.stringify(data),
+  })
+}
+
+// ============ Expedition Schedule Item Types ============
+export async function getExpeditionScheduleItemTypes() {
+  return xanoFetch<any[]>("/expedition_schedule_item_types")
 }
 
 // ============ Students ============
@@ -65,6 +112,14 @@ export async function getExpeditionsProfessionalism() {
 
 export async function getExpeditionsProfessionalismById(id: number) {
   return xanoFetch<any>(`/expeditions_professionalism/${id}`)
+}
+
+export async function getExpeditionsProfessionalismByDate(date: string) {
+  return xanoFetch<any[]>(`/expeditions_professionalism_by_date?date=${date}`)
+}
+
+export async function addStudentsToProfessionalism(date: string) {
+  return xanoFetch<any>(`/add_students_to_professionalism?date=${date}`)
 }
 
 export async function createExpeditionsProfessionalism(data: Record<string, any>) {
@@ -97,6 +152,20 @@ export async function getExpeditionJournalStatus() {
 }
 
 // ============ Locations ============
-export async function getExpeditionLocations() {
-  return xanoFetch<any[]>("/expedition_locations")
+export async function getExpeditionLocations(expeditionsId?: number) {
+  const url = expeditionsId 
+    ? `/expedition_locations?expeditions_id=${expeditionsId}`
+    : "/expedition_locations"
+  return xanoFetch<any[]>(url)
+}
+
+// ============ Schedule Templates ============
+export async function getExpeditionScheduleTemplates() {
+  return xanoFetch<any[]>("/expeditions_schedule_templates")
+}
+
+export async function addExpeditionScheduleTemplate(date: string, templateId: number) {
+  return xanoFetch<any>(`/add_expedition_schedule_template?date=${date}&expeditions_schedule_templates_id=${templateId}`, {
+    method: "GET",
+  })
 }

@@ -10,6 +10,7 @@ interface ScoreControlProps {
   min?: number
   max?: number
   disabled?: boolean
+  isBlocked?: boolean // If true, category is blocked/inactive (controlled by isXUsed flags)
 }
 
 function getScoreBorderColor(value: number | null): string {
@@ -32,51 +33,39 @@ function getScoreBorderColor(value: number | null): string {
   }
 }
 
-export function ScoreControl({ label, value, onChange, min = 0, max = 5, disabled = false }: ScoreControlProps) {
-  const isBlocked = value === null
-  const isAtMin = value === min
-  const isAtMax = value === max
+export function ScoreControl({ label, value, onChange, min = 0, max = 5, disabled = false, isBlocked = false }: ScoreControlProps) {
+  // isBlocked is now controlled by the parent via isXUsed flags, not by null value
+  const displayValue = value ?? 3 // Default display to 3 if null
+  const isAtMin = displayValue === min
+  const isAtMax = displayValue === max
 
   const handleDecrement = () => {
-    if (isBlocked || value === min) return
-    onChange(value - 1)
+    if (isBlocked || disabled) return
+    const currentValue = value ?? 3
+    if (currentValue === min) return
+    onChange(currentValue - 1)
   }
 
   const handleIncrement = () => {
-    if (isBlocked || value === max) return
-    onChange(value + 1)
+    if (isBlocked || disabled) return
+    const currentValue = value ?? 3
+    if (currentValue === max) return
+    onChange(currentValue + 1)
   }
 
-  const handleBlockToggle = () => {
-    if (isBlocked) {
-      onChange(3)
-    } else {
-      onChange(null)
-    }
-  }
-
-  const borderColor = getScoreBorderColor(value)
+  const borderColor = getScoreBorderColor(isBlocked ? null : (value ?? 3))
 
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-center gap-1.5">
         <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{label}</span>
-        <button
-          type="button"
-          onClick={handleBlockToggle}
-          disabled={disabled}
-          className={cn(
-            "p-0.5 rounded transition-colors cursor-pointer",
-            isBlocked ? "text-gray-500 hover:text-gray-600" : "text-gray-300 hover:text-gray-400",
-          )}
-          title={isBlocked ? "Unblock this category" : "Block this category (N/A)"}
-        >
-          <Ban className="h-3.5 w-3.5" />
-        </button>
+        {isBlocked && (
+          <Ban className="h-3.5 w-3.5 text-gray-400" title="This category is disabled" />
+        )}
       </div>
       <div
         className={cn(
-          "grid grid-cols-3 border rounded-md overflow-hidden transition-colors",
+          "grid grid-cols-3 border-2 rounded-md overflow-hidden transition-colors",
           borderColor,
           (disabled || isBlocked) && "opacity-50",
           isBlocked && "bg-gray-100",
@@ -101,7 +90,7 @@ export function ScoreControl({ label, value, onChange, min = 0, max = 5, disable
             isBlocked ? "text-gray-400 font-normal" : "font-semibold",
           )}
         >
-          {isBlocked ? "N/A" : value}
+          {isBlocked ? "N/A" : (value ?? 3)}
         </div>
         <button
           type="button"

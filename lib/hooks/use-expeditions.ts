@@ -5,9 +5,12 @@ import {
   getExpeditions,
   getExpeditionSchedules,
   getExpeditionScheduleItems,
+  getExpeditionScheduleItemsByDate,
+  getExpeditionScheduleItemTypes,
   getStudents,
   getTeachers,
   getExpeditionsProfessionalism,
+  getExpeditionsProfessionalismByDate,
   getExpeditionBonus,
   getExpeditionPenalty,
   getExpeditionLocations,
@@ -40,6 +43,13 @@ export function useExpeditionScheduleItems() {
   return useSWR(KEYS.scheduleItems, getExpeditionScheduleItems)
 }
 
+export function useExpeditionScheduleItemsByDate(date: string | null) {
+  return useSWR(
+    date ? `expedition_schedule_items_date_${date}` : null,
+    date ? () => getExpeditionScheduleItemsByDate(date) : null
+  )
+}
+
 export function useStudents() {
   return useSWR(KEYS.students, getStudents)
 }
@@ -52,6 +62,13 @@ export function useExpeditionsProfessionalism() {
   return useSWR(KEYS.professionalism, getExpeditionsProfessionalism)
 }
 
+export function useExpeditionsProfessionalismByDate(date: string | null) {
+  return useSWR(
+    date ? `expeditions_professionalism_date_${date}` : null,
+    date ? () => getExpeditionsProfessionalismByDate(date) : null
+  )
+}
+
 export function useExpeditionBonus() {
   return useSWR(KEYS.bonus, getExpeditionBonus)
 }
@@ -60,10 +77,24 @@ export function useExpeditionPenalty() {
   return useSWR(KEYS.penalty, getExpeditionPenalty)
 }
 
-export function useExpeditionLocations() {
-  return useSWR(KEYS.locations, getExpeditionLocations)
+export function useExpeditionLocations(expeditionsId?: number) {
+  return useSWR(
+    expeditionsId ? `${KEYS.locations}_${expeditionsId}` : KEYS.locations,
+    () => getExpeditionLocations(expeditionsId)
+  )
 }
 
 export function useExpeditionJournalStatus() {
   return useSWR(KEYS.journalStatus, getExpeditionJournalStatus)
+}
+
+export function useExpeditionScheduleTemplates() {
+  return useSWR("expedition_schedule_templates", () => {
+    const { getExpeditionScheduleTemplates } = require("@/lib/xano")
+    return getExpeditionScheduleTemplates()
+  })
+}
+
+export function useExpeditionScheduleItemTypes() {
+  return useSWR("expedition_schedule_item_types", getExpeditionScheduleItemTypes)
 }

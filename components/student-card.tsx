@@ -27,18 +27,8 @@ interface StudentCardProps {
 }
 
 function getScoreCategories(isOffshore: boolean, isService: boolean) {
-  if (!isOffshore && !isService) {
-    return [
-      { key: "school", label: "SCHOOL" },
-      { key: "job", label: "JOB" },
-      { key: "citizenship", label: "CITIZENSHIP" },
-    ]
-  } else if (isOffshore && !isService) {
-    return [
-      { key: "crew", label: "CREW" },
-      { key: "citizenship", label: "CITIZENSHIP" },
-    ]
-  } else if (isOffshore && isService) {
+  // Service Learning day (in port)
+  if (!isOffshore && isService) {
     return [
       { key: "school", label: "SCHOOL" },
       { key: "job", label: "JOB" },
@@ -46,6 +36,22 @@ function getScoreCategories(isOffshore: boolean, isService: boolean) {
       { key: "service_learning", label: "SERVICE" },
     ]
   }
+  // Offshore + Service Learning
+  else if (isOffshore && isService) {
+    return [
+      { key: "crew", label: "CREW" },
+      { key: "citizenship", label: "CITIZENSHIP" },
+      { key: "service_learning", label: "SERVICE" },
+    ]
+  }
+  // Offshore (no service)
+  else if (isOffshore && !isService) {
+    return [
+      { key: "crew", label: "CREW" },
+      { key: "citizenship", label: "CITIZENSHIP" },
+    ]
+  }
+  // Regular day (anchored, no service)
   return [
     { key: "school", label: "SCHOOL" },
     { key: "job", label: "JOB" },
@@ -62,9 +68,23 @@ function getInitials(name: string): string {
     .slice(0, 2)
 }
 
-function getInitialValue(value: number | null | undefined): number | null {
-  if (value === undefined) return 3
-  return value
+// Map score category key to the corresponding "isUsed" boolean field
+function getCategoryDisabledFlag(record: ExpeditionProfessionalism, key: string): boolean {
+  // If the boolean flag is true, the category is disabled/inactive
+  switch (key) {
+    case "school":
+      return record.isAcademicsUsed === true
+    case "job":
+      return record.isJobUsed === true
+    case "citizenship":
+      return record.isCitizenshipUsed === true
+    case "crew":
+      return record.isCrewUsed === true
+    case "service_learning":
+      return record.isServiceUsed === true
+    default:
+      return false
+  }
 }
 
 export function StudentCard({
@@ -116,7 +136,7 @@ export function StudentCard({
   if (isExcluded) {
     return (
       <Card className="w-full relative bg-gray-100 min-h-[400px]">
-        <div className="flex items-start justify-between p-4 sm:p-6">
+        <div className="flex items-start justify-between px-4 py-3 sm:px-6 sm:py-4">
           <div className="flex items-start gap-4">
             <span className="relative flex shrink-0 overflow-hidden rounded-full h-12 w-12 border-2 border-gray-300">
               {photoUrl ? (
@@ -172,10 +192,13 @@ export function StudentCard({
   const gridCols = scoreCategories.length <= 3 ? "grid-cols-3" : "grid-cols-2 sm:grid-cols-4"
 
   return (
-    <Card className="w-full relative">
-      <div className="flex items-start justify-between p-4 sm:p-6">
+    <Card className={cn("w-full relative", record.isLocked && "bg-gray-50")}>
+      <div className="flex items-start justify-between px-4 py-3 sm:px-6 sm:py-4">
         <div className="flex items-start gap-4">
-          <span className="relative flex shrink-0 overflow-hidden rounded-full h-12 w-12 border-2 border-gray-300">
+          <span className={cn(
+            "relative flex shrink-0 overflow-hidden rounded-full h-12 w-12 border-2",
+            record.isLocked ? "border-gray-300 grayscale" : "border-gray-300"
+          )}>
             {photoUrl ? (
               <img
                 className="aspect-square h-full w-full object-cover"
@@ -183,13 +206,18 @@ export function StudentCard({
                 src={photoUrl || "/placeholder.svg"}
               />
             ) : (
-              <span className="flex h-full w-full items-center justify-center bg-slate-700 text-white font-medium text-sm">
+              <span className={cn(
+                "flex h-full w-full items-center justify-center font-medium text-sm",
+                record.isLocked ? "bg-gray-400 text-white" : "bg-slate-700 text-white"
+              )}>
                 {initials}
               </span>
             )}
           </span>
           <div className="pt-2">
-            <h3 className="text-xl font-bold truncate">{studentName}</h3>
+            <h3 className={cn("text-xl font-bold truncate", record.isLocked && "text-gray-500")}>
+              {studentName}
+            </h3>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -197,12 +225,13 @@ export function StudentCard({
             type="button"
             className={cn(
               "p-2 rounded-full cursor-pointer transition-colors duration-200",
-              "bg-gray-50 hover:bg-red-50 group",
+              record.isLocked ? "bg-gray-100" : "bg-gray-50 hover:bg-red-50 group",
             )}
             title="Exclude student"
             onClick={handleExcludeToggle}
+            disabled={record.isLocked}
           >
-            <X className="h-4 w-4 text-gray-400 group-hover:text-red-500" />
+            <X className={cn("h-4 w-4", record.isLocked ? "text-gray-400" : "text-gray-400 group-hover:text-red-500")} />
           </button>
           <button
             type="button"
@@ -214,7 +243,7 @@ export function StudentCard({
             onClick={handleLockToggle}
           >
             {record.isLocked ? (
-              <Lock className="h-4 w-4 text-gray-500" />
+              <Lock className="h-4 w-4 text-gray-400" />
             ) : (
               <LockOpen className="h-4 w-4 text-green-500" />
             )}
@@ -223,19 +252,97 @@ export function StudentCard({
       </div>
 
       <div className="px-4 sm:px-6 pb-2">
-        <div className={cn("grid gap-3", gridCols)}>
-          {scoreCategories.map(({ key, label }) => (
-            <ScoreControl
-              key={key}
-              label={label}
-              value={getInitialValue((record as Record<string, number | null | undefined>)[key])}
-              onChange={(value) => handleScoreChange(key, value)}
-              disabled={record.isLocked}
-              min={0}
-              max={5}
-            />
-          ))}
-        </div>
+        {isOffshore ? (
+          <>
+            {/* Offshore: First Row - CREW, CITIZENSHIP */}
+            <div className="grid grid-cols-2 gap-3 mb-3">
+              {scoreCategories
+                .filter(({ key }) => key === "crew" || key === "citizenship")
+                .map(({ key, label }) => {
+                  const isCategoryBlocked = getCategoryDisabledFlag(record, key)
+                  return (
+                    <ScoreControl
+                      key={key}
+                      label={label}
+                      value={(record as Record<string, number | null | undefined>)[key] ?? null}
+                      onChange={(value) => handleScoreChange(key, value)}
+                      disabled={record.isLocked}
+                      isBlocked={isCategoryBlocked}
+                      min={0}
+                      max={5}
+                    />
+                  )
+                })}
+            </div>
+            
+            {/* Offshore: Second Row - SERVICE (if applicable) */}
+            {isService && (
+              <div className="grid grid-cols-2 gap-3">
+                {scoreCategories
+                  .filter(({ key }) => key === "service_learning")
+                  .map(({ key, label }) => {
+                    const isCategoryBlocked = getCategoryDisabledFlag(record, key)
+                    return (
+                      <ScoreControl
+                        key={key}
+                        label={label}
+                        value={(record as Record<string, number | null | undefined>)[key] ?? null}
+                        onChange={(value) => handleScoreChange(key, value)}
+                        disabled={record.isLocked}
+                        isBlocked={isCategoryBlocked}
+                        min={0}
+                        max={5}
+                      />
+                    )
+                  })}
+              </div>
+            )}
+          </>
+        ) : (
+          <>
+            {/* In Port: First Row - SCHOOL, JOB */}
+            <div className="grid grid-cols-2 gap-3 mb-3">
+              {scoreCategories
+                .filter(({ key }) => key === "school" || key === "job")
+                .map(({ key, label }) => {
+                  const isCategoryBlocked = getCategoryDisabledFlag(record, key)
+                  return (
+                    <ScoreControl
+                      key={key}
+                      label={label}
+                      value={(record as Record<string, number | null | undefined>)[key] ?? null}
+                      onChange={(value) => handleScoreChange(key, value)}
+                      disabled={record.isLocked}
+                      isBlocked={isCategoryBlocked}
+                      min={0}
+                      max={5}
+                    />
+                  )
+                })}
+            </div>
+            
+            {/* In Port: Second Row - CITIZENSHIP, SERVICE (if applicable) */}
+            <div className="grid grid-cols-2 gap-3">
+              {scoreCategories
+                .filter(({ key }) => key === "citizenship" || key === "service_learning")
+                .map(({ key, label }) => {
+                  const isCategoryBlocked = getCategoryDisabledFlag(record, key)
+                  return (
+                    <ScoreControl
+                      key={key}
+                      label={label}
+                      value={(record as Record<string, number | null | undefined>)[key] ?? null}
+                      onChange={(value) => handleScoreChange(key, value)}
+                      disabled={record.isLocked}
+                      isBlocked={isCategoryBlocked}
+                      min={0}
+                      max={5}
+                    />
+                  )
+                })}
+            </div>
+          </>
+        )}
       </div>
 
       <div className="px-4 sm:px-6 pb-4 space-y-3 relative">

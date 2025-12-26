@@ -82,6 +82,19 @@ export async function createExpeditionScheduleItem(data: Record<string, any>) {
   })
 }
 
+export async function updateExpeditionScheduleItem(id: number, data: Record<string, any>) {
+  return xanoFetch<any>(`/expedition_schedule_items/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  })
+}
+
+export async function deleteExpeditionScheduleItem(id: number) {
+  return xanoFetch<any>(`/expedition_schedule_items/${id}`, {
+    method: "DELETE",
+  })
+}
+
 // ============ Expedition Schedule Item Types ============
 export async function getExpeditionScheduleItemTypes() {
   return xanoFetch<any[]>("/expedition_schedule_item_types")

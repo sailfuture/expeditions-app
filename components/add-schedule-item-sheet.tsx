@@ -13,10 +13,20 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Spinner } from "@/components/ui/spinner"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Check, ChevronDown, X } from "lucide-react"
-import { createExpeditionScheduleItem } from "@/lib/xano"
+import { Check, ChevronDown, X, Trash2 } from "lucide-react"
+import { createExpeditionScheduleItem, updateExpeditionScheduleItem, deleteExpeditionScheduleItem } from "@/lib/xano"
 import { useExpeditionScheduleItemTypes } from "@/lib/hooks/use-expeditions"
 import { mutate } from "swr"
 import { toast } from "sonner"
@@ -28,6 +38,7 @@ interface AddScheduleItemSheetProps {
   scheduleId: number
   date: string
   staff?: any[]
+  editItem?: any // If provided, sheet is in edit mode
 }
 
 // Custom dropdown component
@@ -259,26 +270,43 @@ export function AddScheduleItemSheet({
   scheduleId, 
   date,
   staff = [],
+  editItem,
 }: AddScheduleItemSheetProps) {
   // Fetch item types from API
   const { data: itemTypes = [] } = useExpeditionScheduleItemTypes()
   
-  const [formData, setFormData] = useState({
-    name: "",
-    expedition_schedule_item_types_id: 0,
-    time_in: 800, // 8:00 AM in military
-    time_out: 900, // 9:00 AM in military
-    led_by: 0,
-    participants: [] as number[],
-    notes: "",
-    address: "",
-    things_to_bring: "",
+  const isEditMode = !!editItem
+  
+  const getInitialFormData = () => ({
+    name: editItem?.name || "",
+    expedition_schedule_item_types_id: editItem?.expedition_schedule_item_types_id || 0,
+    time_in: editItem?.time_in || 800,
+    time_out: editItem?.time_out || 900,
+    led_by: editItem?.led_by || 0,
+    participants: editItem?.participants?.map((p: any) => p.id || p) || [],
+    notes: editItem?.notes || "",
+    address: editItem?.address || "",
+    things_to_bring: editItem?.things_to_bring || "",
   })
+  
+  const [formData, setFormData] = useState(getInitialFormData())
   const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   
   // Time state as Date objects for the picker
-  const [timeInDate, setTimeInDate] = useState<Date | undefined>(militaryToDate(800))
-  const [timeOutDate, setTimeOutDate] = useState<Date | undefined>(militaryToDate(900))
+  const [timeInDate, setTimeInDate] = useState<Date | undefined>(militaryToDate(editItem?.time_in || 800))
+  const [timeOutDate, setTimeOutDate] = useState<Date | undefined>(militaryToDate(editItem?.time_out || 900))
+
+  // Reset form when editItem changes or sheet opens
+  useEffect(() => {
+    if (open) {
+      const initial = getInitialFormData()
+      setFormData(initial)
+      setTimeInDate(militaryToDate(initial.time_in))
+      setTimeOutDate(militaryToDate(initial.time_out))
+    }
+  }, [open, editItem])
 
   // Sync time picker changes to form data
   useEffect(() => {
@@ -309,7 +337,7 @@ export function AddScheduleItemSheet({
 
     setSaving(true)
     try {
-      await createExpeditionScheduleItem({
+      const payload = {
         name: formData.name,
         isTemplate: false,
         expedition_schedule_item_types_id: formData.expedition_schedule_item_types_id,
@@ -321,10 +349,17 @@ export function AddScheduleItemSheet({
         notes: formData.notes,
         address: formData.address,
         things_to_bring: formData.things_to_bring,
-      })
+      }
+
+      if (isEditMode && editItem) {
+        await updateExpeditionScheduleItem(editItem.id, payload)
+        toast.success("Activity updated successfully")
+      } else {
+        await createExpeditionScheduleItem(payload)
+        toast.success("Activity added successfully")
+      }
       
       await mutate(`expedition_schedule_items_date_${date}`)
-      toast.success("Activity added successfully")
       onOpenChange(false)
       
       // Reset form
@@ -342,10 +377,32 @@ export function AddScheduleItemSheet({
       setTimeInDate(militaryToDate(800))
       setTimeOutDate(militaryToDate(900))
     } catch (error) {
-      console.error("Failed to add activity:", error)
-      toast.error("Failed to add activity")
+      console.error("Failed to save activity:", error)
+      toast.error(isEditMode ? "Failed to update activity" : "Failed to add activity")
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleDeleteClick = () => {
+    setShowDeleteConfirm(true)
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!editItem) return
+
+    setDeleting(true)
+    setShowDeleteConfirm(false)
+    try {
+      await deleteExpeditionScheduleItem(editItem.id)
+      await mutate(`expedition_schedule_items_date_${date}`)
+      toast.success("Activity deleted")
+      onOpenChange(false)
+    } catch (error) {
+      console.error("Failed to delete activity:", error)
+      toast.error("Failed to delete activity")
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -377,7 +434,7 @@ export function AddScheduleItemSheet({
         <div className="flex-1 overflow-y-auto p-8 pb-24">
           <SheetHeader className="mb-8">
             <div className="flex items-center justify-between">
-              <SheetTitle className="text-2xl">Add Activity</SheetTitle>
+              <SheetTitle className="text-2xl">{isEditMode ? "Edit Activity" : "Add Activity"}</SheetTitle>
               <button
                 type="button"
                 onClick={() => onOpenChange(false)}
@@ -387,7 +444,7 @@ export function AddScheduleItemSheet({
               </button>
             </div>
             <SheetDescription className="text-base">
-              Create a new activity for this schedule
+              {isEditMode ? "Update activity details" : "Create a new activity for this schedule"}
             </SheetDescription>
           </SheetHeader>
 
@@ -520,33 +577,73 @@ export function AddScheduleItemSheet({
           </form>
         </div>
 
-        {/* Fixed Bottom Buttons - left justified */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 bg-white border-t flex gap-3 justify-start">
-          <Button
-            type="submit"
-            form="add-activity-form"
-            disabled={saving}
-            className="h-10 text-sm cursor-pointer px-6"
-          >
-            {saving ? (
-              <>
-                <Spinner size="sm" className="h-3 w-3 mr-2" />
-                Adding...
-              </>
-            ) : (
-              'Add Activity'
-            )}
-          </Button>
+        {/* Fixed Bottom Buttons - Trash | Cancel | Save Changes (flexible) */}
+        <div className="absolute bottom-0 left-0 right-0 p-4 bg-white border-t flex gap-3 items-center">
+          {/* Delete button - only in edit mode */}
+          {isEditMode && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleDeleteClick}
+              disabled={saving || deleting}
+              className="h-10 text-sm cursor-pointer px-3 border-gray-300"
+            >
+              {deleting ? (
+                <Spinner size="sm" className="h-4 w-4 text-gray-500" />
+              ) : (
+                <Trash2 className="h-4 w-4 text-gray-500" />
+              )}
+            </Button>
+          )}
+          
           <Button
             type="button"
             variant="outline"
             onClick={() => onOpenChange(false)}
-            disabled={saving}
+            disabled={saving || deleting}
             className="h-10 text-sm cursor-pointer px-4"
           >
             Cancel
           </Button>
+          
+          {/* Save button - flexible width */}
+          <Button
+            type="submit"
+            form="add-activity-form"
+            disabled={saving || deleting}
+            className="h-10 text-sm cursor-pointer flex-1"
+          >
+            {saving ? (
+              <>
+                <Spinner size="sm" className="h-3 w-3 mr-2" />
+                {isEditMode ? "Saving..." : "Adding..."}
+              </>
+            ) : (
+              isEditMode ? 'Save Changes' : 'Add Activity'
+            )}
+          </Button>
         </div>
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Activity</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete this activity? This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel className="cursor-pointer">Cancel</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={handleDeleteConfirm}
+                className="bg-red-600 hover:bg-red-700 cursor-pointer"
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </SheetContent>
     </Sheet>
   )

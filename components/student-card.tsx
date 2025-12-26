@@ -129,6 +129,27 @@ export function StudentCard({
     onUpdate({ ...record, journal_status_id: statusId })
   }
 
+  // Toggle the isXUsed flag for a category
+  const handleBlockToggle = (key: string) => {
+    switch (key) {
+      case "school":
+        onUpdate({ ...record, isAcademicsUsed: !record.isAcademicsUsed })
+        break
+      case "job":
+        onUpdate({ ...record, isJobUsed: !record.isJobUsed })
+        break
+      case "citizenship":
+        onUpdate({ ...record, isCitizenshipUsed: !record.isCitizenshipUsed })
+        break
+      case "crew":
+        onUpdate({ ...record, isCrewUsed: !record.isCrewUsed })
+        break
+      case "service_learning":
+        onUpdate({ ...record, isServiceUsed: !record.isServiceUsed })
+        break
+    }
+  }
+
   const handleNoteChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onUpdate({ ...record, note: e.target.value })
   }
@@ -268,6 +289,7 @@ export function StudentCard({
                       onChange={(value) => handleScoreChange(key, value)}
                       disabled={record.isLocked}
                       isBlocked={isCategoryBlocked}
+                      onBlockToggle={() => handleBlockToggle(key)}
                       min={0}
                       max={5}
                     />
@@ -290,6 +312,7 @@ export function StudentCard({
                         onChange={(value) => handleScoreChange(key, value)}
                         disabled={record.isLocked}
                         isBlocked={isCategoryBlocked}
+                        onBlockToggle={() => handleBlockToggle(key)}
                         min={0}
                         max={5}
                       />
@@ -314,6 +337,7 @@ export function StudentCard({
                       onChange={(value) => handleScoreChange(key, value)}
                       disabled={record.isLocked}
                       isBlocked={isCategoryBlocked}
+                      onBlockToggle={() => handleBlockToggle(key)}
                       min={0}
                       max={5}
                     />
@@ -335,6 +359,7 @@ export function StudentCard({
                       onChange={(value) => handleScoreChange(key, value)}
                       disabled={record.isLocked}
                       isBlocked={isCategoryBlocked}
+                      onBlockToggle={() => handleBlockToggle(key)}
                       min={0}
                       max={5}
                     />

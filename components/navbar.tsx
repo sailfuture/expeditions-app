@@ -90,6 +90,19 @@ export function Navbar() {
                 View Schedule
               </Link>
             </NavigationMenuItem>
+
+            <NavigationMenuItem>
+              <Link
+                href="/planner"
+                className={cn(
+                  navigationMenuTriggerStyle(),
+                  "cursor-pointer",
+                  pathname.startsWith("/planner") && "text-foreground",
+                )}
+              >
+                Planner
+              </Link>
+            </NavigationMenuItem>
           </NavigationMenuList>
         </NavigationMenu>
 

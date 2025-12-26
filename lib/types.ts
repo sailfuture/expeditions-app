@@ -5,6 +5,7 @@ export interface ExpeditionStaff {
   isActive: boolean
   expeditions_id: number[]
   photo_url?: string
+  role?: "Admin" | "Staff" | "Instructor"
 }
 
 export interface Expedition {

@@ -100,8 +100,10 @@ export function DateNavigation({ date, onDateChange, isOffshore = false, isServi
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align="start">
           <CalendarComponent
+            key={calendarOpen ? date.toISOString() : 'closed'}
             mode="single"
             selected={date}
+            defaultMonth={date}
             onSelect={(selectedDate) => {
               if (selectedDate) {
                 handleDateSelect(selectedDate)

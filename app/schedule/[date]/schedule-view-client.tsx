@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo, useState, useRef, useCallback, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -14,6 +14,16 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog"
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import {
   Breadcrumb,
   BreadcrumbItem,
   BreadcrumbLink,
@@ -21,10 +31,12 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
-import { MapPin, Clock, User, MessageSquare, ChevronLeft, ChevronRight, Plus } from "lucide-react"
+import { Clock, User, MessageSquare, ChevronLeft, ChevronRight, Plus, Pencil, Trash2, X, Settings, MapPin } from "lucide-react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { DateNavigation } from "@/components/date-navigation"
 import { AddScheduleItemSheet } from "@/components/add-schedule-item-sheet"
+import { DraggableScheduleItem } from "@/components/draggable-schedule-item"
+import { ScheduleDragContext } from "@/components/schedule-drag-context"
 import {
   useExpeditionSchedules,
   useExpeditionScheduleItemsByDate,
@@ -32,7 +44,8 @@ import {
   useTeachers,
 } from "@/lib/hooks/use-expeditions"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { addExpeditionScheduleTemplate } from "@/lib/xano"
+import { addExpeditionScheduleTemplate, deleteExpeditionScheduleItem } from "@/lib/xano"
+import { useCurrentUser } from "@/lib/contexts/user-context"
 import { mutate } from "swr"
 import { toast } from "sonner"
 
@@ -57,33 +70,119 @@ const formatMilitaryTime = (militaryTime: number) => {
   return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`
 }
 
-const getColorForType = (typeName: string) => {
+const getColorForType = (item: any) => {
+  // Map color names to Tailwind classes (Tailwind needs static class names)
   const colorMap: Record<string, string> = {
-    'Orientation': 'bg-green-400',
-    'Breakfast': 'bg-orange-400',
-    'Lunch': 'bg-blue-400',
-    'Dinner': 'bg-yellow-400',
-    'Shore Activity': 'bg-purple-400',
-    'Performance Reviews': 'bg-pink-400',
+    "amber": "bg-amber-500",
+    "orange": "bg-orange-500",
+    "red": "bg-red-500",
+    "green": "bg-green-500",
+    "blue": "bg-blue-500",
+    "purple": "bg-purple-500",
+    "teal": "bg-teal-500",
+    "pink": "bg-pink-500",
+    "indigo": "bg-indigo-500",
+    "cyan": "bg-cyan-500",
+    "yellow": "bg-yellow-500",
+    "lime": "bg-lime-500",
+    "emerald": "bg-emerald-500",
+    "sky": "bg-sky-500",
+    "violet": "bg-violet-500",
+    "fuchsia": "bg-fuchsia-500",
+    "rose": "bg-rose-500",
+    "slate": "bg-slate-500",
+    "gray": "bg-gray-500",
+    "zinc": "bg-zinc-500",
+    "neutral": "bg-neutral-500",
+    "stone": "bg-stone-500",
   }
-  return colorMap[typeName] || 'bg-gray-400'
+  const color = item?._expedition_schedule_item_types?.color
+  if (color && colorMap[color]) {
+    return colorMap[color]
+  }
+  return 'bg-gray-400'
 }
 
 export function ScheduleViewClient({ date }: ScheduleViewClientProps) {
   const router = useRouter()
+  const timelineRef = useRef<HTMLDivElement>(null)
+  const { currentUser } = useCurrentUser()
   const { data: schedules, isLoading: loadingSchedules } = useExpeditionSchedules()
   const { data: scheduleItems, isLoading: loadingItems } = useExpeditionScheduleItemsByDate(date)
   const { data: templates, isLoading: loadingTemplates } = useExpeditionScheduleTemplates()
   const { data: staff } = useTeachers()
+  
+  // Edit mode - only admins can enable this
+  const isAdmin = currentUser?.role === "Admin"
+  const [editMode, setEditMode] = useState(false)
   const [selectedItem, setSelectedItem] = useState<any>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [selectedTemplate, setSelectedTemplate] = useState<string>("")
   const [addingTemplate, setAddingTemplate] = useState(false)
   const [addSheetOpen, setAddSheetOpen] = useState(false)
+  const [editingItem, setEditingItem] = useState<any>(null)
+  const [showModalDeleteConfirm, setShowModalDeleteConfirm] = useState(false)
+  const [deletingFromModal, setDeletingFromModal] = useState(false)
+  const [resizingItemId, setResizingItemId] = useState<number | null>(null)
+  const [localItemUpdates, setLocalItemUpdates] = useState<Record<number, { time_in: number; time_out: number }>>({})
+
+  // Handle optimistic updates from drag/resize
+  const handleItemUpdate = useCallback((itemId: number, timeIn: number, timeOut: number) => {
+    setLocalItemUpdates(prev => ({
+      ...prev,
+      [itemId]: { time_in: timeIn, time_out: timeOut }
+    }))
+  }, [])
+
+  // Clear local updates when data refreshes from server
+  // This ensures optimistic updates don't persist after API sync
+  useEffect(() => {
+    if (scheduleItems) {
+      setLocalItemUpdates({})
+    }
+  }, [scheduleItems])
 
   const handleItemClick = (item: any) => {
     setSelectedItem(item)
     setDialogOpen(true)
+  }
+
+  const handleEditItem = (item: any) => {
+    setEditingItem(item)
+    setAddSheetOpen(true)
+  }
+
+  const handleSheetClose = (open: boolean) => {
+    setAddSheetOpen(open)
+    if (!open) {
+      setEditingItem(null)
+    }
+  }
+
+  const handleModalEdit = () => {
+    if (selectedItem) {
+      setDialogOpen(false)
+      handleEditItem(selectedItem)
+    }
+  }
+
+  const handleModalDeleteConfirm = async () => {
+    if (!selectedItem) return
+
+    setDeletingFromModal(true)
+    setShowModalDeleteConfirm(false)
+    try {
+      await deleteExpeditionScheduleItem(selectedItem.id)
+      await mutate(`expedition_schedule_items_date_${date}`)
+      toast.success("Activity deleted")
+      setDialogOpen(false)
+      setSelectedItem(null)
+    } catch (error) {
+      console.error("Failed to delete activity:", error)
+      toast.error("Failed to delete activity")
+    } finally {
+      setDeletingFromModal(false)
+    }
   }
 
   const currentDate = useMemo(() => {
@@ -131,15 +230,35 @@ export function ScheduleViewClient({ date }: ScheduleViewClientProps) {
     return found
   }, [schedules, date])
 
-  const sortedItems = useMemo(() => {
+  // Merge local updates with schedule items for optimistic UI
+  // But keep original items for layout calculation to prevent column jumping during drag
+  const itemsWithLocalUpdates = useMemo(() => {
     if (!scheduleItems) return []
-    return [...scheduleItems].sort((a: any, b: any) => {
+    return scheduleItems.map((item: any) => {
+      const localUpdate = localItemUpdates[item.id]
+      if (localUpdate) {
+        return { 
+          ...item, 
+          time_in: localUpdate.time_in, 
+          time_out: localUpdate.time_out,
+          // Store original times for layout calculation
+          _original_time_in: item.time_in,
+          _original_time_out: item.time_out,
+        }
+      }
+      return item
+    })
+  }, [scheduleItems, localItemUpdates])
+
+  const sortedItems = useMemo(() => {
+    if (!itemsWithLocalUpdates) return []
+    return [...itemsWithLocalUpdates].sort((a: any, b: any) => {
       if (a.time_in === 0 && b.time_in === 0) return 0
       if (a.time_in === 0) return 1
       if (b.time_in === 0) return -1
       return a.time_in - b.time_in
     })
-  }, [scheduleItems])
+  }, [itemsWithLocalUpdates])
 
   const scheduledItems = useMemo(() => {
     return sortedItems.filter((item: any) => item.time_in !== 0 && item.time_out !== 0)
@@ -219,6 +338,10 @@ export function ScheduleViewClient({ date }: ScheduleViewClientProps) {
   const getItemsWithLayout = (items: any[]) => {
     if (items.length === 0) return []
     
+    // Helper to get layout times (use original if being dragged/resized, otherwise current)
+    const getLayoutTimeIn = (item: any) => item._original_time_in ?? item.time_in
+    const getLayoutTimeOut = (item: any) => item._original_time_out ?? item.time_out
+    
     const itemsWithLayout = items.map((item, idx) => ({ 
       ...item, 
       column: 0, 
@@ -226,21 +349,31 @@ export function ScheduleViewClient({ date }: ScheduleViewClientProps) {
       originalIndex: idx 
     }))
     
+    // Use original times for sorting and overlap detection to prevent column jumping during drag
     const sorted = [...itemsWithLayout].sort((a, b) => {
-      if (a.time_in !== b.time_in) return a.time_in - b.time_in
-      return (b.time_out - b.time_in) - (a.time_out - a.time_in)
+      const aTimeIn = getLayoutTimeIn(a)
+      const bTimeIn = getLayoutTimeIn(b)
+      if (aTimeIn !== bTimeIn) return aTimeIn - bTimeIn
+      const aTimeOut = getLayoutTimeOut(a)
+      const bTimeOut = getLayoutTimeOut(b)
+      return (bTimeOut - bTimeIn) - (aTimeOut - aTimeIn)
     })
     
     const groups: any[][] = []
     let currentGroup: any[] = []
     
     sorted.forEach((item, idx) => {
+      const itemTimeIn = getLayoutTimeIn(item)
+      const itemTimeOut = getLayoutTimeOut(item)
+      
       if (currentGroup.length === 0) {
         currentGroup.push(item)
       } else {
         const overlapsWithGroup = currentGroup.some(groupItem => {
-          const startsBeforeOtherEnds = item.time_in < groupItem.time_out
-          const endsAfterOtherStarts = item.time_out > groupItem.time_in
+          const groupTimeIn = getLayoutTimeIn(groupItem)
+          const groupTimeOut = getLayoutTimeOut(groupItem)
+          const startsBeforeOtherEnds = itemTimeIn < groupTimeOut
+          const endsAfterOtherStarts = itemTimeOut > groupTimeIn
           return startsBeforeOtherEnds && endsAfterOtherStarts
         })
         
@@ -267,12 +400,17 @@ export function ScheduleViewClient({ date }: ScheduleViewClientProps) {
       const columns: any[][] = []
       
       group.forEach(item => {
+        const itemTimeIn = getLayoutTimeIn(item)
+        const itemTimeOut = getLayoutTimeOut(item)
+        
         let placed = false
         for (let colIdx = 0; colIdx < columns.length; colIdx++) {
           const column = columns[colIdx]
-          const canPlace = column.every(colItem => 
-            item.time_in >= colItem.time_out || item.time_out <= colItem.time_in
-          )
+          const canPlace = column.every(colItem => {
+            const colTimeIn = getLayoutTimeIn(colItem)
+            const colTimeOut = getLayoutTimeOut(colItem)
+            return itemTimeIn >= colTimeOut || itemTimeOut <= colTimeIn
+          })
           
           if (canPlace) {
             column.push(item)
@@ -356,26 +494,38 @@ export function ScheduleViewClient({ date }: ScheduleViewClientProps) {
             />
 
             {/* Actions */}
-            <div className="flex items-center gap-3 flex-wrap">
-              {schedule && schedule._expedition_current_location && (
+            <div className="flex items-center gap-2 flex-nowrap">
+              {schedule && (
                 <>
-                  <div className="flex items-center gap-2 text-muted-foreground text-sm">
-                    <MapPin className="h-4 w-4" />
-                    <span>{formatLocation(schedule._expedition_current_location)}</span>
+                  <div className="flex items-center gap-1.5 text-muted-foreground text-sm max-w-[100px]">
+                    <MapPin className="h-4 w-4 flex-shrink-0" />
+                    <span className="truncate" title={schedule._expedition_current_location ? formatLocation(schedule._expedition_current_location) : "No Location"}>
+                      {schedule._expedition_current_location ? formatLocation(schedule._expedition_current_location) : "No Location"}
+                    </span>
                   </div>
                   <div className="h-6 w-px bg-border" />
                 </>
               )}
-
               {scheduleItems && scheduleItems.length === 0 && (
                 <>
                   <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
-                    <SelectTrigger className="w-[220px] h-10 bg-white text-sm font-medium">
-                      <SelectValue placeholder="Select template" />
+                    <SelectTrigger 
+                      className="w-[160px] bg-white text-sm font-medium cursor-pointer border border-input rounded-md px-3 hover:bg-accent hover:text-accent-foreground"
+                      style={{ height: '40px' }}
+                    >
+                      <SelectValue placeholder="Select template">
+                        {selectedTemplate ? (
+                          <span className="truncate">
+                            {templates?.find((t: any) => t.id.toString() === selectedTemplate)?.template_name || "Template"}
+                          </span>
+                        ) : (
+                          "Select template"
+                        )}
+                      </SelectValue>
                     </SelectTrigger>
-                    <SelectContent className="min-h-[40px]">
+                    <SelectContent className="min-w-[200px]">
                       {templates?.map((template: any) => (
-                        <SelectItem key={template.id} value={template.id.toString()} className="cursor-pointer text-sm">
+                        <SelectItem key={template.id} value={template.id.toString()} className="cursor-pointer text-sm py-2">
                           {template.template_name}
                         </SelectItem>
                       ))}
@@ -384,19 +534,13 @@ export function ScheduleViewClient({ date }: ScheduleViewClientProps) {
                   <Button 
                     onClick={handleAddTemplate}
                     variant="outline"
-                    className="cursor-pointer h-10 px-6"
+                    className="cursor-pointer h-10 px-4"
                     disabled={!selectedTemplate || addingTemplate}
                   >
                     {addingTemplate ? (
-                      <>
-                        <Spinner size="sm" className="h-3 w-3 mr-2" />
-                        Adding...
-                      </>
+                      <Spinner size="sm" className="h-4 w-4" />
                     ) : (
-                      <>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Template
-                      </>
+                      "Apply"
                     )}
                   </Button>
                   <div className="h-6 w-px bg-border" />
@@ -404,11 +548,27 @@ export function ScheduleViewClient({ date }: ScheduleViewClientProps) {
               )}
               <Button 
                 onClick={() => setAddSheetOpen(true)} 
-                className="cursor-pointer h-10 px-6"
+                className="cursor-pointer h-10 px-4"
               >
                 <Plus className="h-4 w-4 mr-2" />
-                Add Activity
+                Add
               </Button>
+              
+              {/* Edit Mode Toggle - Admin only, disabled if no activities */}
+              {isAdmin && (
+                <>
+                  <div className="h-6 w-px bg-border" />
+                  <Button
+                    variant={editMode ? "default" : "outline"}
+                    onClick={() => setEditMode(!editMode)}
+                    className="cursor-pointer h-10 px-4"
+                    disabled={!scheduleItems || scheduleItems.length === 0}
+                  >
+                    <Settings className="h-4 w-4 mr-2" />
+                    {editMode ? "Done" : "Edit"}
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -459,7 +619,7 @@ export function ScheduleViewClient({ date }: ScheduleViewClientProps) {
                         )}
                         
                         <div className="relative z-10 flex gap-3">
-                          <div className={`w-1 rounded-full ${getColorForType(item._expedition_schedule_item_types?.name || item.name)} flex-shrink-0`} />
+                          <div className={`w-1 rounded-full ${getColorForType(item)} flex-shrink-0`} />
                           
                           <div className="flex-1 min-w-0">
                             <h3 className="font-semibold text-base text-gray-900 mb-1 line-clamp-1">
@@ -499,91 +659,61 @@ export function ScheduleViewClient({ date }: ScheduleViewClientProps) {
                 <p className="text-muted-foreground">No timed activities scheduled</p>
               </div>
             ) : (
-              <div className="relative">
-                <div className="flex">
-                  <div className="w-16 md:w-20 flex-shrink-0" />
-                  <div className="flex-1 relative" style={{ minHeight: "2400px" }}>
-                    {HOURS.map((hour, idx) => (
-                      <div
-                        key={hour}
-                        className="absolute left-0 right-0 border-t border-border"
-                        style={{ top: `${(idx / 20) * 100}%` }}
-                      >
-                        <div className="absolute -left-16 md:-left-20 w-16 md:w-20 pr-3 text-right -mt-3">
-                          <div className="inline-block px-2 py-1 bg-gray-100 rounded text-xs md:text-sm font-medium text-gray-900">
-                            {formatTime(hour)}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-
-                    {getItemsWithLayout(scheduledItems).map((item: any, index: number) => {
-                      const position = getItemPosition(item.time_in, item.time_out)
-                      const widthPercent = 100 / item.totalColumns
-                      const leftPercent = item.column * widthPercent
-                      
-                      return (
+              <ScheduleDragContext
+                date={date}
+                timelineRef={timelineRef}
+                items={itemsWithLocalUpdates}
+                onItemUpdate={handleItemUpdate}
+                onResizingChange={setResizingItemId}
+                formatMilitaryTime={formatMilitaryTime}
+                getDuration={getDuration}
+                getColorForType={getColorForType}
+              >
+                <div className="relative">
+                  <div className="flex">
+                    <div className="w-16 md:w-20 flex-shrink-0" />
+                    <div ref={timelineRef} className="flex-1 relative" style={{ minHeight: "2400px" }}>
+                      {HOURS.map((hour, idx) => (
                         <div
-                          key={item.id}
-                          className="absolute mx-2 md:mx-4 rounded-2xl border-2 border-gray-100 p-3 cursor-pointer hover:shadow-lg transition-all bg-white overflow-hidden group"
-                          style={{
-                            top: position.top,
-                            height: position.height,
-                            left: `${leftPercent}%`,
-                            width: `${widthPercent}%`,
-                          }}
-                          onClick={() => handleItemClick(item)}
+                          key={hour}
+                          className="absolute left-0 right-0 border-t border-border"
+                          style={{ top: `${(idx / 20) * 100}%` }}
                         >
-                          <div className="absolute inset-0 bg-gradient-to-b from-gray-50/0 via-gray-50/20 to-gray-50/40 opacity-0 group-hover:opacity-100 transition-opacity" />
-
-                          <div className="absolute top-3 right-3 text-xs text-gray-500 font-medium z-20">
-                            {getDuration(item.time_in, item.time_out)}
-                          </div>
-
-                          {item.notes && (
-                            <div className="absolute bottom-3 right-3 text-gray-400 z-20">
-                              <MessageSquare className="h-4 w-4" />
-                            </div>
-                          )}
-
-                          <div className="relative z-10 flex gap-3 h-full">
-                            <div className={`w-1 rounded-full ${getColorForType(item._expedition_schedule_item_types?.name || item.name)} flex-shrink-0`} />
-                            
-                            <div className="flex-1 min-w-0 overflow-hidden pr-8">
-                              <h3 className="font-semibold text-base text-gray-900 mb-1 line-clamp-1">
-                                {item.name}
-                              </h3>
-                              <p className="text-xs text-gray-600 mb-1">
-                                {formatMilitaryTime(item.time_in)} - {formatMilitaryTime(item.time_out)}
-                              </p>
-                              {item._expedition_staff && (
-                                <div className="flex items-center gap-2 mb-1">
-                                  <Avatar className="h-4 w-4">
-                                    <AvatarFallback className="text-[9px] bg-gray-200 text-gray-700">
-                                      {item._expedition_staff.name?.split(" ").map((n: string) => n[0]).join("")}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                  <span className="text-xs text-gray-500 truncate">
-                                    {item._expedition_staff.name}
-                                    {item.participants && item.participants.length > 0 && (
-                                      <span> • {item.participants.map((p: any) => p.name).join(", ")}</span>
-                                    )}
-                                  </span>
-                                </div>
-                              )}
-                              {item.notes && (
-                                <p className="text-xs text-gray-600 line-clamp-1">
-                                  {item.notes}
-                                </p>
-                              )}
+                          <div className="absolute -left-16 md:-left-20 w-16 md:w-20 pr-3 text-right -mt-3">
+                            <div className="inline-block px-2 py-1 bg-gray-100 rounded text-xs md:text-sm font-medium text-gray-900">
+                              {formatTime(hour)}
                             </div>
                           </div>
                         </div>
-                      )
-                    })}
+                      ))}
+
+                      {getItemsWithLayout(scheduledItems).map((item: any, index: number) => {
+                        const position = getItemPosition(item.time_in, item.time_out)
+                        const widthPercent = 100 / item.totalColumns
+                        const leftPercent = item.column * widthPercent
+                        
+                        return (
+                          <DraggableScheduleItem
+                            key={item.id}
+                            item={item}
+                            position={position}
+                            widthPercent={widthPercent}
+                            leftPercent={leftPercent}
+                            onClick={() => handleItemClick(item)}
+                            onEdit={() => handleEditItem(item)}
+                            formatMilitaryTime={formatMilitaryTime}
+                            getDuration={getDuration}
+                            getColorForType={getColorForType}
+                            isResizing={resizingItemId === item.id}
+                            editMode={editMode}
+                            isAdmin={isAdmin}
+                          />
+                        )
+                      })}
+                    </div>
                   </div>
                 </div>
-              </div>
+              </ScheduleDragContext>
             )}
           </>
         )}
@@ -591,19 +721,35 @@ export function ScheduleViewClient({ date }: ScheduleViewClientProps) {
 
       {/* Modal */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="text-2xl">
-              {selectedItem?.name}
-            </DialogTitle>
-            {selectedItem && selectedItem.time_in !== 0 && selectedItem.time_out !== 0 && (
-              <DialogDescription className="text-base">
-                {formatMilitaryTime(selectedItem.time_in)} - {formatMilitaryTime(selectedItem.time_out)}
-              </DialogDescription>
-            )}
-          </DialogHeader>
+        <DialogContent className="max-w-lg p-0 border-2 border-gray-100 bg-gray-50 overflow-hidden gap-0 max-h-[85vh] flex flex-col" showCloseButton={false}>
+          {/* Header section with white background */}
+          <div className="bg-white px-6 py-4">
+            <div className="flex items-start justify-between gap-4">
+              <DialogHeader className="gap-1">
+                <DialogTitle className="text-2xl">
+                  {selectedItem?.name}
+                </DialogTitle>
+                {selectedItem && selectedItem.time_in !== 0 && selectedItem.time_out !== 0 && (
+                  <DialogDescription className="text-base">
+                    {formatMilitaryTime(selectedItem.time_in)} - {formatMilitaryTime(selectedItem.time_out)}
+                  </DialogDescription>
+                )}
+              </DialogHeader>
+              <button
+                onClick={() => setDialogOpen(false)}
+                className="rounded-full p-1.5 hover:bg-gray-100 transition-colors shrink-0 cursor-pointer"
+              >
+                <X className="h-5 w-5 text-gray-500" />
+              </button>
+            </div>
+          </div>
+          
+          {/* Divider */}
+          <div className="h-px bg-gray-200" />
+          
+          {/* Scrollable content section with gray background */}
           {selectedItem && (
-            <div className="space-y-5 py-4">
+            <div className="flex-1 overflow-y-auto p-6 pt-4 space-y-5 min-h-0">
               <div>
                 <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">
                   Led By
@@ -687,8 +833,51 @@ export function ScheduleViewClient({ date }: ScheduleViewClientProps) {
               </div>
             </div>
           )}
+          
+          {/* Divider - only show if admin (for action buttons) */}
+          {isAdmin && <div className="h-px bg-gray-200" />}
+          
+          {/* Fixed footer with action buttons - Admin only */}
+          {selectedItem && isAdmin && (
+            <div className="bg-white px-6 py-4 flex justify-end gap-2">
+              <button
+                className="bg-white rounded-full h-10 w-10 border border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-colors cursor-pointer flex items-center justify-center"
+                onClick={() => setShowModalDeleteConfirm(true)}
+                disabled={deletingFromModal}
+              >
+                <Trash2 className="h-4 w-4 text-gray-500" />
+              </button>
+              <button
+                className="bg-white rounded-full h-10 w-10 border border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-colors cursor-pointer flex items-center justify-center"
+                onClick={handleModalEdit}
+              >
+                <Pencil className="h-4 w-4 text-gray-500" />
+              </button>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
+
+      {/* Modal Delete Confirmation */}
+      <AlertDialog open={showModalDeleteConfirm} onOpenChange={setShowModalDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Activity</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{selectedItem?.name}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="cursor-pointer">Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleModalDeleteConfirm}
+              className="bg-red-600 hover:bg-red-700 cursor-pointer"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Mobile Bottom Navigation */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 md:hidden z-50 shadow-lg">
@@ -725,10 +914,11 @@ export function ScheduleViewClient({ date }: ScheduleViewClientProps) {
 
       <AddScheduleItemSheet
         open={addSheetOpen}
-        onOpenChange={setAddSheetOpen}
+        onOpenChange={handleSheetClose}
         scheduleId={schedule?.id || 0}
         date={date}
         staff={staff}
+        editItem={editingItem}
       />
     </div>
   )

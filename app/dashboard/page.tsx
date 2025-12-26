@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useRef, useCallback, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -18,7 +18,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
-import { Calendar, Plus, Check, X, ChevronDown, ChevronRight } from "lucide-react"
+import { Calendar, Plus, Check, X, ChevronDown, ChevronRight, ExternalLink } from "lucide-react"
 import { useExpeditionSchedules, useExpeditionLocations } from "@/lib/hooks/use-expeditions"
 import { useExpeditionContext } from "@/lib/contexts/expedition-context"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -51,6 +51,40 @@ export default function DashboardPage() {
   const [editingNotesId, setEditingNotesId] = useState<number | null>(null)
   const [notesValues, setNotesValues] = useState<Record<number, string>>({})
   const [collapsedLocations, setCollapsedLocations] = useState<Set<string>>(new Set())
+  
+  // Scroll tracking for gradient indicators
+  const [scrollState, setScrollState] = useState<Record<string, { left: boolean; right: boolean }>>({})
+  const scrollRefs = useRef<Record<string, HTMLDivElement | null>>({})
+  
+  const updateScrollState = useCallback((key: string, element: HTMLDivElement | null) => {
+    if (!element) return
+    const { scrollLeft, scrollWidth, clientWidth } = element
+    const canScrollLeft = scrollLeft > 0
+    const canScrollRight = scrollLeft < scrollWidth - clientWidth - 1
+    setScrollState(prev => {
+      if (prev[key]?.left === canScrollLeft && prev[key]?.right === canScrollRight) return prev
+      return { ...prev, [key]: { left: canScrollLeft, right: canScrollRight } }
+    })
+  }, [])
+  
+  const handleScrollRef = useCallback((key: string) => (el: HTMLDivElement | null) => {
+    scrollRefs.current[key] = el
+    if (el) {
+      updateScrollState(key, el)
+      el.onscroll = () => updateScrollState(key, el)
+    }
+  }, [updateScrollState])
+  
+  // Update scroll state on window resize
+  useEffect(() => {
+    const handleResize = () => {
+      Object.entries(scrollRefs.current).forEach(([key, el]) => {
+        updateScrollState(key, el)
+      })
+    }
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [updateScrollState])
 
   const formatLocation = (location: any) => {
     if (!location) return "No Location"
@@ -58,7 +92,10 @@ export default function DashboardPage() {
   }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
+    // Parse date without timezone issues by splitting the date string
+    const [year, month, day] = dateString.split('-').map(Number)
+    const date = new Date(year, month - 1, day) // month is 0-indexed
+    return date.toLocaleDateString("en-US", {
       weekday: "short",
       month: "short",
       day: "numeric",
@@ -66,8 +103,11 @@ export default function DashboardPage() {
   }
 
   const calculateTotalDays = (startDate: string, endDate: string) => {
-    const start = new Date(startDate)
-    const end = new Date(endDate)
+    // Parse dates without timezone issues
+    const [startYear, startMonth, startDay] = startDate.split('-').map(Number)
+    const [endYear, endMonth, endDay] = endDate.split('-').map(Number)
+    const start = new Date(startYear, startMonth - 1, startDay)
+    const end = new Date(endYear, endMonth - 1, endDay)
     const diffTime = Math.abs(end.getTime() - start.getTime())
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
     return diffDays + 1 // Include both start and end days
@@ -78,7 +118,14 @@ export default function DashboardPage() {
     if (!schedules || !selectedExpeditionId) return []
     return schedules
       .filter((s: any) => s.expeditions_id === selectedExpeditionId)
-      .sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime())
+      .sort((a: any, b: any) => {
+        // Parse dates without timezone issues
+        const [aYear, aMonth, aDay] = a.date.split('-').map(Number)
+        const [bYear, bMonth, bDay] = b.date.split('-').map(Number)
+        const aDate = new Date(aYear, aMonth - 1, aDay)
+        const bDate = new Date(bYear, bMonth - 1, bDay)
+        return aDate.getTime() - bDate.getTime()
+      })
   }, [schedules, selectedExpeditionId])
 
   // Filter out old dates if toggle is off
@@ -91,7 +138,9 @@ export default function DashboardPage() {
   const filteredSchedules = useMemo(() => {
     if (showOldDates) return allFilteredSchedules
     return allFilteredSchedules.filter((s: any) => {
-      const scheduleDate = new Date(s.date)
+      // Parse date without timezone issues
+      const [year, month, day] = s.date.split('-').map(Number)
+      const scheduleDate = new Date(year, month - 1, day)
       scheduleDate.setHours(0, 0, 0, 0)
       return scheduleDate >= today
     })
@@ -143,26 +192,22 @@ export default function DashboardPage() {
   }
 
   const isOldDate = (dateString: string) => {
-    const scheduleDate = new Date(dateString)
+    // Parse date without timezone issues
+    const [year, month, day] = dateString.split('-').map(Number)
+    const scheduleDate = new Date(year, month - 1, day)
     scheduleDate.setHours(0, 0, 0, 0)
     return scheduleDate < today
   }
 
   const handleViewSchedule = (schedule: any, e?: React.MouseEvent) => {
     e?.stopPropagation()
-    const dateStr = new Date(schedule.date).toISOString().split('T')[0]
-    router.push(`/schedule/${dateStr}`)
-  }
-
-  const handleRecordScores = (schedule: any, e?: React.MouseEvent) => {
-    e?.stopPropagation()
-    const dateStr = new Date(schedule.date).toISOString().split('T')[0]
-    router.push(`/evaluate/${dateStr}`)
+    // Use the date string directly - it's already in YYYY-MM-DD format
+    router.push(`/schedule/${schedule.date}`)
   }
 
   const handleRowClick = (schedule: any) => {
-    const dateStr = new Date(schedule.date).toISOString().split('T')[0]
-    router.push(`/evaluate/${dateStr}`)
+    // Use the date string directly - it's already in YYYY-MM-DD format
+    router.push(`/evaluate/${schedule.date}`)
   }
 
   const handleGenerateAllDates = async () => {
@@ -443,15 +488,21 @@ export default function DashboardPage() {
                   </button>
 
                   {!isCollapsed && (
-                    <Table className="table-fixed w-full">
+                    <div className="relative">
+                      {/* Left scroll gradient indicator */}
+                      <div className={`absolute top-0 left-0 bottom-0 w-8 bg-gradient-to-r from-white to-transparent pointer-events-none z-10 transition-opacity ${scrollState[locationKey]?.left ? 'opacity-100' : 'opacity-0'}`} />
+                      {/* Right scroll gradient indicator */}
+                      <div className={`absolute top-0 right-0 bottom-0 w-8 bg-gradient-to-l from-white to-transparent pointer-events-none z-10 transition-opacity ${scrollState[locationKey]?.right !== false ? 'opacity-100' : 'opacity-0'}`} />
+                      <div className="overflow-x-auto" ref={handleScrollRef(locationKey)}>
+                    <Table className="table-fixed w-full min-w-[1110px]">
                       <TableHeader>
                         <TableRow className="border-b bg-gray-50/30 hover:bg-gray-50/30">
                           <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600" style={{ width: "100px" }}>Date</TableHead>
                           <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600" style={{ width: "230px" }}>Location</TableHead>
                           <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600" style={{ width: "150px" }}>Type</TableHead>
                           <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600" style={{ width: "230px" }}>Destination</TableHead>
-                          <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600" style={{ width: "500px" }}>Notes</TableHead>
-                          <TableHead className="h-10 px-4 text-right text-xs font-semibold text-gray-600" style={{ width: "180px" }}>Actions</TableHead>
+                          <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600" style={{ width: "300px" }}>Notes</TableHead>
+                          <TableHead className="h-10 px-4 text-right text-xs font-semibold text-gray-600" style={{ width: "100px" }}>Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -570,9 +621,9 @@ export default function DashboardPage() {
                                   </SelectContent>
                                 </Select>
                               </TableCell>
-                              <TableCell className="h-14 px-4" style={{ width: "500px" }} onClick={(e) => e.stopPropagation()}>
+                              <TableCell className="h-14 px-4" style={{ width: "300px" }} onClick={(e) => e.stopPropagation()}>
                                 {editingNotesId === schedule.id ? (
-                                  <div className="flex items-center gap-1" style={{ maxWidth: "480px" }}>
+                                  <div className="flex items-center gap-1" style={{ maxWidth: "280px" }}>
                                     <Input
                                       value={notesValues.hasOwnProperty(schedule.id) ? notesValues[schedule.id] : (schedule.notes ?? "")}
                                       onChange={(e) => handleNotesChange(schedule.id, e.target.value)}
@@ -601,7 +652,7 @@ export default function DashboardPage() {
                                       className="h-6 w-6 p-0 cursor-pointer shrink-0"
                                       onClick={() => handleNotesCancel(schedule.id)}
                                     >
-                                      <X className="h-3 w-3 text-red-600" />
+                                      <X className="h-3 w-3 text-gray-600" />
                                     </Button>
                                   </div>
                                 ) : (
@@ -616,33 +667,15 @@ export default function DashboardPage() {
                                   </div>
                                 )}
                               </TableCell>
-                              <TableCell className="h-14 px-4" style={{ width: "180px" }}>
+                              <TableCell className="h-14 px-4" style={{ width: "100px" }}>
                                 <div className="flex items-center justify-end gap-2">
                                   <Button 
-                                    variant="outline" 
-                                    size="sm"
-                                    onClick={(e) => handleViewSchedule(schedule, e)}
-                                    className="text-gray-600 hover:text-gray-900 cursor-pointer"
-                                  >
-                                    View
-                                  </Button>
-                                  <Button 
                                     variant="outline"
-                                    size="sm"
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      router.push(`/update-schedule/${schedule.id}`)
-                                    }}
-                                    className="cursor-pointer"
+                                    size="icon"
+                                    onClick={(e) => handleViewSchedule(schedule, e)}
+                                    className="h-8 w-8 text-gray-500 hover:text-gray-900 cursor-pointer border-gray-300"
                                   >
-                                    Update
-                                  </Button>
-                                  <Button 
-                                    size="sm"
-                                    onClick={(e) => handleRecordScores(schedule, e)}
-                                    className="bg-gray-900 hover:bg-gray-800 text-white cursor-pointer"
-                                  >
-                                    Record
+                                    <ExternalLink className="h-4 w-4" />
                                   </Button>
                                 </div>
                               </TableCell>
@@ -651,21 +684,28 @@ export default function DashboardPage() {
                         })}
                       </TableBody>
                     </Table>
+                      </div>
+                    </div>
                   )}
                 </div>
               )
             })
           ) : (
-            <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-                    <Table className="table-fixed w-full">
+            <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden relative">
+              {/* Left scroll gradient indicator */}
+              <div className={`absolute top-0 left-0 bottom-0 w-8 bg-gradient-to-r from-white to-transparent pointer-events-none z-10 transition-opacity ${scrollState['main']?.left ? 'opacity-100' : 'opacity-0'}`} />
+              {/* Right scroll gradient indicator */}
+              <div className={`absolute top-0 right-0 bottom-0 w-8 bg-gradient-to-l from-white to-transparent pointer-events-none z-10 transition-opacity ${scrollState['main']?.right !== false ? 'opacity-100' : 'opacity-0'}`} />
+              <div className="overflow-x-auto" ref={handleScrollRef('main')}>
+                    <Table className="table-fixed w-full min-w-[1110px]">
                       <TableHeader>
                         <TableRow className="border-b bg-gray-50/30 hover:bg-gray-50/30">
                           <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600" style={{ width: "100px" }}>Date</TableHead>
                           <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600" style={{ width: "230px" }}>Location</TableHead>
                           <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600" style={{ width: "150px" }}>Type</TableHead>
                           <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600" style={{ width: "230px" }}>Destination</TableHead>
-                          <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600" style={{ width: "500px" }}>Notes</TableHead>
-                          <TableHead className="h-10 px-4 text-right text-xs font-semibold text-gray-600" style={{ width: "180px" }}>Actions</TableHead>
+                          <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600" style={{ width: "300px" }}>Notes</TableHead>
+                          <TableHead className="h-10 px-4 text-right text-xs font-semibold text-gray-600" style={{ width: "100px" }}>Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -783,9 +823,9 @@ export default function DashboardPage() {
                                   </SelectContent>
                                 </Select>
                               </TableCell>
-                              <TableCell className="h-14 px-4" style={{ width: "500px" }} onClick={(e) => e.stopPropagation()}>
+                              <TableCell className="h-14 px-4" style={{ width: "300px" }} onClick={(e) => e.stopPropagation()}>
                                 {editingNotesId === schedule.id ? (
-                                  <div className="flex items-center gap-1" style={{ maxWidth: "480px" }}>
+                                  <div className="flex items-center gap-1" style={{ maxWidth: "280px" }}>
                                     <Input
                                       value={notesValues.hasOwnProperty(schedule.id) ? notesValues[schedule.id] : (schedule.notes ?? "")}
                                       onChange={(e) => handleNotesChange(schedule.id, e.target.value)}
@@ -814,7 +854,7 @@ export default function DashboardPage() {
                                       className="h-6 w-6 p-0 cursor-pointer shrink-0"
                                       onClick={() => handleNotesCancel(schedule.id)}
                                     >
-                                      <X className="h-3 w-3 text-red-600" />
+                                      <X className="h-3 w-3 text-gray-600" />
                                     </Button>
                                   </div>
                                 ) : (
@@ -829,33 +869,15 @@ export default function DashboardPage() {
                                   </div>
                                 )}
                               </TableCell>
-                              <TableCell className="h-14 px-4" style={{ width: "180px" }}>
+                              <TableCell className="h-14 px-4" style={{ width: "100px" }}>
                                 <div className="flex items-center justify-end gap-2">
                                   <Button 
-                                    variant="outline" 
-                                    size="sm"
-                                    onClick={(e) => handleViewSchedule(schedule, e)}
-                                    className="text-gray-600 hover:text-gray-900 cursor-pointer"
-                                  >
-                                    View
-                                  </Button>
-                                  <Button 
                                     variant="outline"
-                                    size="sm"
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      router.push(`/update-schedule/${schedule.id}`)
-                                    }}
-                                    className="cursor-pointer"
+                                    size="icon"
+                                    onClick={(e) => handleViewSchedule(schedule, e)}
+                                    className="h-8 w-8 text-gray-500 hover:text-gray-900 cursor-pointer border-gray-300"
                                   >
-                                    Update
-                                  </Button>
-                                  <Button 
-                                    size="sm"
-                                    onClick={(e) => handleRecordScores(schedule, e)}
-                                    className="bg-gray-900 hover:bg-gray-800 text-white cursor-pointer"
-                                  >
-                                    Record
+                                    <ExternalLink className="h-4 w-4" />
                                   </Button>
                                 </div>
                               </TableCell>
@@ -864,6 +886,7 @@ export default function DashboardPage() {
                         })}
                       </TableBody>
                     </Table>
+              </div>
             </div>
           )}
         </div>

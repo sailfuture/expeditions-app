@@ -113,6 +113,13 @@ export async function getStudentsByExpedition(expeditionsId: number) {
   return xanoFetch<any[]>(`/students_by_expedition?expeditions_id=${expeditionsId}`)
 }
 
+export async function createExpeditionStudentInformation(data: Record<string, any>) {
+  return xanoFetch<any>("/expeditions_student_information", {
+    method: "POST",
+    body: JSON.stringify(data),
+  })
+}
+
 // ============ Teachers (Staff) ============
 export async function getTeachers() {
   return xanoFetch<any[]>("/teachers")

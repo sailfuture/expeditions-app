@@ -18,6 +18,11 @@ export function Navbar() {
   const { selectedExpedition, selectedExpeditionId, setSelectedExpeditionId, userExpeditions, isLoading } = useExpeditionContext()
   const { currentUser } = useCurrentUser()
 
+  // Hide navbar on public pages
+  if (pathname === "/intake") {
+    return null
+  }
+
   const selectedExpeditionName = selectedExpedition?.name || "Select Expedition"
   
   // Get today's date in YYYY-MM-DD format

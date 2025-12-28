@@ -166,11 +166,34 @@ export function ScheduleViewClient({ date, expeditionId }: ScheduleViewClientPro
     }))
   }, [])
 
-  // Clear local updates when data refreshes from server
-  // This ensures optimistic updates don't persist after API sync
+  // Clear local updates only when server data matches the local update
+  // This prevents the flash when mutate() is called
+  const localUpdatesRef = useRef(localItemUpdates)
+  localUpdatesRef.current = localItemUpdates
+  
   useEffect(() => {
-    if (scheduleItems) {
-      setLocalItemUpdates({})
+    if (scheduleItems && Object.keys(localUpdatesRef.current).length > 0) {
+      const updatesToRemove: number[] = []
+      
+      Object.entries(localUpdatesRef.current).forEach(([itemIdStr, localUpdate]) => {
+        const itemId = parseInt(itemIdStr)
+        const serverItem = scheduleItems.find((item: any) => item.id === itemId)
+        
+        // Only clear local update if server has the same values
+        if (serverItem && 
+            serverItem.time_in === localUpdate.time_in && 
+            serverItem.time_out === localUpdate.time_out) {
+          updatesToRemove.push(itemId)
+        }
+      })
+      
+      if (updatesToRemove.length > 0) {
+        setLocalItemUpdates(prev => {
+          const newUpdates = { ...prev }
+          updatesToRemove.forEach(id => delete newUpdates[id])
+          return newUpdates
+        })
+      }
     }
   }, [scheduleItems])
 

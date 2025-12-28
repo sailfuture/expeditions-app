@@ -2,7 +2,6 @@
 
 import React, { useRef, useEffect } from "react"
 import { useDraggable } from "@dnd-kit/core"
-import { CSS } from "@dnd-kit/utilities"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { MessageSquare, GripVertical, Pencil } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -42,7 +41,6 @@ export function DraggableScheduleItem({
     attributes,
     listeners,
     setNodeRef,
-    transform,
     isDragging: isCurrentlyDragging,
   } = useDraggable({
     id: `item-${item.id}`,
@@ -74,20 +72,20 @@ export function DraggableScheduleItem({
     onClick()
   }
 
-  // Only animate position changes when not actively dragging or resizing
-  const shouldAnimate = !isCurrentlyDragging && !isResizing
+  // Calculate resize handle height - 15% of item height, min 8px, max 24px
+  const itemHeightPx = parseFloat(position.height) || 100
+  const resizeHandleHeight = Math.min(24, Math.max(8, itemHeightPx * 0.15))
 
   const style: React.CSSProperties = {
     top: position.top,
     height: position.height,
     left: `${leftPercent}%`,
     width: `${widthPercent}%`,
-    transform: transform ? CSS.Translate.toString(transform) : undefined,
-    zIndex: isCurrentlyDragging || isResizing ? 1000 : undefined,
-    // Animate position/size changes with movement, not fade
-    transition: shouldAnimate 
-      ? "top 300ms ease-out, height 300ms ease-out, left 300ms ease-out, width 300ms ease-out, box-shadow 150ms ease" 
-      : "box-shadow 150ms ease",
+    // Don't apply transform - the DragOverlay handles the visual movement during drag
+    // The original item stays in place and only updates when data changes
+    zIndex: isResizing ? 1000 : undefined,
+    // Hide the original item while dragging - the DragOverlay shows the preview
+    opacity: isCurrentlyDragging ? 0 : 1,
   }
 
   return (
@@ -97,17 +95,18 @@ export function DraggableScheduleItem({
         "absolute mx-2 md:mx-4 rounded-2xl border-2 p-3 bg-white overflow-hidden group",
         isCurrentlyDragging 
           ? "border-blue-400 shadow-2xl cursor-grabbing" 
-          : "border-gray-100 hover:shadow-lg cursor-pointer"
+          : editMode 
+            ? "border-gray-100 hover:shadow-lg cursor-grab active:cursor-grabbing"
+            : "border-gray-100 hover:shadow-lg cursor-pointer"
       )}
       style={style}
       onClick={handleClick}
+      {...(editMode ? { ...listeners, ...attributes } : {})}
     >
-      {/* Drag handle - positioned on right side (only in edit mode) */}
+      {/* Drag handle indicator - positioned on right side (only in edit mode) */}
       {editMode && (
         <div 
-          className="absolute top-0 bottom-0 right-0 w-12 flex flex-col items-center justify-center cursor-grab active:cursor-grabbing z-30 bg-gradient-to-l from-gray-50 to-transparent opacity-0 group-hover:opacity-100 transition-all"
-          {...listeners}
-          {...attributes}
+          className="absolute top-0 bottom-0 right-0 w-12 flex flex-col items-center justify-center z-30 bg-gradient-to-l from-gray-50 to-transparent opacity-0 group-hover:opacity-100 transition-all pointer-events-none"
         >
           <GripVertical className="h-5 w-5 text-gray-400" />
         </div>
@@ -133,30 +132,40 @@ export function DraggableScheduleItem({
         </span>
       </div>
 
-      {/* Top resize handle (only in edit mode) - larger for easier clicking */}
+      {/* Top resize handle (only in edit mode) - height scales with item size */}
       {editMode && (
         <div 
-          className="absolute top-0 left-0 right-0 h-4 cursor-ns-resize z-40 hover:bg-gray-200/50 transition-colors"
+          className="absolute top-0 left-0 right-0 cursor-ns-resize z-50 hover:bg-gray-300/30 transition-colors"
+          style={{ cursor: 'ns-resize', height: resizeHandleHeight }}
           onMouseDown={(e) => {
             e.stopPropagation()
+            e.preventDefault()
             const event = new CustomEvent('schedule-resize-start', {
               detail: { itemId: item.id, edge: 'top', startY: e.clientY, item }
             })
             window.dispatchEvent(event)
           }}
+          onPointerDown={(e) => {
+            e.stopPropagation()
+          }}
         />
       )}
 
-      {/* Bottom resize handle (only in edit mode) - larger for easier clicking */}
+      {/* Bottom resize handle (only in edit mode) - height scales with item size */}
       {editMode && (
         <div 
-          className="absolute bottom-0 left-0 right-0 h-4 cursor-ns-resize z-40 hover:bg-gray-200/50 transition-colors"
+          className="absolute bottom-0 left-0 right-0 cursor-ns-resize z-50 hover:bg-gray-300/30 transition-colors"
+          style={{ cursor: 'ns-resize', height: resizeHandleHeight }}
           onMouseDown={(e) => {
             e.stopPropagation()
+            e.preventDefault()
             const event = new CustomEvent('schedule-resize-start', {
               detail: { itemId: item.id, edge: 'bottom', startY: e.clientY, item }
             })
             window.dispatchEvent(event)
+          }}
+          onPointerDown={(e) => {
+            e.stopPropagation()
           }}
         />
       )}

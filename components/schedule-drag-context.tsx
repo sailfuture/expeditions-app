@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef, ReactNode } from "react"
+import { createPortal } from "react-dom"
 import {
   DndContext,
   DragEndEvent,
@@ -80,6 +81,12 @@ export function ScheduleDragContext({
   expeditionsId,
 }: ScheduleDragContextProps) {
   const [activeItem, setActiveItem] = useState<any>(null)
+  const [snapPreview, setSnapPreview] = useState<{
+    top: number
+    height: number
+    timeIn: number
+    timeOut: number
+  } | null>(null)
   const [resizing, setResizing] = useState<{
     itemId: number
     edge: "top" | "bottom"
@@ -111,12 +118,57 @@ export function ScheduleDragContext({
     }
   }
 
+  const handleDragMove = (event: DragMoveEvent) => {
+    const { active, delta } = event
+    const item = active.data.current?.item
+    
+    if (!item || !timelineRef.current) {
+      setSnapPreview(null)
+      return
+    }
+
+    const timelineHeight = timelineRef.current.getBoundingClientRect().height
+    const deltaMinutes = (delta.y / timelineHeight) * TIMELINE_HOURS * 60
+    const snappedDeltaMinutes = Math.round(deltaMinutes / SNAP_MINUTES) * SNAP_MINUTES
+
+    // Calculate new times
+    const originalStartMinutes = Math.floor(item.time_in / 100) * 60 + (item.time_in % 100)
+    const originalEndMinutes = Math.floor(item.time_out / 100) * 60 + (item.time_out % 100)
+    
+    const newStartMinutes = originalStartMinutes + snappedDeltaMinutes
+    const newEndMinutes = originalEndMinutes + snappedDeltaMinutes
+    
+    // Clamp to valid range
+    const minMinutes = TIMELINE_START_HOUR * 60
+    const maxMinutes = (TIMELINE_START_HOUR + TIMELINE_HOURS) * 60
+    
+    if (newStartMinutes < minMinutes || newEndMinutes > maxMinutes) {
+      setSnapPreview(null)
+      return
+    }
+    
+    const newTimeIn = Math.floor(newStartMinutes / 60) * 100 + (newStartMinutes % 60)
+    const newTimeOut = Math.floor(newEndMinutes / 60) * 100 + (newEndMinutes % 60)
+
+    // Calculate preview position
+    const previewTop = militaryTimeToPixel(newTimeIn, timelineHeight)
+    const previewBottom = militaryTimeToPixel(newTimeOut, timelineHeight)
+    
+    setSnapPreview({
+      top: previewTop,
+      height: previewBottom - previewTop,
+      timeIn: newTimeIn,
+      timeOut: newTimeOut,
+    })
+  }
+
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, delta } = event
     const item = active.data.current?.item
     
     if (!item || !timelineRef.current) {
       setActiveItem(null)
+    setSnapPreview(null)
       return
     }
 
@@ -126,6 +178,7 @@ export function ScheduleDragContext({
 
     if (snappedDeltaMinutes === 0) {
       setActiveItem(null)
+    setSnapPreview(null)
       return
     }
 
@@ -143,29 +196,41 @@ export function ScheduleDragContext({
     if (newStartMinutes < minMinutes || newEndMinutes > maxMinutes) {
       toast.error("Cannot move event outside schedule hours")
       setActiveItem(null)
+    setSnapPreview(null)
       return
     }
     
     const newTimeIn = Math.floor(newStartMinutes / 60) * 100 + (newStartMinutes % 60)
     const newTimeOut = Math.floor(newEndMinutes / 60) * 100 + (newEndMinutes % 60)
 
-    // Optimistic update
+    // Optimistic update - update local state immediately
     onItemUpdate(item.id, newTimeIn, newTimeOut)
     setActiveItem(null)
+    setSnapPreview(null)
 
+    const cacheKey = `expedition_schedule_items_date_${date}_${expeditionsId || 'all'}`
+    
     // API call
     try {
       await updateExpeditionScheduleItem(item.id, {
         time_in: newTimeIn,
         time_out: newTimeOut,
       })
-      await mutate(`expedition_schedule_items_date_${date}_${expeditionsId || 'all'}`)
+      // Use optimistic data update to prevent flash when server responds
+      await mutate(cacheKey, (currentData: any[]) => {
+        if (!currentData) return currentData
+        return currentData.map((i: any) => 
+          i.id === item.id 
+            ? { ...i, time_in: newTimeIn, time_out: newTimeOut }
+            : i
+        )
+      }, { revalidate: false })
       toast.success(`Moved to ${formatMilitaryTime(newTimeIn)} - ${formatMilitaryTime(newTimeOut)}`)
     } catch (error) {
       console.error("Failed to update schedule item:", error)
       toast.error("Failed to update time")
-      // Revert optimistic update
-      await mutate(`expedition_schedule_items_date_${date}_${expeditionsId || 'all'}`)
+      // Revert optimistic update - refetch from server
+      await mutate(cacheKey)
     }
   }
 
@@ -241,18 +306,31 @@ export function ScheduleDragContext({
       }
 
       // API call
+      const cacheKey = `expedition_schedule_items_date_${date}_${expeditionsId || 'all'}`
+      const newTimeIn = item.time_in
+      const newTimeOut = item.time_out
+      const itemId = resizing.itemId
+      
       try {
-        await updateExpeditionScheduleItem(resizing.itemId, {
-          time_in: item.time_in,
-          time_out: item.time_out,
+        await updateExpeditionScheduleItem(itemId, {
+          time_in: newTimeIn,
+          time_out: newTimeOut,
         })
-        await mutate(`expedition_schedule_items_date_${date}_${expeditionsId || 'all'}`)
-        toast.success(`Updated to ${formatMilitaryTime(item.time_in)} - ${formatMilitaryTime(item.time_out)}`)
+        // Use optimistic data update to prevent flash when server responds
+        await mutate(cacheKey, (currentData: any[]) => {
+          if (!currentData) return currentData
+          return currentData.map((i: any) => 
+            i.id === itemId 
+              ? { ...i, time_in: newTimeIn, time_out: newTimeOut }
+              : i
+          )
+        }, { revalidate: false })
+        toast.success(`Updated to ${formatMilitaryTime(newTimeIn)} - ${formatMilitaryTime(newTimeOut)}`)
       } catch (error) {
         console.error("Failed to update schedule item:", error)
         toast.error("Failed to update time")
-        // Revert optimistic update
-        await mutate(`expedition_schedule_items_date_${date}_${expeditionsId || 'all'}`)
+        // Revert optimistic update - refetch from server
+        await mutate(cacheKey)
       }
 
       setResizing(null)
@@ -274,10 +352,32 @@ export function ScheduleDragContext({
     <DndContext
       sensors={sensors}
       onDragStart={handleDragStart}
+      onDragMove={handleDragMove}
       onDragEnd={handleDragEnd}
       modifiers={[restrictToVerticalAxis]}
     >
       {children}
+      
+      {/* Snap Preview Indicator - rendered via portal into timeline */}
+      {snapPreview && timelineRef.current && createPortal(
+        <div
+          className="absolute pointer-events-none z-40 mx-2 md:mx-4 left-0 right-0"
+          style={{
+            top: snapPreview.top,
+            height: snapPreview.height,
+          }}
+        >
+          <div className="h-full w-full rounded-2xl border-2 border-dashed border-gray-300 bg-gray-100/50" />
+          {/* Time label positioned above the preview with padding */}
+          <div className="absolute -top-9 left-1/2 -translate-x-1/2 whitespace-nowrap">
+            <span className="text-xs font-medium text-gray-600 bg-white px-2 py-1 rounded-full shadow-md border border-gray-200">
+              {formatMilitaryTime(snapPreview.timeIn)} - {formatMilitaryTime(snapPreview.timeOut)}
+            </span>
+          </div>
+        </div>,
+        timelineRef.current
+      )}
+      
       <DragOverlay>
         {activeItem ? (
           <div className="bg-white rounded-2xl border-2 border-blue-400 shadow-2xl p-3 opacity-90 pointer-events-none min-w-[200px]">

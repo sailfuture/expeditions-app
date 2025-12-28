@@ -10,12 +10,13 @@ import useSWR from "swr"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 
-// Window constants - shows 5 hours total (1 behind + 4 ahead)
-const HOURS_BEHIND = 1
-const HOURS_AHEAD = 4
-const WINDOW_HOURS = HOURS_BEHIND + HOURS_AHEAD // 5 hours visible
-const DAY_START_HOUR = 6 // 6 AM
-const DAY_END_HOUR = 23 // 11 PM
+// Timeline constants - Split into two even rows
+const ROW1_START = 5  // 5 AM
+const ROW1_END = 14   // 2 PM (9 hours)
+const ROW2_START = 14 // 2 PM
+const ROW2_END = 23   // 11 PM (9 hours)
+const ROW1_HOURS = ROW1_END - ROW1_START
+const ROW2_HOURS = ROW2_END - ROW2_START
 
 // Parse UTC offset string like "UTC-5" or "UTC+2" to get offset in hours
 function parseUtcOffset(offsetString: string | undefined): number {
@@ -122,28 +123,22 @@ function TVDisplayContent() {
     return scheduleItems[0]?._expedition_schedule || null
   }, [scheduleItems])
 
-  // Calculate the visible time window based on current time
-  const timeWindow = useMemo(() => {
-    const currentHour = currentTime.getHours()
-    const currentMinutes = currentTime.getMinutes()
-    const currentDecimalHour = currentHour + currentMinutes / 60
-    
-    // Calculate window start (1 hour behind current time)
-    let windowStart = currentDecimalHour - HOURS_BEHIND
-    let windowEnd = currentDecimalHour + HOURS_AHEAD
-    
-    // Clamp to day boundaries
-    if (windowStart < DAY_START_HOUR) {
-      windowStart = DAY_START_HOUR
-      windowEnd = DAY_START_HOUR + WINDOW_HOURS
-    }
-    if (windowEnd > DAY_END_HOUR) {
-      windowEnd = DAY_END_HOUR
-      windowStart = Math.max(DAY_START_HOUR, DAY_END_HOUR - WINDOW_HOURS)
-    }
-    
-    return { start: windowStart, end: windowEnd }
-  }, [currentTime])
+  // Filter items for each row
+  const row1Items = useMemo(() => {
+    return itemsWithLayout.filter((item: any) => {
+      const startHour = Math.floor(item.time_in / 100)
+      const endHour = Math.floor(item.time_out / 100)
+      return startHour < ROW1_END && endHour > ROW1_START
+    })
+  }, [itemsWithLayout])
+
+  const row2Items = useMemo(() => {
+    return itemsWithLayout.filter((item: any) => {
+      const startHour = Math.floor(item.time_in / 100)
+      const endHour = Math.floor(item.time_out / 100)
+      return startHour < ROW2_END && endHour > ROW2_START
+    })
+  }, [itemsWithLayout])
 
   // Calculate layout for overlapping items
   const itemsWithLayout = useMemo(() => {
@@ -196,99 +191,69 @@ function TVDisplayContent() {
     return items
   }, [scheduleItems])
 
-  // Filter items visible in current window
-  const visibleItems = useMemo(() => {
-    const windowStartMilitary = Math.floor(timeWindow.start) * 100 + Math.round((timeWindow.start % 1) * 60)
-    const windowEndMilitary = Math.floor(timeWindow.end) * 100 + Math.round((timeWindow.end % 1) * 60)
-    
-    return itemsWithLayout.filter((item: any) => {
-      // Item is visible if it overlaps with the window
-      return item.time_out > windowStartMilitary && item.time_in < windowEndMilitary
-    })
-  }, [itemsWithLayout, timeWindow])
-
-  // Update current time every 10 seconds for smooth animation
-  useEffect(() => {
-    if (testTime) return // Don't update if testing specific time
-    
-    const interval = setInterval(() => {
-      setCurrentTime(getCurrentTimeForOffset(timezoneOffset))
-    }, 10000) // Update every 10 seconds
-    return () => clearInterval(interval)
-  }, [timezoneOffset, testTime])
-
-  // Calculate position for an item within the visible window
-  const getItemPosition = (timeIn: number, timeOut: number) => {
-    const windowDuration = timeWindow.end - timeWindow.start // in hours
-    
-    // Convert military time to decimal hours
+  // Calculate position for an item in a specific row
+  const getItemPositionForRow = (timeIn: number, timeOut: number, rowStart: number, rowEnd: number, rowHours: number) => {
     const startHour = Math.floor(timeIn / 100) + (timeIn % 100) / 60
     const endHour = Math.floor(timeOut / 100) + (timeOut % 100) / 60
     
-    // Calculate position relative to window - exact percentages
-    const startPercent = ((startHour - timeWindow.start) / windowDuration) * 100
-    const endPercent = ((endHour - timeWindow.start) / windowDuration) * 100
-    const widthPercent = endPercent - startPercent
+    const clampedStart = Math.max(startHour, rowStart)
+    const clampedEnd = Math.min(endHour, rowEnd)
+    
+    const startPercent = ((clampedStart - rowStart) / rowHours) * 100
+    const endPercent = ((clampedEnd - rowStart) / rowHours) * 100
     
     return { 
-      left: `${startPercent}%`, 
-      width: `${widthPercent}%`,
-      // Also return raw values for calculations
-      startPercent,
-      widthPercent
+      left: `${Math.max(0, startPercent)}%`, 
+      width: `${Math.max(2, endPercent - startPercent)}%` 
     }
   }
 
-  // Current time position within window (should be at ~20% from left, since 1 hour behind out of 5)
-  const currentTimePosition = useMemo(() => {
-    const currentHour = currentTime.getHours() + currentTime.getMinutes() / 60
-    if (currentHour < DAY_START_HOUR || currentHour > DAY_END_HOUR) return null
-    
-    const windowDuration = timeWindow.end - timeWindow.start
-    const percent = ((currentHour - timeWindow.start) / windowDuration) * 100
-    return `${Math.max(0, Math.min(100, percent))}%`
-  }, [currentTime, timeWindow])
+  // Update current time every minute
+  useEffect(() => {
+    if (testTime) return
+    const interval = setInterval(() => {
+      setCurrentTime(getCurrentTimeForOffset(timezoneOffset))
+    }, 60000)
+    return () => clearInterval(interval)
+  }, [timezoneOffset, testTime])
 
-  // Generate hour markers for visible window
-  const hourMarkers = useMemo(() => {
+  // Current time position for each row
+  const currentTimeRow1Position = useMemo(() => {
+    const hours = currentTime.getHours()
+    const minutes = currentTime.getMinutes()
+    const decimalHour = hours + minutes / 60
+    if (decimalHour < ROW1_START || decimalHour >= ROW1_END) return null
+    const percent = ((decimalHour - ROW1_START) / ROW1_HOURS) * 100
+    return `${percent}%`
+  }, [currentTime])
+
+  const currentTimeRow2Position = useMemo(() => {
+    const hours = currentTime.getHours()
+    const minutes = currentTime.getMinutes()
+    const decimalHour = hours + minutes / 60
+    if (decimalHour < ROW2_START || decimalHour >= ROW2_END) return null
+    const percent = ((decimalHour - ROW2_START) / ROW2_HOURS) * 100
+    return `${percent}%`
+  }, [currentTime])
+
+  // Hour markers for each row
+  const row1HourMarkers = useMemo(() => {
     const markers = []
-    const startHour = Math.floor(timeWindow.start)
-    const endHour = Math.ceil(timeWindow.end)
-    const windowDuration = timeWindow.end - timeWindow.start
-    
-    for (let hour = startHour; hour <= endHour; hour++) {
-      const percent = ((hour - timeWindow.start) / windowDuration) * 100
-      if (percent >= -5 && percent <= 105) {
-        markers.push({ hour, percent })
-      }
+    for (let hour = ROW1_START; hour <= ROW1_END; hour++) {
+      const percent = ((hour - ROW1_START) / ROW1_HOURS) * 100
+      markers.push({ hour, percent })
     }
     return markers
-  }, [timeWindow])
+  }, [])
 
-  // Generate 15-minute interval markers
-  const quarterHourMarkers = useMemo(() => {
+  const row2HourMarkers = useMemo(() => {
     const markers = []
-    const startHour = Math.floor(timeWindow.start)
-    const endHour = Math.ceil(timeWindow.end)
-    const windowDuration = timeWindow.end - timeWindow.start
-    
-    for (let hour = startHour; hour <= endHour; hour++) {
-      // Add markers at :15, :30, :45 (skip :00 as those are hour markers)
-      for (const minutes of [15, 30, 45]) {
-        const decimalHour = hour + minutes / 60
-        const percent = ((decimalHour - timeWindow.start) / windowDuration) * 100
-        if (percent >= 0 && percent <= 100) {
-          markers.push({ 
-            hour, 
-            minutes, 
-            percent,
-            isHalf: minutes === 30 // :30 gets slightly more visible line
-          })
-        }
-      }
+    for (let hour = ROW2_START; hour <= ROW2_END; hour++) {
+      const percent = ((hour - ROW2_START) / ROW2_HOURS) * 100
+      markers.push({ hour, percent })
     }
     return markers
-  }, [timeWindow])
+  }, [])
 
   // Parse display date
   const displayDate = useMemo(() => {

@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState, useRef, useCallback, useEffect } from "react"
+import { useMemo, useState, useRef, useCallback, useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { format, addDays, subDays, isToday } from "date-fns"
 import { Button } from "@/components/ui/button"
@@ -48,6 +48,14 @@ import { ExpeditionHeader } from "@/components/expedition-header"
 import { useExpeditions } from "@/lib/hooks/use-expeditions"
 
 export default function PlannerPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center h-64"><Skeleton className="h-8 w-32" /></div>}>
+      <PlannerPageContent />
+    </Suspense>
+  )
+}
+
+function PlannerPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const expeditionIdFromUrl = searchParams.get('expedition') ? parseInt(searchParams.get('expedition')!) : null

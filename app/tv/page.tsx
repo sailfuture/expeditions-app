@@ -1,17 +1,21 @@
 "use client"
 
-import { useMemo, useState, useEffect, useRef, Suspense } from "react"
-import { useSearchParams } from "next/navigation"
+import { useMemo, useState, useEffect, Suspense } from "react"
+import { useSearchParams, usePathname } from "next/navigation"
+import Link from "next/link"
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
 import { getActiveExpedition, getExpeditionScheduleItemsByDate } from "@/lib/xano"
 import useSWR from "swr"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Button } from "@/components/ui/button"
 
-// Timeline constants - 24 hour display from 5 AM to 5 AM next day
-const TIMELINE_START_HOUR = 5 // 5 AM
-const TIMELINE_END_HOUR = 29 // 5 AM next day (24 + 5)
-const TOTAL_HOURS = TIMELINE_END_HOUR - TIMELINE_START_HOUR // 24 hours
+// Window constants - shows 5 hours total (1 behind + 4 ahead)
+const HOURS_BEHIND = 1
+const HOURS_AHEAD = 4
+const WINDOW_HOURS = HOURS_BEHIND + HOURS_AHEAD // 5 hours visible
+const DAY_START_HOUR = 6 // 6 AM
+const DAY_END_HOUR = 23 // 11 PM
 
 // Parse UTC offset string like "UTC-5" or "UTC+2" to get offset in hours
 function parseUtcOffset(offsetString: string | undefined): number {
@@ -38,7 +42,7 @@ function getCurrentTimeForOffset(offsetHours: number): Date {
   return new Date(utcTime + (offsetHours * 3600000))
 }
 
-// Color mapping for activity types - returns Tailwind color classes
+// Color mapping for activity types
 const getColorForType = (item: any): string => {
   const color = item._expedition_schedule_item_types?.color || ""
   const colorMap: Record<string, string> = {
@@ -66,25 +70,10 @@ const formatTime = (militaryTime: number): string => {
   return `${displayHours}:${minutes.toString().padStart(2, "0")} ${period}`
 }
 
-// Get duration string
-const getDuration = (timeIn: number, timeOut: number): string => {
-  const startMinutes = Math.floor(timeIn / 100) * 60 + (timeIn % 100)
-  const endMinutes = Math.floor(timeOut / 100) * 60 + (timeOut % 100)
-  const durationMinutes = endMinutes - startMinutes
-  const hours = Math.floor(durationMinutes / 60)
-  const mins = durationMinutes % 60
-  if (hours === 0) return `${mins}m`
-  if (mins === 0) return `${hours}h`
-  return `${hours}h ${mins}m`
-}
-
 function TVDisplayContent() {
   const searchParams = useSearchParams()
   const testDate = searchParams.get('date')
-  
-  const containerRef = useRef<HTMLDivElement>(null)
-  const [scrollPosition, setScrollPosition] = useState(0)
-  const [isPaused, setIsPaused] = useState(false)
+  const testTime = searchParams.get('time') // Optional: test specific time like "1430" for 2:30 PM
 
   // Fetch the active expedition
   const { data: activeExpedition, isLoading: loadingExpedition } = useSWR(
@@ -108,8 +97,17 @@ function TVDisplayContent() {
     return getTodayForOffset(timezoneOffset)
   }, [timezoneOffset, testDate])
 
-  // Current time
-  const [currentTime, setCurrentTime] = useState(() => getCurrentTimeForOffset(timezoneOffset))
+  // Current time - updates every minute for smooth animation
+  const [currentTime, setCurrentTime] = useState(() => {
+    if (testTime) {
+      const hours = Math.floor(parseInt(testTime) / 100)
+      const minutes = parseInt(testTime) % 100
+      const date = new Date()
+      date.setHours(hours, minutes, 0, 0)
+      return date
+    }
+    return getCurrentTimeForOffset(timezoneOffset)
+  })
 
   // Fetch schedule items
   const { data: scheduleItems, isLoading: loadingItems } = useSWR(
@@ -124,161 +122,173 @@ function TVDisplayContent() {
     return scheduleItems[0]?._expedition_schedule || null
   }, [scheduleItems])
 
+  // Calculate the visible time window based on current time
+  const timeWindow = useMemo(() => {
+    const currentHour = currentTime.getHours()
+    const currentMinutes = currentTime.getMinutes()
+    const currentDecimalHour = currentHour + currentMinutes / 60
+    
+    // Calculate window start (1 hour behind current time)
+    let windowStart = currentDecimalHour - HOURS_BEHIND
+    let windowEnd = currentDecimalHour + HOURS_AHEAD
+    
+    // Clamp to day boundaries
+    if (windowStart < DAY_START_HOUR) {
+      windowStart = DAY_START_HOUR
+      windowEnd = DAY_START_HOUR + WINDOW_HOURS
+    }
+    if (windowEnd > DAY_END_HOUR) {
+      windowEnd = DAY_END_HOUR
+      windowStart = Math.max(DAY_START_HOUR, DAY_END_HOUR - WINDOW_HOURS)
+    }
+    
+    return { start: windowStart, end: windowEnd }
+  }, [currentTime])
+
   // Calculate layout for overlapping items
   const itemsWithLayout = useMemo(() => {
     if (!scheduleItems || !Array.isArray(scheduleItems)) return []
     
-    const filtered = scheduleItems
-      .filter((item: any) => item.time_in !== 0 && item.time_out !== 0)
-      .sort((a: any, b: any) => a.time_in - b.time_in)
-    
-    if (filtered.length === 0) return []
-    
-    // Add layout properties
-    const items = filtered.map((item: any) => ({ ...item, row: 0, totalRows: 1 }))
-    
-    // Find overlapping groups and assign rows
-    const groups: any[][] = []
-    let currentGroup: any[] = []
-    
-    items.forEach((item: any) => {
-      if (currentGroup.length === 0) {
-        currentGroup.push(item)
-      } else {
-        const overlapsWithGroup = currentGroup.some((groupItem: any) => {
-          return item.time_in < groupItem.time_out && item.time_out > groupItem.time_in
+    const items = scheduleItems.map((item: any, idx: number) => ({
+      ...item,
+      row: 0,
+      totalRows: 1,
+      originalIndex: idx,
+    }))
+
+    // Sort by start time, then by duration
+    const sorted = [...items].sort((a, b) => {
+      if (a.time_in !== b.time_in) return a.time_in - b.time_in
+      return (b.time_out - b.time_in) - (a.time_out - a.time_in)
+    })
+
+    // Assign each item to a row where it doesn't overlap
+    const rows: any[][] = []
+
+    sorted.forEach(item => {
+      let placed = false
+      
+      for (let rowIdx = 0; rowIdx < rows.length; rowIdx++) {
+        const row = rows[rowIdx]
+        const canPlace = row.every(rowItem => {
+          return item.time_in >= rowItem.time_out || item.time_out <= rowItem.time_in
         })
-        
-        if (overlapsWithGroup) {
-          currentGroup.push(item)
-        } else {
-          groups.push(currentGroup)
-          currentGroup = [item]
+
+        if (canPlace) {
+          row.push(item)
+          item.row = rowIdx
+          placed = true
+          break
         }
+      }
+
+      if (!placed) {
+        rows.push([item])
+        item.row = rows.length - 1
       }
     })
-    
-    if (currentGroup.length > 0) {
-      groups.push(currentGroup)
-    }
-    
-    // Assign rows within each group
-    groups.forEach(group => {
-      if (group.length === 1) {
-        group[0].row = 0
-        group[0].totalRows = 1
-        return
-      }
-      
-      const rows: any[][] = []
-      
-      group.forEach((item: any) => {
-        let placed = false
-        for (let rowIdx = 0; rowIdx < rows.length; rowIdx++) {
-          const row = rows[rowIdx]
-          const canPlace = row.every((rowItem: any) => 
-            item.time_in >= rowItem.time_out || item.time_out <= rowItem.time_in
-          )
-          
-          if (canPlace) {
-            row.push(item)
-            item.row = rowIdx
-            placed = true
-            break
-          }
-        }
-        
-        if (!placed) {
-          rows.push([item])
-          item.row = rows.length - 1
-        }
-      })
-      
-      group.forEach((item: any) => {
-        item.totalRows = rows.length
-      })
+
+    const totalRows = rows.length
+    items.forEach(item => {
+      item.totalRows = totalRows
     })
     
     return items
   }, [scheduleItems])
 
-  // Update current time every minute
+  // Filter items visible in current window
+  const visibleItems = useMemo(() => {
+    const windowStartMilitary = Math.floor(timeWindow.start) * 100 + Math.round((timeWindow.start % 1) * 60)
+    const windowEndMilitary = Math.floor(timeWindow.end) * 100 + Math.round((timeWindow.end % 1) * 60)
+    
+    return itemsWithLayout.filter((item: any) => {
+      // Item is visible if it overlaps with the window
+      return item.time_out > windowStartMilitary && item.time_in < windowEndMilitary
+    })
+  }, [itemsWithLayout, timeWindow])
+
+  // Update current time every 10 seconds for smooth animation
   useEffect(() => {
+    if (testTime) return // Don't update if testing specific time
+    
     const interval = setInterval(() => {
       setCurrentTime(getCurrentTimeForOffset(timezoneOffset))
-    }, 60000)
+    }, 10000) // Update every 10 seconds
     return () => clearInterval(interval)
-  }, [timezoneOffset])
+  }, [timezoneOffset, testTime])
 
-  // Auto-scroll - seamless infinite treadmill scrolling
-  // We render the timeline twice and when we reach the end of the first copy, we reset to 0
-  useEffect(() => {
-    if (isPaused || itemsWithLayout.length === 0) return
-    
-    const scrollInterval = setInterval(() => {
-      if (containerRef.current) {
-        const container = containerRef.current
-        // Each copy is exactly 250vw, get the actual pixel width of one copy
-        const singleCopyWidth = container.scrollWidth / 2
-        
-        if (singleCopyWidth <= 0) return
-        
-        // Read actual scroll position to stay in sync
-        const currentScroll = container.scrollLeft
-        
-        // When we've scrolled past the first copy, instantly reset to start
-        // This creates the seamless treadmill effect
-        if (currentScroll >= singleCopyWidth) {
-          container.scrollLeft = 0
-          setScrollPosition(0)
-        } else {
-          const newPosition = currentScroll + 1 // Scroll speed (1px per frame)
-          container.scrollLeft = newPosition
-          setScrollPosition(newPosition)
-        }
-      }
-    }, 16) // ~60fps for smooth animation
-    
-    return () => clearInterval(scrollInterval)
-  }, [isPaused, itemsWithLayout.length])
-
-  // Calculate position for an item
+  // Calculate position for an item within the visible window
   const getItemPosition = (timeIn: number, timeOut: number) => {
-    const startHour = Math.floor(timeIn / 100)
-    const startMinutes = timeIn % 100
-    const endHour = Math.floor(timeOut / 100)
-    const endMinutes = timeOut % 100
-    const startPercent = ((startHour - TIMELINE_START_HOUR) * 60 + startMinutes) / (TOTAL_HOURS * 60) * 100
-    const endPercent = ((endHour - TIMELINE_START_HOUR) * 60 + endMinutes) / (TOTAL_HOURS * 60) * 100
-    return { left: `${Math.max(0, startPercent)}%`, width: `${Math.max(3, endPercent - startPercent)}%` }
+    const windowDuration = timeWindow.end - timeWindow.start // in hours
+    
+    // Convert military time to decimal hours
+    const startHour = Math.floor(timeIn / 100) + (timeIn % 100) / 60
+    const endHour = Math.floor(timeOut / 100) + (timeOut % 100) / 60
+    
+    // Calculate position relative to window - exact percentages
+    const startPercent = ((startHour - timeWindow.start) / windowDuration) * 100
+    const endPercent = ((endHour - timeWindow.start) / windowDuration) * 100
+    const widthPercent = endPercent - startPercent
+    
+    return { 
+      left: `${startPercent}%`, 
+      width: `${widthPercent}%`,
+      // Also return raw values for calculations
+      startPercent,
+      widthPercent
+    }
   }
 
-  // Current time position - handles wrap-around for times past midnight
+  // Current time position within window (should be at ~20% from left, since 1 hour behind out of 5)
   const currentTimePosition = useMemo(() => {
-    let hours = currentTime.getHours()
-    const minutes = currentTime.getMinutes()
+    const currentHour = currentTime.getHours() + currentTime.getMinutes() / 60
+    if (currentHour < DAY_START_HOUR || currentHour > DAY_END_HOUR) return null
     
-    // If it's early morning (before timeline start), treat as next day hours
-    if (hours < TIMELINE_START_HOUR) {
-      hours = hours + 24
-    }
-    
-    // Check if within visible range
-    if (hours < TIMELINE_START_HOUR || hours >= TIMELINE_END_HOUR) return null
-    
-    const percent = ((hours - TIMELINE_START_HOUR) * 60 + minutes) / (TOTAL_HOURS * 60) * 100
-    return `${percent}%`
-  }, [currentTime])
+    const windowDuration = timeWindow.end - timeWindow.start
+    const percent = ((currentHour - timeWindow.start) / windowDuration) * 100
+    return `${Math.max(0, Math.min(100, percent))}%`
+  }, [currentTime, timeWindow])
 
-  // Hour markers - don't include end hour to avoid duplicate at loop point
+  // Generate hour markers for visible window
   const hourMarkers = useMemo(() => {
     const markers = []
-    for (let hour = TIMELINE_START_HOUR; hour < TIMELINE_END_HOUR; hour++) {
-      const percent = ((hour - TIMELINE_START_HOUR) / TOTAL_HOURS) * 100
-      markers.push({ hour, percent })
+    const startHour = Math.floor(timeWindow.start)
+    const endHour = Math.ceil(timeWindow.end)
+    const windowDuration = timeWindow.end - timeWindow.start
+    
+    for (let hour = startHour; hour <= endHour; hour++) {
+      const percent = ((hour - timeWindow.start) / windowDuration) * 100
+      if (percent >= -5 && percent <= 105) {
+        markers.push({ hour, percent })
+      }
     }
     return markers
-  }, [])
+  }, [timeWindow])
+
+  // Generate 15-minute interval markers
+  const quarterHourMarkers = useMemo(() => {
+    const markers = []
+    const startHour = Math.floor(timeWindow.start)
+    const endHour = Math.ceil(timeWindow.end)
+    const windowDuration = timeWindow.end - timeWindow.start
+    
+    for (let hour = startHour; hour <= endHour; hour++) {
+      // Add markers at :15, :30, :45 (skip :00 as those are hour markers)
+      for (const minutes of [15, 30, 45]) {
+        const decimalHour = hour + minutes / 60
+        const percent = ((decimalHour - timeWindow.start) / windowDuration) * 100
+        if (percent >= 0 && percent <= 100) {
+          markers.push({ 
+            hour, 
+            minutes, 
+            percent,
+            isHalf: minutes === 30 // :30 gets slightly more visible line
+          })
+        }
+      }
+    }
+    return markers
+  }, [timeWindow])
 
   // Parse display date
   const displayDate = useMemo(() => {
@@ -309,11 +319,8 @@ function TVDisplayContent() {
                           (todaySchedule?.destination > 0 ? `Location ${todaySchedule.destination}` : null)
 
   return (
-    <div 
-      className="fixed inset-0 z-[100] bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 overflow-hidden"
-      onClick={() => setIsPaused(!isPaused)}
-    >
-      {/* Header - dark navy style */}
+    <div className="fixed inset-0 z-[100] bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 overflow-hidden">
+      {/* Header */}
       <div className="h-[12vh] bg-slate-900/80 border-b border-white/10 flex items-center justify-between px-10">
         <div className="flex items-center gap-8">
           <div>
@@ -333,7 +340,7 @@ function TVDisplayContent() {
                 </span>
               )}
               
-              {/* Status badges - inline, rounded, no emojis */}
+              {/* Status badges */}
               {todaySchedule?.isOffshore && (
                 <span className="px-3 py-1 rounded-md bg-cyan-500/20 text-cyan-300 text-sm font-medium">
                   Offshore
@@ -349,12 +356,7 @@ function TVDisplayContent() {
                   Service Day
                 </span>
               )}
-              {todaySchedule?.nautical_miles > 0 && (
-                <span className="px-3 py-1 rounded-md bg-blue-500/20 text-blue-300 text-sm font-medium">
-                  {todaySchedule.nautical_miles} NM
-                </span>
-              )}
-              {testDate && (
+              {(testDate || testTime) && (
                 <span className="px-3 py-1 rounded-md bg-amber-500/20 text-amber-300 text-sm font-medium">
                   Test Mode
                 </span>
@@ -368,191 +370,222 @@ function TVDisplayContent() {
             {format(currentTime, "h:mm")}
             <span className="text-2xl text-white/50 ml-2">{format(currentTime, "a")}</span>
           </p>
-          {!testDate && (
+          {!testDate && !testTime && (
             <p className="text-lg text-green-400 font-medium">Live</p>
           )}
         </div>
       </div>
 
-      {/* Timeline Container - infinite scroll with duplicated content */}
-      <div 
-        ref={containerRef}
-        className="h-[88vh] overflow-x-auto overflow-y-hidden scrollbar-hide"
-        style={{ scrollBehavior: "auto" }}
-      >
-        {/* Two copies of the timeline for seamless looping */}
-        <div className="h-full flex" style={{ width: "500vw" }}>
-          {[0, 1].map((copyIndex) => (
-            <div key={copyIndex} className="h-full relative py-6 flex-shrink-0" style={{ width: "250vw" }}>
-              {/* Hour markers */}
-              <div className="absolute top-6 left-0 right-0 h-12 px-10">
-                {hourMarkers.map(({ hour, percent }) => {
-                  // Handle hours that wrap past midnight (24+)
-                  const displayHour = hour >= 24 ? hour - 24 : hour
-                  const hour12 = displayHour > 12 ? displayHour - 12 : displayHour === 0 ? 12 : displayHour
-                  const ampm = displayHour >= 12 && displayHour < 24 ? "PM" : "AM"
-                  
-                  return (
-                    <div
-                      key={`${copyIndex}-${hour}`}
-                      className="absolute flex flex-col items-center"
-                      style={{ left: `${percent}%` }}
-                    >
-                      <div className="px-3 py-1.5 bg-white/10 backdrop-blur rounded-lg text-lg font-medium text-white">
-                        {hour12}
-                        <span className="text-sm text-white/60 ml-1">
-                          {ampm}
-                        </span>
-                      </div>
-                      <div className="w-px h-[70vh] bg-white/10 mt-3" />
-                    </div>
-                  )
-                })}
-              </div>
-
-              {/* Current time indicator line - only show on first copy */}
-              {copyIndex === 0 && currentTimePosition && (
-                <div
-                  className="absolute top-6 bottom-6 w-1 bg-red-500 z-50 shadow-lg shadow-red-500/50"
-                  style={{ left: `calc(2.5rem + ${currentTimePosition})` }}
-                >
-                  <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-red-500 border-2 border-white shadow-lg" />
-                  <div className="absolute top-0 left-4 bg-red-500 text-white text-sm font-bold px-2 py-1 rounded shadow-lg whitespace-nowrap">
-                    {format(currentTime, "h:mm a")}
-                  </div>
-                </div>
-              )}
-
-              {/* Schedule items - card style with dark theme */}
-              <div className="absolute top-24 left-0 right-0 bottom-6 px-10">
-            {isLoading ? (
-              <div className="flex items-center justify-center h-full">
-                <div className="text-3xl text-white/50">Loading schedule...</div>
-              </div>
-            ) : itemsWithLayout.length === 0 ? (
-              <div className="flex items-center justify-center h-full">
-                <div className="text-3xl text-white/50">No activities scheduled</div>
-              </div>
-            ) : (
-              <div className="relative h-full">
-                {itemsWithLayout.map((item: any) => {
-                  const position = getItemPosition(item.time_in, item.time_out)
-                  const rowHeight = 100 / item.totalRows
-                  const topOffset = item.row * rowHeight
-                  
-                  // Check if item is in the past (ended before current time)
-                  const currentMilitaryTime = currentTime.getHours() * 100 + currentTime.getMinutes()
-                  const isPast = item.time_out < currentMilitaryTime && !testDate
-                  
-                  // Truncate notes to max 120 characters
-                  const truncatedNotes = item.notes && item.notes.length > 120 
-                    ? item.notes.substring(0, 120) + "..." 
-                    : item.notes
-                  
-                  // Truncate things to bring to max 60 characters
-                  const truncatedThings = item.things_to_bring && item.things_to_bring.length > 60
-                    ? item.things_to_bring.substring(0, 60) + "..."
-                    : item.things_to_bring
-                  
-                  // Build staff display with participants
-                  const staffNames: string[] = []
-                  if (item._expedition_staff?.name) staffNames.push(item._expedition_staff.name)
-                  if (item.participants?.length > 0) {
-                    item.participants.slice(0, 2).forEach((p: any) => {
-                      if (p.name && p.name !== item._expedition_staff?.name) {
-                        staffNames.push(p.name.split(' ')[0]) // First name only
-                      }
-                    })
-                  }
-                  
-                  return (
-                    <div
-                      key={item.id}
-                      className={cn(
-                        "absolute bg-white rounded-2xl shadow-xl overflow-hidden p-4 border-4 border-gray-200 transition-opacity duration-300",
-                        isPast && "opacity-40"
-                      )}
-                      style={{
-                        left: position.left,
-                        width: position.width,
-                        top: `calc(${topOffset}% + 8px)`,
-                        height: `calc(${rowHeight}% - 16px)`,
-                        minWidth: "280px",
-                      }}
-                    >
-                      <div className="flex h-full gap-4">
-                        {/* Color bar - padded inside with rounded corners */}
-                        <div className={cn("w-1.5 flex-shrink-0 rounded-full", getColorForType(item))} />
-                        
-                        {/* Content */}
-                        <div className="flex-1 py-2 pr-2 overflow-hidden flex flex-col">
-                          {/* Title */}
-                          <h3 className="font-bold text-3xl text-gray-900 truncate mb-1">
-                            {item.name}
-                          </h3>
-                          
-                          {/* Time */}
-                          <p className="text-2xl text-gray-500 mb-3">
-                            {formatTime(item.time_in)} - {formatTime(item.time_out)}
-                          </p>
-
-                          {/* Staff with avatar */}
-                          {staffNames.length > 0 && (
-                            <div className="flex items-center gap-3 mb-5">
-                              <Avatar className="h-9 w-9">
-                                <AvatarFallback className="text-base bg-gray-100 text-gray-600 font-medium">
-                                  {item._expedition_staff?.name?.split(" ").map((n: string) => n[0]).join("") || "?"}
-                                </AvatarFallback>
-                              </Avatar>
-                              <span className="text-xl text-gray-700 truncate">
-                                {staffNames.join(" • ")}
-                              </span>
-                            </div>
-                          )}
-
-                          {/* Address */}
-                          {item.address && (
-                            <p className="text-xl text-gray-600 mb-4 line-clamp-1 truncate">
-                              {item.address}
-                            </p>
-                          )}
-
-                          {/* Things to bring */}
-                          {truncatedThings && (
-                            <p className="text-xl text-gray-600 mb-4 truncate">
-                              {truncatedThings}
-                            </p>
-                          )}
-
-                          {/* Notes */}
-                          {truncatedNotes && (
-                            <p className="text-lg text-gray-500 line-clamp-2 flex-1">
-                              {truncatedNotes}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-        </div>
+      {/* Timeline Container */}
+      <div className="h-[88vh] relative px-10 py-6 overflow-hidden">
+        {/* 15-minute interval lines (behind hour markers) */}
+        <div className="absolute top-16 left-10 right-10 bottom-6">
+          {quarterHourMarkers.map(({ hour, minutes, percent, isHalf }) => (
+            <div
+              key={`${hour}-${minutes}`}
+              className="absolute top-0 bottom-0 transition-all duration-1000 ease-linear"
+              style={{ 
+                left: `${percent}%`,
+                transform: 'translateX(-50%)'
+              }}
+            >
+              <div className={cn(
+                "w-px h-full",
+                isHalf ? "bg-white/8" : "bg-white/5"
+              )} />
+            </div>
           ))}
+        </div>
+
+        {/* Hour markers - stretch full height */}
+        <div className="absolute top-6 left-10 right-10 bottom-16">
+          {hourMarkers.map(({ hour, percent }) => {
+            const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour
+            const ampm = hour >= 12 ? "PM" : "AM"
+            
+            return (
+              <div
+                key={hour}
+                className="absolute top-0 bottom-0 flex flex-col items-center transition-all duration-1000 ease-linear"
+                style={{ 
+                  left: `${percent}%`,
+                  transform: 'translateX(-50%)' // Center the marker on the exact percentage point
+                }}
+              >
+                <div className="px-3 py-1.5 bg-white/10 backdrop-blur rounded-lg text-lg font-medium text-white flex-shrink-0">
+                  {displayHour}
+                  <span className="text-sm text-white/60 ml-1">
+                    {ampm}
+                  </span>
+                </div>
+                <div className="w-px flex-1 bg-white/15 mt-3" />
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Current time indicator line - positioned within the same container as hour markers */}
+        <div className="absolute top-6 left-10 right-10 bottom-6 pointer-events-none">
+          {currentTimePosition && (
+            <div
+              className="absolute top-0 bottom-0 w-1 bg-red-500 z-50 shadow-lg shadow-red-500/50 transition-all duration-1000 ease-linear"
+              style={{ 
+                left: currentTimePosition,
+                transform: 'translateX(-50%)' // Center the line on the exact position
+              }}
+            >
+              <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-red-500 border-2 border-white shadow-lg" />
+              <div className="absolute top-0 left-4 bg-red-500 text-white text-sm font-bold px-2 py-1 rounded shadow-lg whitespace-nowrap">
+                {format(currentTime, "h:mm a")}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Schedule items */}
+        <div className="absolute top-24 left-10 right-10 bottom-6">
+          {isLoading ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-3xl text-white/50">Loading schedule...</div>
+            </div>
+          ) : visibleItems.length === 0 ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-3xl text-white/50">No activities in this time window</div>
+            </div>
+          ) : (
+            <div className="relative h-full">
+              {visibleItems.map((item: any) => {
+                const position = getItemPosition(item.time_in, item.time_out)
+                const rowHeight = 100 / item.totalRows
+                const topOffset = item.row * rowHeight
+                
+                // Check if item is in the past
+                const currentMilitaryTime = currentTime.getHours() * 100 + currentTime.getMinutes()
+                const isPast = item.time_out < currentMilitaryTime && !testDate
+                
+                // Build staff display
+                const staffNames: string[] = []
+                if (item._expedition_staff?.name) staffNames.push(item._expedition_staff.name)
+                if (item.participants?.length > 0) {
+                  item.participants.slice(0, 2).forEach((p: any) => {
+                    if (p.name && p.name !== item._expedition_staff?.name) {
+                      staffNames.push(p.name.split(' ')[0])
+                    }
+                  })
+                }
+                
+                // Determine if card is narrow (less than 10% width = less than 30 min in 5hr window)
+                const isNarrow = position.widthPercent < 10
+                
+                return (
+                  <div
+                    key={item.id}
+                    className={cn(
+                      "absolute bg-white rounded-xl shadow-lg overflow-hidden border-2 border-gray-200 transition-all duration-1000 ease-linear box-border",
+                      isPast && "opacity-40"
+                    )}
+                    style={{
+                      left: position.left,
+                      width: `calc(${position.width} - 4px)`, // Subtract small gap to prevent visual overlap
+                      top: `calc(${topOffset}% + 4px)`,
+                      height: `calc(${rowHeight}% - 8px)`,
+                    }}
+                  >
+                    <div className="flex flex-col h-full p-3">
+                      {/* Color bar - horizontal at top with padding */}
+                      <div className={cn("h-1.5 w-full flex-shrink-0 rounded-full", getColorForType(item))} />
+                      
+                      {/* Content */}
+                      <div className="flex-1 overflow-hidden flex flex-col min-w-0 pt-2">
+                        {/* Title */}
+                        <h3 className={cn(
+                          "font-bold text-gray-900 truncate",
+                          isNarrow ? "text-sm" : "text-xl"
+                        )}>
+                          {item.name}
+                        </h3>
+                        
+                        {/* Time */}
+                        <p className={cn(
+                          "text-gray-500",
+                          isNarrow ? "text-xs" : "text-base"
+                        )}>
+                          {formatTime(item.time_in)} - {formatTime(item.time_out)}
+                        </p>
+
+                        {/* Staff - hide on narrow cards */}
+                        {!isNarrow && staffNames.length > 0 && (
+                          <div className="flex items-center gap-2 mt-2">
+                            <Avatar className="h-6 w-6 flex-shrink-0">
+                              <AvatarFallback className="text-xs bg-gray-100 text-gray-600">
+                                {item._expedition_staff?.name?.split(" ").map((n: string) => n[0]).join("") || "?"}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="text-sm text-gray-600 truncate">
+                              {staffNames.join(" • ")}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Address - hide on narrow cards */}
+                        {!isNarrow && item.address && (
+                          <p className="text-sm text-gray-500 mt-2 truncate">
+                            {item.address}
+                          </p>
+                        )}
+
+                        {/* Notes - hide on narrow cards */}
+                        {!isNarrow && item.notes && (
+                          <p className="text-sm text-gray-400 mt-1 line-clamp-2 flex-1">
+                            {item.notes.length > 80 ? item.notes.substring(0, 80) + "..." : item.notes}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Pause indicator */}
-      {isPaused && (
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 px-6 py-3 rounded-full bg-white/20 backdrop-blur text-white text-lg font-medium">
-          Paused - Click to resume
+      {/* Footer with navigation */}
+      <div className="absolute bottom-4 left-6 right-6 flex items-center justify-between">
+        <div className="text-sm text-white/30">
+          Showing {Math.floor(timeWindow.start)}:00 - {Math.floor(timeWindow.end)}:00 • Auto-refreshes
         </div>
-      )}
-
-      {/* Refresh indicator */}
-      <div className="absolute bottom-4 right-6 text-sm text-white/30">
-        Auto-refreshes every 30s
+        
+        {/* TV Display Navigation */}
+        <div className="flex items-center gap-2">
+          <Link href="/tv?date=2026-01-11">
+            <Button 
+              variant="ghost" 
+              size="sm"
+              className="bg-white/10 hover:bg-white/20 text-white text-xs"
+            >
+              Animated
+            </Button>
+          </Link>
+          <Link href="/tv/static?date=2026-01-11">
+            <Button 
+              variant="ghost" 
+              size="sm"
+              className="bg-white/5 hover:bg-white/20 text-white/60 text-xs"
+            >
+              Static
+            </Button>
+          </Link>
+          <Link href="/tv/vertical?date=2026-01-11">
+            <Button 
+              variant="ghost" 
+              size="sm"
+              className="bg-white/5 hover:bg-white/20 text-white/60 text-xs"
+            >
+              Vertical
+            </Button>
+          </Link>
+        </div>
       </div>
     </div>
   )
@@ -561,8 +594,8 @@ function TVDisplayContent() {
 export default function TVDisplayPage() {
   return (
     <Suspense fallback={
-      <div className="fixed inset-0 z-[100] bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-500 text-2xl">Loading display...</div>
+      <div className="fixed inset-0 z-[100] bg-slate-900 flex items-center justify-center">
+        <div className="text-white/60 text-2xl">Loading display...</div>
       </div>
     }>
       <TVDisplayContent />

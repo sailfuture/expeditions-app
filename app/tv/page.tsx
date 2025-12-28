@@ -8,10 +8,10 @@ import { getActiveExpedition, getExpeditionScheduleItemsByDate } from "@/lib/xan
 import useSWR from "swr"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 
-// Timeline constants
+// Timeline constants - 24 hour display from 5 AM to 5 AM next day
 const TIMELINE_START_HOUR = 5 // 5 AM
-const TIMELINE_END_HOUR = 22 // 10 PM
-const TOTAL_HOURS = TIMELINE_END_HOUR - TIMELINE_START_HOUR
+const TIMELINE_END_HOUR = 29 // 5 AM next day (24 + 5)
+const TOTAL_HOURS = TIMELINE_END_HOUR - TIMELINE_START_HOUR // 24 hours
 
 // Parse UTC offset string like "UTC-5" or "UTC+2" to get offset in hours
 function parseUtcOffset(offsetString: string | undefined): number {
@@ -218,26 +218,29 @@ function TVDisplayContent() {
     const scrollInterval = setInterval(() => {
       if (containerRef.current) {
         const container = containerRef.current
-        // The content is duplicated, so half the scrollWidth is one complete cycle
-        const halfWidth = container.scrollWidth / 2
+        // Each copy is exactly 250vw, get the actual pixel width of one copy
+        const singleCopyWidth = container.scrollWidth / 2
         
-        if (halfWidth <= 0) return
+        if (singleCopyWidth <= 0) return
+        
+        // Read actual scroll position to stay in sync
+        const currentScroll = container.scrollLeft
         
         // When we've scrolled past the first copy, instantly reset to start
         // This creates the seamless treadmill effect
-        if (scrollPosition >= halfWidth) {
-          setScrollPosition(0)
+        if (currentScroll >= singleCopyWidth) {
           container.scrollLeft = 0
+          setScrollPosition(0)
         } else {
-          const newPosition = scrollPosition + 1 // Scroll speed
-          setScrollPosition(newPosition)
+          const newPosition = currentScroll + 1 // Scroll speed (1px per frame)
           container.scrollLeft = newPosition
+          setScrollPosition(newPosition)
         }
       }
     }, 16) // ~60fps for smooth animation
     
     return () => clearInterval(scrollInterval)
-  }, [scrollPosition, isPaused, itemsWithLayout.length])
+  }, [isPaused, itemsWithLayout.length])
 
   // Calculate position for an item
   const getItemPosition = (timeIn: number, timeOut: number) => {
@@ -250,19 +253,27 @@ function TVDisplayContent() {
     return { left: `${Math.max(0, startPercent)}%`, width: `${Math.max(3, endPercent - startPercent)}%` }
   }
 
-  // Current time position
+  // Current time position - handles wrap-around for times past midnight
   const currentTimePosition = useMemo(() => {
-    const hours = currentTime.getHours()
+    let hours = currentTime.getHours()
     const minutes = currentTime.getMinutes()
+    
+    // If it's early morning (before timeline start), treat as next day hours
+    if (hours < TIMELINE_START_HOUR) {
+      hours = hours + 24
+    }
+    
+    // Check if within visible range
     if (hours < TIMELINE_START_HOUR || hours >= TIMELINE_END_HOUR) return null
+    
     const percent = ((hours - TIMELINE_START_HOUR) * 60 + minutes) / (TOTAL_HOURS * 60) * 100
     return `${percent}%`
   }, [currentTime])
 
-  // Hour markers
+  // Hour markers - don't include end hour to avoid duplicate at loop point
   const hourMarkers = useMemo(() => {
     const markers = []
-    for (let hour = TIMELINE_START_HOUR; hour <= TIMELINE_END_HOUR; hour++) {
+    for (let hour = TIMELINE_START_HOUR; hour < TIMELINE_END_HOUR; hour++) {
       const percent = ((hour - TIMELINE_START_HOUR) / TOTAL_HOURS) * 100
       markers.push({ hour, percent })
     }
@@ -372,24 +383,31 @@ function TVDisplayContent() {
         {/* Two copies of the timeline for seamless looping */}
         <div className="h-full flex" style={{ width: "500vw" }}>
           {[0, 1].map((copyIndex) => (
-            <div key={copyIndex} className="h-full relative px-10 py-6" style={{ width: "250vw" }}>
+            <div key={copyIndex} className="h-full relative py-6 flex-shrink-0" style={{ width: "250vw" }}>
               {/* Hour markers */}
-              <div className="absolute top-6 left-10 right-10 h-12">
-                {hourMarkers.map(({ hour, percent }) => (
-                  <div
-                    key={`${copyIndex}-${hour}`}
-                    className="absolute flex flex-col items-center"
-                    style={{ left: `${percent}%` }}
-                  >
-                    <div className="px-3 py-1.5 bg-white/10 backdrop-blur rounded-lg text-lg font-medium text-white">
-                      {hour > 12 ? hour - 12 : hour === 0 ? 12 : hour}
-                      <span className="text-sm text-white/60 ml-1">
-                        {hour >= 12 ? "PM" : "AM"}
-                      </span>
+              <div className="absolute top-6 left-0 right-0 h-12 px-10">
+                {hourMarkers.map(({ hour, percent }) => {
+                  // Handle hours that wrap past midnight (24+)
+                  const displayHour = hour >= 24 ? hour - 24 : hour
+                  const hour12 = displayHour > 12 ? displayHour - 12 : displayHour === 0 ? 12 : displayHour
+                  const ampm = displayHour >= 12 && displayHour < 24 ? "PM" : "AM"
+                  
+                  return (
+                    <div
+                      key={`${copyIndex}-${hour}`}
+                      className="absolute flex flex-col items-center"
+                      style={{ left: `${percent}%` }}
+                    >
+                      <div className="px-3 py-1.5 bg-white/10 backdrop-blur rounded-lg text-lg font-medium text-white">
+                        {hour12}
+                        <span className="text-sm text-white/60 ml-1">
+                          {ampm}
+                        </span>
+                      </div>
+                      <div className="w-px h-[70vh] bg-white/10 mt-3" />
                     </div>
-                    <div className="w-px h-[70vh] bg-white/10 mt-3" />
-                  </div>
-                ))}
+                  )
+                })}
               </div>
 
               {/* Current time indicator line - only show on first copy */}
@@ -406,7 +424,7 @@ function TVDisplayContent() {
               )}
 
               {/* Schedule items - card style with dark theme */}
-              <div className="absolute top-24 left-10 right-10 bottom-6">
+              <div className="absolute top-24 left-0 right-0 bottom-6 px-10">
             {isLoading ? (
               <div className="flex items-center justify-center h-full">
                 <div className="text-3xl text-white/50">Loading schedule...</div>

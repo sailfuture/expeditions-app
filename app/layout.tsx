@@ -1,5 +1,6 @@
 import type React from "react"
 import type { Metadata } from "next"
+import { Suspense } from "react"
 import { Inter } from "next/font/google"
 import "./globals.css"
 import { Navbar } from "@/components/navbar"
@@ -23,7 +24,9 @@ export default function RootLayout({
     <html lang="en" className={fontSans.variable}>
       <body className="antialiased">
         <Providers>
-          <Navbar />
+          <Suspense fallback={<div className="h-16 bg-white border-b" />}>
+            <Navbar />
+          </Suspense>
           {children}
           <Toaster position="bottom-right" />
         </Providers>

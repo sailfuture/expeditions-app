@@ -1,33 +1,28 @@
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import { getPerformanceReviewById, getProfessionalismByStudentAndDate } from './xano'
 
-interface PerformanceReview {
-  id: number
-  report_name: string
-  startDate: string
-  endDate: string
-  notes: string
-  crew: number | null
-  service: number | null
-  job: number | null
-  citizenship: number | null
-  journaling: number | null
-  academics: number | null
-  crew_evaluation: string | null
-  service_evaluation: string | null
-  job_evaluation: string | null
-  citizenship_evaluation: string | null
-  journaling_evaluation: string | null
-  academics_evaluation: string | null
-  _students: {
-    name: string
+export async function generatePerformanceReviewPDF(reviewId: number) {
+  // Fetch the full review data by ID
+  const review = await getPerformanceReviewById(reviewId)
+  
+  // Fetch daily scores for this student and date range
+  let dailyScores: any[] = []
+  if (review.students_id && review.expeditions_id && review.startDate && review.endDate) {
+    try {
+      dailyScores = await getProfessionalismByStudentAndDate(
+        review.students_id,
+        review.expeditions_id,
+        review.startDate,
+        review.endDate
+      )
+      // Sort by date
+      dailyScores.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    } catch (error) {
+      console.error('Error fetching daily scores:', error)
+    }
   }
-  _expeditions: {
-    name: string
-  }
-}
-
-export function generatePerformanceReviewPDF(review: PerformanceReview) {
+  
   const doc = new jsPDF()
   
   // Add logo/header space
@@ -38,10 +33,12 @@ export function generatePerformanceReviewPDF(review: PerformanceReview) {
   doc.setFont('helvetica', 'bold')
   doc.text('Performance Review', pageWidth / 2, 20, { align: 'center' })
   
-  // Expedition name
-  doc.setFontSize(12)
-  doc.setFont('helvetica', 'normal')
-  doc.text(review._expeditions.name, pageWidth / 2, 30, { align: 'center' })
+  // Expedition name (handle if not present)
+  if (review._expeditions?.name) {
+    doc.setFontSize(12)
+    doc.setFont('helvetica', 'normal')
+    doc.text(review._expeditions.name, pageWidth / 2, 30, { align: 'center' })
+  }
   
   let yPosition = 45
   
@@ -53,7 +50,8 @@ export function generatePerformanceReviewPDF(review: PerformanceReview) {
   
   doc.setFontSize(11)
   doc.setFont('helvetica', 'normal')
-  doc.text(`Student Name: ${review._students.name}`, 14, yPosition)
+  const studentName = review._students?.name || `Student ID: ${review.students_id}`
+  doc.text(`Student Name: ${studentName}`, 14, yPosition)
   yPosition += 6
   doc.text(`Report Name: ${review.report_name || 'Untitled'}`, 14, yPosition)
   yPosition += 6
@@ -104,6 +102,80 @@ export function generatePerformanceReviewPDF(review: PerformanceReview) {
   // Get the final Y position after the table
   yPosition = (doc as any).lastAutoTable.finalY + 15
   
+  // Daily Scores Section
+  if (dailyScores.length > 0) {
+    // Check if we need a new page
+    if (yPosition > 200) {
+      doc.addPage()
+      yPosition = 20
+    }
+    
+    doc.setFontSize(14)
+    doc.setFont('helvetica', 'bold')
+    doc.text('Daily Scores', 14, yPosition)
+    yPosition += 8
+    
+    // Create daily scores table data
+    const dailyTableData = dailyScores.map((score: any) => [
+      formatDateShort(score.date),
+      formatDailyScore(score.academics),
+      formatDailyScore(score.citizenship),
+      formatDailyScore(score.job),
+      formatDailyScore(score.crew),
+      formatDailyScore(score.service),
+    ])
+    
+    autoTable(doc, {
+      startY: yPosition,
+      head: [['Date', 'Acad', 'Citz', 'Job', 'Crew', 'Serv']],
+      body: dailyTableData,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [249, 250, 251],
+        textColor: [55, 65, 81],
+        fontStyle: 'bold',
+        fontSize: 9,
+      },
+      bodyStyles: {
+        fontSize: 9,
+        textColor: [55, 65, 81],
+        halign: 'center',
+      },
+      columnStyles: {
+        0: { halign: 'left', cellWidth: 35 },
+        1: { cellWidth: 20 },
+        2: { cellWidth: 20 },
+        3: { cellWidth: 20 },
+        4: { cellWidth: 20 },
+        5: { cellWidth: 20 },
+      },
+      alternateRowStyles: {
+        fillColor: [249, 250, 251],
+      },
+      didParseCell: (data) => {
+        // Color code cells based on score
+        if (data.section === 'body' && data.column.index > 0) {
+          const value = parseFloat(data.cell.text[0])
+          if (!isNaN(value)) {
+            if (value >= 3.21) {
+              data.cell.styles.fillColor = [219, 234, 254] // blue-100
+            } else if (value >= 2.751) {
+              data.cell.styles.fillColor = [220, 252, 231] // green-100
+            } else if (value >= 2.251) {
+              data.cell.styles.fillColor = [254, 249, 195] // yellow-100
+            } else if (value >= 1.1) {
+              data.cell.styles.fillColor = [254, 226, 226] // red-100
+            } else if (value >= 0) {
+              data.cell.styles.fillColor = [243, 244, 246] // gray-100
+            }
+          }
+        }
+      },
+    })
+    
+    yPosition = (doc as any).lastAutoTable.finalY + 15
+  }
+  
   // Notes Section
   if (review.notes) {
     // Check if we need a new page
@@ -143,7 +215,8 @@ export function generatePerformanceReviewPDF(review: PerformanceReview) {
   }
   
   // Download the PDF
-  const fileName = `${review._students.name.replace(/\s+/g, '_')}_Performance_Review_${review.id}.pdf`
+  const studentNameForFile = review._students?.name || `Student_${review.students_id}`
+  const fileName = `${studentNameForFile.replace(/\s+/g, '_')}_Performance_Review_${review.id}.pdf`
   doc.save(fileName)
 }
 
@@ -158,10 +231,27 @@ function formatDate(dateStr: string | null): string {
   }
 }
 
+function formatDateShort(dateStr: string | null): string {
+  if (!dateStr) return '—'
+  try {
+    const [year, month, day] = dateStr.split('-').map(Number)
+    const date = new Date(year, month - 1, day)
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    return `${days[date.getDay()]}, ${months[month - 1]} ${day}`
+  } catch {
+    return dateStr
+  }
+}
+
 function formatScore(score: number | null | undefined): string {
   if (score === null || score === undefined) return '—'
-  if (score === 0) return 'Unexcused'
   return score.toFixed(2)
+}
+
+function formatDailyScore(score: number | null | undefined): string {
+  if (score === null || score === undefined) return '—'
+  return score.toString()
 }
 
 function formatJournaling(percentage: number | null | undefined): string {

@@ -189,6 +189,10 @@ export async function getEvaluationByStudent(studentsId: number, expeditionsId: 
   return xanoFetch<any>(`/evaluation_by_student?students_id=${studentsId}&expeditions_id=${expeditionsId}`)
 }
 
+export async function getEvaluationByStudentAll(studentsId: number, expeditionsId: number) {
+  return xanoFetch<any[]>(`/evaluation_by_student_all?students_id=${studentsId}&expeditions_id=${expeditionsId}`)
+}
+
 export async function getEvaluationByStudentType(studentsId: number, expeditionsId: number, type: string) {
   return xanoFetch<any[]>(`/get_expedition_professionalism?students_id=${studentsId}&expeditions_id=${expeditionsId}&type=${type}`)
 }
@@ -220,6 +224,41 @@ export async function getProfessionalismByStudentAndDate(
   return xanoFetch<any[]>(
     `/expeditions_professionalism_by_student_and_date?students_id=${studentsId}&expeditions_id=${expeditionsId}&startDate=${startDate}&endDate=${endDate}`
   )
+}
+
+export async function createPerformanceReview(data: {
+  expeditions_id: number
+  report_name: string
+  startDate: string
+  endDate: string
+}) {
+  return xanoFetch<any>("/calculate_student_evaluation_performance_evaluation", {
+    method: "POST",
+    body: JSON.stringify({
+      expeditions_id: data.expeditions_id,
+      students_id: 0,
+      report_name: data.report_name,
+      startDate: data.startDate,
+      endDate: data.endDate,
+    }),
+  })
+}
+
+export async function getPerformanceReviewById(reviewId: number) {
+  return xanoFetch<any>(`/expedition_performance_reviews/${reviewId}`)
+}
+
+export async function updatePerformanceReviewNotes(id: number, notes: string) {
+  return xanoFetch<any>(`/expedition_performance_reviews/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ notes }),
+  })
+}
+
+export async function deletePerformanceReview(id: number) {
+  return xanoFetch<any>(`/expedition_performance_reviews/${id}`, {
+    method: "DELETE",
+  })
 }
 
 // ============ Bonus Options ============
@@ -311,6 +350,23 @@ export async function updateStudent(id: number, data: any) {
 // ============ Intake Form Management ============
 export async function getExpeditionsStudentInformation() {
   return xanoFetch<any[]>("/expeditions_student_information")
+}
+
+export async function getExpeditionsStudentInformationById(id: number) {
+  return xanoFetch<any>(`/expeditions_student_information/${id}`)
+}
+
+export async function updateExpeditionsStudentInformation(id: number, data: Record<string, any>) {
+  return xanoFetch<any>(`/expeditions_student_information/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  })
+}
+
+export async function deleteExpeditionsStudentInformation(id: number) {
+  return xanoFetch<any>(`/expeditions_student_information/${id}`, {
+    method: "DELETE",
+  })
 }
 
 // ============ Staff Management ============

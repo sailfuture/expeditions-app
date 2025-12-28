@@ -7,10 +7,11 @@ import { format } from "date-fns"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import {
   Collapsible,
@@ -46,12 +47,21 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Pencil, ExternalLink, Calendar, FileText, TrendingUp, CheckCircle2, ArrowLeft, Calculator } from "lucide-react"
-import { getStudentById, updateStudent, calculateStudentEvaluation } from "@/lib/xano"
+import { Pencil, ExternalLink, Calendar, FileText, TrendingUp, CheckCircle2, ArrowLeft, Calculator, Download } from "lucide-react"
+import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts"
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from "@/components/ui/chart"
+import { getStudentById, updateStudent, calculateStudentEvaluation, getPerformanceReviewById, updatePerformanceReviewNotes, getProfessionalismByStudentAndDate, getEvaluationByStudentAll } from "@/lib/xano"
 import { toast } from "sonner"
 import { mutate } from "swr"
 import { Spinner } from "@/components/ui/spinner"
-import { useExpeditions, useEvaluationByStudent, useEvaluationByStudentType, useProfessionalismByStudent } from "@/lib/hooks/use-expeditions"
+import { useExpeditions, useEvaluationByStudent, useEvaluationByStudentType, useProfessionalismByStudent, useExpeditionPerformanceReviews } from "@/lib/hooks/use-expeditions"
+import { generatePerformanceReviewPDF } from "@/lib/pdf-generator"
+import { formatDistanceToNow } from "date-fns"
 import { Eye } from "lucide-react"
 
 export default function StudentDetailPage() {
@@ -89,16 +99,138 @@ export default function StudentDetailPage() {
     selectedScoreType
   )
   
-  // Fetch all professionalism records for all scores modal
+  // Fetch all professionalism records for chart and all scores modal
   const { data: allProfessionalismRecords, isLoading: loadingAllRecords } = useProfessionalismByStudent(
-    allScoresModalOpen ? studentId : null,
-    allScoresModalOpen ? expeditionId : null
+    expeditionId ? studentId : null,
+    expeditionId
   )
+  
+  // Fetch performance reviews for this expedition
+  const { data: allPerformanceReviews, isLoading: loadingPerformanceReviews } = useExpeditionPerformanceReviews(expeditionId)
+  
+  // Filter performance reviews for this specific student
+  const studentPerformanceReviews = useMemo(() => {
+    if (!allPerformanceReviews) return []
+    return allPerformanceReviews
+      .filter((review: any) => review.students_id === studentId)
+      .sort((a: any, b: any) => (a.created_at || 0) - (b.created_at || 0))
+  }, [allPerformanceReviews, studentId])
+  
+  // Fetch all evaluation records for the chart
+  const { data: allEvaluationRecords } = useSWR(
+    expeditionId && studentId ? `evaluation_by_student_all_${studentId}_${expeditionId}` : null,
+    expeditionId && studentId ? () => getEvaluationByStudentAll(studentId, expeditionId) : null
+  )
+  
+  // Format relative time (abbreviated) - defined early for useMemo usage
+  const formatRelativeTimeForChart = (timestamp: number | null) => {
+    if (!timestamp) return "—"
+    try {
+      const distance = formatDistanceToNow(new Date(timestamp), { addSuffix: false })
+      return distance
+        .replace('about ', '')
+        .replace(' minutes', 'm')
+        .replace(' minute', 'm')
+        .replace(' hours', 'h')
+        .replace(' hour', 'h')
+        .replace(' days', 'd')
+        .replace(' day', 'd')
+        .replace(' weeks', 'w')
+        .replace(' week', 'w')
+        .replace(' months', 'mo')
+        .replace(' month', 'mo')
+        .replace(' years', 'y')
+        .replace(' year', 'y')
+        .replace('less than a', '<1')
+    } catch {
+      return "—"
+    }
+  }
+  
+  // Transform evaluation data for the chart
+  const chartData = useMemo(() => {
+    if (!allEvaluationRecords || allEvaluationRecords.length === 0) return []
+    return allEvaluationRecords
+      .sort((a: any, b: any) => (a.created_at || 0) - (b.created_at || 0))
+      .map((record: any) => {
+        return {
+          dateLabel: formatRelativeTimeForChart(record.created_at),
+          academics: record.academics !== null ? Number(record.academics.toFixed(2)) : null,
+          citizenship: record.citizenship !== null ? Number(record.citizenship.toFixed(2)) : null,
+          job: record.job !== null ? Number(record.job.toFixed(2)) : null,
+          crew: record.crew !== null ? Number(record.crew.toFixed(2)) : null,
+          service: record.service !== null ? Number(record.service.toFixed(2)) : null,
+          total: record.total !== null ? Number(record.total.toFixed(2)) : null,
+        }
+      })
+  }, [allEvaluationRecords])
+  
+  // Chart configuration
+  const chartConfig = {
+    total: {
+      label: "Total",
+      color: "hsl(0, 0%, 20%)",
+    },
+    academics: {
+      label: "Academics",
+      color: "hsl(221, 83%, 53%)",
+    },
+    citizenship: {
+      label: "Citizenship",
+      color: "hsl(142, 71%, 45%)",
+    },
+    job: {
+      label: "Job",
+      color: "hsl(38, 92%, 50%)",
+    },
+    crew: {
+      label: "Crew",
+      color: "hsl(262, 83%, 58%)",
+    },
+    service: {
+      label: "Service",
+      color: "hsl(330, 81%, 60%)",
+    },
+  } satisfies ChartConfig
   
   const [dialogOpen, setDialogOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [unlinkConfirmOpen, setUnlinkConfirmOpen] = useState(false)
   const [unlinking, setUnlinking] = useState(false)
+  
+  // Performance review preview modal state
+  const [reviewPreviewOpen, setReviewPreviewOpen] = useState(false)
+  const [selectedReviewId, setSelectedReviewId] = useState<number | null>(null)
+  const [editedNotes, setEditedNotes] = useState("")
+  const [savingNotes, setSavingNotes] = useState(false)
+  
+  // Fetch selected review data for preview modal
+  const { data: selectedReview, isLoading: loadingSelectedReview } = useSWR(
+    reviewPreviewOpen && selectedReviewId ? `performance_review_${selectedReviewId}` : null,
+    reviewPreviewOpen && selectedReviewId ? () => getPerformanceReviewById(selectedReviewId) : null,
+    {
+      onSuccess: (data) => {
+        if (data && data.notes !== undefined) {
+          setEditedNotes(data.notes || "")
+        }
+      }
+    }
+  )
+  
+  // Fetch daily scores for preview modal
+  const { data: reviewDailyScores, isLoading: loadingReviewDailyScores } = useSWR(
+    reviewPreviewOpen && selectedReview?.students_id && selectedReview?.expeditions_id && selectedReview?.startDate && selectedReview?.endDate
+      ? `daily_scores_${selectedReview.students_id}_${selectedReview.expeditions_id}_${selectedReview.startDate}_${selectedReview.endDate}`
+      : null,
+    reviewPreviewOpen && selectedReview?.students_id && selectedReview?.expeditions_id && selectedReview?.startDate && selectedReview?.endDate
+      ? () => getProfessionalismByStudentAndDate(
+          selectedReview.students_id,
+          selectedReview.expeditions_id,
+          selectedReview.startDate,
+          selectedReview.endDate
+        )
+      : null
+  )
   const [formData, setFormData] = useState({
     name: "",
     grade: "",
@@ -323,6 +455,85 @@ export default function StudentDetailPage() {
       return format(date, "MMM d, yyyy")
     } catch {
       return dateStr
+    }
+  }
+  
+  // Format relative time (abbreviated)
+  const formatRelativeTime = (timestamp: number | null) => {
+    if (!timestamp) return "—"
+    try {
+      const distance = formatDistanceToNow(new Date(timestamp), { addSuffix: false })
+      return distance
+        .replace('about ', '')
+        .replace(' minutes', 'm')
+        .replace(' minute', 'm')
+        .replace(' hours', 'h')
+        .replace(' hour', 'h')
+        .replace(' days', 'd')
+        .replace(' day', 'd')
+        .replace(' weeks', 'w')
+        .replace(' week', 'w')
+        .replace(' months', 'mo')
+        .replace(' month', 'mo')
+        .replace(' years', 'y')
+        .replace(' year', 'y')
+        .replace('less than a', '<1')
+    } catch {
+      return "—"
+    }
+  }
+  
+  // Format date short for daily scores
+  const formatDateShort = (dateStr: string | null) => {
+    if (!dateStr) return "—"
+    try {
+      const [year, month, day] = dateStr.split('-').map(Number)
+      return format(new Date(year, month - 1, day), 'EEE, MMM d')
+    } catch {
+      return dateStr
+    }
+  }
+  
+  // Color coding for performance review scores
+  const getReviewScoreColor = (score: number | null | undefined) => {
+    if (score === null || score === undefined) return ""
+    if (score >= 3.21) return "bg-blue-50"
+    if (score >= 2.751) return "bg-green-50"
+    if (score >= 2.251) return "bg-yellow-50"
+    if (score >= 1.1) return "bg-red-50"
+    return "bg-gray-50"
+  }
+  
+  const getJournalColor = (percentage: number | null | undefined) => {
+    if (percentage === null || percentage === undefined) return ""
+    if (percentage < 70) return "bg-red-50"
+    if (percentage >= 90) return "bg-blue-50"
+    return "bg-green-50"
+  }
+  
+  // Handler to open performance review preview
+  const handlePreviewReview = (reviewId: number, currentNotes: string) => {
+    setSelectedReviewId(reviewId)
+    setEditedNotes(currentNotes || "")
+    setReviewPreviewOpen(true)
+  }
+  
+  // Handler to save notes
+  const handleSaveReviewNotes = async () => {
+    if (!selectedReviewId) return
+    
+    setSavingNotes(true)
+    try {
+      await updatePerformanceReviewNotes(selectedReviewId, editedNotes)
+      toast.success("Notes saved successfully")
+      mutate(`expedition_performance_reviews_${expeditionId}`)
+      mutate(`performance_review_${selectedReviewId}`)
+      setReviewPreviewOpen(false)
+    } catch (error) {
+      console.error("Error saving notes:", error)
+      toast.error("Failed to save notes")
+    } finally {
+      setSavingNotes(false)
     }
   }
   
@@ -775,6 +986,218 @@ export default function StudentDetailPage() {
                 </TableRow>
               </TableBody>
             </Table>
+          </div>
+        )}
+
+        {/* Score Trends Chart - Only show when expedition ID is present and we have data */}
+        {expeditionId && chartData.length > 0 && (
+          <Card>
+            <CardHeader className="border-b">
+              <CardTitle>Evaluation Trends</CardTitle>
+              <CardDescription>
+                Average scores across evaluations
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <ChartContainer config={chartConfig} className="h-[300px] w-full">
+                <LineChart
+                  accessibilityLayer
+                  data={chartData}
+                  margin={{ left: 12, right: 12 }}
+                >
+                  <CartesianGrid vertical={false} />
+                  <XAxis
+                    dataKey="dateLabel"
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={8}
+                  />
+                  <YAxis
+                    domain={[0, 5]}
+                    ticks={[0, 1, 2, 3, 4, 5]}
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={8}
+                  />
+                  <ChartTooltip
+                    cursor={false}
+                    content={<ChartTooltipContent />}
+                  />
+                  <Line
+                    dataKey="total"
+                    type="natural"
+                    stroke="var(--color-total)"
+                    strokeWidth={3}
+                    dot={{ r: 4 }}
+                    connectNulls
+                  />
+                  <Line
+                    dataKey="academics"
+                    type="natural"
+                    stroke="var(--color-academics)"
+                    strokeWidth={2}
+                    dot={false}
+                    connectNulls
+                  />
+                  <Line
+                    dataKey="citizenship"
+                    type="natural"
+                    stroke="var(--color-citizenship)"
+                    strokeWidth={2}
+                    dot={false}
+                    connectNulls
+                  />
+                  <Line
+                    dataKey="job"
+                    type="natural"
+                    stroke="var(--color-job)"
+                    strokeWidth={2}
+                    dot={false}
+                    connectNulls
+                  />
+                  <Line
+                    dataKey="crew"
+                    type="natural"
+                    stroke="var(--color-crew)"
+                    strokeWidth={2}
+                    dot={false}
+                    connectNulls
+                  />
+                  <Line
+                    dataKey="service"
+                    type="natural"
+                    stroke="var(--color-service)"
+                    strokeWidth={2}
+                    dot={false}
+                    connectNulls
+                  />
+                </LineChart>
+              </ChartContainer>
+            </CardContent>
+            <CardFooter className="flex-col items-start gap-2 text-sm">
+              <div className="flex flex-wrap gap-4">
+                <div className="flex items-center gap-2">
+                  <div className="h-3 w-3 rounded-full" style={{ backgroundColor: 'hsl(0, 0%, 20%)' }} />
+                  <span className="text-muted-foreground font-medium">Total</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="h-3 w-3 rounded-full" style={{ backgroundColor: 'hsl(221, 83%, 53%)' }} />
+                  <span className="text-muted-foreground">Academics</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="h-3 w-3 rounded-full" style={{ backgroundColor: 'hsl(142, 71%, 45%)' }} />
+                  <span className="text-muted-foreground">Citizenship</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="h-3 w-3 rounded-full" style={{ backgroundColor: 'hsl(38, 92%, 50%)' }} />
+                  <span className="text-muted-foreground">Job</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="h-3 w-3 rounded-full" style={{ backgroundColor: 'hsl(262, 83%, 58%)' }} />
+                  <span className="text-muted-foreground">Crew</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="h-3 w-3 rounded-full" style={{ backgroundColor: 'hsl(330, 81%, 60%)' }} />
+                  <span className="text-muted-foreground">Service</span>
+                </div>
+              </div>
+              <div className="text-muted-foreground leading-none">
+                Showing {chartData.length} evaluation{chartData.length !== 1 ? 's' : ''} over time
+              </div>
+            </CardFooter>
+          </Card>
+        )}
+
+        {/* Performance Reviews - Only show when expedition ID is present */}
+        {expeditionId && (
+          <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b bg-gray-50/30">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold">Performance Reviews</h2>
+                  <p className="text-sm text-gray-500 mt-1">
+                    {studentPerformanceReviews.length} {studentPerformanceReviews.length === 1 ? 'review' : 'reviews'} for this student
+                  </p>
+                </div>
+              </div>
+            </div>
+            {loadingPerformanceReviews ? (
+              <div className="p-8 flex justify-center">
+                <Spinner size="md" />
+              </div>
+            ) : studentPerformanceReviews.length === 0 ? (
+              <div className="p-8 text-center text-gray-500">
+                <FileText className="h-10 w-10 mx-auto text-gray-300 mb-2" />
+                <p className="text-sm">No performance reviews yet</p>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-b bg-gray-50/30 hover:bg-gray-50/30">
+                    <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 w-16">Created</TableHead>
+                    <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600">Report Name</TableHead>
+                    <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600">Start Date</TableHead>
+                    <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600">End Date</TableHead>
+                    <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600 text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {studentPerformanceReviews.map((review: any) => (
+                    <TableRow 
+                      key={review.id}
+                      className="border-b last:border-0 hover:bg-gray-50/50"
+                    >
+                      <TableCell className="h-14 px-4">
+                        <span className="text-xs text-gray-500">{formatRelativeTime(review.created_at)}</span>
+                      </TableCell>
+                      <TableCell className="h-14 px-6">
+                        {review.report_name ? (
+                          <span className="text-sm font-medium text-gray-700">{review.report_name}</span>
+                        ) : (
+                          <span className="text-sm text-gray-400 italic">Untitled</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="h-14 px-6">
+                        <span className="text-sm text-gray-600">{formatDate(review.startDate)}</span>
+                      </TableCell>
+                      <TableCell className="h-14 px-6">
+                        <span className="text-sm text-gray-600">{formatDate(review.endDate)}</span>
+                      </TableCell>
+                      <TableCell className="h-14 px-6 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="cursor-pointer h-9 w-9"
+                            onClick={() => handlePreviewReview(review.id, review.notes)}
+                            title="View Details"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="cursor-pointer h-9 w-9"
+                            onClick={async () => {
+                              try {
+                                await generatePerformanceReviewPDF(review.id)
+                                toast.success("PDF downloaded successfully")
+                              } catch (error) {
+                                console.error("Error generating PDF:", error)
+                                toast.error("Failed to generate PDF")
+                              }
+                            }}
+                            title="Download PDF"
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </div>
         )}
 
@@ -1532,6 +1955,195 @@ export default function StudentDetailPage() {
               Close
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Performance Review Preview Modal */}
+      <Dialog open={reviewPreviewOpen} onOpenChange={(open) => {
+        setReviewPreviewOpen(open)
+        if (!open) setSelectedReviewId(null)
+      }}>
+        <DialogContent className="w-full sm:max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
+          {loadingSelectedReview ? (
+            <div className="flex justify-center items-center py-20">
+              <Spinner size="lg" />
+            </div>
+          ) : selectedReview ? (
+            <>
+              <DialogHeader>
+                <DialogTitle>{selectedReview._students?.name || 'Student'} — {selectedReview.report_name || 'Performance Review'}</DialogTitle>
+                <DialogDescription>
+                  {formatDate(selectedReview.startDate)} - {formatDate(selectedReview.endDate)}
+                </DialogDescription>
+              </DialogHeader>
+              
+              <div className="flex-1 overflow-y-auto space-y-6">
+                {/* Evaluation Summary Table */}
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-700 mb-3">Evaluation Summary</h3>
+                  <div className="border rounded-lg overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="border-b bg-gray-50 hover:bg-gray-50">
+                          <TableHead className="h-10 px-3 text-xs font-semibold text-gray-600">Category</TableHead>
+                          <TableHead className="h-10 px-3 text-xs font-semibold text-gray-600 text-center w-16">Score</TableHead>
+                          <TableHead className="h-10 px-3 text-xs font-semibold text-gray-600">Evaluation</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        <TableRow className={`border-b ${getReviewScoreColor(selectedReview.academics)}`}>
+                          <TableCell className="px-3 py-2 font-medium text-gray-700 text-sm">Academics</TableCell>
+                          <TableCell className="px-3 py-2 text-center text-gray-700 text-sm">
+                            {selectedReview.academics !== null && selectedReview.academics !== undefined ? selectedReview.academics.toFixed(2) : '—'}
+                          </TableCell>
+                          <TableCell className="px-3 py-2 text-gray-600 text-sm">
+                            {selectedReview.academics_evaluation || '—'}
+                          </TableCell>
+                        </TableRow>
+                        <TableRow className={`border-b ${getReviewScoreColor(selectedReview.citizenship)}`}>
+                          <TableCell className="px-3 py-2 font-medium text-gray-700 text-sm">Citizenship</TableCell>
+                          <TableCell className="px-3 py-2 text-center text-gray-700 text-sm">
+                            {selectedReview.citizenship !== null && selectedReview.citizenship !== undefined ? selectedReview.citizenship.toFixed(2) : '—'}
+                          </TableCell>
+                          <TableCell className="px-3 py-2 text-gray-600 text-sm">
+                            {selectedReview.citizenship_evaluation || '—'}
+                          </TableCell>
+                        </TableRow>
+                        <TableRow className={`border-b ${getReviewScoreColor(selectedReview.job)}`}>
+                          <TableCell className="px-3 py-2 font-medium text-gray-700 text-sm">Job Duties</TableCell>
+                          <TableCell className="px-3 py-2 text-center text-gray-700 text-sm">
+                            {selectedReview.job !== null && selectedReview.job !== undefined ? selectedReview.job.toFixed(2) : '—'}
+                          </TableCell>
+                          <TableCell className="px-3 py-2 text-gray-600 text-sm">
+                            {selectedReview.job_evaluation || '—'}
+                          </TableCell>
+                        </TableRow>
+                        <TableRow className={`border-b ${getReviewScoreColor(selectedReview.crew)}`}>
+                          <TableCell className="px-3 py-2 font-medium text-gray-700 text-sm">Crew</TableCell>
+                          <TableCell className="px-3 py-2 text-center text-gray-700 text-sm">
+                            {selectedReview.crew !== null && selectedReview.crew !== undefined ? selectedReview.crew.toFixed(2) : '—'}
+                          </TableCell>
+                          <TableCell className="px-3 py-2 text-gray-600 text-sm">
+                            {selectedReview.crew_evaluation || '—'}
+                          </TableCell>
+                        </TableRow>
+                        <TableRow className={`border-b ${getReviewScoreColor(selectedReview.service)}`}>
+                          <TableCell className="px-3 py-2 font-medium text-gray-700 text-sm">Service</TableCell>
+                          <TableCell className="px-3 py-2 text-center text-gray-700 text-sm">
+                            {selectedReview.service !== null && selectedReview.service !== undefined ? selectedReview.service.toFixed(2) : '—'}
+                          </TableCell>
+                          <TableCell className="px-3 py-2 text-gray-600 text-sm">
+                            {selectedReview.service_evaluation || '—'}
+                          </TableCell>
+                        </TableRow>
+                        <TableRow className={getJournalColor(selectedReview.journaling)}>
+                          <TableCell className="px-3 py-2 font-medium text-gray-700 text-sm">Journaling</TableCell>
+                          <TableCell className="px-3 py-2 text-center text-gray-700 text-sm">
+                            {selectedReview.journaling !== null && selectedReview.journaling !== undefined ? `${Math.round(selectedReview.journaling)}%` : '—'}
+                          </TableCell>
+                          <TableCell className="px-3 py-2 text-gray-600 text-sm">
+                            {selectedReview.journaling_evaluation || '—'}
+                          </TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+                
+                {/* Daily Scores Table */}
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-700 mb-3">Daily Scores</h3>
+                  {loadingReviewDailyScores ? (
+                    <div className="flex justify-center py-4">
+                      <Spinner size="sm" />
+                    </div>
+                  ) : reviewDailyScores && reviewDailyScores.length > 0 ? (
+                    <div className="border rounded-lg overflow-hidden">
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="border-b bg-gray-50 hover:bg-gray-50">
+                              <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600 whitespace-nowrap">Date</TableHead>
+                              <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600 text-center">Acad</TableHead>
+                              <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600 text-center">Citz</TableHead>
+                              <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600 text-center">Job</TableHead>
+                              <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600 text-center">Crew</TableHead>
+                              <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600 text-center">Serv</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {[...reviewDailyScores]
+                              .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+                              .map((score: any) => (
+                              <TableRow key={score.date} className="border-b last:border-0">
+                                <TableCell className="px-2 py-2 font-medium text-gray-700 text-sm whitespace-nowrap">
+                                  {formatDateShort(score.date)}
+                                </TableCell>
+                                <TableCell className={`px-2 py-2 text-center text-sm ${getReviewScoreColor(score.academics)}`}>
+                                  {score.academics !== null && score.academics !== undefined ? score.academics : '—'}
+                                </TableCell>
+                                <TableCell className={`px-2 py-2 text-center text-sm ${getReviewScoreColor(score.citizenship)}`}>
+                                  {score.citizenship !== null && score.citizenship !== undefined ? score.citizenship : '—'}
+                                </TableCell>
+                                <TableCell className={`px-2 py-2 text-center text-sm ${getReviewScoreColor(score.job)}`}>
+                                  {score.job !== null && score.job !== undefined ? score.job : '—'}
+                                </TableCell>
+                                <TableCell className={`px-2 py-2 text-center text-sm ${getReviewScoreColor(score.crew)}`}>
+                                  {score.crew !== null && score.crew !== undefined ? score.crew : '—'}
+                                </TableCell>
+                                <TableCell className={`px-2 py-2 text-center text-sm ${getReviewScoreColor(score.service)}`}>
+                                  {score.service !== null && score.service !== undefined ? score.service : '—'}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-500 text-center py-4">No daily scores found for this period.</p>
+                  )}
+                </div>
+                
+                {/* Notes Section */}
+                <div>
+                  <Label htmlFor="review-notes" className="text-sm font-semibold text-gray-700">Notes</Label>
+                  <Textarea
+                    id="review-notes"
+                    placeholder="Add notes about this performance review..."
+                    value={editedNotes}
+                    onChange={(e) => setEditedNotes(e.target.value)}
+                    className="mt-2 min-h-[120px]"
+                  />
+                </div>
+              </div>
+              
+              <DialogFooter className="flex-shrink-0">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setReviewPreviewOpen(false)}
+                  disabled={savingNotes}
+                  className="cursor-pointer"
+                >
+                  Close
+                </Button>
+                <Button 
+                  onClick={handleSaveReviewNotes}
+                  disabled={savingNotes}
+                  className="cursor-pointer"
+                >
+                  {savingNotes ? (
+                    <>
+                      <Spinner size="sm" className="h-4 w-4 mr-2" />
+                      Saving...
+                    </>
+                  ) : (
+                    'Save Notes'
+                  )}
+                </Button>
+              </DialogFooter>
+            </>
+          ) : null}
         </DialogContent>
       </Dialog>
     </div>

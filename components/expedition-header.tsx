@@ -128,84 +128,93 @@ export function ExpeditionHeader({ expedition, isLoading = false, currentPage = 
 
       {/* Navigation */}
       <div className="border-b bg-muted/30">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center gap-2 flex-wrap">
-            {/* 1. Overview */}
-            <Button 
-              variant={currentPage === "overview" ? "default" : "outline"}
-              className="cursor-pointer"
-              onClick={() => expedition && router.push(`/expedition/${expedition.id}`)}
-              disabled={!expedition}
-            >
-              <Home className="h-4 w-4 mr-2" />
-              Overview
-            </Button>
-            
-            {/* 2. Trip Planner */}
-            <Button 
-              variant={currentPage === "trip-planner" ? "default" : "outline"}
-              className="cursor-pointer"
-              onClick={() => expedition && router.push(`/dashboard?expedition=${expedition.id}`)}
-              disabled={!expedition}
-            >
-              <Map className="h-4 w-4 mr-2" />
-              Trip Planner
-            </Button>
-            
-            {/* 3. Weekly Planner */}
-            <Button 
-              variant={currentPage === "weekly-planner" ? "default" : "outline"}
-              className="cursor-pointer"
-              onClick={() => expedition && router.push(`/planner?expedition=${expedition.id}`)}
-              disabled={!expedition}
-            >
-              <ClipboardList className="h-4 w-4 mr-2" />
-              Weekly Planner
-            </Button>
-            
-            {/* 4. Daily View */}
-            <Button 
-              variant={currentPage === "daily-view" ? "default" : "outline"}
-              className="cursor-pointer"
-              onClick={() => expedition && router.push(`/schedule/${defaultDate}?expedition=${expedition.id}`)}
-              disabled={!expedition}
-            >
-              <Eye className="h-4 w-4 mr-2" />
-              Daily View
-            </Button>
-            
-            {/* 5. Students */}
-            <Button 
-              variant={currentPage === "students" ? "default" : "outline"}
-              className="cursor-pointer"
-              onClick={() => expedition && router.push(`/students?expedition=${expedition.id}`)}
-              disabled={!expedition}
-            >
-              <Users className="h-4 w-4 mr-2" />
-              Students
-            </Button>
-            
-            {/* 6. Add Scores */}
-            <Button 
-              variant={currentPage === "add-scores" ? "default" : "outline"}
-              className="cursor-pointer"
-              onClick={() => expedition && router.push(`/evaluate/${defaultDate}?expedition=${expedition.id}`)}
-              disabled={!expedition}
-            >
-              <PlusCircle className="h-4 w-4 mr-2" />
-              Add Scores
-            </Button>
-            
-            {/* 7. Performance Reviews */}
-            <Button 
-              variant={currentPage === "performance-reviews" ? "default" : "outline"}
-              className="cursor-pointer"
-              onClick={() => expedition && router.push(`/performance-reviews?expedition=${expedition.id}`)}
-              disabled={!expedition}
-            >
-              <FileText className="h-4 w-4 mr-2" />
-              Performance Reviews
-            </Button>
+        <div className="container mx-auto px-4 py-3">
+          <div className="flex items-center">
+            <div className="inline-flex gap-3 rounded-lg border border-gray-200 bg-gray-50 p-1.5 shadow-sm">
+              {/* 1. Overview */}
+              <Button 
+                variant={currentPage === "overview" ? "default" : "ghost"}
+                size="sm"
+                className={`cursor-pointer h-8 px-3 rounded-md ${currentPage !== "overview" ? "bg-white border border-gray-200 hover:bg-gray-50" : ""}`}
+                onClick={() => expedition && router.push(`/expedition/${expedition.id}`)}
+                disabled={!expedition}
+              >
+                <Home className="h-4 w-4 sm:mr-1.5" />
+                <span className="hidden sm:inline truncate">Overview</span>
+              </Button>
+              
+              {/* 2. Trip Planner */}
+              <Button 
+                variant={currentPage === "trip-planner" ? "default" : "ghost"}
+                size="sm"
+                className={`cursor-pointer h-8 px-3 rounded-md ${currentPage !== "trip-planner" ? "bg-white border border-gray-200 hover:bg-gray-50" : ""}`}
+                onClick={() => expedition && router.push(`/dashboard?expedition=${expedition.id}`)}
+                disabled={!expedition}
+              >
+                <Map className="h-4 w-4 sm:mr-1.5" />
+                <span className="hidden sm:inline truncate">Planner</span>
+              </Button>
+              
+              {/* 3. Weekly Planner */}
+              <Button 
+                variant={currentPage === "weekly-planner" ? "default" : "ghost"}
+                size="sm"
+                className={`cursor-pointer h-8 px-3 rounded-md ${currentPage !== "weekly-planner" ? "bg-white border border-gray-200 hover:bg-gray-50" : ""}`}
+                onClick={() => expedition && router.push(`/planner?expedition=${expedition.id}`)}
+                disabled={!expedition}
+              >
+                <ClipboardList className="h-4 w-4 sm:mr-1.5" />
+                <span className="hidden sm:inline truncate">Weekly</span>
+              </Button>
+              
+              {/* 4. Daily View */}
+              <Button 
+                variant={currentPage === "daily-view" ? "default" : "ghost"}
+                size="sm"
+                className={`cursor-pointer h-8 px-3 rounded-md ${currentPage !== "daily-view" ? "bg-white border border-gray-200 hover:bg-gray-50" : ""}`}
+                onClick={() => expedition && router.push(`/schedule/${defaultDate}?expedition=${expedition.id}`)}
+                disabled={!expedition}
+              >
+                <Eye className="h-4 w-4 sm:mr-1.5" />
+                <span className="hidden sm:inline truncate">Daily</span>
+              </Button>
+              
+              {/* 5. Students */}
+              <Button 
+                variant={currentPage === "students" ? "default" : "ghost"}
+                size="sm"
+                className={`cursor-pointer h-8 px-3 rounded-md ${currentPage !== "students" ? "bg-white border border-gray-200 hover:bg-gray-50" : ""}`}
+                onClick={() => expedition && router.push(`/students?expedition=${expedition.id}`)}
+                disabled={!expedition}
+              >
+                <Users className="h-4 w-4 sm:mr-1.5" />
+                <span className="hidden sm:inline truncate">Students</span>
+              </Button>
+              
+              {/* 6. Add Scores */}
+              <Button 
+                variant={currentPage === "add-scores" ? "default" : "ghost"}
+                size="sm"
+                className={`cursor-pointer h-8 px-3 rounded-md ${currentPage !== "add-scores" ? "bg-white border border-gray-200 hover:bg-gray-50" : ""}`}
+                onClick={() => expedition && router.push(`/evaluate/${defaultDate}?expedition=${expedition.id}`)}
+                disabled={!expedition}
+              >
+                <PlusCircle className="h-4 w-4 sm:mr-1.5" />
+                <span className="hidden sm:inline truncate">Scores</span>
+              </Button>
+              
+              {/* 7. Performance Reviews */}
+              <Button 
+                variant={currentPage === "performance-reviews" ? "default" : "ghost"}
+                size="sm"
+                className={`cursor-pointer h-8 px-3 rounded-md ${currentPage !== "performance-reviews" ? "bg-white border border-gray-200 hover:bg-gray-50" : ""}`}
+                onClick={() => expedition && router.push(`/performance-reviews?expedition=${expedition.id}`)}
+                disabled={!expedition}
+              >
+                <FileText className="h-4 w-4 sm:mr-1.5" />
+                <span className="hidden sm:inline truncate">Reviews</span>
+              </Button>
+            </div>
           </div>
         </div>
       </div>

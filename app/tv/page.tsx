@@ -210,26 +210,26 @@ function TVDisplayContent() {
     return () => clearInterval(interval)
   }, [timezoneOffset])
 
-  // Auto-scroll - seamless continuous scrolling
+  // Auto-scroll - seamless infinite treadmill scrolling
+  // We render the timeline twice and when we reach the end of the first copy, we reset to 0
   useEffect(() => {
     if (isPaused || itemsWithLayout.length === 0) return
     
     const scrollInterval = setInterval(() => {
       if (containerRef.current) {
         const container = containerRef.current
-        const maxScroll = container.scrollWidth - container.clientWidth
+        // The content is duplicated, so half the scrollWidth is one complete cycle
+        const halfWidth = container.scrollWidth / 2
         
-        if (maxScroll <= 0) return // No need to scroll if content fits
+        if (halfWidth <= 0) return
         
-        // Seamless scrolling - when near the end, smoothly transition
-        if (scrollPosition >= maxScroll - 10) {
-          // Pause briefly at the end, then reset smoothly
-          setTimeout(() => {
-            setScrollPosition(0)
-            container.scrollTo({ left: 0, behavior: "auto" })
-          }, 3000) // 3 second pause at end
+        // When we've scrolled past the first copy, instantly reset to start
+        // This creates the seamless treadmill effect
+        if (scrollPosition >= halfWidth) {
+          setScrollPosition(0)
+          container.scrollLeft = 0
         } else {
-          const newPosition = scrollPosition + 0.5 // Slower, smoother scroll
+          const newPosition = scrollPosition + 1 // Scroll speed
           setScrollPosition(newPosition)
           container.scrollLeft = newPosition
         }
@@ -306,7 +306,7 @@ function TVDisplayContent() {
       <div className="h-[12vh] bg-slate-900/80 border-b border-white/10 flex items-center justify-between px-10">
         <div className="flex items-center gap-8">
           <div>
-            <h1 className="text-3xl font-bold text-white">
+            <h1 className="text-4xl font-bold text-white">
               {format(displayDate, "EEEE, MMMM d, yyyy")}
             </h1>
             <div className="flex items-center gap-3 mt-2">
@@ -363,51 +363,57 @@ function TVDisplayContent() {
         </div>
       </div>
 
-      {/* Timeline Container */}
+      {/* Timeline Container - infinite scroll with duplicated content */}
       <div 
         ref={containerRef}
         className="h-[88vh] overflow-x-auto overflow-y-hidden scrollbar-hide"
         style={{ scrollBehavior: "auto" }}
       >
-        <div className="h-full min-w-[250vw] relative px-10 py-6">
-          {/* Hour markers */}
-          <div className="absolute top-6 left-10 right-10 h-12">
-            {hourMarkers.map(({ hour, percent }) => (
-              <div
-                key={hour}
-                className="absolute flex flex-col items-center"
-                style={{ left: `${percent}%` }}
-              >
-                <div className="px-3 py-1.5 bg-white/10 backdrop-blur rounded-lg text-lg font-medium text-white">
-                  {hour > 12 ? hour - 12 : hour === 0 ? 12 : hour}
-                  <span className="text-sm text-white/60 ml-1">
-                    {hour >= 12 ? "PM" : "AM"}
-                  </span>
-                </div>
-                <div className="w-px h-[70vh] bg-white/10 mt-3" />
+        {/* Two copies of the timeline for seamless looping */}
+        <div className="h-full flex" style={{ width: "500vw" }}>
+          {[0, 1].map((copyIndex) => (
+            <div key={copyIndex} className="h-full relative px-10 py-6" style={{ width: "250vw" }}>
+              {/* Hour markers */}
+              <div className="absolute top-6 left-10 right-10 h-12">
+                {hourMarkers.map(({ hour, percent }) => (
+                  <div
+                    key={`${copyIndex}-${hour}`}
+                    className="absolute flex flex-col items-center"
+                    style={{ left: `${percent}%` }}
+                  >
+                    <div className="px-3 py-1.5 bg-white/10 backdrop-blur rounded-lg text-lg font-medium text-white">
+                      {hour > 12 ? hour - 12 : hour === 0 ? 12 : hour}
+                      <span className="text-sm text-white/60 ml-1">
+                        {hour >= 12 ? "PM" : "AM"}
+                      </span>
+                    </div>
+                    <div className="w-px h-[70vh] bg-white/10 mt-3" />
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
 
-          {/* Current time indicator */}
-          {currentTimePosition && !testDate && (
-            <div
-              className="absolute top-6 bottom-6 w-1 bg-red-500 z-50 shadow-lg shadow-red-500/50"
-              style={{ left: `calc(2.5rem + ${currentTimePosition})` }}
-            >
-              <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-red-500 border-2 border-white shadow-lg" />
-            </div>
-          )}
+              {/* Current time indicator line - only show on first copy */}
+              {copyIndex === 0 && currentTimePosition && (
+                <div
+                  className="absolute top-6 bottom-6 w-1 bg-red-500 z-50 shadow-lg shadow-red-500/50"
+                  style={{ left: `calc(2.5rem + ${currentTimePosition})` }}
+                >
+                  <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-red-500 border-2 border-white shadow-lg" />
+                  <div className="absolute top-0 left-4 bg-red-500 text-white text-sm font-bold px-2 py-1 rounded shadow-lg whitespace-nowrap">
+                    {format(currentTime, "h:mm a")}
+                  </div>
+                </div>
+              )}
 
-          {/* Schedule items - card style with dark theme */}
-          <div className="absolute top-24 left-10 right-10 bottom-6">
+              {/* Schedule items - card style with dark theme */}
+              <div className="absolute top-24 left-10 right-10 bottom-6">
             {isLoading ? (
               <div className="flex items-center justify-center h-full">
-                <div className="text-2xl text-white/50">Loading schedule...</div>
+                <div className="text-3xl text-white/50">Loading schedule...</div>
               </div>
             ) : itemsWithLayout.length === 0 ? (
               <div className="flex items-center justify-center h-full">
-                <div className="text-2xl text-white/50">No activities scheduled</div>
+                <div className="text-3xl text-white/50">No activities scheduled</div>
               </div>
             ) : (
               <div className="relative h-full">
@@ -416,103 +422,95 @@ function TVDisplayContent() {
                   const rowHeight = 100 / item.totalRows
                   const topOffset = item.row * rowHeight
                   
-                  // Truncate notes to max 150 characters
-                  const truncatedNotes = item.notes && item.notes.length > 150 
-                    ? item.notes.substring(0, 150) + "..." 
+                  // Check if item is in the past (ended before current time)
+                  const currentMilitaryTime = currentTime.getHours() * 100 + currentTime.getMinutes()
+                  const isPast = item.time_out < currentMilitaryTime && !testDate
+                  
+                  // Truncate notes to max 120 characters
+                  const truncatedNotes = item.notes && item.notes.length > 120 
+                    ? item.notes.substring(0, 120) + "..." 
                     : item.notes
+                  
+                  // Truncate things to bring to max 60 characters
+                  const truncatedThings = item.things_to_bring && item.things_to_bring.length > 60
+                    ? item.things_to_bring.substring(0, 60) + "..."
+                    : item.things_to_bring
+                  
+                  // Build staff display with participants
+                  const staffNames: string[] = []
+                  if (item._expedition_staff?.name) staffNames.push(item._expedition_staff.name)
+                  if (item.participants?.length > 0) {
+                    item.participants.slice(0, 2).forEach((p: any) => {
+                      if (p.name && p.name !== item._expedition_staff?.name) {
+                        staffNames.push(p.name.split(' ')[0]) // First name only
+                      }
+                    })
+                  }
                   
                   return (
                     <div
                       key={item.id}
-                      className="absolute bg-white/95 backdrop-blur rounded-2xl shadow-xl overflow-hidden border border-white/20"
+                      className={cn(
+                        "absolute bg-white rounded-2xl shadow-xl overflow-hidden p-4 border-4 border-gray-200 transition-opacity duration-300",
+                        isPast && "opacity-40"
+                      )}
                       style={{
                         left: position.left,
                         width: position.width,
-                        top: `calc(${topOffset}% + 6px)`,
-                        height: `calc(${rowHeight}% - 12px)`,
-                        minWidth: "220px",
+                        top: `calc(${topOffset}% + 8px)`,
+                        height: `calc(${rowHeight}% - 16px)`,
+                        minWidth: "280px",
                       }}
                     >
-                      <div className="flex h-full">
-                        {/* Color bar */}
-                        <div className={cn("w-2 flex-shrink-0", getColorForType(item))} />
+                      <div className="flex h-full gap-4">
+                        {/* Color bar - padded inside with rounded corners */}
+                        <div className={cn("w-1.5 flex-shrink-0 rounded-full", getColorForType(item))} />
                         
                         {/* Content */}
-                        <div className="flex-1 p-5 overflow-hidden flex flex-col">
-                          {/* Header */}
-                          <div className="flex items-start justify-between gap-3 mb-3">
-                            <div className="min-w-0 flex-1">
-                              <h3 className="font-bold text-xl text-gray-900 truncate">
-                                {item.name}
-                              </h3>
-                              <p className="text-base text-gray-600 mt-1">
-                                {formatTime(item.time_in)} - {formatTime(item.time_out)}
-                              </p>
-                            </div>
-                            <span className="text-sm text-gray-400 font-semibold flex-shrink-0 bg-gray-100 px-2 py-1 rounded">
-                              {getDuration(item.time_in, item.time_out)}
-                            </span>
-                          </div>
+                        <div className="flex-1 py-2 pr-2 overflow-hidden flex flex-col">
+                          {/* Title */}
+                          <h3 className="font-bold text-3xl text-gray-900 truncate mb-1">
+                            {item.name}
+                          </h3>
+                          
+                          {/* Time */}
+                          <p className="text-2xl text-gray-500 mb-3">
+                            {formatTime(item.time_in)} - {formatTime(item.time_out)}
+                          </p>
 
-                          {/* Lead staff */}
-                          {item._expedition_staff && (
-                            <div className="flex items-center gap-3 mb-4">
-                              <Avatar className="h-8 w-8">
-                                <AvatarFallback className="text-sm bg-gray-200 text-gray-700 font-medium">
-                                  {item._expedition_staff.name?.split(" ").map((n: string) => n[0]).join("")}
+                          {/* Staff with avatar */}
+                          {staffNames.length > 0 && (
+                            <div className="flex items-center gap-3 mb-5">
+                              <Avatar className="h-9 w-9">
+                                <AvatarFallback className="text-base bg-gray-100 text-gray-600 font-medium">
+                                  {item._expedition_staff?.name?.split(" ").map((n: string) => n[0]).join("") || "?"}
                                 </AvatarFallback>
                               </Avatar>
-                              <span className="text-base text-gray-800 font-medium">
-                                {item._expedition_staff.name}
+                              <span className="text-xl text-gray-700 truncate">
+                                {staffNames.join(" • ")}
                               </span>
                             </div>
                           )}
 
-                          {/* Participants */}
-                          {item.participants && item.participants.length > 0 && (
-                            <div className="mb-4">
-                              <p className="text-sm text-gray-500 mb-2 font-medium">Participating:</p>
-                              <div className="flex flex-wrap gap-2">
-                                {item.participants.slice(0, 4).map((p: any) => (
-                                  <span key={p.id} className="px-3 py-1 rounded-lg bg-gray-100 text-gray-700 text-sm font-medium">
-                                    {p.name}
-                                  </span>
-                                ))}
-                                {item.participants.length > 4 && (
-                                  <span className="px-3 py-1 rounded-lg bg-gray-100 text-gray-500 text-sm">
-                                    +{item.participants.length - 4} more
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Divider */}
-                          {(item.address || item.things_to_bring || truncatedNotes) && (
-                            <div className="h-px bg-gray-200 my-3" />
-                          )}
-
                           {/* Address */}
                           {item.address && (
-                            <p className="text-base text-gray-600 mb-4 line-clamp-2">
+                            <p className="text-xl text-gray-600 mb-4 line-clamp-1 truncate">
                               {item.address}
                             </p>
                           )}
 
                           {/* Things to bring */}
-                          {item.things_to_bring && (
-                            <div className="mb-4">
-                              <p className="text-sm text-gray-500 font-medium mb-1">Bring:</p>
-                              <p className="text-base text-gray-700 line-clamp-2">{item.things_to_bring}</p>
-                            </div>
+                          {truncatedThings && (
+                            <p className="text-xl text-gray-600 mb-4 truncate">
+                              {truncatedThings}
+                            </p>
                           )}
 
                           {/* Notes */}
                           {truncatedNotes && (
-                            <div className="flex-1 overflow-hidden">
-                              <p className="text-sm text-gray-500 font-medium mb-1">Notes:</p>
-                              <p className="text-base text-gray-600 line-clamp-3">{truncatedNotes}</p>
-                            </div>
+                            <p className="text-lg text-gray-500 line-clamp-2 flex-1">
+                              {truncatedNotes}
+                            </p>
                           )}
                         </div>
                       </div>
@@ -522,6 +520,8 @@ function TVDisplayContent() {
               </div>
             )}
           </div>
+        </div>
+          ))}
         </div>
       </div>
 

@@ -1,7 +1,7 @@
 "use client"
 
 import { useRouter, useSearchParams } from "next/navigation"
-import { useMemo, useState } from "react"
+import { useMemo, useState, Suspense } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -33,6 +33,14 @@ import { ExpeditionHeader } from "@/components/expedition-header"
 import { useExpeditions } from "@/lib/hooks/use-expeditions"
 
 export default function StudentsPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center h-64"><Skeleton className="h-8 w-32" /></div>}>
+      <StudentsPageContent />
+    </Suspense>
+  )
+}
+
+function StudentsPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { currentUser } = useCurrentUser()

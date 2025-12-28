@@ -299,15 +299,14 @@ function TVStaticContent() {
 
   return (
     <div className="fixed inset-0 z-[100] bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col overflow-hidden">
-      {/* Header */}
-      <div className="h-16 flex-shrink-0 bg-slate-900/80 border-b border-white/10 flex items-center justify-between px-6">
-        <div className="flex items-center gap-6">
-          <div>
-            <h1 className="text-3xl font-bold text-white">
-              {format(displayDate, "EEEE, MMMM d, yyyy")}
+      {/* Header - Compact */}
+      <div className="h-12 flex-shrink-0 bg-slate-900/80 border-b border-white/10 flex items-center justify-between px-6">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4">
+            <h1 className="text-xl font-bold text-white">
+              {format(displayDate, "EEE, MMM d")}
             </h1>
-            <div className="flex items-center gap-3 mt-1">
-              <span className="text-base text-white/70">{activeExpedition.name}</span>
+            <span className="text-sm text-white/70">{activeExpedition.name}</span>
               
               {/* Location info */}
               {currentLocationName && (

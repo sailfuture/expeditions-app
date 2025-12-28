@@ -123,23 +123,6 @@ function TVDisplayContent() {
     return scheduleItems[0]?._expedition_schedule || null
   }, [scheduleItems])
 
-  // Filter items for each row
-  const row1Items = useMemo(() => {
-    return itemsWithLayout.filter((item: any) => {
-      const startHour = Math.floor(item.time_in / 100)
-      const endHour = Math.floor(item.time_out / 100)
-      return startHour < ROW1_END && endHour > ROW1_START
-    })
-  }, [itemsWithLayout])
-
-  const row2Items = useMemo(() => {
-    return itemsWithLayout.filter((item: any) => {
-      const startHour = Math.floor(item.time_in / 100)
-      const endHour = Math.floor(item.time_out / 100)
-      return startHour < ROW2_END && endHour > ROW2_START
-    })
-  }, [itemsWithLayout])
-
   // Calculate layout for overlapping items
   const itemsWithLayout = useMemo(() => {
     if (!scheduleItems || !Array.isArray(scheduleItems)) return []
@@ -190,6 +173,23 @@ function TVDisplayContent() {
     
     return items
   }, [scheduleItems])
+
+  // Filter items for each row
+  const row1Items = useMemo(() => {
+    return itemsWithLayout.filter((item: any) => {
+      const startHour = Math.floor(item.time_in / 100)
+      const endHour = Math.floor(item.time_out / 100)
+      return startHour < ROW1_END && endHour > ROW1_START
+    })
+  }, [itemsWithLayout])
+
+  const row2Items = useMemo(() => {
+    return itemsWithLayout.filter((item: any) => {
+      const startHour = Math.floor(item.time_in / 100)
+      const endHour = Math.floor(item.time_out / 100)
+      return startHour < ROW2_END && endHour > ROW2_START
+    })
+  }, [itemsWithLayout])
 
   // Calculate position for an item in a specific row
   const getItemPositionForRow = (timeIn: number, timeOut: number, rowStart: number, rowEnd: number, rowHours: number) => {
@@ -284,9 +284,9 @@ function TVDisplayContent() {
                           (todaySchedule?.destination > 0 ? `Location ${todaySchedule.destination}` : null)
 
   return (
-    <div className="fixed inset-0 z-[100] bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 overflow-hidden">
+    <div className="fixed inset-0 z-[100] bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="h-[12vh] bg-slate-900/80 border-b border-white/10 flex items-center justify-between px-10">
+      <div className="h-16 flex-shrink-0 bg-slate-900/80 border-b border-white/10 flex items-center justify-between px-6">
         <div className="flex items-center gap-8">
           <div>
             <h1 className="text-4xl font-bold text-white">
@@ -341,184 +341,219 @@ function TVDisplayContent() {
         </div>
       </div>
 
-      {/* Timeline Container */}
-      <div className="h-[88vh] relative px-10 py-6 overflow-hidden">
-        {/* 15-minute interval lines (behind hour markers) */}
-        <div className="absolute top-16 left-10 right-10 bottom-6">
-          {quarterHourMarkers.map(({ hour, minutes, percent, isHalf }) => (
-            <div
-              key={`${hour}-${minutes}`}
-              className="absolute top-0 bottom-0 transition-all duration-1000 ease-linear"
-              style={{ 
-                left: `${percent}%`,
-                transform: 'translateX(-50%)'
-              }}
-            >
-              <div className={cn(
-                "w-px h-full",
-                isHalf ? "bg-white/8" : "bg-white/5"
-              )} />
-            </div>
-          ))}
-        </div>
-
-        {/* Hour markers - stretch full height */}
-        <div className="absolute top-6 left-10 right-10 bottom-16">
-          {hourMarkers.map(({ hour, percent }) => {
-            const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour
-            const ampm = hour >= 12 ? "PM" : "AM"
-            
-            return (
-              <div
-                key={hour}
-                className="absolute top-0 bottom-0 flex flex-col items-center transition-all duration-1000 ease-linear"
-                style={{ 
-                  left: `${percent}%`,
-                  transform: 'translateX(-50%)' // Center the marker on the exact percentage point
-                }}
-              >
-                <div className="px-3 py-1.5 bg-white/10 backdrop-blur rounded-lg text-lg font-medium text-white flex-shrink-0">
-                  {displayHour}
-                  <span className="text-sm text-white/60 ml-1">
-                    {ampm}
-                  </span>
-                </div>
-                <div className="w-px flex-1 bg-white/15 mt-3" />
+      {/* Timeline Container - Two rows */}
+      <div className="flex-1 flex flex-col pl-12 pr-6 py-2 gap-3 overflow-hidden">
+        {isLoading ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-2xl text-white/50">Loading schedule...</div>
+          </div>
+        ) : itemsWithLayout.length === 0 ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-2xl text-white/50">No activities scheduled</div>
+          </div>
+        ) : (
+          <>
+            {/* Row 1: 5 AM - 2 PM */}
+            <div className="flex-1 relative min-h-0">
+              {/* Row label */}
+              <div className="absolute -left-4 top-1/2 -translate-y-1/2 -rotate-90 text-white/30 text-xs font-medium whitespace-nowrap">
+                5AM - 2PM
               </div>
-            )
-          })}
-        </div>
-
-        {/* Current time indicator line - positioned within the same container as hour markers */}
-        <div className="absolute top-6 left-10 right-10 bottom-6 pointer-events-none">
-          {currentTimePosition && (
-            <div
-              className="absolute top-0 bottom-0 w-1 bg-red-500 z-50 shadow-lg shadow-red-500/50 transition-all duration-1000 ease-linear"
-              style={{ 
-                left: currentTimePosition,
-                transform: 'translateX(-50%)' // Center the line on the exact position
-              }}
-            >
-              <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-red-500 border-2 border-white shadow-lg" />
-              <div className="absolute top-0 left-4 bg-red-500 text-white text-sm font-bold px-2 py-1 rounded shadow-lg whitespace-nowrap">
-                {format(currentTime, "h:mm a")}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Schedule items */}
-        <div className="absolute top-24 left-10 right-10 bottom-6">
-          {isLoading ? (
-            <div className="flex items-center justify-center h-full">
-              <div className="text-3xl text-white/50">Loading schedule...</div>
-            </div>
-          ) : visibleItems.length === 0 ? (
-            <div className="flex items-center justify-center h-full">
-              <div className="text-3xl text-white/50">No activities in this time window</div>
-            </div>
-          ) : (
-            <div className="relative h-full">
-              {visibleItems.map((item: any) => {
-                const position = getItemPosition(item.time_in, item.time_out)
-                const rowHeight = 100 / item.totalRows
-                const topOffset = item.row * rowHeight
-                
-                // Check if item is in the past
-                const currentMilitaryTime = currentTime.getHours() * 100 + currentTime.getMinutes()
-                const isPast = item.time_out < currentMilitaryTime && !testDate
-                
-                // Build staff display
-                const staffNames: string[] = []
-                if (item._expedition_staff?.name) staffNames.push(item._expedition_staff.name)
-                if (item.participants?.length > 0) {
-                  item.participants.slice(0, 2).forEach((p: any) => {
-                    if (p.name && p.name !== item._expedition_staff?.name) {
-                      staffNames.push(p.name.split(' ')[0])
-                    }
-                  })
-                }
-                
-                // Determine if card is narrow (less than 10% width = less than 30 min in 5hr window)
-                const isNarrow = position.widthPercent < 10
-                
-                return (
-                  <div
-                    key={item.id}
-                    className={cn(
-                      "absolute bg-white rounded-xl shadow-lg overflow-hidden border-2 border-gray-200 transition-all duration-1000 ease-linear box-border",
-                      isPast && "opacity-40"
-                    )}
-                    style={{
-                      left: position.left,
-                      width: `calc(${position.width} - 4px)`, // Subtract small gap to prevent visual overlap
-                      top: `calc(${topOffset}% + 4px)`,
-                      height: `calc(${rowHeight}% - 8px)`,
-                    }}
-                  >
-                    <div className="flex flex-col h-full p-3">
-                      {/* Color bar - horizontal at top with padding */}
-                      <div className={cn("h-1.5 w-full flex-shrink-0 rounded-full", getColorForType(item))} />
-                      
-                      {/* Content */}
-                      <div className="flex-1 overflow-hidden flex flex-col min-w-0 pt-2">
-                        {/* Title */}
-                        <h3 className={cn(
-                          "font-bold text-gray-900 truncate",
-                          isNarrow ? "text-sm" : "text-xl"
-                        )}>
-                          {item.name}
-                        </h3>
-                        
-                        {/* Time */}
-                        <p className={cn(
-                          "text-gray-500",
-                          isNarrow ? "text-xs" : "text-base"
-                        )}>
-                          {formatTime(item.time_in)} - {formatTime(item.time_out)}
-                        </p>
-
-                        {/* Staff - hide on narrow cards */}
-                        {!isNarrow && staffNames.length > 0 && (
-                          <div className="flex items-center gap-2 mt-2">
-                            <Avatar className="h-6 w-6 flex-shrink-0">
-                              <AvatarFallback className="text-xs bg-gray-100 text-gray-600">
-                                {item._expedition_staff?.name?.split(" ").map((n: string) => n[0]).join("") || "?"}
-                              </AvatarFallback>
-                            </Avatar>
-                            <span className="text-sm text-gray-600 truncate">
-                              {staffNames.join(" • ")}
-                            </span>
-                          </div>
-                        )}
-
-                        {/* Address - hide on narrow cards */}
-                        {!isNarrow && item.address && (
-                          <p className="text-sm text-gray-500 mt-2 truncate">
-                            {item.address}
-                          </p>
-                        )}
-
-                        {/* Notes - hide on narrow cards */}
-                        {!isNarrow && item.notes && (
-                          <p className="text-sm text-gray-400 mt-1 line-clamp-2 flex-1">
-                            {item.notes.length > 80 ? item.notes.substring(0, 80) + "..." : item.notes}
-                          </p>
-                        )}
+              {/* Hour markers for row 1 */}
+              <div className="absolute top-0 left-0 right-0 h-6">
+                {row1HourMarkers.map(({ hour, percent }) => {
+                  const hour12 = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour
+                  const ampm = hour >= 12 ? "PM" : "AM"
+                  
+                  return (
+                    <div
+                      key={hour}
+                      className="absolute flex flex-col items-center"
+                      style={{ left: `${percent}%`, transform: 'translateX(-50%)' }}
+                    >
+                      <div className="px-1.5 py-0.5 bg-white/10 backdrop-blur rounded text-xs font-medium text-white">
+                        {hour12}
+                        <span className="text-[10px] text-white/60 ml-0.5">{ampm}</span>
                       </div>
                     </div>
-                  </div>
-                )
-              })}
+                  )
+                })}
+              </div>
+              
+              {/* Vertical grid lines for row 1 */}
+              <div className="absolute top-6 left-0 right-0 bottom-0">
+                {row1HourMarkers.map(({ hour, percent }) => (
+                  <div
+                    key={hour}
+                    className="absolute w-px bg-white/10 h-full"
+                    style={{ left: `${percent}%`, transform: 'translateX(-50%)' }}
+                  />
+                ))}
+              </div>
+
+              {/* Current time indicator for row 1 */}
+              {currentTimeRow1Position && (
+                <div
+                  className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-50 shadow-lg shadow-red-500/50"
+                  style={{ left: currentTimeRow1Position, transform: 'translateX(-50%)' }}
+                >
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-red-500 border border-white" />
+                </div>
+              )}
+
+              {/* Schedule items for row 1 */}
+              <div className="absolute top-7 left-0 right-0 bottom-1">
+                {row1Items.map((item: any) => {
+                  const position = getItemPositionForRow(item.time_in, item.time_out, ROW1_START, ROW1_END, ROW1_HOURS)
+                  const columnHeight = 100 / item.totalRows
+                  const topOffset = item.row * columnHeight
+                  const currentMilitaryTime = currentTime.getHours() * 100 + currentTime.getMinutes()
+                  const isPast = item.time_out < currentMilitaryTime && !testDate
+                  
+                  const staffNames: string[] = []
+                  if (item._expedition_staff?.name) staffNames.push(item._expedition_staff.name)
+                  if (item.participants?.length > 0) {
+                    item.participants.slice(0, 1).forEach((p: any) => {
+                      if (p.name && p.name !== item._expedition_staff?.name) {
+                        staffNames.push(p.name.split(' ')[0])
+                      }
+                    })
+                  }
+                  
+                  return (
+                    <div
+                      key={item.id}
+                      className={cn(
+                        "absolute bg-white rounded-lg shadow-lg overflow-hidden border border-gray-200",
+                        isPast && "opacity-40"
+                      )}
+                      style={{
+                        left: position.left,
+                        width: position.width,
+                        top: `${topOffset}%`,
+                        height: `${columnHeight}%`,
+                      }}
+                    >
+                      <div className="flex flex-col h-full p-1.5">
+                        <div className={cn("h-1 w-full flex-shrink-0 rounded-full", getColorForType(item))} />
+                        <div className="flex-1 overflow-hidden flex flex-col min-w-0 pt-1">
+                          <h3 className="font-bold text-sm text-gray-900 leading-tight truncate">{item.name}</h3>
+                          <p className="text-[10px] text-gray-500">{formatTime(item.time_in)} - {formatTime(item.time_out)}</p>
+                          {staffNames.length > 0 && (
+                            <span className="text-[10px] text-gray-600 truncate">{staffNames.join(" • ")}</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
             </div>
-          )}
-        </div>
+
+            {/* Row 2: 2 PM - 11 PM */}
+            <div className="flex-1 relative min-h-0">
+              {/* Row label */}
+              <div className="absolute -left-4 top-1/2 -translate-y-1/2 -rotate-90 text-white/30 text-xs font-medium whitespace-nowrap">
+                2PM - 11PM
+              </div>
+              {/* Hour markers for row 2 */}
+              <div className="absolute top-0 left-0 right-0 h-6">
+                {row2HourMarkers.map(({ hour, percent }) => {
+                  const hour12 = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour
+                  const ampm = hour >= 12 ? "PM" : "AM"
+                  
+                  return (
+                    <div
+                      key={hour}
+                      className="absolute flex flex-col items-center"
+                      style={{ left: `${percent}%`, transform: 'translateX(-50%)' }}
+                    >
+                      <div className="px-1.5 py-0.5 bg-white/10 backdrop-blur rounded text-xs font-medium text-white">
+                        {hour12}
+                        <span className="text-[10px] text-white/60 ml-0.5">{ampm}</span>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+              
+              {/* Vertical grid lines for row 2 */}
+              <div className="absolute top-6 left-0 right-0 bottom-0">
+                {row2HourMarkers.map(({ hour, percent }) => (
+                  <div
+                    key={hour}
+                    className="absolute w-px bg-white/10 h-full"
+                    style={{ left: `${percent}%`, transform: 'translateX(-50%)' }}
+                  />
+                ))}
+              </div>
+
+              {/* Current time indicator for row 2 */}
+              {currentTimeRow2Position && (
+                <div
+                  className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-50 shadow-lg shadow-red-500/50"
+                  style={{ left: currentTimeRow2Position, transform: 'translateX(-50%)' }}
+                >
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-red-500 border border-white" />
+                </div>
+              )}
+
+              {/* Schedule items for row 2 */}
+              <div className="absolute top-7 left-0 right-0 bottom-1">
+                {row2Items.map((item: any) => {
+                  const position = getItemPositionForRow(item.time_in, item.time_out, ROW2_START, ROW2_END, ROW2_HOURS)
+                  const columnHeight = 100 / item.totalRows
+                  const topOffset = item.row * columnHeight
+                  const currentMilitaryTime = currentTime.getHours() * 100 + currentTime.getMinutes()
+                  const isPast = item.time_out < currentMilitaryTime && !testDate
+                  
+                  const staffNames: string[] = []
+                  if (item._expedition_staff?.name) staffNames.push(item._expedition_staff.name)
+                  if (item.participants?.length > 0) {
+                    item.participants.slice(0, 1).forEach((p: any) => {
+                      if (p.name && p.name !== item._expedition_staff?.name) {
+                        staffNames.push(p.name.split(' ')[0])
+                      }
+                    })
+                  }
+                  
+                  return (
+                    <div
+                      key={item.id}
+                      className={cn(
+                        "absolute bg-white rounded-lg shadow-lg overflow-hidden border border-gray-200",
+                        isPast && "opacity-40"
+                      )}
+                      style={{
+                        left: position.left,
+                        width: position.width,
+                        top: `${topOffset}%`,
+                        height: `${columnHeight}%`,
+                      }}
+                    >
+                      <div className="flex flex-col h-full p-1.5">
+                        <div className={cn("h-1 w-full flex-shrink-0 rounded-full", getColorForType(item))} />
+                        <div className="flex-1 overflow-hidden flex flex-col min-w-0 pt-1">
+                          <h3 className="font-bold text-sm text-gray-900 leading-tight truncate">{item.name}</h3>
+                          <p className="text-[10px] text-gray-500">{formatTime(item.time_in)} - {formatTime(item.time_out)}</p>
+                          {staffNames.length > 0 && (
+                            <span className="text-[10px] text-gray-600 truncate">{staffNames.join(" • ")}</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Footer with navigation */}
-      <div className="absolute bottom-4 left-6 right-6 flex items-center justify-between">
-        <div className="text-sm text-white/30">
-          Showing {Math.floor(timeWindow.start)}:00 - {Math.floor(timeWindow.end)}:00 • Auto-refreshes
+      <div className="h-10 flex-shrink-0 px-6 flex items-center justify-between">
+        <div className="text-xs text-white/30">
+          Auto-refreshes every 30s
         </div>
         
         {/* TV Display Navigation */}

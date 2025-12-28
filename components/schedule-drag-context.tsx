@@ -27,6 +27,7 @@ interface ScheduleDragContextProps {
   formatMilitaryTime: (time: number) => string
   getDuration: (timeIn: number, timeOut: number) => string
   getColorForType: (typeName: string) => string
+  expeditionsId?: number
 }
 
 // Constants for the timeline
@@ -76,6 +77,7 @@ export function ScheduleDragContext({
   formatMilitaryTime,
   getDuration,
   getColorForType,
+  expeditionsId,
 }: ScheduleDragContextProps) {
   const [activeItem, setActiveItem] = useState<any>(null)
   const [resizing, setResizing] = useState<{
@@ -157,13 +159,13 @@ export function ScheduleDragContext({
         time_in: newTimeIn,
         time_out: newTimeOut,
       })
-      await mutate(`expedition_schedule_items_date_${date}`)
+      await mutate(`expedition_schedule_items_date_${date}_${expeditionsId || 'all'}`)
       toast.success(`Moved to ${formatMilitaryTime(newTimeIn)} - ${formatMilitaryTime(newTimeOut)}`)
     } catch (error) {
       console.error("Failed to update schedule item:", error)
       toast.error("Failed to update time")
       // Revert optimistic update
-      await mutate(`expedition_schedule_items_date_${date}`)
+      await mutate(`expedition_schedule_items_date_${date}_${expeditionsId || 'all'}`)
     }
   }
 
@@ -244,13 +246,13 @@ export function ScheduleDragContext({
           time_in: item.time_in,
           time_out: item.time_out,
         })
-        await mutate(`expedition_schedule_items_date_${date}`)
+        await mutate(`expedition_schedule_items_date_${date}_${expeditionsId || 'all'}`)
         toast.success(`Updated to ${formatMilitaryTime(item.time_in)} - ${formatMilitaryTime(item.time_out)}`)
       } catch (error) {
         console.error("Failed to update schedule item:", error)
         toast.error("Failed to update time")
         // Revert optimistic update
-        await mutate(`expedition_schedule_items_date_${date}`)
+        await mutate(`expedition_schedule_items_date_${date}_${expeditionsId || 'all'}`)
       }
 
       setResizing(null)

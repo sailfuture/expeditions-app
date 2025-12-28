@@ -30,19 +30,139 @@ import {
   ClipboardList,
   Map,
   Award,
-  ExternalLink
+  ExternalLink,
+  Home,
+  Users,
+  Eye,
+  PlusCircle
 } from "lucide-react"
 import { 
   useExpeditions, 
   useExpeditionSchedules, 
   useStudentsByExpedition, 
-  useTeachersByExpedition 
+  useTeachersByExpedition,
+  useEvaluationByStudent
 } from "@/lib/hooks/use-expeditions"
 import { useCurrentUser } from "@/lib/contexts/user-context"
 import { calculateDistanceBetweenLocations } from "@/lib/haversine"
+import { ExpeditionHeader } from "@/components/expedition-header"
 
 interface PageProps {
   params: Promise<{ id: string }>
+}
+
+// Helper function to get color class based on evaluation text
+function getEvaluationColorClass(evaluation: string | null | undefined) {
+  if (!evaluation) return "bg-gray-50"
+  if (evaluation.includes("Critical") || evaluation === "N/A") return "bg-gray-50"
+  if (evaluation.includes("Needs Improvement")) return "bg-red-50"
+  if (evaluation.includes("Developing")) return "bg-yellow-50"
+  if (evaluation.includes("Met Expectations")) return "bg-green-50"
+  if (evaluation.includes("Exceeded")) return "bg-blue-50"
+  return "bg-gray-50"
+}
+
+// Helper function to get color class based on journal percentage
+function getJournalColorClass(percentage: number | null | undefined) {
+  if (percentage === null || percentage === undefined) return "bg-gray-50"
+  if (percentage < 70) return "bg-red-50"
+  if (percentage >= 90) return "bg-blue-50"
+  return "bg-green-50"
+}
+
+// Component to display a single student's evaluations
+function StudentEvaluationRow({ student, expeditionId }: { student: any; expeditionId: number }) {
+  const router = useRouter()
+  const { data: evaluation } = useEvaluationByStudent(student.id, expeditionId)
+  
+  const formatScore = (score: number | null | undefined) => {
+    if (score === null || score === undefined) return null
+    return score.toFixed(2)
+  }
+  
+  return (
+    <TableRow className="border-b last:border-0 hover:bg-gray-50/50">
+      <TableCell 
+        className="h-14 px-4 cursor-pointer"
+        onClick={() => router.push(`/student/${student.id}?expedition=${expeditionId}`)}
+      >
+        <div className="flex items-center gap-3">
+          <Avatar className="h-8 w-8">
+            <AvatarFallback className="text-xs bg-gray-200 text-gray-600">
+              {student.name?.split(" ").map((n: string) => n[0]).join("")}
+            </AvatarFallback>
+          </Avatar>
+          <span className="font-medium text-gray-900 truncate max-w-[180px]" title={student.name}>{student.name}</span>
+        </div>
+      </TableCell>
+      <TableCell className={`h-14 px-4 text-center ${getEvaluationColorClass(evaluation?.academics_evaluation)}`}>
+        {formatScore(evaluation?.academics) ? (
+          <span className="text-xs font-medium text-gray-700">{formatScore(evaluation.academics)}</span>
+        ) : (
+          <span className="text-xs text-gray-400">—</span>
+        )}
+      </TableCell>
+      <TableCell className={`h-14 px-4 text-center ${getEvaluationColorClass(evaluation?.citizenship_evaluation)}`}>
+        {formatScore(evaluation?.citizenship) ? (
+          <span className="text-xs font-medium text-gray-700">{formatScore(evaluation.citizenship)}</span>
+        ) : (
+          <span className="text-xs text-gray-400">—</span>
+        )}
+      </TableCell>
+      <TableCell className={`h-14 px-4 text-center ${getEvaluationColorClass(evaluation?.job_evaluation)}`}>
+        {formatScore(evaluation?.job) ? (
+          <span className="text-xs font-medium text-gray-700">{formatScore(evaluation.job)}</span>
+        ) : (
+          <span className="text-xs text-gray-400">—</span>
+        )}
+      </TableCell>
+      <TableCell className={`h-14 px-4 text-center ${getEvaluationColorClass(evaluation?.crew_evaluation)}`}>
+        {formatScore(evaluation?.crew) ? (
+          <span className="text-xs font-medium text-gray-700">{formatScore(evaluation.crew)}</span>
+        ) : (
+          <span className="text-xs text-gray-400">—</span>
+        )}
+      </TableCell>
+      <TableCell className={`h-14 px-4 text-center ${getEvaluationColorClass(evaluation?.service_evaluation)}`}>
+        {formatScore(evaluation?.service) ? (
+          <span className="text-xs font-medium text-gray-700">{formatScore(evaluation.service)}</span>
+        ) : (
+          <span className="text-xs text-gray-400">—</span>
+        )}
+      </TableCell>
+      <TableCell className={`h-14 px-4 text-center ${getJournalColorClass(evaluation?.journal)}`}>
+        {evaluation?.journal !== null && evaluation?.journal !== undefined ? (
+          <span className="text-xs font-medium text-gray-700">{Math.round(evaluation.journal)}%</span>
+        ) : (
+          <span className="text-xs text-gray-400">—</span>
+        )}
+      </TableCell>
+    </TableRow>
+  )
+}
+
+// Component to display evaluations table
+function StudentEvaluationsTable({ students, expeditionId }: { students: any[]; expeditionId: number }) {
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow className="border-b bg-gray-50/30 hover:bg-gray-50/30">
+          <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600">Student</TableHead>
+          <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 text-center">Academics</TableHead>
+          <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 text-center">Citizenship</TableHead>
+          <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 text-center">Job Duties</TableHead>
+          <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 text-center">Crew</TableHead>
+          <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 text-center">Service</TableHead>
+          <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 text-center">Journaling</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {students.map((student: any) => (
+          <StudentEvaluationRow key={student.id} student={student} expeditionId={expeditionId} />
+        ))}
+      </TableBody>
+    </Table>
+  )
 }
 
 export default function ExpeditionDetailPage({ params }: PageProps) {
@@ -52,7 +172,7 @@ export default function ExpeditionDetailPage({ params }: PageProps) {
   const { currentUser, isLoading: userLoading } = useCurrentUser()
   
   const { data: expeditions, isLoading: expeditionsLoading } = useExpeditions()
-  const { data: schedules, isLoading: schedulesLoading } = useExpeditionSchedules()
+  const { data: schedules, isLoading: schedulesLoading } = useExpeditionSchedules(expeditionId)
   const { data: expeditionStudents, isLoading: studentsLoading } = useStudentsByExpedition(expeditionId)
   const { data: expeditionStaff, isLoading: staffLoading } = useTeachersByExpedition(expeditionId)
 
@@ -120,7 +240,22 @@ export default function ExpeditionDetailPage({ params }: PageProps) {
   }
 
   // Get today's date for navigation links
-  const today = new Date().toISOString().split('T')[0]
+  // Get the appropriate default date based on expedition status
+  const defaultDate = useMemo(() => {
+    if (!expedition) return new Date().toISOString().split('T')[0]
+    
+    if (expedition.isActive) {
+      return new Date().toISOString().split('T')[0]
+    }
+    
+    // For non-active expeditions, use the start date
+    const startDate = expedition.startDate || expedition.start_date
+    if (startDate) {
+      return startDate
+    }
+    
+    return new Date().toISOString().split('T')[0]
+  }, [expedition])
 
   const isLoading = userLoading || expeditionsLoading || schedulesLoading
 
@@ -143,210 +278,154 @@ export default function ExpeditionDetailPage({ params }: PageProps) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Breadcrumb */}
-      <div className="bg-white border-b">
-        <div className="container mx-auto px-4 py-3">
-          <Breadcrumb>
-            <BreadcrumbList>
-              <BreadcrumbItem>
-                <BreadcrumbLink href="/dashboard">Dashboard</BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbLink href="/expeditions">Expeditions</BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbPage>{expedition?.name || "Loading..."}</BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
-        </div>
-      </div>
-
-      {/* Header */}
-      <div className="border-b bg-white">
-        <div className="container mx-auto px-4 py-6">
-          <div className="flex items-start justify-between">
-            <div>
-              {isLoading ? (
-                <>
-                  <Skeleton className="h-9 w-64 mb-2" />
-                  <Skeleton className="h-5 w-48" />
-                </>
-              ) : (
-                <>
-                  <h1 className="text-3xl font-bold">{expedition?.name}</h1>
-                  <div className="flex items-center gap-2 text-muted-foreground mt-2">
-                    <Calendar className="h-4 w-4" />
-                    <span>
-                      {expedition?.startDate && expedition?.endDate 
-                        ? `${formatDate(expedition.startDate)} — ${formatDate(expedition.endDate)}`
-                        : "—"
-                      }
-                    </span>
-                    {expedition?._schoolterms && (
-                      <>
-                        <span className="text-gray-300">|</span>
-                        <Badge variant="outline" className="bg-white">
-                          {expedition._schoolterms.short_name}
-                        </Badge>
-                      </>
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Quick Actions */}
-      <div className="border-b bg-muted/30">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center gap-3 flex-wrap">
-            <Button 
-              variant="outline" 
-              className="cursor-pointer"
-              onClick={() => router.push(`/schedule/${today}`)}
-            >
-              <FileText className="h-4 w-4 mr-2" />
-              Daily Log
-            </Button>
-            <Button 
-              variant="outline" 
-              className="cursor-pointer"
-              onClick={() => router.push("/planner")}
-            >
-              <ClipboardList className="h-4 w-4 mr-2" />
-              Weekly Planner
-            </Button>
-            <Button 
-              variant="outline" 
-              className="cursor-pointer"
-              onClick={() => router.push("/dashboard")}
-            >
-              <Map className="h-4 w-4 mr-2" />
-              Trip Plan
-            </Button>
-            <Button 
-              variant="outline" 
-              className="cursor-pointer"
-              onClick={() => router.push(`/evaluate/${today}`)}
-            >
-              <Award className="h-4 w-4 mr-2" />
-              Professionalism
-            </Button>
-          </div>
-        </div>
-      </div>
+      {/* Expedition Header with Navigation */}
+      <ExpeditionHeader expedition={expedition} isLoading={expeditionsLoading} currentPage="overview" />
 
       {/* Content */}
       <main className="container mx-auto px-4 py-6">
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardHeader className="pb-1">
+              <CardTitle className="text-xs font-medium text-muted-foreground">
                 Total Days
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pb-3">
               {isLoading ? (
-                <Skeleton className="h-8 w-16" />
+                <Skeleton className="h-6 w-12" />
               ) : (
-                <p className="text-2xl font-bold">{stats.totalDays}</p>
+                <p className="text-xl font-bold">{stats.totalDays}</p>
               )}
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardHeader className="pb-1">
+              <CardTitle className="text-xs font-medium text-muted-foreground">
                 Anchored
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pb-3">
               {isLoading ? (
-                <Skeleton className="h-8 w-16" />
+                <Skeleton className="h-6 w-12" />
               ) : (
-                <p className="text-2xl font-bold text-green-600">{stats.anchoredDays}</p>
+                <p className="text-xl font-bold">{stats.anchoredDays}</p>
               )}
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardHeader className="pb-1">
+              <CardTitle className="text-xs font-medium text-muted-foreground">
                 Offshore
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pb-3">
               {isLoading ? (
-                <Skeleton className="h-8 w-16" />
+                <Skeleton className="h-6 w-12" />
               ) : (
-                <p className="text-2xl font-bold text-blue-600">{stats.offshoreDays}</p>
+                <p className="text-xl font-bold">{stats.offshoreDays}</p>
               )}
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardHeader className="pb-1">
+              <CardTitle className="text-xs font-medium text-muted-foreground">
                 Service
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pb-3">
               {isLoading ? (
-                <Skeleton className="h-8 w-16" />
+                <Skeleton className="h-6 w-12" />
               ) : (
-                <p className="text-2xl font-bold text-red-600">{stats.serviceDays}</p>
+                <p className="text-xl font-bold">{stats.serviceDays}</p>
               )}
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardHeader className="pb-1">
+              <CardTitle className="text-xs font-medium text-muted-foreground">
                 Nautical Miles
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pb-3">
               {isLoading ? (
-                <Skeleton className="h-8 w-16" />
+                <Skeleton className="h-6 w-16" />
               ) : (
-                <p className="text-2xl font-bold">{stats.totalNauticalMiles}</p>
+                <p className="text-xl font-bold">{stats.totalNauticalMiles}</p>
               )}
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Crew Size
+            <CardHeader className="pb-1">
+              <CardTitle className="text-xs font-medium text-muted-foreground">
+                Students
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              {studentsLoading || staffLoading ? (
-                <Skeleton className="h-8 w-16" />
+            <CardContent className="pb-3">
+              {studentsLoading ? (
+                <Skeleton className="h-6 w-12" />
               ) : (
-                <p className="text-2xl font-bold">
-                  {(expeditionStudents?.length || 0) + (expeditionStaff?.length || 0)}
+                <p className="text-xl font-bold">
+                  {expeditionStudents?.length || 0}
                 </p>
               )}
             </CardContent>
           </Card>
         </div>
 
-        {/* Staff Table */}
+        {/* Student Evaluations Summary Table */}
         <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden mb-6">
           <div className="px-6 py-4 border-b bg-gray-50/50">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Staff</h2>
-              <Badge variant="outline">
-                {expeditionStaff?.length || 0}
-              </Badge>
+            <h2 className="text-lg font-semibold">Student Evaluations</h2>
+          </div>
+          {studentsLoading ? (
+            <Table>
+              <TableHeader>
+                <TableRow className="border-b bg-gray-50/30 hover:bg-gray-50/30">
+                  <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600">Student</TableHead>
+                  <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 text-center">Academics</TableHead>
+                  <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 text-center">Citizenship</TableHead>
+                  <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 text-center">Job Duties</TableHead>
+                  <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 text-center">Crew</TableHead>
+                  <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 text-center">Service</TableHead>
+                  <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 text-center">Journaling</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {[1, 2, 3].map((i) => (
+                  <TableRow key={i}>
+                    <TableCell className="h-14 px-4"><Skeleton className="h-4 w-32" /></TableCell>
+                    <TableCell className="h-14 px-4"><Skeleton className="h-6 w-20 mx-auto" /></TableCell>
+                    <TableCell className="h-14 px-4"><Skeleton className="h-6 w-20 mx-auto" /></TableCell>
+                    <TableCell className="h-14 px-4"><Skeleton className="h-6 w-20 mx-auto" /></TableCell>
+                    <TableCell className="h-14 px-4"><Skeleton className="h-6 w-20 mx-auto" /></TableCell>
+                    <TableCell className="h-14 px-4"><Skeleton className="h-6 w-20 mx-auto" /></TableCell>
+                    <TableCell className="h-14 px-4"><Skeleton className="h-6 w-16 mx-auto" /></TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : !expeditionStudents || expeditionStudents.filter((s: any) => !s.isArchived).length === 0 ? (
+            <div className="p-12 text-center text-muted-foreground">
+              <p>No active students in this expedition</p>
             </div>
+          ) : (
+            <StudentEvaluationsTable 
+              students={expeditionStudents.filter((s: any) => !s.isArchived)} 
+              expeditionId={expeditionId} 
+            />
+          )}
+        </div>
+
+        {/* Staff Table */}
+        <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+          <div className="px-6 py-4 border-b bg-gray-50/50">
+            <h2 className="text-lg font-semibold">Staff</h2>
           </div>
           {staffLoading ? (
             <Table>
@@ -406,86 +485,6 @@ export default function ExpeditionDetailPage({ params }: PageProps) {
                     <TableCell className="h-14 px-4">
                       <Badge variant="outline" className="bg-white border-gray-200 text-gray-700">
                         {member.role || "Staff"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="h-14 px-4 text-right">
-                      <ExternalLink className="h-4 w-4 text-gray-400 inline-block" />
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </div>
-
-        {/* Students Table */}
-        <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b bg-gray-50/50">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Students</h2>
-              <Badge variant="outline">
-                {expeditionStudents?.length || 0}
-              </Badge>
-            </div>
-          </div>
-          {studentsLoading ? (
-            <Table>
-              <TableHeader>
-                <TableRow className="border-b bg-gray-50/30 hover:bg-gray-50/30">
-                  <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600">Name</TableHead>
-                  <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600">Status</TableHead>
-                  <TableHead className="h-10 px-4 text-right text-xs font-semibold text-gray-600">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <TableRow key={i}>
-                    <TableCell className="h-14 px-4"><Skeleton className="h-4 w-32" /></TableCell>
-                    <TableCell className="h-14 px-4"><Skeleton className="h-6 w-16" /></TableCell>
-                    <TableCell className="h-14 px-4"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          ) : !expeditionStudents || expeditionStudents.length === 0 ? (
-            <div className="p-12 text-center text-muted-foreground">
-              <p>No students assigned to this expedition</p>
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow className="border-b bg-gray-50/30 hover:bg-gray-50/30">
-                  <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600">Name</TableHead>
-                  <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600">Status</TableHead>
-                  <TableHead className="h-10 px-4 text-right text-xs font-semibold text-gray-600">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {expeditionStudents.map((student: any) => (
-                  <TableRow 
-                    key={student.id} 
-                    className="border-b last:border-0 hover:bg-gray-50/50 cursor-pointer"
-                    onClick={() => router.push(`/student/${student.id}?expedition=${expeditionId}`)}
-                  >
-                    <TableCell className="h-14 px-4">
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-8 w-8">
-                          <AvatarFallback className="text-xs bg-gray-200 text-gray-600">
-                            {student.name?.split(" ").map((n: string) => n[0]).join("")}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span className="font-medium text-gray-900">{student.name}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="h-14 px-4">
-                      <Badge 
-                        variant="outline" 
-                        className={student.isArchived 
-                          ? "bg-gray-50 border-gray-200 text-gray-500" 
-                          : "bg-green-50 border-green-200 text-green-700"
-                        }
-                      >
-                        {student.isArchived ? "Archived" : "Active"}
                       </Badge>
                     </TableCell>
                     <TableCell className="h-14 px-4 text-right">

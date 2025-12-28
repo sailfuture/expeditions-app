@@ -1,7 +1,7 @@
 "use client"
 
-import { useMemo, useState, useRef, useCallback } from "react"
-import { useRouter } from "next/navigation"
+import { useMemo, useState, useRef, useCallback, useEffect } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { format, addDays, subDays, isToday } from "date-fns"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -33,22 +33,67 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import { ChevronLeft, ChevronRight, ExternalLink, Calendar, Plus, X, Clock, User, MapPin, Backpack, Pencil, Trash2 } from "lucide-react"
-import { useExpeditionScheduleItemsByDate, useExpeditionSchedules, useTeachers } from "@/lib/hooks/use-expeditions"
-import { cn } from "@/lib/utils"
+import { useExpeditionScheduleItemsByDate, useExpeditionSchedules, useTeachers, useExpeditionScheduleTemplates } from "@/lib/hooks/use-expeditions"
+import { useExpeditionContext } from "@/lib/contexts/expedition-context"
+import { cn, isDateWithinExpeditionRange, getExpeditionFirstDate } from "@/lib/utils"
 import { AddScheduleItemSheet } from "@/components/add-schedule-item-sheet"
-import { deleteExpeditionScheduleItem } from "@/lib/xano"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { deleteExpeditionScheduleItem, addExpeditionScheduleTemplate } from "@/lib/xano"
 import { mutate } from "swr"
 import { toast } from "sonner"
 import { Spinner } from "@/components/ui/spinner"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
+import { ExpeditionHeader } from "@/components/expedition-header"
+import { useExpeditions } from "@/lib/hooks/use-expeditions"
 
 export default function PlannerPage() {
   const router = useRouter()
-  const [centerDate, setCenterDate] = useState(new Date())
+  const searchParams = useSearchParams()
+  const expeditionIdFromUrl = searchParams.get('expedition') ? parseInt(searchParams.get('expedition')!) : null
+  const { activeExpedition, userExpeditions } = useExpeditionContext()
+  const { data: allExpeditionsData } = useExpeditions()
+  
+  // Use expedition ID from URL if provided, otherwise fall back to active expedition
+  const effectiveExpeditionId = expeditionIdFromUrl || activeExpedition?.id
+  
+  // Find the expedition to display - prioritize URL parameter, fetch full data with term info
+  const displayExpedition = useMemo(() => {
+    if (expeditionIdFromUrl && allExpeditionsData) {
+      const expeditionFromUrl = allExpeditionsData.find((e: any) => e.id === expeditionIdFromUrl)
+      if (expeditionFromUrl) return expeditionFromUrl
+    }
+    if (expeditionIdFromUrl && userExpeditions) {
+      const expeditionFromUrl = userExpeditions.find((e: any) => e.id === expeditionIdFromUrl)
+      if (expeditionFromUrl) return expeditionFromUrl
+    }
+    return activeExpedition
+  }, [expeditionIdFromUrl, allExpeditionsData, userExpeditions, activeExpedition])
+  
+  // Default to expedition first date if expedition is not active, otherwise today
+  const getDefaultDate = () => {
+    if (displayExpedition?.isActive) {
+      return new Date()
+    }
+    return getExpeditionFirstDate(displayExpedition?.startDate || displayExpedition?.start_date)
+  }
+  
+  const [centerDate, setCenterDate] = useState(getDefaultDate())
+  
+  // Update center date when display expedition changes (especially on reload)
+  useEffect(() => {
+    if (displayExpedition) {
+      const defaultDate = displayExpedition.isActive 
+        ? new Date()
+        : getExpeditionFirstDate(displayExpedition.startDate || displayExpedition.start_date)
+      setCenterDate(defaultDate)
+    }
+  }, [displayExpedition?.id, displayExpedition?.isActive])
   const [calendarOpen, setCalendarOpen] = useState(false)
   const [selectedItem, setSelectedItem] = useState<any>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [selectedTemplates, setSelectedTemplates] = useState<Record<string, number>>({})
+  const [addingTemplate, setAddingTemplate] = useState<string | null>(null)
   const [addSheetOpen, setAddSheetOpen] = useState(false)
   const [addSheetDate, setAddSheetDate] = useState<string>("")
   const [addSheetScheduleId, setAddSheetScheduleId] = useState<number | null>(null)
@@ -71,10 +116,13 @@ export default function PlannerPage() {
   }, [])
   
   // Fetch all schedules to get day types
-  const { data: allSchedules } = useExpeditionSchedules()
+  const { data: allSchedules } = useExpeditionSchedules(effectiveExpeditionId)
   
   // Fetch staff for the add/edit sheet
   const { data: staff } = useTeachers()
+  
+  // Fetch templates for empty day states
+  const { data: templates } = useExpeditionScheduleTemplates()
   
   // Generate the 5 days to display
   const days = useMemo(() => {
@@ -99,11 +147,11 @@ export default function PlannerPage() {
   }
   
   // Fetch items for each day
-  const { data: items0, isLoading: loading0 } = useExpeditionScheduleItemsByDate(dateStrings[0])
-  const { data: items1, isLoading: loading1 } = useExpeditionScheduleItemsByDate(dateStrings[1])
-  const { data: items2, isLoading: loading2 } = useExpeditionScheduleItemsByDate(dateStrings[2])
-  const { data: items3, isLoading: loading3 } = useExpeditionScheduleItemsByDate(dateStrings[3])
-  const { data: items4, isLoading: loading4 } = useExpeditionScheduleItemsByDate(dateStrings[4])
+  const { data: items0, isLoading: loading0 } = useExpeditionScheduleItemsByDate(dateStrings[0], effectiveExpeditionId)
+  const { data: items1, isLoading: loading1 } = useExpeditionScheduleItemsByDate(dateStrings[1], effectiveExpeditionId)
+  const { data: items2, isLoading: loading2 } = useExpeditionScheduleItemsByDate(dateStrings[2], effectiveExpeditionId)
+  const { data: items3, isLoading: loading3 } = useExpeditionScheduleItemsByDate(dateStrings[3], effectiveExpeditionId)
+  const { data: items4, isLoading: loading4 } = useExpeditionScheduleItemsByDate(dateStrings[4], effectiveExpeditionId)
   
   const allItems = [items0, items1, items2, items3, items4]
   const allLoading = [loading0, loading1, loading2, loading3, loading4]
@@ -172,11 +220,19 @@ export default function PlannerPage() {
   }
   
   const handlePrevious = () => {
-    setCenterDate(prev => subDays(prev, 1))
+    setCenterDate(prev => {
+      const newDate = subDays(prev, 1)
+      // Create at noon to avoid timezone issues
+      return new Date(newDate.getFullYear(), newDate.getMonth(), newDate.getDate(), 12, 0, 0)
+    })
   }
   
   const handleNext = () => {
-    setCenterDate(prev => addDays(prev, 1))
+    setCenterDate(prev => {
+      const newDate = addDays(prev, 1)
+      // Create at noon to avoid timezone issues
+      return new Date(newDate.getFullYear(), newDate.getMonth(), newDate.getDate(), 12, 0, 0)
+    })
   }
   
   const handleToday = () => {
@@ -184,7 +240,9 @@ export default function PlannerPage() {
   }
   
   const handleDayClick = (date: Date) => {
-    router.push(`/schedule/${format(date, "yyyy-MM-dd")}`)
+    const dateStr = format(date, "yyyy-MM-dd")
+    const url = expeditionIdFromUrl ? `/schedule/${dateStr}?expedition=${expeditionIdFromUrl}` : `/schedule/${dateStr}`
+    router.push(url)
   }
   
   const handleItemClick = (item: any) => {
@@ -226,10 +284,11 @@ export default function PlannerPage() {
     try {
       await deleteExpeditionScheduleItem(itemToDelete.id)
       dateStrings.forEach(date => {
-        mutate(`expedition_schedule_items_date_${date}`)
+        mutate(`expedition_schedule_items_date_${date}_${effectiveExpeditionId || 'all'}`)
       })
       toast.success("Activity deleted")
       setDeleteConfirmOpen(false)
+      setDialogOpen(false)
       setItemToDelete(null)
     } catch (error) {
       console.error("Failed to delete:", error)
@@ -239,35 +298,42 @@ export default function PlannerPage() {
     }
   }
   
-  const handleSheetSuccess = () => {
-    dateStrings.forEach(date => {
-      mutate(`expedition_schedule_items_date_${date}`)
-    })
+  const handleAddTemplate = async (dateString: string) => {
+    const templateId = selectedTemplates[dateString]
+    if (!templateId) {
+      toast.error("Please select a template")
+      return
+    }
+    
+    setAddingTemplate(dateString)
+    try {
+      await addExpeditionScheduleTemplate(dateString, templateId)
+      mutate(`expedition_schedule_items_date_${dateString}_${effectiveExpeditionId || 'all'}`)
+      toast.success("Template added successfully")
+      setSelectedTemplates(prev => {
+        const newState = { ...prev }
+        delete newState[dateString]
+        return newState
+      })
+    } catch (error) {
+      console.error("Failed to add template:", error)
+      toast.error("Failed to add template")
+    } finally {
+      setAddingTemplate(null)
+    }
   }
 
   return (
     <div className="flex flex-col bg-gray-50 overflow-hidden" style={{ height: 'calc(100vh - 64px)' }}>
-      {/* Header */}
-      <div className="bg-white border-b flex-shrink-0">
-        <div className="max-w-[1600px] mx-auto px-6 py-4">
-          <Breadcrumb className="mb-4">
-            <BreadcrumbList>
-              <BreadcrumbItem>
-                <BreadcrumbLink href="/dashboard">Dashboard</BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbPage>Planner</BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
-          
+      {/* Expedition Header with Navigation */}
+      <ExpeditionHeader expedition={displayExpedition} isLoading={!displayExpedition} currentPage="weekly-planner" />
+      
+      {/* Date Navigation Controls */}
+      <div className="bg-gray-50 border-b flex-shrink-0">
+        <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Weekly Planner</h1>
-              <p className="text-sm text-gray-500 mt-1">
-                5-day view of expedition activities
-              </p>
+              <h2 className="text-lg font-semibold text-gray-700">Weekly Planner</h2>
             </div>
             
             <div className="flex items-center gap-2">
@@ -275,7 +341,7 @@ export default function PlannerPage() {
                 variant="outline"
                 size="icon"
                 onClick={handlePrevious}
-                className="h-9 w-9 cursor-pointer"
+                className="h-9 w-9 cursor-pointer bg-white"
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
@@ -283,20 +349,22 @@ export default function PlannerPage() {
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
-                    className="h-9 px-4 cursor-pointer"
+                    className="h-9 px-4 cursor-pointer bg-white"
                   >
                     <Calendar className="h-4 w-4 mr-2" />
                     {format(centerDate, "MMM d, yyyy")}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="center">
+                <PopoverContent className="w-auto p-0 bg-white" align="center">
                   <CalendarComponent
                     mode="single"
                     selected={centerDate}
                     defaultMonth={centerDate}
                     onSelect={(selectedDate) => {
                       if (selectedDate) {
-                        setCenterDate(selectedDate)
+                        // Create a new date at noon local time to avoid timezone issues
+                        const localDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate(), 12, 0, 0)
+                        setCenterDate(localDate)
                         setCalendarOpen(false)
                       }
                     }}
@@ -309,28 +377,30 @@ export default function PlannerPage() {
                 variant="outline"
                 size="icon"
                 onClick={handleNext}
-                className="h-9 w-9 cursor-pointer"
+                className="h-9 w-9 cursor-pointer bg-white"
               >
                 <ChevronRight className="h-4 w-4" />
               </Button>
-              <Button
-                variant="outline"
-                onClick={handleToday}
-                className="h-9 px-4 cursor-pointer"
-              >
-                Today
-              </Button>
+              {displayExpedition?.isActive && (
+                <Button
+                  variant="outline"
+                  onClick={handleToday}
+                  className="h-9 px-4 cursor-pointer bg-white"
+                >
+                  Today
+                </Button>
+              )}
             </div>
           </div>
         </div>
       </div>
       
       {/* Planner Grid - fills remaining height */}
-      <div className="flex-1 min-h-0 overflow-hidden px-6 pb-4 pt-4">
-        <div className="h-full max-w-[1600px] w-full mx-auto">
+      <div className="flex-1 min-h-0 overflow-hidden px-4 pb-4 pt-4">
+        <div className="h-full container w-full mx-auto">
           <div className="grid grid-cols-5 gap-2 h-full">
           {days.map((day, index) => {
-            const items = allItems[index] || []
+            const items = Array.isArray(allItems[index]) ? allItems[index] : []
             const isLoadingDay = allLoading[index]
             const isTodayColumn = isToday(day)
             const sortedItems = [...items].sort((a: any, b: any) => a.time_in - b.time_in)
@@ -339,12 +409,21 @@ export default function PlannerPage() {
             const location = getLocation(schedule)
             const staffOff = getStaffOff(schedule)
             
+            // Check if date is within expedition range
+            const isWithinRange = isDateWithinExpeditionRange(
+              day,
+              displayExpedition?.startDate || displayExpedition?.start_date,
+              displayExpedition?.endDate || displayExpedition?.end_date
+            )
+            const hasSchedule = !!schedule
+            
             return (
               <div 
                 key={dateStrings[index]} 
                 className={cn(
                   "bg-white rounded-xl border-2 overflow-hidden flex flex-col h-full",
-                  isTodayColumn ? "border-green-500 shadow-lg" : "border-gray-200"
+                  isTodayColumn && isWithinRange ? "border-green-500 shadow-lg" : "border-gray-200",
+                  !isWithinRange && "opacity-50 bg-gray-50"
                 )}
               >
                 {/* Day Header - fixed height */}
@@ -363,13 +442,13 @@ export default function PlannerPage() {
                         </Badge>
                         {staffOff && (
                           <span 
-                            className="inline-flex items-center text-[9px] font-medium px-1.5 py-0 h-5 rounded bg-orange-50 border border-orange-200 text-orange-700 truncate flex-shrink-0 max-w-[80px]" 
+                            className="inline-flex items-center text-[9px] font-medium px-1.5 py-0 h-5 rounded bg-orange-50 border border-orange-200 text-orange-700 flex-shrink-0" 
                             title={`Staff Off: ${staffOff}`}
                           >
                             Off: {staffOff}
                           </span>
                         )}
-                        <span className="text-[9px] text-gray-400 truncate min-w-0" title={location}>
+                        <span className="text-[9px] text-gray-400 truncate min-w-0 max-w-[100px]" title={location}>
                           {location}
                         </span>
                       </div>
@@ -380,7 +459,8 @@ export default function PlannerPage() {
                         size="icon"
                         className="h-6 w-6 cursor-pointer hover:bg-gray-200"
                         onClick={(e) => handleAddActivity(dateStrings[index], e)}
-                        disabled={!schedule}
+                        disabled={!schedule || !isWithinRange}
+                        title={!isWithinRange ? "Outside expedition date range" : !schedule ? "No schedule for this date" : "Add activity"}
                       >
                         <Plus className="h-3.5 w-3.5 text-gray-500" />
                       </Button>
@@ -407,23 +487,79 @@ export default function PlannerPage() {
                       }
                     }}
                   >
-                  {isLoadingDay ? (
+                  {!isWithinRange ? (
+                    <div className="text-center py-6 px-3">
+                      <p className="text-gray-400 text-xs font-medium">Outside of expedition range</p>
+                    </div>
+                  ) : isLoadingDay ? (
                     <div className="space-y-2">
                       {[1, 2, 3, 4, 5].map((i) => (
                         <Skeleton key={i} className="h-14 w-full rounded-lg" />
                       ))}
                     </div>
                   ) : sortedItems.length === 0 ? (
-                    <div className="text-center py-8 text-gray-400 text-xs">
-                      No activities
+                    <div className="text-center py-4 px-3 space-y-3">
+                      <p className="text-gray-400 text-xs mb-3">No activities</p>
+                      {hasSchedule && (
+                        <div className="space-y-2">
+                          <Select
+                            value={selectedTemplates[dateStrings[index]]?.toString() || ""}
+                            onValueChange={(value) => {
+                              setSelectedTemplates(prev => ({
+                                ...prev,
+                                [dateStrings[index]]: parseInt(value)
+                              }))
+                            }}
+                          >
+                            <SelectTrigger className="w-full h-8 text-xs cursor-pointer bg-white">
+                              <SelectValue placeholder="Select template">
+                                {selectedTemplates[dateStrings[index]] ? (
+                                  <span className="truncate text-xs">
+                                    {templates?.find((t: any) => t.id === selectedTemplates[dateStrings[index]])?.template_name || "Template"}
+                                  </span>
+                                ) : (
+                                  "Select template"
+                                )}
+                              </SelectValue>
+                            </SelectTrigger>
+                            <SelectContent>
+                              {templates?.map((template: any) => (
+                                <SelectItem key={template.id} value={template.id.toString()}>
+                                  {template.template_name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="w-full h-7 text-xs cursor-pointer"
+                            onClick={() => handleAddTemplate(dateStrings[index])}
+                            disabled={!selectedTemplates[dateStrings[index]] || addingTemplate === dateStrings[index]}
+                          >
+                            {addingTemplate === dateStrings[index] ? (
+                              <>
+                                <Spinner size="sm" className="h-3 w-3 mr-1" />
+                                Adding...
+                              </>
+                            ) : (
+                              <>
+                                <Plus className="h-3 w-3 mr-1" />
+                                Add Template
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   ) : (
-                    sortedItems.map((item: any) => (
-                      <div
-                        key={item.id}
-                        className="rounded-lg border border-gray-100 p-2 hover:shadow-md hover:border-gray-200 transition-all bg-white cursor-pointer group"
-                        onClick={() => handleItemClick(item)}
-                      >
+                    <div className="space-y-2">
+                      {sortedItems.map((item: any) => (
+                        <div
+                          key={item.id}
+                          className="rounded-lg border border-gray-100 p-2 hover:shadow-md hover:border-gray-200 transition-all duration-300 ease-in-out bg-white cursor-pointer group animate-in fade-in slide-in-from-top-2"
+                          onClick={() => handleItemClick(item)}
+                        >
                         <div className="flex gap-2">
                           <div className={cn(
                             "w-1 rounded-full flex-shrink-0",
@@ -467,7 +603,8 @@ export default function PlannerPage() {
                           </div>
                         </div>
                       </div>
-                    ))
+                      ))}
+                    </div>
                   )}
                   </div>
                   {/* Bottom gradient when more content to scroll */}
@@ -664,10 +801,10 @@ export default function PlannerPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleting} className="cursor-pointer">Cancel</AlertDialogCancel>
             <AlertDialogAction 
               onClick={handleConfirmDelete} 
-              className="bg-red-600 hover:bg-red-700 text-white"
+              className="bg-red-600 hover:bg-red-700 text-white cursor-pointer"
               disabled={deleting}
             >
               {deleting ? <Spinner size="sm" className="mr-2" /> : null}
@@ -683,9 +820,9 @@ export default function PlannerPage() {
         onOpenChange={setAddSheetOpen}
         scheduleId={addSheetScheduleId || 0}
         date={addSheetDate}
-        onSuccess={handleSheetSuccess}
         editItem={editingItem}
         staff={staff || []}
+        expeditionsId={effectiveExpeditionId}
       />
     </div>
   )

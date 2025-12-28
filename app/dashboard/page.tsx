@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useMemo, useRef, useCallback, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -26,6 +26,8 @@ import { addAllDatesForExpedition, updateExpeditionSchedule } from "@/lib/xano"
 import { mutate } from "swr"
 import { toast } from "sonner"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { ExpeditionHeader } from "@/components/expedition-header"
+import { useExpeditions } from "@/lib/hooks/use-expeditions"
 
 // Multi-select component for Staff Off
 function StaffOffMultiSelect({
@@ -138,10 +140,28 @@ function StaffOffMultiSelect({
 
 export default function DashboardPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const expeditionIdFromUrl = searchParams.get('expedition') ? parseInt(searchParams.get('expedition')!) : null
 
-  const { selectedExpedition, selectedExpeditionId } = useExpeditionContext()
-  const { data: schedules, isLoading: loadingSchedules } = useExpeditionSchedules()
-  const { data: locations } = useExpeditionLocations(selectedExpeditionId || undefined)
+  const { selectedExpedition, selectedExpeditionId, activeExpedition, userExpeditions } = useExpeditionContext()
+  const activeExpeditionId = expeditionIdFromUrl || activeExpedition?.id || selectedExpeditionId
+  const { data: allExpeditionsData } = useExpeditions()
+  
+  // Find the expedition to display - prioritize URL parameter, fetch full data with term info
+  const displayExpedition = useMemo(() => {
+    if (expeditionIdFromUrl && allExpeditionsData) {
+      const expeditionFromUrl = allExpeditionsData.find((e: any) => e.id === expeditionIdFromUrl)
+      if (expeditionFromUrl) return expeditionFromUrl
+    }
+    if (expeditionIdFromUrl && userExpeditions) {
+      const expeditionFromUrl = userExpeditions.find((e: any) => e.id === expeditionIdFromUrl)
+      if (expeditionFromUrl) return expeditionFromUrl
+    }
+    return activeExpedition || selectedExpedition
+  }, [expeditionIdFromUrl, allExpeditionsData, userExpeditions, activeExpedition, selectedExpedition])
+  
+  const { data: schedules, isLoading: loadingSchedules } = useExpeditionSchedules(activeExpeditionId || undefined)
+  const { data: locations } = useExpeditionLocations(activeExpeditionId || undefined)
   const { data: staff } = useTeachers()
   const [showOldDates, setShowOldDates] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -224,11 +244,11 @@ export default function DashboardPage() {
     return diffDays + 1 // Include both start and end days
   }
 
-  // Filter and sort schedules by selected expedition (ascending order - oldest to newest)
+  // Filter and sort schedules by active expedition (ascending order - oldest to newest)
   const allFilteredSchedules = useMemo(() => {
-    if (!schedules || !selectedExpeditionId) return []
+    if (!schedules || !activeExpeditionId) return []
     return schedules
-      .filter((s: any) => s.expeditions_id === selectedExpeditionId)
+      .filter((s: any) => s.expeditions_id === activeExpeditionId)
       .sort((a: any, b: any) => {
         // Parse dates without timezone issues
         const [aYear, aMonth, aDay] = a.date.split('-').map(Number)
@@ -237,7 +257,7 @@ export default function DashboardPage() {
         const bDate = new Date(bYear, bMonth - 1, bDay)
         return aDate.getTime() - bDate.getTime()
       })
-  }, [schedules, selectedExpeditionId])
+  }, [schedules, activeExpeditionId])
 
   // Filter out old dates if toggle is off
   const today = useMemo(() => {
@@ -247,6 +267,10 @@ export default function DashboardPage() {
   }, [])
 
   const filteredSchedules = useMemo(() => {
+    // For non-active expeditions, always show all dates (past and future)
+    if (!displayExpedition?.isActive) return allFilteredSchedules
+    
+    // For active expeditions, respect the toggle
     if (showOldDates) return allFilteredSchedules
     return allFilteredSchedules.filter((s: any) => {
       // Parse date without timezone issues
@@ -255,7 +279,7 @@ export default function DashboardPage() {
       scheduleDate.setHours(0, 0, 0, 0)
       return scheduleDate >= today
     })
-  }, [allFilteredSchedules, showOldDates, today])
+  }, [allFilteredSchedules, showOldDates, today, displayExpedition?.isActive])
 
   // Calculate day type counts
   const dayTypeCounts = useMemo(() => {
@@ -343,10 +367,15 @@ export default function DashboardPage() {
   }
 
   const handleGenerateAllDates = async () => {
+    if (!activeExpeditionId) {
+      toast.error("No active expedition selected")
+      return
+    }
+    
     setGeneratingDates(true)
     try {
-      await addAllDatesForExpedition()
-      mutate("expedition_schedules")
+      await addAllDatesForExpedition(activeExpeditionId)
+      mutate(`expedition_schedules_${activeExpeditionId}`)
       toast.success("All dates generated successfully")
     } catch (error) {
       console.error("Failed to generate dates:", error)
@@ -481,63 +510,28 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header Section */}
-      {selectedExpedition && (
-        <div className="border-b bg-white">
-          <div className="container mx-auto px-4 py-6">
-            <Breadcrumb className="mb-4">
-              <BreadcrumbList>
-                <BreadcrumbItem>
-                  <BreadcrumbPage>Dashboard</BreadcrumbPage>
-                </BreadcrumbItem>
-              </BreadcrumbList>
-            </Breadcrumb>
-            
-            <h1 className="text-3xl font-bold mb-2">{selectedExpedition.name}</h1>
-            <p className="text-muted-foreground flex items-center gap-2">
-              <Calendar className="h-4 w-4" />
-              {formatDate(selectedExpedition.startDate || selectedExpedition.start_date)} —{" "}
-              {formatDate(selectedExpedition.endDate || selectedExpedition.end_date)}
-              {" | "}
-              {calculateTotalDays(
-                selectedExpedition.startDate || selectedExpedition.start_date,
-                selectedExpedition.endDate || selectedExpedition.end_date
-              )} days
-              <span className="flex items-center gap-1.5 ml-2">
-                <span className="inline-flex items-center gap-1.5 bg-white text-gray-600 px-2 py-0.5 rounded border border-gray-200 text-xs font-medium">
-                  <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                  {dayTypeCounts.anchored}
-                </span>
-                <span className="inline-flex items-center gap-1.5 bg-white text-gray-600 px-2 py-0.5 rounded border border-gray-200 text-xs font-medium">
-                  <span className="w-2 h-2 bg-pink-500 rounded-full"></span>
-                  {dayTypeCounts.service}
-                </span>
-                <span className="inline-flex items-center gap-1.5 bg-white text-gray-600 px-2 py-0.5 rounded border border-gray-200 text-xs font-medium">
-                  <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
-                  {dayTypeCounts.offshore}
-                </span>
-              </span>
-            </p>
-          </div>
-        </div>
-      )}
+      {/* Expedition Header with Navigation */}
+      <ExpeditionHeader expedition={displayExpedition} isLoading={!displayExpedition} currentPage="trip-planner" />
 
       {/* Action Bar */}
-      {selectedExpedition && (
+      {displayExpedition && (
         <div className="border-b bg-muted/30">
           <div className="container mx-auto px-4 py-4">
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <Switch
-                    id="show-old"
-                    checked={showOldDates}
-                    onCheckedChange={handleShowOldDatesChange}
-                  />
-                  <Label htmlFor="show-old" className="text-sm cursor-pointer">
-                    Show past dates
-                  </Label>
-                </div>
+                {/* Only show this toggle for active expeditions */}
+                {displayExpedition?.isActive && (
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      id="show-old"
+                      checked={showOldDates}
+                      onCheckedChange={handleShowOldDatesChange}
+                    />
+                    <Label htmlFor="show-old" className="text-sm cursor-pointer">
+                      Show past dates
+                    </Label>
+                  </div>
+                )}
                 <div className="flex items-center gap-2">
                   <Switch
                     id="group-location"
@@ -552,8 +546,9 @@ export default function DashboardPage() {
               <Button 
                 onClick={handleGenerateAllDates} 
                 variant="outline"
-                disabled={generatingDates}
+                disabled={generatingDates || !activeExpeditionId}
                 className="cursor-pointer"
+                title={!activeExpeditionId ? "No active expedition selected" : "Generate all dates for the expedition"}
               >
                 <Plus className="h-4 w-4 mr-2" />
                 {generatingDates ? "Generating..." : "Generate All Dates"}
@@ -659,7 +654,7 @@ export default function DashboardPage() {
                           return (
                             <TableRow 
                               key={schedule.id}
-                              className={`border-b last:border-0 transition-colors ${isPast ? 'bg-gray-50' : ''}`}
+                              className="border-b last:border-0 transition-colors hover:bg-gray-50/50"
                             >
                               {/* Row content - reuse the same cells */}
                               <TableCell className="h-14 px-4" style={{ width: "100px" }}>
@@ -882,7 +877,7 @@ export default function DashboardPage() {
                           return (
                             <TableRow 
                               key={schedule.id}
-                              className={`border-b last:border-0 transition-colors ${isPast ? 'bg-gray-50' : ''}`}
+                              className="border-b last:border-0 transition-colors hover:bg-gray-50/50"
                             >
                               <TableCell className="h-14 px-4" style={{ width: "100px" }}>
                                 <span className="font-semibold text-sm text-gray-900">

@@ -1,0 +1,81 @@
+---
+description: Despia Native implementation guide for mobile app features
+alwaysApply: true
+---
+# Despia Native Features Implementation Guide
+
+We are using Despia EXCLUSIVELY for Native Functionalities. Please refer to: https://npm.despia.com
+
+You can access all Despia Features via the website's sitemap: https://npm.despia.com/sitemap.xml
+
+Every time you are asked to add a native feature:
+1. Go to the Despia Sitemap
+2. Find the appropriate one
+3. Scrape the feature page
+4. Implement it
+
+## Page Structure (IMPORTANT!)
+
+Make sure that ALL pages have a main section (most outer element containing the page) with a fixed height of `100vh`. The first component of those core pages would be a relative top bar (iOS Style), and under that we have an app container (the app container is the only thing that would scroll). It will be flex grow/shrink and make sure that the scrollbar is width "none". Under that, add a relative menubar with the menu options.
+
+## Safe Areas
+
+Make sure to add Safe Area Insets via the Despia Safe Area Variables (explained below) to the top-bar/top-padding and the menubar/bottom-padding.
+
+Here is how it works with Despia:
+
+Use CSS variables for safe area handling in your application. The Despia native runtime automatically provides `var(--safe-area-top)` and `var(--safe-area-bottom)` CSS variables.
+
+- Add spacer divs at the top and bottom of your layout
+- Set the height of spacer divs to `var(--safe-area-top)` and `var(--safe-area-bottom)`
+- Use CSS variables in padding or height styles for fixed positioned elements
+- Ensure fixed positioned elements respect device boundaries
+- Handle device notches, status bars, and home indicators automatically
+
+This feature is automatically provided by the Despia Native runtime - no npm package installation required!
+
+Please follow the implementation instructions closely. The CSS variables are injected by the Despia Native runtime environment.
+
+## Implement RevenueCat Like This:
+
+Add native mobile monetization to my app using the Despia SDK from: https://www.npmjs.com/package/despia-native
+
+First, install the package:
+```bash
+npm install despia-native
+```
+
+Then import it:
+```javascript
+import despia from 'despia-native'
+```
+
+Create a payment system that uses RevenueCat Paywalls by calling:
+```javascript
+despia(revenuecat://launchPaywall?external_id=USER_ID&offering=OFFERING)
+```
+
+This will launch a native paywall interface configured in your RevenueCat dashboard, handling purchases through Apple App Store and Google Play billing.
+
+Add a button to launch the paywall for your app's offerings, for example:
+- "default" - your main offering
+- "premium" - premium tier offering
+- "annual_sale" - special promotional offering
+
+If you prefer to design 100% custom paywalls that match your app's unique design and branding, consider our RevenueCat Payments SDK instead: https://lovable.despia.com/default-guide/native-features/revenuecat
+
+The Despia Native Runtime will call the global function `onRevenueCatPurchase()` when an in-app purchase or subscription is successfully made on the client side. Although this should not grant access immediately, it's a good time to start polling your backend to check if the RevenueCat webhook has already updated the user's status or plan permissions.
+
+This feature requires native capabilities which will be fully provided by the "despia-native" npm package, no additional native libraries are needed!
+
+Payment confirmation will happen via RevenueCat's Webhooks, so make sure to include or instruct me to set up the correct backend structure.
+
+You can find the documentation about this here: https://www.revenuecat.com/docs/integrations/webhooks
+
+Read and follow all best practices for Webhook events here: https://www.revenuecat.com/docs/integrations/webhooks/event-types-and-fields
+
+Check out the sample Webhook event schemas here: https://www.revenuecat.com/docs/integrations/webhooks/sample-events
+
+Once the payment is confirmed on the backend, the backend should send a webhook to the frontend to let it know that this user's in-app purchase session was completed.
+
+**Please follow the installation instructions for the "despia-native" npm package closely, and do not modify my instructions. Implementation as mentioned is critical.**

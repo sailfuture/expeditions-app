@@ -13,9 +13,20 @@ interface DateNavigationProps {
   isService?: boolean
   size?: "default" | "large"
   isLoading?: boolean
+  expeditionStartDate?: string
+  expeditionEndDate?: string
 }
 
-export function DateNavigation({ date, onDateChange, isOffshore = false, isService = false, size = "default", isLoading = false }: DateNavigationProps) {
+export function DateNavigation({ 
+  date, 
+  onDateChange, 
+  isOffshore = false, 
+  isService = false, 
+  size = "default", 
+  isLoading = false,
+  expeditionStartDate,
+  expeditionEndDate,
+}: DateNavigationProps) {
   const [calendarOpen, setCalendarOpen] = useState(false)
   const formatDate = (d: Date) => {
     return d.toLocaleDateString("en-US", {
@@ -25,6 +36,17 @@ export function DateNavigation({ date, onDateChange, isOffshore = false, isServi
       year: "numeric",
     })
   }
+  
+  // Parse expedition date range
+  const minDate = expeditionStartDate ? (() => {
+    const [y, m, d] = expeditionStartDate.split('-').map(Number)
+    return new Date(y, m - 1, d)
+  })() : undefined
+  
+  const maxDate = expeditionEndDate ? (() => {
+    const [y, m, d] = expeditionEndDate.split('-').map(Number)
+    return new Date(y, m - 1, d)
+  })() : undefined
 
   const goToPrevDay = () => {
     const newDate = new Date(date)
@@ -39,7 +61,16 @@ export function DateNavigation({ date, onDateChange, isOffshore = false, isServi
   }
 
   const goToToday = () => {
-    onDateChange(new Date())
+    const today = new Date()
+    
+    // If outside expedition range, default to first or last day
+    if (minDate && today < minDate) {
+      onDateChange(minDate)
+    } else if (maxDate && today > maxDate) {
+      onDateChange(maxDate)
+    } else {
+      onDateChange(today)
+    }
   }
 
   const handleDateSelect = (selectedDate: Date) => {
@@ -104,6 +135,13 @@ export function DateNavigation({ date, onDateChange, isOffshore = false, isServi
             mode="single"
             selected={date}
             defaultMonth={date}
+            fromDate={minDate}
+            toDate={maxDate}
+            disabled={(date) => {
+              if (minDate && date < minDate) return true
+              if (maxDate && date > maxDate) return true
+              return false
+            }}
             onSelect={(selectedDate) => {
               if (selectedDate) {
                 handleDateSelect(selectedDate)

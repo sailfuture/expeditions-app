@@ -4,7 +4,9 @@ import { useMemo } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
-import { useExpeditionSchedules, useExpeditionScheduleItems, useTeachers } from "@/lib/hooks/use-expeditions"
+import { useExpeditionScheduleItems, useTeachers } from "@/lib/hooks/use-expeditions"
+import { getExpeditionScheduleById } from "@/lib/xano"
+import useSWR from "swr"
 
 interface ScheduleDetailDialogProps {
   scheduleId: number | null
@@ -21,14 +23,13 @@ function formatTime(minutes: number): string {
 }
 
 export function ScheduleDetailDialog({ scheduleId, open, onOpenChange }: ScheduleDetailDialogProps) {
-  const { data: schedules, isLoading: loadingSchedule } = useExpeditionSchedules()
+  // Fetch the specific schedule by ID
+  const { data: schedule, isLoading: loadingSchedule } = useSWR(
+    scheduleId ? `expedition_schedule_${scheduleId}` : null,
+    scheduleId ? () => getExpeditionScheduleById(scheduleId) : null
+  )
   const { data: allItems, isLoading: loadingItems } = useExpeditionScheduleItems()
   const { data: teachers } = useTeachers()
-
-  const schedule = useMemo(() => {
-    if (!schedules || !scheduleId) return null
-    return schedules.find((s: any) => s.id === scheduleId)
-  }, [schedules, scheduleId])
 
   const items = useMemo(() => {
     if (!allItems || !scheduleId) return []

@@ -39,6 +39,7 @@ interface AddScheduleItemSheetProps {
   date: string
   staff?: any[]
   editItem?: any // If provided, sheet is in edit mode
+  expeditionsId?: number // For cache invalidation
 }
 
 // Custom dropdown component
@@ -270,6 +271,7 @@ export function AddScheduleItemSheet({
   scheduleId, 
   date,
   staff = [],
+  expeditionsId,
   editItem,
 }: AddScheduleItemSheetProps) {
   // Fetch item types from API
@@ -359,7 +361,7 @@ export function AddScheduleItemSheet({
         toast.success("Activity added successfully")
       }
       
-      await mutate(`expedition_schedule_items_date_${date}`)
+      await mutate(`expedition_schedule_items_date_${date}_${expeditionsId || 'all'}`)
       onOpenChange(false)
       
       // Reset form
@@ -395,7 +397,7 @@ export function AddScheduleItemSheet({
     setShowDeleteConfirm(false)
     try {
       await deleteExpeditionScheduleItem(editItem.id)
-      await mutate(`expedition_schedule_items_date_${date}`)
+      await mutate(`expedition_schedule_items_date_${date}_${expeditionsId || 'all'}`)
       toast.success("Activity deleted")
       onOpenChange(false)
     } catch (error) {

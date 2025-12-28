@@ -15,8 +15,9 @@ import {
 } from "@/components/ui/breadcrumb"
 import { DateNavigation } from "@/components/date-navigation"
 import { Spinner } from "@/components/ui/spinner"
-import { Unlock, MapPin } from "lucide-react"
+import { Unlock, MapPin, Calendar, X } from "lucide-react"
 import { StudentCard } from "@/components/student-card"
+import { useExpeditionContext } from "@/lib/contexts/expedition-context"
 import {
   useExpeditionSchedules,
   useStudents,
@@ -37,17 +38,40 @@ import {
 import { Users } from "lucide-react"
 import { mutate } from "swr"
 import type { ExpeditionProfessionalism } from "@/lib/types"
+import { isDateWithinExpeditionRange } from "@/lib/utils"
+import { ExpeditionHeader } from "@/components/expedition-header"
+import { useExpeditions } from "@/lib/hooks/use-expeditions"
+import { toast } from "sonner"
 
 interface EvaluateClientProps {
   date: string
+  expeditionId?: number
 }
 
-export function EvaluateClient({ date }: EvaluateClientProps) {
+export function EvaluateClient({ date, expeditionId }: EvaluateClientProps) {
   const router = useRouter()
+  const { activeExpedition, userExpeditions } = useExpeditionContext()
+  const { data: allExpeditionsData } = useExpeditions()
+  
+  // Use expedition ID from URL if provided, otherwise fall back to active expedition
+  const effectiveExpeditionId = expeditionId || activeExpedition?.id || null
+  
+  // Find the expedition to display - prioritize URL parameter, fetch full data with term info
+  const displayExpedition = useMemo(() => {
+    if (expeditionId && allExpeditionsData) {
+      const expeditionFromUrl = allExpeditionsData.find((e: any) => e.id === expeditionId)
+      if (expeditionFromUrl) return expeditionFromUrl
+    }
+    if (expeditionId && userExpeditions) {
+      const expeditionFromUrl = userExpeditions.find((e: any) => e.id === expeditionId)
+      if (expeditionFromUrl) return expeditionFromUrl
+    }
+    return activeExpedition
+  }, [expeditionId, allExpeditionsData, userExpeditions, activeExpedition])
 
-  const { data: schedules, isLoading: loadingSchedule } = useExpeditionSchedules()
+  const { data: schedules, isLoading: loadingSchedule } = useExpeditionSchedules(effectiveExpeditionId || undefined)
   const { data: students, isLoading: loadingStudents } = useStudents()
-  const { data: allProfessionalism, isLoading: loadingProfessionalism } = useExpeditionsProfessionalismByDate(date)
+  const { data: allProfessionalism, isLoading: loadingProfessionalism } = useExpeditionsProfessionalismByDate(date, effectiveExpeditionId)
   const { data: bonusOptions = [], isLoading: loadingBonus } = useExpeditionBonus()
   const { data: penaltyOptions = [], isLoading: loadingPenalty } = useExpeditionPenalty()
   const { data: journalStatusOptions = [], isLoading: loadingJournalStatus } = useExpeditionJournalStatus()
@@ -61,22 +85,9 @@ export function EvaluateClient({ date }: EvaluateClientProps) {
   const schedule = useMemo(() => {
     if (!schedules) return null
     const found = schedules.find((s: any) => {
-      const scheduleDate = new Date(s.date).toISOString().split('T')[0]
-      console.log('Comparing schedule date:', scheduleDate, 'with URL date:', date)
-      return scheduleDate === date
+      // Compare date strings directly (both in YYYY-MM-DD format)
+      return s.date === date
     })
-    if (found) {
-      console.log('Evaluate schedule data:', found)
-      console.log('Has location?', found._expedition_current_location)
-    } else {
-      console.log('No schedule found for date:', date)
-      console.log('Available schedules:', schedules.map((s: any) => ({
-        id: s.id,
-        name: s.name,
-        date: s.date,
-        formatted: new Date(s.date).toISOString().split('T')[0]
-      })))
-    }
     return found
   }, [schedules, date])
 
@@ -98,14 +109,24 @@ export function EvaluateClient({ date }: EvaluateClientProps) {
     const [year, month, day] = date.split('-').map(Number)
     setCurrentDate(new Date(year, month - 1, day))
   }, [date])
+  
+  // Check if current date is within expedition range
+  const isWithinExpeditionRange = useMemo(() => {
+    return isDateWithinExpeditionRange(
+      currentDate,
+      displayExpedition?.startDate || displayExpedition?.start_date,
+      displayExpedition?.endDate || displayExpedition?.end_date
+    )
+  }, [currentDate, displayExpedition])
 
-  // When date changes, navigate to new date
+  // When date changes, navigate to new date (preserve expedition ID)
   const handleDateChange = (newDate: Date) => {
     const dateStr = newDate.toISOString().split('T')[0]
     if (dateStr !== date) {
       setIsNavigating(true)
       setLocalUpdates({})
-      router.push(`/evaluate/${dateStr}`)
+      const url = effectiveExpeditionId ? `/evaluate/${dateStr}?expedition=${effectiveExpeditionId}` : `/evaluate/${dateStr}`
+      router.push(url)
     }
   }
 
@@ -121,11 +142,17 @@ export function EvaluateClient({ date }: EvaluateClientProps) {
   // Get students for this expedition
   const expeditionStudents = useMemo(() => {
     if (!students || !schedule) return []
-    return students.filter((s: any) =>
-      Array.isArray(s.expeditions_id)
-        ? s.expeditions_id.includes(schedule.expeditions_id)
-        : s.expeditions_id === schedule.expeditions_id,
-    )
+    
+    const filtered = students.filter((s: any) => {
+      if (Array.isArray(s.expeditions_id)) {
+        // Check if array contains objects with id property or just numbers
+        return s.expeditions_id.some((exp: any) => 
+          typeof exp === 'object' ? exp.id === schedule.expeditions_id : exp === schedule.expeditions_id
+        )
+      }
+      return s.expeditions_id === schedule.expeditions_id
+    })
+    return filtered
   }, [students, schedule])
 
   // Build professionalism records - merge API data with local updates
@@ -283,19 +310,25 @@ export function EvaluateClient({ date }: EvaluateClientProps) {
     })
   }
 
-  const handleReload = () => {
+  const handleReload = async () => {
     setLocalUpdates({})
-    mutate(`expeditions_professionalism_date_${date}`)
+    await mutate(`expeditions_professionalism_date_${date}_${effectiveExpeditionId}`)
   }
 
   const handleLoadStudents = async () => {
+    if (!effectiveExpeditionId) {
+      toast.error("No expedition selected")
+      return
+    }
+    
     setIsLoadingStudents(true)
     try {
-      await addStudentsToProfessionalism(date)
+      await addStudentsToProfessionalism(date, effectiveExpeditionId)
       // Refresh the professionalism data
-      await mutate(`expeditions_professionalism_date_${date}`)
+      await mutate(`expeditions_professionalism_date_${date}_${effectiveExpeditionId}`)
     } catch (error) {
       console.error("Failed to load students:", error)
+      toast.error("Failed to load students")
     } finally {
       setIsLoadingStudents(false)
     }
@@ -317,8 +350,11 @@ export function EvaluateClient({ date }: EvaluateClientProps) {
         
         const data: Record<string, any> = {
           expedition_schedule_id: record.expedition_schedule_id,
+          expeditions_id: effectiveExpeditionId || 0,
           students_id: record.students_id,
+          date: date,
           citizenship: record.citizenship ?? 3, // Always applicable
+          isCitizenshipUsed: record.isCitizenshipUsed ?? false,
           isFlagged: record.isFlagged,
           isLocked: true, // Lock on submit
           bonus: record.bonuses?.[0] || {},
@@ -329,23 +365,31 @@ export function EvaluateClient({ date }: EvaluateClientProps) {
         if (isOffshore) {
           // Offshore days: crew is visible
           data.crew = record.crew ?? 3
+          data.isCrewUsed = record.isCrewUsed ?? false
           // Don't submit school/job on offshore days
           data.academics = null
           data.job = null
+          data.isAcademicsUsed = false
+          data.isJobUsed = false
         } else {
           // Anchored days: school and job are visible
           data.academics = record.school ?? 3
           data.job = record.job ?? 3
+          data.isAcademicsUsed = record.isAcademicsUsed ?? false
+          data.isJobUsed = record.isJobUsed ?? false
           // Don't submit crew on anchored days
           data.crew = null
+          data.isCrewUsed = false
         }
 
         if (isService) {
           // Service learning days: service is visible
           data.service = record.service_learning ?? 3
+          data.isServiceUsed = record.isServiceUsed ?? false
         } else {
           // Non-service days: don't submit service score
           data.service = null
+          data.isServiceUsed = false
         }
 
         try {
@@ -362,8 +406,12 @@ export function EvaluateClient({ date }: EvaluateClientProps) {
       }
 
       // Refresh data
-      await mutate(`expeditions_professionalism_date_${date}`)
+      await mutate(`expeditions_professionalism_date_${date}_${effectiveExpeditionId}`)
       setLocalUpdates({})
+      toast.success("Scores submitted successfully")
+    } catch (error) {
+      console.error("Error submitting scores:", error)
+      toast.error("Failed to submit scores")
     } finally {
       setIsSubmitting(false)
     }
@@ -382,39 +430,13 @@ export function EvaluateClient({ date }: EvaluateClientProps) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Breadcrumb Navigation */}
-      <div className="border-b bg-background">
-        <div className="container mx-auto px-4 py-4">
-          <Breadcrumb>
-            <BreadcrumbList>
-              <BreadcrumbItem>
-                <BreadcrumbLink href="/dashboard" className="cursor-pointer">
-                  Dashboard
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbPage>Record Professionalism Scores</BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
-        </div>
-      </div>
-
-      {/* Header */}
-      <div className="border-b bg-background">
-        <div className="container mx-auto px-4 py-6">
-          <h1 className="text-3xl font-bold mb-2">Record Professionalism Scores</h1>
-          <p className="text-muted-foreground">
-            Edit and submit professionalism scores for courses with attendance data.
-          </p>
-        </div>
-      </div>
+      {/* Expedition Header with Navigation */}
+      <ExpeditionHeader expedition={displayExpedition} isLoading={!displayExpedition} currentPage="add-scores" />
 
       {/* Date Navigation & Actions Bar */}
       <div className="border-b bg-muted/30">
         <div className="container mx-auto px-4 py-4">
-          <div className="flex flex-col lg:flex-row lg:items-center gap-4 justify-between">
+          <div className="flex flex-row items-center gap-4 justify-between flex-wrap lg:flex-nowrap">
             {/* Date Navigation */}
             <DateNavigation 
               date={currentDate} 
@@ -423,16 +445,20 @@ export function EvaluateClient({ date }: EvaluateClientProps) {
               isService={isService}
               size="large"
               isLoading={isLoading || !schedule}
+              expeditionStartDate={schedule?._expeditions?.startDate}
+              expeditionEndDate={schedule?._expeditions?.endDate}
             />
 
             {/* Stats & Actions */}
-            <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex items-center gap-3 flex-nowrap">
               {/* Location */}
               {schedule && schedule._expedition_current_location && (
                 <>
-                  <div className="flex items-center gap-2 text-muted-foreground text-sm">
-                    <MapPin className="h-4 w-4" />
-                    <span>{formatLocation(schedule._expedition_current_location)}</span>
+                  <div className="flex items-center gap-2 text-muted-foreground text-sm max-w-[150px]">
+                    <MapPin className="h-4 w-4 flex-shrink-0" />
+                    <span className="truncate" title={formatLocation(schedule._expedition_current_location)}>
+                      {formatLocation(schedule._expedition_current_location)}
+                    </span>
                   </div>
                   <div className="h-6 w-px bg-border" />
                 </>
@@ -456,36 +482,40 @@ export function EvaluateClient({ date }: EvaluateClientProps) {
 
               <Button
                 variant="outline"
-                size="default"
+                size="icon"
                 onClick={() => router.push(`/schedule/${date}`)}
-                className="cursor-pointer h-10 px-6"
+                className="cursor-pointer h-10 w-10"
+                disabled={!isWithinExpeditionRange}
+                title={!isWithinExpeditionRange ? "Outside expedition date range" : "View schedule"}
               >
-                View Schedule
+                <Calendar className="h-4 w-4" />
               </Button>
               <Button
                 variant="outline"
-                size="default"
+                size="icon"
                 onClick={handleUnblockAllCategories}
-                className="cursor-pointer h-10 px-6"
-                disabled={isNavigating}
+                className="cursor-pointer h-10 w-10"
+                disabled={isNavigating || !isWithinExpeditionRange}
+                title={!isWithinExpeditionRange ? "Outside expedition date range" : "Unblock all categories"}
               >
-                Unblock All
+                <X className="h-4 w-4" />
               </Button>
               <Button
                 variant="outline"
                 size="icon"
                 onClick={handleUnlockAll}
                 className="cursor-pointer h-10 w-10"
-                disabled={isNavigating}
-                title="Unlock All"
+                disabled={isNavigating || !isWithinExpeditionRange}
+                title={!isWithinExpeditionRange ? "Outside expedition date range" : "Unlock All"}
               >
                 <Unlock className="h-4 w-4" />
               </Button>
               <Button
                 size="default"
-                disabled={submitCount === 0 || isNavigating || isSubmitting}
+                disabled={submitCount === 0 || isNavigating || isSubmitting || !isWithinExpeditionRange}
                 onClick={handleSubmitScores}
-                className="cursor-pointer h-10 px-6"
+                className="cursor-pointer h-10 px-4"
+                title={!isWithinExpeditionRange ? "Outside expedition date range" : "Submit professionalism scores"}
               >
                 {isSubmitting ? (
                   <>
@@ -493,7 +523,7 @@ export function EvaluateClient({ date }: EvaluateClientProps) {
                     Submitting...
                   </>
                 ) : (
-                  `Submit Scores (${submitCount})`
+                  `Submit (${submitCount})`
                 )}
               </Button>
             </div>
@@ -526,7 +556,19 @@ export function EvaluateClient({ date }: EvaluateClientProps) {
           </div>
         )}
 
-        {isLoading ? (
+        {!isWithinExpeditionRange ? (
+          <Empty className="bg-white border-gray-200">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <Users />
+              </EmptyMedia>
+              <EmptyTitle>Outside of Expedition Range</EmptyTitle>
+              <EmptyDescription>
+                This date is outside the expedition's scheduled date range. Please select a date within the expedition period.
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        ) : isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {Array.from({ length: 6 }).map((_, i) => (
               <Skeleton key={i} className="h-80 w-full rounded-lg" />

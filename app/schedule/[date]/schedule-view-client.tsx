@@ -24,6 +24,16 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty"
+import { ExpeditionHeader } from "@/components/expedition-header"
+import { useExpeditions } from "@/lib/hooks/use-expeditions"
+import {
   Breadcrumb,
   BreadcrumbItem,
   BreadcrumbLink,
@@ -31,7 +41,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
-import { Clock, User, MessageSquare, ChevronLeft, ChevronRight, Plus, Pencil, Trash2, X, Settings, MapPin } from "lucide-react"
+import { Clock, User, MessageSquare, ChevronLeft, ChevronRight, Plus, Pencil, Trash2, X, Settings, MapPin, ClipboardList } from "lucide-react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { DateNavigation } from "@/components/date-navigation"
 import { AddScheduleItemSheet } from "@/components/add-schedule-item-sheet"
@@ -46,11 +56,14 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { addExpeditionScheduleTemplate, deleteExpeditionScheduleItem } from "@/lib/xano"
 import { useCurrentUser } from "@/lib/contexts/user-context"
+import { useExpeditionContext } from "@/lib/contexts/expedition-context"
 import { mutate } from "swr"
 import { toast } from "sonner"
+import { isDateWithinExpeditionRange } from "@/lib/utils"
 
 interface ScheduleViewClientProps {
   date: string
+  expeditionId?: number
 }
 
 const HOURS = Array.from({ length: 20 }, (_, i) => i + 4) // 4 AM to 11 PM
@@ -103,12 +116,31 @@ const getColorForType = (item: any) => {
   return 'bg-gray-400'
 }
 
-export function ScheduleViewClient({ date }: ScheduleViewClientProps) {
+export function ScheduleViewClient({ date, expeditionId }: ScheduleViewClientProps) {
   const router = useRouter()
   const timelineRef = useRef<HTMLDivElement>(null)
   const { currentUser } = useCurrentUser()
-  const { data: schedules, isLoading: loadingSchedules } = useExpeditionSchedules()
-  const { data: scheduleItems, isLoading: loadingItems } = useExpeditionScheduleItemsByDate(date)
+  const { activeExpedition, userExpeditions } = useExpeditionContext()
+  const { data: allExpeditionsData } = useExpeditions()
+  
+  // Use expedition ID from URL if provided, otherwise fall back to active expedition
+  const effectiveExpeditionId = expeditionId || activeExpedition?.id
+  
+  // Find the expedition to display - prioritize URL parameter, fetch full data with term info
+  const displayExpedition = useMemo(() => {
+    if (expeditionId && allExpeditionsData) {
+      const expeditionFromUrl = allExpeditionsData.find((e: any) => e.id === expeditionId)
+      if (expeditionFromUrl) return expeditionFromUrl
+    }
+    if (expeditionId && userExpeditions) {
+      const expeditionFromUrl = userExpeditions.find((e: any) => e.id === expeditionId)
+      if (expeditionFromUrl) return expeditionFromUrl
+    }
+    return activeExpedition
+  }, [expeditionId, allExpeditionsData, userExpeditions, activeExpedition])
+  
+  const { data: schedules, isLoading: loadingSchedules } = useExpeditionSchedules(effectiveExpeditionId)
+  const { data: scheduleItems, isLoading: loadingItems } = useExpeditionScheduleItemsByDate(date, effectiveExpeditionId)
   const { data: templates, isLoading: loadingTemplates } = useExpeditionScheduleTemplates()
   const { data: staff } = useTeachers()
   
@@ -173,7 +205,7 @@ export function ScheduleViewClient({ date }: ScheduleViewClientProps) {
     setShowModalDeleteConfirm(false)
     try {
       await deleteExpeditionScheduleItem(selectedItem.id)
-      await mutate(`expedition_schedule_items_date_${date}`)
+      await mutate(`expedition_schedule_items_date_${date}_${effectiveExpeditionId || 'all'}`)
       toast.success("Activity deleted")
       setDialogOpen(false)
       setSelectedItem(null)
@@ -190,6 +222,15 @@ export function ScheduleViewClient({ date }: ScheduleViewClientProps) {
     const [year, month, day] = date.split('-').map(Number)
     return new Date(year, month - 1, day)
   }, [date])
+  
+  // Check if current date is within expedition range
+  const isWithinExpeditionRange = useMemo(() => {
+    return isDateWithinExpeditionRange(
+      currentDate,
+      displayExpedition?.startDate || displayExpedition?.start_date,
+      displayExpedition?.endDate || displayExpedition?.end_date
+    )
+  }, [currentDate, displayExpedition])
 
   const goToPrevDay = () => {
     const newDate = new Date(currentDate)
@@ -207,33 +248,22 @@ export function ScheduleViewClient({ date }: ScheduleViewClientProps) {
 
   const handleDateChange = (newDate: Date) => {
     const dateStr = newDate.toISOString().split('T')[0]
-    router.push(`/schedule/${dateStr}`)
+    const url = effectiveExpeditionId ? `/schedule/${dateStr}?expedition=${effectiveExpeditionId}` : `/schedule/${dateStr}`
+    router.push(url)
   }
 
   // Find schedule by date
   const schedule = useMemo(() => {
     if (!schedules) return null
-    const found = schedules.find((s: any) => {
-      const scheduleDate = new Date(s.date).toISOString().split('T')[0]
-      console.log('Comparing schedule date:', scheduleDate, 'with URL date:', date)
-      return scheduleDate === date
-    })
-    if (!found) {
-      console.log('No schedule found for date:', date)
-      console.log('Available schedules:', schedules.map((s: any) => ({
-        id: s.id,
-        name: s.name,
-        date: s.date,
-        formatted: new Date(s.date).toISOString().split('T')[0]
-      })))
-    }
+    // Compare date strings directly (both in YYYY-MM-DD format)
+    const found = schedules.find((s: any) => s.date === date)
     return found
   }, [schedules, date])
 
   // Merge local updates with schedule items for optimistic UI
   // But keep original items for layout calculation to prevent column jumping during drag
   const itemsWithLocalUpdates = useMemo(() => {
-    if (!scheduleItems) return []
+    if (!Array.isArray(scheduleItems)) return []
     return scheduleItems.map((item: any) => {
       const localUpdate = localItemUpdates[item.id]
       if (localUpdate) {
@@ -292,7 +322,7 @@ export function ScheduleViewClient({ date }: ScheduleViewClientProps) {
     setAddingTemplate(true)
     try {
       await addExpeditionScheduleTemplate(date, Number(selectedTemplate))
-      await mutate(`expedition_schedule_items_date_${date}`)
+      await mutate(`expedition_schedule_items_date_${date}_${effectiveExpeditionId || 'all'}`)
       toast.success("Template activities added successfully")
       setSelectedTemplate("")
     } catch (error) {
@@ -440,44 +470,8 @@ export function ScheduleViewClient({ date }: ScheduleViewClientProps) {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-8">
-      {/* Breadcrumb */}
-      <div className="border-b bg-background sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-4">
-          <Breadcrumb>
-            <BreadcrumbList>
-              <BreadcrumbItem>
-                <BreadcrumbLink href="/dashboard" className="cursor-pointer">
-                  Dashboard
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbPage>Daily Schedule</BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
-        </div>
-      </div>
-
-      {/* Header */}
-      <div className="border-b bg-background">
-        <div className="container mx-auto px-4 py-6">
-          <h1 className="text-3xl font-bold mb-2">Daily Schedule</h1>
-          <div className="flex items-center justify-between">
-            <p className="text-muted-foreground">
-              View schedule details and activities for the day.
-            </p>
-            <Button 
-              onClick={() => router.push(`/evaluate/${date}`)} 
-              variant="outline"
-              className="cursor-pointer h-10 px-6"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Professionalism Scores
-            </Button>
-          </div>
-        </div>
-      </div>
+      {/* Expedition Header with Navigation */}
+      <ExpeditionHeader expedition={displayExpedition} isLoading={!displayExpedition} currentPage="daily-view" />
 
       {/* Date Navigation & Actions Bar */}
       <div className="border-b bg-muted/30">
@@ -491,6 +485,8 @@ export function ScheduleViewClient({ date }: ScheduleViewClientProps) {
               isService={schedule?.isService || schedule?.is_service || false}
               size="large"
               isLoading={isLoadingSchedules || !schedule}
+              expeditionStartDate={schedule?._expeditions?.startDate}
+              expeditionEndDate={schedule?._expeditions?.endDate}
             />
 
             {/* Actions */}
@@ -520,7 +516,7 @@ export function ScheduleViewClient({ date }: ScheduleViewClientProps) {
                   <div className="h-6 w-px bg-border" />
                 </>
               )}
-              {scheduleItems && scheduleItems.length === 0 && (
+              {Array.isArray(scheduleItems) && scheduleItems.length === 0 && schedule && isWithinExpeditionRange && (
                 <>
                   <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
                     <SelectTrigger 
@@ -562,10 +558,20 @@ export function ScheduleViewClient({ date }: ScheduleViewClientProps) {
               )}
               <Button 
                 onClick={() => setAddSheetOpen(true)} 
-                className="cursor-pointer h-10 px-4"
+                className="cursor-pointer h-10 w-10 p-0"
+                disabled={!isWithinExpeditionRange}
+                title={!isWithinExpeditionRange ? "Outside expedition date range" : "Add activity"}
               >
-                <Plus className="h-4 w-4 mr-2" />
-                Add
+                <Plus className="h-4 w-4" />
+              </Button>
+              <Button 
+                variant="outline"
+                onClick={() => router.push(`/evaluate/${date}${effectiveExpeditionId ? `?expedition=${effectiveExpeditionId}` : ''}`)} 
+                className="cursor-pointer h-10 w-10 p-0"
+                disabled={!isWithinExpeditionRange}
+                title={!isWithinExpeditionRange ? "Outside expedition date range" : "Add scores for this day"}
+              >
+                <ClipboardList className="h-4 w-4" />
               </Button>
               
               {/* Edit Mode Toggle - Admin only, disabled if no activities */}
@@ -575,11 +581,11 @@ export function ScheduleViewClient({ date }: ScheduleViewClientProps) {
                   <Button
                     variant={editMode ? "default" : "outline"}
                     onClick={() => setEditMode(!editMode)}
-                    className="cursor-pointer h-10 px-4"
-                    disabled={!scheduleItems || scheduleItems.length === 0}
+                    className="cursor-pointer h-10 w-10 p-0"
+                    disabled={!Array.isArray(scheduleItems) || scheduleItems.length === 0}
+                    title={editMode ? "Done editing" : "Edit schedule"}
                   >
-                    <Settings className="h-4 w-4 mr-2" />
-                    {editMode ? "Done" : "Edit"}
+                    <Settings className="h-4 w-4" />
                   </Button>
                 </>
               )}
@@ -590,7 +596,19 @@ export function ScheduleViewClient({ date }: ScheduleViewClientProps) {
 
       {/* Content Area */}
       <div className="container mx-auto px-4 py-6">
-        {isLoadingSchedules || isLoadingData ? (
+        {!isWithinExpeditionRange ? (
+          <Empty className="bg-white border-gray-200">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <Clock />
+              </EmptyMedia>
+              <EmptyTitle>Outside of Expedition Range</EmptyTitle>
+              <EmptyDescription>
+                This date is outside the expedition's scheduled date range.
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        ) : isLoadingSchedules || isLoadingData ? (
           <div className="text-center py-8">
             <div className="flex flex-col items-center gap-2">
               <Spinner size="sm" />
@@ -682,6 +700,7 @@ export function ScheduleViewClient({ date }: ScheduleViewClientProps) {
                 formatMilitaryTime={formatMilitaryTime}
                 getDuration={getDuration}
                 getColorForType={getColorForType}
+                expeditionsId={effectiveExpeditionId}
               >
                 <div className="relative">
                   <div className="flex">
@@ -933,6 +952,7 @@ export function ScheduleViewClient({ date }: ScheduleViewClientProps) {
         date={date}
         staff={staff}
         editItem={editingItem}
+        expeditionsId={effectiveExpeditionId}
       />
     </div>
   )

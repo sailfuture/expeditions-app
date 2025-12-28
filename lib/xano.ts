@@ -28,8 +28,11 @@ export async function getExpeditions() {
 }
 
 // ============ Expedition Schedules ============
-export async function getExpeditionSchedules() {
-  return xanoFetch<any[]>("/expedition_schedule")
+export async function getExpeditionSchedules(expeditionsId?: number) {
+  const url = expeditionsId 
+    ? `/expedition_schedule?expeditions_id=${expeditionsId}`
+    : "/expedition_schedule"
+  return xanoFetch<any[]>(url)
 }
 
 export async function getExpeditionScheduleById(id: number) {
@@ -56,9 +59,9 @@ export async function createExpeditionSchedule(data: Record<string, any>) {
   })
 }
 
-export async function addAllDatesForExpedition() {
-  return xanoFetch<any>("/add_all_dates", {
-    method: "POST",
+export async function addAllDatesForExpedition(expeditionsId: number) {
+  return xanoFetch<any>(`/add_all_dates?expedition_id=${expeditionsId}`, {
+    method: "GET",
   })
 }
 
@@ -71,8 +74,21 @@ export async function getExpeditionScheduleItemById(id: number) {
   return xanoFetch<any>(`/expedition_schedule_items/${id}`)
 }
 
-export async function getExpeditionScheduleItemsByDate(date: string) {
-  return xanoFetch<any[]>(`/expedition_schedule_items_date?date=${date}`)
+export async function getExpeditionScheduleItemsByDate(date: string, expeditionsId?: number) {
+  const url = expeditionsId 
+    ? `/expedition_schedule_items_date?date=${date}&expeditions_id=${expeditionsId}`
+    : `/expedition_schedule_items_date?date=${date}`
+  try {
+    const response = await xanoFetch<{ out: string; expedition_schedule_items: any[] } | any[]>(url)
+    // Handle both object response and empty array (from 500 error handling)
+    if (Array.isArray(response)) {
+      return response
+    }
+    return response.expedition_schedule_items || []
+  } catch (error) {
+    console.error("Error fetching schedule items by date:", error)
+    return []
+  }
 }
 
 export async function createExpeditionScheduleItem(data: Record<string, any>) {
@@ -142,12 +158,12 @@ export async function getExpeditionsProfessionalismById(id: number) {
   return xanoFetch<any>(`/expeditions_professionalism/${id}`)
 }
 
-export async function getExpeditionsProfessionalismByDate(date: string) {
-  return xanoFetch<any[]>(`/expeditions_professionalism_by_date?date=${date}`)
+export async function getExpeditionsProfessionalismByDate(date: string, expeditionsId: number) {
+  return xanoFetch<any[]>(`/expeditions_professionalism_by_date?date=${date}&expeditions_id=${expeditionsId}`)
 }
 
-export async function addStudentsToProfessionalism(date: string) {
-  return xanoFetch<any>(`/add_students_to_professionalism?date=${date}`)
+export async function addStudentsToProfessionalism(date: string, expeditionsId: number) {
+  return xanoFetch<any>(`/add_students_to_professionalism?date=${date}&expeditions_id=${expeditionsId}`)
 }
 
 export async function createExpeditionsProfessionalism(data: Record<string, any>) {
@@ -162,6 +178,48 @@ export async function updateExpeditionsProfessionalism(id: number, data: Record<
     method: "PATCH",
     body: JSON.stringify(data),
   })
+}
+
+export async function getStudentProfessionalismByExpedition(studentsId: number, expeditionsId: number) {
+  return xanoFetch<any[]>(`/expeditions_professionalism?students_id=${studentsId}&expeditions_id=${expeditionsId}`)
+}
+
+// ============ Student Evaluation Summary ============
+export async function getEvaluationByStudent(studentsId: number, expeditionsId: number) {
+  return xanoFetch<any>(`/evaluation_by_student?students_id=${studentsId}&expeditions_id=${expeditionsId}`)
+}
+
+export async function getEvaluationByStudentType(studentsId: number, expeditionsId: number, type: string) {
+  return xanoFetch<any[]>(`/get_expedition_professionalism?students_id=${studentsId}&expeditions_id=${expeditionsId}&type=${type}`)
+}
+
+export async function getProfessionalismByStudent(studentsId: number, expeditionsId: number) {
+  return xanoFetch<any[]>(`/expeditions_professionalism_by_student?students_id=${studentsId}&expeditions_id=${expeditionsId}`)
+}
+
+export async function calculateStudentEvaluation(studentsId: number, expeditionsId: number) {
+  return xanoFetch<any>("/calculate_student_evaluation", {
+    method: "POST",
+    body: JSON.stringify({
+      students_id: studentsId,
+      expeditions_id: expeditionsId,
+    }),
+  })
+}
+
+export async function getExpeditionPerformanceReviews(expeditionsId: number) {
+  return xanoFetch<any[]>(`/expedition_performance_reviews?expeditions_id=${expeditionsId}`)
+}
+
+export async function getProfessionalismByStudentAndDate(
+  studentsId: number,
+  expeditionsId: number,
+  startDate: string,
+  endDate: string
+) {
+  return xanoFetch<any[]>(
+    `/expeditions_professionalism_by_student_and_date?students_id=${studentsId}&expeditions_id=${expeditionsId}&startDate=${startDate}&endDate=${endDate}`
+  )
 }
 
 // ============ Bonus Options ============
@@ -195,5 +253,71 @@ export async function getExpeditionScheduleTemplates() {
 export async function addExpeditionScheduleTemplate(date: string, templateId: number) {
   return xanoFetch<any>(`/add_expedition_schedule_template?date=${date}&expeditions_schedule_templates_id=${templateId}`, {
     method: "GET",
+  })
+}
+
+// ============ School Management ============
+export async function getSchoolTerms() {
+  return xanoFetch<any[]>("/schoolterms")
+}
+
+export async function getSchoolYears() {
+  return xanoFetch<any[]>("/schoolyears")
+}
+
+// ============ Expedition Management ============
+export async function createExpedition(data: {
+  name: string
+  startDate: string
+  endDate: string
+  schoolterms_id: number
+  schoolyears_id: number
+}) {
+  return xanoFetch<any>("/expeditions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  })
+}
+
+export async function updateExpedition(id: number, data: {
+  expeditions_id?: number
+  name?: string
+  startDate?: string
+  endDate?: string
+  schoolterms_id?: number
+  schoolyears_id?: number
+  isActive?: boolean
+}) {
+  return xanoFetch<any>(`/expeditions/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      expeditions_id: id,
+      ...data,
+    }),
+  })
+}
+
+// ============ Student Management ============
+export async function updateStudent(id: number, data: any) {
+  return xanoFetch<any>(`/students/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  })
+}
+
+// ============ Intake Form Management ============
+export async function getExpeditionsStudentInformation() {
+  return xanoFetch<any[]>("/expeditions_student_information")
+}
+
+// ============ Staff Management ============
+export async function updateTeacher(id: number, data: any) {
+  return xanoFetch<any>(`/teachers/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
   })
 }

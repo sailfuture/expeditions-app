@@ -18,9 +18,10 @@ import {
 } from "@/components/ui/breadcrumb"
 import { ArrowLeft } from "lucide-react"
 import { useExpeditionSchedules, useExpeditionLocations } from "@/lib/hooks/use-expeditions"
-import { updateExpeditionSchedule } from "@/lib/xano"
+import { updateExpeditionSchedule, getExpeditionScheduleById } from "@/lib/xano"
 import { mutate } from "swr"
 import { toast } from "sonner"
+import useSWR from "swr"
 
 interface ScheduleUpdateClientProps {
   scheduleId: string
@@ -28,15 +29,14 @@ interface ScheduleUpdateClientProps {
 
 export function ScheduleUpdateClient({ scheduleId }: ScheduleUpdateClientProps) {
   const router = useRouter()
-  const { data: schedules, isLoading: loadingSchedules } = useExpeditionSchedules()
+  // Fetch the specific schedule by ID first
+  const { data: schedule, isLoading: loadingSchedule } = useSWR(
+    scheduleId ? `expedition_schedule_${scheduleId}` : null,
+    scheduleId ? () => getExpeditionScheduleById(Number(scheduleId)) : null
+  )
   const [updatingField, setUpdatingField] = useState<string | null>(null)
   const [notes, setNotes] = useState<string>("")
   const [notesChanged, setNotesChanged] = useState(false)
-
-  const schedule = useMemo(() => {
-    if (!schedules) return null
-    return schedules.find((s: any) => s.id === Number(scheduleId))
-  }, [schedules, scheduleId])
   
   // Update local notes state when schedule loads
   useMemo(() => {
@@ -78,7 +78,9 @@ export function ScheduleUpdateClient({ scheduleId }: ScheduleUpdateClientProps) 
         destination: isDestination ? locationId : schedule.destination,
         expeditions_id: schedule.expeditions_id,
       })
-      mutate("expedition_schedules")
+      // Invalidate both the specific schedule and the schedules list
+      mutate(`expedition_schedule_${schedule.id}`)
+      mutate(`expedition_schedules_${schedule.expeditions_id}`)
       toast.success("Location updated")
     } catch (error) {
       console.error("Failed to update location:", error)
@@ -110,7 +112,9 @@ export function ScheduleUpdateClient({ scheduleId }: ScheduleUpdateClientProps) 
         destination: isOffshore ? schedule.destination : 0,
         expeditions_id: schedule.expeditions_id,
       })
-      mutate("expedition_schedules")
+      // Invalidate both the specific schedule and the schedules list
+      mutate(`expedition_schedule_${schedule.id}`)
+      mutate(`expedition_schedules_${schedule.expeditions_id}`)
       toast.success("Type updated")
     } catch (error) {
       console.error("Failed to update type:", error)
@@ -148,7 +152,9 @@ export function ScheduleUpdateClient({ scheduleId }: ScheduleUpdateClientProps) 
         expeditions_id: schedule.expeditions_id,
         notes: notes,
       })
-      mutate("expedition_schedules")
+      // Invalidate both the specific schedule and the schedules list
+      mutate(`expedition_schedule_${schedule.id}`)
+      mutate(`expedition_schedules_${schedule.expeditions_id}`)
       toast.success("Notes updated")
       setNotesChanged(false)
     } catch (error) {
@@ -159,7 +165,7 @@ export function ScheduleUpdateClient({ scheduleId }: ScheduleUpdateClientProps) 
     }
   }
 
-  if (loadingSchedules) {
+  if (loadingSchedule) {
     return (
       <div className="min-h-screen bg-background">
         <div className="border-b bg-muted/30">
@@ -199,7 +205,7 @@ export function ScheduleUpdateClient({ scheduleId }: ScheduleUpdateClientProps) 
           <Breadcrumb className="mb-4">
             <BreadcrumbList>
               <BreadcrumbItem>
-                <BreadcrumbLink href="/dashboard" className="cursor-pointer">Dashboard</BreadcrumbLink>
+                <BreadcrumbLink href="/expeditions" className="cursor-pointer">All Expeditions</BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbSeparator />
               <BreadcrumbItem>
@@ -424,15 +430,14 @@ export function ScheduleUpdateClient({ scheduleId }: ScheduleUpdateClientProps) 
           <Button 
             variant="outline" 
             onClick={() => {
-              const dateStr = new Date(schedule.date).toISOString().split('T')[0]
-              router.push(`/schedule/${dateStr}`)
+              router.push(`/schedule/${schedule.date}`)
             }}
             className="cursor-pointer"
           >
             View Full Schedule
           </Button>
           <Button 
-            onClick={() => router.push(`/evaluate/${new Date(schedule.date).toISOString().split('T')[0]}`)}
+            onClick={() => router.push(`/evaluate/${schedule.date}`)}
             className="cursor-pointer"
           >
             Record Scores

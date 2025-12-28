@@ -269,6 +269,32 @@ function TVStaticContent() {
     return markers
   }, [])
 
+  // 15-minute interval markers for row 1
+  const row1QuarterMarkers = useMemo(() => {
+    const markers = []
+    for (let hour = ROW1_START; hour < ROW1_END; hour++) {
+      for (const minutes of [15, 30, 45]) {
+        const decimalHour = hour + minutes / 60
+        const percent = ((decimalHour - ROW1_START) / ROW1_HOURS) * 100
+        markers.push({ hour, minutes, percent, isHalf: minutes === 30 })
+      }
+    }
+    return markers
+  }, [])
+
+  // 15-minute interval markers for row 2
+  const row2QuarterMarkers = useMemo(() => {
+    const markers = []
+    for (let hour = ROW2_START; hour < ROW2_END; hour++) {
+      for (const minutes of [15, 30, 45]) {
+        const decimalHour = hour + minutes / 60
+        const percent = ((decimalHour - ROW2_START) / ROW2_HOURS) * 100
+        markers.push({ hour, minutes, percent, isHalf: minutes === 30 })
+      }
+    }
+    return markers
+  }, [])
+
   // Parse display date
   const displayDate = useMemo(() => {
     try {
@@ -300,56 +326,53 @@ function TVStaticContent() {
   return (
     <div className="fixed inset-0 z-[100] bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col overflow-hidden">
       {/* Header - Compact */}
-      <div className="h-12 flex-shrink-0 bg-slate-900/80 border-b border-white/10 flex items-center justify-between px-6">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-4">
-            <h1 className="text-xl font-bold text-white">
-              {format(displayDate, "EEE, MMM d")}
-            </h1>
-            <span className="text-sm text-white/70">{activeExpedition.name}</span>
-              
-              {/* Location info */}
-              {currentLocationName && (
-                <span className="px-2 py-0.5 rounded-md bg-white/10 text-white/90 text-sm font-medium">
-                  {currentLocationName}
-                  {destinationName && (
-                    <span className="text-white/50"> → {destinationName}</span>
-                  )}
-                </span>
+      <div className="h-10 flex-shrink-0 bg-slate-900/80 border-b border-white/10 flex items-center justify-between px-6">
+        <div className="flex items-center gap-3">
+          <h1 className="text-lg font-bold text-white">
+            {format(displayDate, "EEE, MMM d")}
+          </h1>
+          <span className="text-sm text-white/60">{activeExpedition.name}</span>
+          
+          {/* Location info */}
+          {currentLocationName && (
+            <span className="px-2 py-0.5 rounded-md bg-white/10 text-white/80 text-xs font-medium">
+              {currentLocationName}
+              {destinationName && (
+                <span className="text-white/50"> → {destinationName}</span>
               )}
-              
-              {/* Status badges */}
-              {todaySchedule?.isOffshore && (
-                <span className="px-2 py-0.5 rounded-md bg-cyan-500/20 text-cyan-300 text-sm font-medium">
-                  Offshore
-                </span>
-              )}
-              {!todaySchedule?.isOffshore && todaySchedule && (
-                <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 text-sm font-medium">
-                  In Port
-                </span>
-              )}
-              {todaySchedule?.isService && (
-                <span className="px-2 py-0.5 rounded-md bg-purple-500/20 text-purple-300 text-sm font-medium">
-                  Service Day
-                </span>
-              )}
-              {testDate && (
-                <span className="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 text-sm font-medium">
-                  Test Mode
-                </span>
-              )}
-            </div>
-          </div>
+            </span>
+          )}
+          
+          {/* Status badges */}
+          {todaySchedule?.isOffshore && (
+            <span className="px-2 py-0.5 rounded-md bg-cyan-500/20 text-cyan-300 text-xs font-medium">
+              Offshore
+            </span>
+          )}
+          {!todaySchedule?.isOffshore && todaySchedule && (
+            <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 text-xs font-medium">
+              In Port
+            </span>
+          )}
+          {todaySchedule?.isService && (
+            <span className="px-2 py-0.5 rounded-md bg-purple-500/20 text-purple-300 text-xs font-medium">
+              Service Day
+            </span>
+          )}
+          {testDate && (
+            <span className="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 text-xs font-medium">
+              Test Mode
+            </span>
+          )}
         </div>
         
-        <div className="text-right">
-          <p className="text-4xl font-light text-white tabular-nums">
+        <div className="flex items-center gap-2">
+          <p className="text-2xl font-light text-white tabular-nums">
             {format(currentTime, "h:mm")}
-            <span className="text-xl text-white/50 ml-2">{format(currentTime, "a")}</span>
+            <span className="text-sm text-white/50 ml-1">{format(currentTime, "a")}</span>
           </p>
           {!testDate && (
-            <p className="text-base text-green-400 font-medium">Live</p>
+            <span className="text-xs text-green-400 font-medium">Live</span>
           )}
         </div>
       </div>
@@ -393,6 +416,20 @@ function TVStaticContent() {
                 })}
               </div>
               
+              {/* 15-minute interval lines for row 1 */}
+              <div className="absolute top-6 left-0 right-0 bottom-0">
+                {row1QuarterMarkers.map(({ hour, minutes, percent, isHalf }) => (
+                  <div
+                    key={`${hour}-${minutes}`}
+                    className={cn(
+                      "absolute w-px h-full",
+                      isHalf ? "bg-white/8" : "bg-white/5"
+                    )}
+                    style={{ left: `${percent}%`, transform: 'translateX(-50%)' }}
+                  />
+                ))}
+              </div>
+
               {/* Vertical grid lines for row 1 */}
               <div className="absolute top-6 left-0 right-0 bottom-0">
                 {row1HourMarkers.map(({ hour, percent }) => (
@@ -426,7 +463,7 @@ function TVStaticContent() {
                   const staffNames: string[] = []
                   if (item._expedition_staff?.name) staffNames.push(item._expedition_staff.name)
                   if (item.participants?.length > 0) {
-                    item.participants.slice(0, 1).forEach((p: any) => {
+                    item.participants.slice(0, 2).forEach((p: any) => {
                       if (p.name && p.name !== item._expedition_staff?.name) {
                         staffNames.push(p.name.split(' ')[0])
                       }
@@ -447,13 +484,22 @@ function TVStaticContent() {
                         height: `${columnHeight}%`,
                       }}
                     >
-                      <div className="flex flex-col h-full p-1.5">
-                        <div className={cn("h-1 w-full flex-shrink-0 rounded-full", getColorForType(item))} />
-                        <div className="flex-1 overflow-hidden flex flex-col min-w-0 pt-1">
-                          <h3 className="font-bold text-sm text-gray-900 leading-tight truncate">{item.name}</h3>
-                          <p className="text-[10px] text-gray-500">{formatTime(item.time_in)} - {formatTime(item.time_out)}</p>
+                      <div className="flex flex-col h-full p-2.5">
+                        <div className={cn("h-2 w-full flex-shrink-0 rounded-full", getColorForType(item))} />
+                        <div className="flex-1 overflow-hidden flex flex-col min-w-0 pt-1.5">
+                          <h3 className="font-bold text-lg text-gray-900 leading-tight truncate">{item.name}</h3>
+                          <p className="text-sm text-gray-500">{formatTime(item.time_in)} - {formatTime(item.time_out)}</p>
                           {staffNames.length > 0 && (
-                            <span className="text-[10px] text-gray-600 truncate">{staffNames.join(" • ")}</span>
+                            <span className="text-sm text-gray-600 truncate">{staffNames.join(" • ")}</span>
+                          )}
+                          {item.address && (
+                            <p className="text-sm text-gray-400 truncate mt-0.5">{item.address}</p>
+                          )}
+                          {item.notes && (
+                            <p className="text-sm text-gray-400 truncate mt-0.5">{item.notes.substring(0, 60)}</p>
+                          )}
+                          {item.things_to_bring && (
+                            <p className="text-sm text-blue-500 truncate mt-0.5">Bring: {item.things_to_bring.substring(0, 40)}</p>
                           )}
                         </div>
                       </div>
@@ -463,7 +509,7 @@ function TVStaticContent() {
               </div>
             </div>
 
-            {/* Row 2: 4 PM - 11 PM */}
+            {/* Row 2: 2 PM - 11 PM */}
             <div className="flex-1 relative min-h-0">
               {/* Row label */}
               <div className="absolute -left-4 top-1/2 -translate-y-1/2 -rotate-90 text-white/30 text-xs font-medium whitespace-nowrap">
@@ -490,6 +536,20 @@ function TVStaticContent() {
                 })}
               </div>
               
+              {/* 15-minute interval lines for row 2 */}
+              <div className="absolute top-6 left-0 right-0 bottom-0">
+                {row2QuarterMarkers.map(({ hour, minutes, percent, isHalf }) => (
+                  <div
+                    key={`${hour}-${minutes}`}
+                    className={cn(
+                      "absolute w-px h-full",
+                      isHalf ? "bg-white/8" : "bg-white/5"
+                    )}
+                    style={{ left: `${percent}%`, transform: 'translateX(-50%)' }}
+                  />
+                ))}
+              </div>
+
               {/* Vertical grid lines for row 2 */}
               <div className="absolute top-6 left-0 right-0 bottom-0">
                 {row2HourMarkers.map(({ hour, percent }) => (
@@ -523,7 +583,7 @@ function TVStaticContent() {
                   const staffNames: string[] = []
                   if (item._expedition_staff?.name) staffNames.push(item._expedition_staff.name)
                   if (item.participants?.length > 0) {
-                    item.participants.slice(0, 1).forEach((p: any) => {
+                    item.participants.slice(0, 2).forEach((p: any) => {
                       if (p.name && p.name !== item._expedition_staff?.name) {
                         staffNames.push(p.name.split(' ')[0])
                       }
@@ -544,13 +604,22 @@ function TVStaticContent() {
                         height: `${columnHeight}%`,
                       }}
                     >
-                      <div className="flex flex-col h-full p-1.5">
-                        <div className={cn("h-1 w-full flex-shrink-0 rounded-full", getColorForType(item))} />
-                        <div className="flex-1 overflow-hidden flex flex-col min-w-0 pt-1">
-                          <h3 className="font-bold text-sm text-gray-900 leading-tight truncate">{item.name}</h3>
-                          <p className="text-[10px] text-gray-500">{formatTime(item.time_in)} - {formatTime(item.time_out)}</p>
+                      <div className="flex flex-col h-full p-2.5">
+                        <div className={cn("h-2 w-full flex-shrink-0 rounded-full", getColorForType(item))} />
+                        <div className="flex-1 overflow-hidden flex flex-col min-w-0 pt-1.5">
+                          <h3 className="font-bold text-lg text-gray-900 leading-tight truncate">{item.name}</h3>
+                          <p className="text-sm text-gray-500">{formatTime(item.time_in)} - {formatTime(item.time_out)}</p>
                           {staffNames.length > 0 && (
-                            <span className="text-[10px] text-gray-600 truncate">{staffNames.join(" • ")}</span>
+                            <span className="text-sm text-gray-600 truncate">{staffNames.join(" • ")}</span>
+                          )}
+                          {item.address && (
+                            <p className="text-sm text-gray-400 truncate mt-0.5">{item.address}</p>
+                          )}
+                          {item.notes && (
+                            <p className="text-sm text-gray-400 truncate mt-0.5">{item.notes.substring(0, 60)}</p>
+                          )}
+                          {item.things_to_bring && (
+                            <p className="text-sm text-blue-500 truncate mt-0.5">Bring: {item.things_to_bring.substring(0, 40)}</p>
                           )}
                         </div>
                       </div>

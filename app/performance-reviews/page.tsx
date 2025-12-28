@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo, useState, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { format, formatDistanceToNow } from "date-fns"
 import useSWR from "swr"
@@ -355,7 +355,7 @@ function PreviewModal({
   )
 }
 
-export default function PerformanceReviewsPage() {
+function PerformanceReviewsContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const expeditionId = searchParams.get('expedition') ? parseInt(searchParams.get('expedition')!) : null
@@ -835,3 +835,14 @@ export default function PerformanceReviewsPage() {
   )
 }
 
+export default function PerformanceReviewsPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-lg text-gray-500">Loading...</div>
+      </div>
+    }>
+      <PerformanceReviewsContent />
+    </Suspense>
+  )
+}

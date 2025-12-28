@@ -27,6 +27,11 @@ export async function getExpeditions() {
   return xanoFetch<any[]>("/expeditions")
 }
 
+export async function getActiveExpedition() {
+  const result = await xanoFetch<any[]>("/active_expedition")
+  return result[0] || null
+}
+
 // ============ Expedition Schedules ============
 export async function getExpeditionSchedules(expeditionsId?: number) {
   const url = expeditionsId 

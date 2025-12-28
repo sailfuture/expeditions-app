@@ -45,10 +45,11 @@ export function useExpeditions() {
   return useSWR(KEYS.expeditions, getExpeditions)
 }
 
-export function useExpeditionSchedules(expeditionsId?: number) {
+export function useExpeditionSchedules(expeditionsId?: number, options?: { refreshInterval?: number; revalidateOnFocus?: boolean }) {
   return useSWR(
     expeditionsId ? `${KEYS.schedules}_${expeditionsId}` : KEYS.schedules,
-    () => getExpeditionSchedules(expeditionsId)
+    () => getExpeditionSchedules(expeditionsId),
+    options
   )
 }
 
@@ -56,10 +57,11 @@ export function useExpeditionScheduleItems() {
   return useSWR(KEYS.scheduleItems, getExpeditionScheduleItems)
 }
 
-export function useExpeditionScheduleItemsByDate(date: string | null, expeditionsId?: number) {
+export function useExpeditionScheduleItemsByDate(date: string | null, expeditionsId?: number, options?: { refreshInterval?: number; revalidateOnFocus?: boolean }) {
   return useSWR(
     date ? `expedition_schedule_items_date_${date}_${expeditionsId || 'all'}` : null,
-    date ? () => getExpeditionScheduleItemsByDate(date, expeditionsId) : null
+    date ? () => getExpeditionScheduleItemsByDate(date, expeditionsId) : null,
+    options
   )
 }
 

@@ -69,7 +69,7 @@ export function Navbar() {
   const defaultDate = getDefaultDate()
 
   // Hide navbar on public pages - MUST be after all hooks
-  if (pathname === "/intake") {
+  if (pathname === "/intake" || pathname.startsWith("/tv")) {
     return null
   }
 
@@ -151,6 +151,20 @@ export function Navbar() {
                       )}
                     >
                       Staff Records
+                    </Link>
+                  </NavigationMenuItem>
+
+                  <NavigationMenuItem>
+                    <Link
+                      href="/tv"
+                      className={cn(
+                        navigationMenuTriggerStyle(),
+                        "cursor-pointer",
+                        pathname.startsWith("/tv") && "text-foreground",
+                      )}
+                      target="_blank"
+                    >
+                      Display
                     </Link>
                   </NavigationMenuItem>
                 </>

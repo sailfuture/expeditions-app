@@ -79,7 +79,8 @@ export function ScheduleUpdateClient({ scheduleId }: ScheduleUpdateClientProps) 
         expeditions_id: schedule.expeditions_id,
       })
       // Invalidate both the specific schedule and the schedules list
-      mutate(`expedition_schedule_${schedule.id}`)
+      // Use scheduleId (string) to match the SWR key
+      mutate(`expedition_schedule_${scheduleId}`)
       mutate(`expedition_schedules_${schedule.expeditions_id}`)
       toast.success("Location updated")
     } catch (error) {
@@ -113,7 +114,8 @@ export function ScheduleUpdateClient({ scheduleId }: ScheduleUpdateClientProps) 
         expeditions_id: schedule.expeditions_id,
       })
       // Invalidate both the specific schedule and the schedules list
-      mutate(`expedition_schedule_${schedule.id}`)
+      // Use scheduleId (string) to match the SWR key
+      mutate(`expedition_schedule_${scheduleId}`)
       mutate(`expedition_schedules_${schedule.expeditions_id}`)
       toast.success("Type updated")
     } catch (error) {
@@ -153,7 +155,8 @@ export function ScheduleUpdateClient({ scheduleId }: ScheduleUpdateClientProps) 
         notes: notes,
       })
       // Invalidate both the specific schedule and the schedules list
-      mutate(`expedition_schedule_${schedule.id}`)
+      // Use scheduleId (string) to match the SWR key
+      mutate(`expedition_schedule_${scheduleId}`)
       mutate(`expedition_schedules_${schedule.expeditions_id}`)
       toast.success("Notes updated")
       setNotesChanged(false)
@@ -298,35 +301,35 @@ export function ScheduleUpdateClient({ scheduleId }: ScheduleUpdateClientProps) 
                         <button
                           onClick={() => handleTypeChange("anchored")}
                           disabled={updatingField === 'type'}
-                          className={`px-4 py-2 text-sm font-medium rounded-md transition-colors cursor-pointer ${
+                          className={`px-3 py-2 text-sm font-medium rounded-md transition-colors cursor-pointer ${
                             getCurrentType() === "anchored"
                               ? 'bg-green-50 text-green-700 border-2 border-green-200'
                               : 'bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100'
                           } ${updatingField === 'type' ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
-                          Anchored
+                          A
                         </button>
                         <button
                           onClick={() => handleTypeChange("service")}
                           disabled={updatingField === 'type'}
-                          className={`px-4 py-2 text-sm font-medium rounded-md transition-colors cursor-pointer ${
+                          className={`px-3 py-2 text-sm font-medium rounded-md transition-colors cursor-pointer ${
                             getCurrentType() === "service"
                               ? 'bg-red-50 text-red-700 border-2 border-red-200'
                               : 'bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100'
                           } ${updatingField === 'type' ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
-                          Service
+                          S
                         </button>
                         <button
                           onClick={() => handleTypeChange("offshore")}
                           disabled={updatingField === 'type'}
-                          className={`px-4 py-2 text-sm font-medium rounded-md transition-colors cursor-pointer ${
+                          className={`px-3 py-2 text-sm font-medium rounded-md transition-colors cursor-pointer ${
                             getCurrentType() === "offshore"
                               ? 'bg-blue-50 text-blue-700 border-2 border-blue-200'
                               : 'bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100'
                           } ${updatingField === 'type' ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
-                          Offshore
+                          O
                         </button>
                       </div>
                       {updatingField === 'type' && (

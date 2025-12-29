@@ -536,6 +536,28 @@ export function ScheduleViewClient({ date, expeditionId }: ScheduleViewClientPro
                       </span>
                     </>
                   )}
+                  {schedule.galley_team && (
+                    <>
+                      <div className="h-6 w-px bg-border" />
+                      <span 
+                        className="inline-flex items-center h-8 text-sm font-medium px-3 rounded bg-gray-50 border border-gray-200 text-gray-700 truncate max-w-[180px]" 
+                        title={schedule.galley_team}
+                      >
+                        {schedule.galley_team.replace(/\s*Team\s*/gi, ' ').trim()}
+                      </span>
+                    </>
+                  )}
+                  {schedule.dishday && (
+                    <>
+                      <div className="h-6 w-px bg-border" />
+                      <span 
+                        className="inline-flex items-center h-8 text-sm font-medium px-3 rounded bg-gray-50 border border-gray-200 text-gray-700 truncate max-w-[180px]" 
+                        title={schedule.dishday}
+                      >
+                        {schedule.dishday.replace(/\s*Team\s*/gi, ' ').trim()}
+                      </span>
+                    </>
+                  )}
                   <div className="h-6 w-px bg-border" />
                 </>
               )}

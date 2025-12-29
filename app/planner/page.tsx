@@ -206,10 +206,10 @@ function PlannerPageContent() {
   }
   
   const getDayType = (schedule: any) => {
-    if (!schedule) return { label: "No Type" }
-    if (schedule.isOffshore || schedule.is_offshore) return { label: "Offshore" }
-    if (schedule.isService || schedule.is_service) return { label: "Service" }
-    return { label: "Anchored" }
+    if (!schedule) return { label: "-" }
+    if (schedule.isOffshore || schedule.is_offshore) return { label: "O" }
+    if (schedule.isService || schedule.is_service) return { label: "S" }
+    return { label: "A" }
   }
   
   const getLocation = (schedule: any) => {

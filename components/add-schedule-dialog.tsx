@@ -79,8 +79,8 @@ export function AddScheduleDialog({ open, onOpenChange }: AddScheduleDialogProps
         }
       }
       
-      // Refresh schedules data
-      mutate("expedition_schedules")
+      // Refresh schedules data with correct SWR key
+      mutate(`expedition_schedules_${selectedExpeditionId}`)
       onOpenChange(false)
       
       // Reset form

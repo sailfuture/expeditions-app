@@ -2,6 +2,57 @@ import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { getPerformanceReviewById, getProfessionalismByStudentAndDate } from './xano'
 
+// School header information
+const SCHOOL_INFO = {
+  name: 'SailFuture Academy',
+  address: '2154 27th Ave N, Saint Petersburg, FL 33713',
+  phone: '(727) 209-7846',
+  email: 'dean@sailfuture.org',
+}
+
+// Add school header to PDF - returns the Y position after the header
+export function addPDFHeader(doc: jsPDF): number {
+  const pageWidth = doc.internal.pageSize.getWidth()
+  const leftMargin = 14
+  
+  // Draw logo background (rounded rectangle) - smaller size
+  doc.setFillColor(30, 41, 59) // slate-800
+  doc.roundedRect(leftMargin, 10, 18, 18, 2, 2, 'F')
+  
+  // Add "SF" text as logo placeholder (since we can't easily embed the actual image)
+  doc.setFontSize(6)
+  doc.setFont('helvetica', 'bold')
+  doc.setTextColor(255, 255, 255)
+  doc.text('SAILFUTURE', leftMargin + 9, 17, { align: 'center' })
+  doc.setFontSize(5)
+  doc.text('ACADEMY', leftMargin + 9, 22, { align: 'center' })
+  doc.setTextColor(0, 0, 0)
+  
+  // School name and details - positioned to the right of logo, left justified
+  const textX = leftMargin + 22
+  
+  // All text same size (9pt)
+  doc.setFontSize(9)
+  doc.setFont('helvetica', 'bold')
+  doc.setTextColor(30, 41, 59)
+  doc.text(SCHOOL_INFO.name, textX, 14)
+  
+  doc.setFont('helvetica', 'normal')
+  doc.setTextColor(75, 85, 99) // gray-600
+  doc.text(SCHOOL_INFO.address, textX, 20)
+  doc.text(`${SCHOOL_INFO.phone}  •  ${SCHOOL_INFO.email}`, textX, 26)
+  
+  // Reset text color
+  doc.setTextColor(0, 0, 0)
+  
+  // Draw separator line
+  doc.setDrawColor(229, 231, 235) // gray-200
+  doc.setLineWidth(0.5)
+  doc.line(leftMargin, 32, pageWidth - leftMargin, 32)
+  
+  return 40 // Return Y position after header
+}
+
 export async function generatePerformanceReviewPDF(reviewId: number) {
   // Fetch the full review data by ID
   const review = await getPerformanceReviewById(reviewId)
@@ -24,23 +75,26 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
   }
   
   const doc = new jsPDF()
-  
-  // Add logo/header space
   const pageWidth = doc.internal.pageSize.getWidth()
   
+  // Add school header
+  let yPosition = addPDFHeader(doc)
+  
   // Title
-  doc.setFontSize(20)
+  doc.setFontSize(18)
   doc.setFont('helvetica', 'bold')
-  doc.text('Performance Review', pageWidth / 2, 20, { align: 'center' })
+  doc.text('Performance Review', pageWidth / 2, yPosition, { align: 'center' })
+  yPosition += 8
   
   // Expedition name (handle if not present)
   if (review._expeditions?.name) {
-    doc.setFontSize(12)
+    doc.setFontSize(11)
     doc.setFont('helvetica', 'normal')
-    doc.text(review._expeditions.name, pageWidth / 2, 30, { align: 'center' })
+    doc.text(review._expeditions.name, pageWidth / 2, yPosition, { align: 'center' })
+    yPosition += 10
+  } else {
+    yPosition += 5
   }
-  
-  let yPosition = 45
   
   // Student Information Section
   doc.setFontSize(14)
@@ -123,11 +177,12 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
       formatDailyScore(score.job),
       formatDailyScore(score.crew),
       formatDailyScore(score.service),
+      score.journal !== null && score.journal !== undefined ? `${Math.round(score.journal)}%` : '—',
     ])
     
     autoTable(doc, {
       startY: yPosition,
-      head: [['Date', 'Acad', 'Citz', 'Job', 'Crew', 'Serv']],
+      head: [['Date', 'Acad', 'Citz', 'Job', 'Crew', 'Serv', 'Jrnl']],
       body: dailyTableData,
       theme: 'grid',
       headStyles: {
@@ -142,12 +197,13 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
         halign: 'center',
       },
       columnStyles: {
-        0: { halign: 'left', cellWidth: 35 },
-        1: { cellWidth: 20 },
-        2: { cellWidth: 20 },
-        3: { cellWidth: 20 },
-        4: { cellWidth: 20 },
-        5: { cellWidth: 20 },
+        0: { halign: 'left', cellWidth: 30 },
+        1: { cellWidth: 18 },
+        2: { cellWidth: 18 },
+        3: { cellWidth: 18 },
+        4: { cellWidth: 18 },
+        5: { cellWidth: 18 },
+        6: { cellWidth: 18 },
       },
       alternateRowStyles: {
         fillColor: [249, 250, 251],

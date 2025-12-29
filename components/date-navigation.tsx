@@ -60,19 +60,6 @@ export function DateNavigation({
     onDateChange(newDate)
   }
 
-  const goToToday = () => {
-    const today = new Date()
-    
-    // If outside expedition range, default to first or last day
-    if (minDate && today < minDate) {
-      onDateChange(minDate)
-    } else if (maxDate && today > maxDate) {
-      onDateChange(maxDate)
-    } else {
-      onDateChange(today)
-    }
-  }
-
   const handleDateSelect = (selectedDate: Date) => {
     onDateChange(selectedDate)
     setCalendarOpen(false)
@@ -84,7 +71,7 @@ export function DateNavigation({
   const getStatusInfo = () => {
     if (isService) {
       return {
-        text: "Service Learning",
+        text: "S",
         bgColor: "bg-red-50",
         borderColor: "border-red-200",
         textColor: "text-red-700"
@@ -92,14 +79,14 @@ export function DateNavigation({
     }
     if (isOffshore) {
       return {
-        text: "Offshore",
+        text: "O",
         bgColor: "bg-blue-50",
         borderColor: "border-blue-200",
         textColor: "text-blue-700"
       }
     }
     return {
-      text: "Anchored",
+      text: "A",
       bgColor: "bg-green-50",
       borderColor: "border-green-200",
       textColor: "text-green-700"
@@ -162,14 +149,6 @@ export function DateNavigation({
         <ChevronRight className="h-4 w-4" />
       </Button>
 
-      <Button
-        variant="outline"
-        onClick={goToToday}
-        className={`${buttonHeight} px-4 cursor-pointer flex-shrink-0`}
-      >
-        Today
-      </Button>
-      
       {!isLoading && (
         <>
           <div className="h-6 w-px bg-border flex-shrink-0" />

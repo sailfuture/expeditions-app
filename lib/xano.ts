@@ -185,6 +185,13 @@ export async function updateExpeditionsProfessionalism(id: number, data: Record<
   })
 }
 
+export async function editExpeditionsProfessionalism(id: number) {
+  return xanoFetch<any>(`/expeditions_professionalism/edit`, {
+    method: "POST",
+    body: JSON.stringify({ expeditions_professionalism_id: id }),
+  })
+}
+
 export async function getStudentProfessionalismByExpedition(studentsId: number, expeditionsId: number) {
   return xanoFetch<any[]>(`/expeditions_professionalism?students_id=${studentsId}&expeditions_id=${expeditionsId}`)
 }
@@ -380,5 +387,47 @@ export async function updateTeacher(id: number, data: any) {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
+  })
+}
+
+// ============ Discipline Management ============
+export async function getExpeditionDiscipline(expeditionsId?: number) {
+  const url = expeditionsId 
+    ? `/expedition_discipline?expeditions_id=${expeditionsId}`
+    : "/expedition_discipline"
+  return xanoFetch<any[]>(url)
+}
+
+export async function getExpeditionDisciplineById(id: number) {
+  return xanoFetch<any>(`/expedition_discipline/${id}`)
+}
+
+export async function createExpeditionDiscipline(data: {
+  expeditions_id: number
+  students_id: number
+  date: string
+  isReferral: boolean
+  reason: string
+  summary_of_incident: string
+  consequence: string
+  expedition_staff_id: number
+  action_taken: string
+}) {
+  return xanoFetch<any>("/expedition_discipline", {
+    method: "POST",
+    body: JSON.stringify(data),
+  })
+}
+
+export async function updateExpeditionDiscipline(id: number, data: Record<string, any>) {
+  return xanoFetch<any>(`/expedition_discipline/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  })
+}
+
+export async function deleteExpeditionDiscipline(id: number) {
+  return xanoFetch<any>(`/expedition_discipline/${id}`, {
+    method: "DELETE",
   })
 }

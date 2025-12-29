@@ -63,8 +63,8 @@ export function EditScheduleDialog({ schedule, open, onOpenChange }: EditSchedul
         ...formData,
       })
       
-      // Refresh schedules data
-      mutate("expedition_schedules")
+      // Refresh schedules data with correct SWR key
+      mutate(`expedition_schedules_${schedule.expeditions_id}`)
       onOpenChange(false)
       toast.success("Schedule updated successfully")
     } catch (error) {

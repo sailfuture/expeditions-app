@@ -13,13 +13,13 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
-import { Calendar, Home, Map, ClipboardList, Users, Eye, PlusCircle, FileText } from "lucide-react"
+import { Calendar, Home, Map, ClipboardList, Users, Eye, PlusCircle, FileText, AlertTriangle } from "lucide-react"
 import { format } from "date-fns"
 
 interface ExpeditionHeaderProps {
   expedition: any
   isLoading?: boolean
-  currentPage?: "overview" | "trip-planner" | "weekly-planner" | "students" | "daily-view" | "add-scores" | "performance-reviews"
+  currentPage?: "overview" | "trip-planner" | "weekly-planner" | "students" | "daily-view" | "add-scores" | "performance-reviews" | "discipline"
 }
 
 const PAGE_TITLES: Record<string, string> = {
@@ -30,6 +30,7 @@ const PAGE_TITLES: Record<string, string> = {
   "daily-view": "Daily View",
   "add-scores": "Add Scores",
   "performance-reviews": "Performance Reviews",
+  "discipline": "Discipline",
 }
 
 export function ExpeditionHeader({ expedition, isLoading = false, currentPage = "overview" }: ExpeditionHeaderProps) {
@@ -213,6 +214,18 @@ export function ExpeditionHeader({ expedition, isLoading = false, currentPage = 
               >
                 <FileText className="h-4 w-4 sm:mr-1.5" />
                 <span className="hidden sm:inline truncate">Reviews</span>
+              </Button>
+              
+              {/* 8. Discipline */}
+              <Button 
+                variant={currentPage === "discipline" ? "default" : "ghost"}
+                size="sm"
+                className={`cursor-pointer h-8 px-3 rounded-md ${currentPage !== "discipline" ? "bg-white border border-gray-200 hover:bg-gray-50" : ""}`}
+                onClick={() => expedition && router.push(`/discipline?expedition=${expedition.id}`)}
+                disabled={!expedition}
+              >
+                <AlertTriangle className="h-4 w-4 sm:mr-1.5" />
+                <span className="hidden sm:inline truncate">Discipline</span>
               </Button>
             </div>
           </div>

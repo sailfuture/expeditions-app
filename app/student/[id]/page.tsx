@@ -59,7 +59,7 @@ import { getStudentById, updateStudent, calculateStudentEvaluation, getPerforman
 import { toast } from "sonner"
 import { mutate } from "swr"
 import { Spinner } from "@/components/ui/spinner"
-import { useExpeditions, useEvaluationByStudent, useEvaluationByStudentType, useProfessionalismByStudent, useExpeditionPerformanceReviews } from "@/lib/hooks/use-expeditions"
+import { useExpeditions, useEvaluationByStudent, useProfessionalismByStudent, useExpeditionPerformanceReviews } from "@/lib/hooks/use-expeditions"
 import { generatePerformanceReviewPDF } from "@/lib/pdf-generator"
 import { formatDistanceToNow } from "date-fns"
 import { Eye } from "lucide-react"
@@ -81,23 +81,12 @@ export default function StudentDetailPage() {
     expeditionId
   )
   
-  // State for viewing detailed scores modal
-  const [scoresModalOpen, setScoresModalOpen] = useState(false)
-  const [selectedScoreType, setSelectedScoreType] = useState<string | null>(null)
-  const [selectedScoreLabel, setSelectedScoreLabel] = useState<string>("")
-  
   // State for viewing all scores modal
   const [allScoresModalOpen, setAllScoresModalOpen] = useState(false)
   
   // State for calculating evaluation
   const [calculating, setCalculating] = useState(false)
   
-  // Fetch detailed scores when a type is selected
-  const { data: detailedScores, isLoading: loadingDetailedScores } = useEvaluationByStudentType(
-    studentId,
-    expeditionId,
-    selectedScoreType
-  )
   
   // Fetch all professionalism records for chart and all scores modal
   const { data: allProfessionalismRecords, isLoading: loadingAllRecords } = useProfessionalismByStudent(
@@ -332,12 +321,6 @@ export default function StudentDetailPage() {
     return evaluationSummary
   }, [evaluationSummary])
   
-  // Handler to open scores modal
-  const handleViewScores = (type: string, label: string) => {
-    setSelectedScoreType(type)
-    setSelectedScoreLabel(label)
-    setScoresModalOpen(true)
-  }
   
   // Handler to calculate student evaluation
   const handleCalculateEvaluation = async () => {
@@ -383,13 +366,6 @@ export default function StudentDetailPage() {
     return "bg-gray-50"
   }
   
-  // Sort and filter detailed scores
-  const sortedDetailedScores = useMemo(() => {
-    if (!detailedScores) return []
-    return detailedScores
-      .filter((s: any) => s.date) // Filter out null dates
-      .sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime())
-  }, [detailedScores])
   
   // Sort all professionalism records by date
   const sortedAllRecords = useMemo(() => {
@@ -420,15 +396,16 @@ export default function StudentDetailPage() {
   }
   
   // Get row background color based on score value
+  // 5=blue, 3=green, 2=yellow, 1=red, 0/unexcused=red
   const getScoreRowColor = (value: number | null | undefined, isUsed: boolean) => {
-    if (isUsed) return "bg-gray-50"
+    if (isUsed) return "bg-red-50" // Unexcused
     if (value === null || value === undefined) return ""
-    if (value === 0) return "bg-gray-50"
     if (value === 5) return "bg-blue-50"
-    if (value === 4) return "bg-green-50"
-    if (value === 3) return ""
+    if (value === 4) return "bg-blue-50"
+    if (value === 3) return "bg-green-50"
     if (value === 2) return "bg-yellow-50"
     if (value === 1) return "bg-red-50"
+    if (value === 0) return "bg-red-50"
     return ""
   }
   
@@ -506,9 +483,39 @@ export default function StudentDetailPage() {
   
   const getJournalColor = (percentage: number | null | undefined) => {
     if (percentage === null || percentage === undefined) return ""
-    if (percentage < 70) return "bg-red-50"
-    if (percentage >= 90) return "bg-blue-50"
+    // Convert decimal to percentage for comparison if needed
+    const pct = percentage <= 1 ? percentage * 100 : percentage
+    if (pct < 70) return "bg-red-50"
+    if (pct >= 90) return "bg-blue-50"
     return "bg-green-50"
+  }
+  
+  // Format journal percentage - API returns decimal (0-1), convert to percentage
+  const formatJournalPercent = (value: number | null | undefined): string => {
+    if (value === null || value === undefined) return '—'
+    // If value is <= 1, it's a decimal that needs to be converted to percentage
+    const pct = value <= 1 ? value * 100 : value
+    return `${pct.toFixed(2)}%`
+  }
+  
+  // Get journal color class based on raw value from API
+  const getJournalColorClass = (value: number | null | undefined): string => {
+    if (value === null || value === undefined) return ''
+    const pct = value <= 1 ? value * 100 : value
+    if (pct >= 90) return 'bg-blue-50'
+    if (pct >= 70) return 'bg-green-50'
+    return 'bg-red-50'
+  }
+  
+  // Get journal color class based on string value (Completed, Incomplete, etc.)
+  const getJournalStringColor = (value: string | null | undefined): string => {
+    if (!value) return ''
+    const lowerValue = value.toLowerCase()
+    if (lowerValue.includes('complete') && !lowerValue.includes('incomplete')) return 'bg-green-50'
+    if (lowerValue.includes('incomplete') || lowerValue.includes('late')) return 'bg-yellow-50'
+    if (lowerValue.includes('not started') || lowerValue.includes('missing')) return 'bg-red-50'
+    if (lowerValue.includes('excused')) return 'bg-blue-50'
+    return ''
   }
   
   // Handler to open performance review preview
@@ -638,15 +645,6 @@ export default function StudentDetailPage() {
             <div className="container mx-auto px-4 py-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <Button
-                    variant="outline"
-                    onClick={() => router.push(`/students?expedition=${currentExpedition.id}`)}
-                    className="cursor-pointer"
-                  >
-                    <ArrowLeft className="h-4 w-4 mr-2" />
-                    Back to Students
-                  </Button>
-                  <div className="h-6 w-px bg-border" />
                   <Avatar className="h-8 w-8">
                     <AvatarFallback className="text-sm bg-gray-200 text-gray-600">
                       {student.name?.split(" ").map((n: string) => n[0]).join("") || "?"}
@@ -661,6 +659,12 @@ export default function StudentDetailPage() {
                       <Badge variant="outline" className="bg-gray-100 text-gray-600">Archived</Badge>
                     )}
                   </div>
+                  {student.department && (
+                    <>
+                      <div className="h-6 w-px bg-border" />
+                      <span className="text-sm text-muted-foreground">{student.department}</span>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -763,7 +767,6 @@ export default function StudentDetailPage() {
                   <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600 w-[35%]">Requirement</TableHead>
                   <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600">Average Score</TableHead>
                   <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600">Evaluation</TableHead>
-                  <TableHead className="h-10 px-6 text-right text-xs font-semibold text-gray-600">View</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -791,17 +794,7 @@ export default function StudentDetailPage() {
                       <span className="text-sm text-gray-400">—</span>
                     )}
                   </TableCell>
-                  <TableCell className="px-6 py-4 text-right">
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="h-7 text-xs cursor-pointer"
-                      onClick={() => handleViewScores('citizenship', 'Citizenship')}
-                    >
-                      <ExternalLink className="h-3.5 w-3.5" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
+                  </TableRow>
 
                 {/* Crew */}
                 <TableRow className="border-b hover:bg-gray-50/50">
@@ -827,17 +820,7 @@ export default function StudentDetailPage() {
                       <span className="text-sm text-gray-400">—</span>
                     )}
                   </TableCell>
-                  <TableCell className="px-6 py-4 text-right">
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="h-7 text-xs cursor-pointer"
-                      onClick={() => handleViewScores('crew', 'Crew Responsibilities')}
-                    >
-                      <ExternalLink className="h-3.5 w-3.5" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
+                  </TableRow>
 
                 {/* Service Learning */}
                 <TableRow className="border-b hover:bg-gray-50/50">
@@ -863,17 +846,7 @@ export default function StudentDetailPage() {
                       <span className="text-sm text-gray-400">—</span>
                     )}
                   </TableCell>
-                  <TableCell className="px-6 py-4 text-right">
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="h-7 text-xs cursor-pointer"
-                      onClick={() => handleViewScores('service', 'Service Learning')}
-                    >
-                      <ExternalLink className="h-3.5 w-3.5" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
+                  </TableRow>
 
                 {/* Academics */}
                 <TableRow className="border-b hover:bg-gray-50/50">
@@ -899,17 +872,7 @@ export default function StudentDetailPage() {
                       <span className="text-sm text-gray-400">—</span>
                     )}
                   </TableCell>
-                  <TableCell className="px-6 py-4 text-right">
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="h-7 text-xs cursor-pointer"
-                      onClick={() => handleViewScores('academics', 'Academics')}
-                    >
-                      <ExternalLink className="h-3.5 w-3.5" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
+                  </TableRow>
 
                 {/* Job Duties */}
                 <TableRow className="border-b last:border-0 hover:bg-gray-50/50">
@@ -935,17 +898,7 @@ export default function StudentDetailPage() {
                       <span className="text-sm text-gray-400">—</span>
                     )}
                   </TableCell>
-                  <TableCell className="px-6 py-4 text-right">
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="h-7 text-xs cursor-pointer"
-                      onClick={() => handleViewScores('job', 'Job Duties')}
-                    >
-                      <ExternalLink className="h-3.5 w-3.5" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
+                  </TableRow>
 
                 {/* Journaling */}
                 <TableRow className="border-b hover:bg-gray-50/50">
@@ -959,29 +912,22 @@ export default function StudentDetailPage() {
                   </TableCell>
                   <TableCell className="px-6 py-4">
                     {evaluationData?.journal !== null && evaluationData?.journal !== undefined ? (
-                      <span className="text-sm font-medium text-gray-700">{Math.round(evaluationData.journal)}%</span>
+                      <span className="text-sm font-medium text-gray-700">{formatJournalPercent(evaluationData.journal)}</span>
                     ) : (
                       <span className="text-sm font-medium text-gray-700">No record</span>
                     )}
                   </TableCell>
-                  <TableCell className={`px-6 py-4 ${evaluationData?.journal !== null && evaluationData?.journal !== undefined ? (evaluationData.journal < 70 ? 'bg-red-50' : evaluationData.journal >= 90 ? 'bg-blue-50' : 'bg-green-50') : 'bg-gray-50'}`}>
+                  <TableCell className={`px-6 py-4 ${getJournalColorClass(evaluationData?.journal) || 'bg-gray-50'}`}>
                     {evaluationData?.journal !== null && evaluationData?.journal !== undefined ? (
                       <span className="text-sm font-medium text-gray-700">
-                        {evaluationData.journal < 70 ? 'Unsatisfactory' : evaluationData.journal >= 90 ? 'Strong' : 'Satisfactory'}
+                        {(() => {
+                          const pct = evaluationData.journal <= 1 ? evaluationData.journal * 100 : evaluationData.journal
+                          return pct < 70 ? 'Unsatisfactory' : pct >= 90 ? 'Strong' : 'Satisfactory'
+                        })()}
                       </span>
                     ) : (
                       <span className="text-sm text-gray-400">—</span>
                     )}
-                  </TableCell>
-                  <TableCell className="px-6 py-4 text-right">
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="h-7 text-xs cursor-pointer"
-                      onClick={() => handleViewScores('journaling', 'Journaling')}
-                    >
-                      <ExternalLink className="h-3.5 w-3.5" />
-                    </Button>
                   </TableCell>
                 </TableRow>
               </TableBody>
@@ -1749,98 +1695,6 @@ export default function StudentDetailPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Scores Detail Modal */}
-      <Dialog open={scoresModalOpen} onOpenChange={setScoresModalOpen}>
-        <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-hidden flex flex-col">
-          <DialogHeader className="flex-shrink-0">
-            <DialogTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
-              {selectedScoreLabel} Records
-            </DialogTitle>
-            <DialogDescription>
-              {student?.name} • {currentExpedition?._schoolterms?.short_name || 'Term'} • {currentExpedition?._schoolyears?.name || ''}
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="flex-1 min-h-0 overflow-hidden border rounded-lg">
-            <div className="max-h-[350px] overflow-y-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-b bg-gray-50 hover:bg-gray-50 sticky top-0 z-10">
-                    <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600 bg-gray-50">Date</TableHead>
-                    <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600 text-right bg-gray-50">Score</TableHead>
-                    <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600 text-right bg-gray-50">View</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {loadingDetailedScores ? (
-                    <TableRow>
-                      <TableCell colSpan={3} className="text-center py-8">
-                        <Spinner size="md" className="mx-auto" />
-                      </TableCell>
-                    </TableRow>
-                  ) : sortedDetailedScores.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={3} className="text-center py-8 text-gray-500">
-                        No records found
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    sortedDetailedScores.map((score: any) => (
-                      <TableRow 
-                        key={`${score.date}-${score.expedition_schedule_id}`} 
-                        className={`border-b hover:bg-gray-50/50 ${getScoreRowColor(score.value, false)}`}
-                      >
-                        <TableCell className="px-6 py-3">
-                          <span className="text-sm text-gray-700">{formatDetailDate(score.date)}</span>
-                        </TableCell>
-                        <TableCell className="px-6 py-3 text-right">
-                          <span className={`text-sm ${getScoreClass(score.value, false)}`}>
-                            {formatScoreValue(score.value, false)}
-                          </span>
-                        </TableCell>
-                        <TableCell className="px-6 py-3 text-right">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 cursor-pointer"
-                            onClick={() => {
-                              if (score.date) {
-                                router.push(`/evaluate/${score.date}?expedition=${expeditionId}`)
-                              }
-                            }}
-                            disabled={!score.date}
-                          >
-                            <ExternalLink className="h-3.5 w-3.5 text-gray-500" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </div>
-          
-          <div className="flex items-center justify-between pt-4 border-t flex-shrink-0">
-            <div className="text-sm text-gray-600">
-              {evaluationData && selectedScoreType && (
-                <span>
-                  Average: <strong>{formatScore((evaluationData as any)[selectedScoreType]) || 'N/A'}</strong>
-                </span>
-              )}
-            </div>
-            <Button 
-              variant="outline" 
-              onClick={() => setScoresModalOpen(false)}
-              className="cursor-pointer"
-            >
-              Close
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
       {/* All Scores Modal */}
       <Dialog open={allScoresModalOpen} onOpenChange={setAllScoresModalOpen}>
         <DialogContent className="sm:max-w-[900px] max-h-[85vh] overflow-hidden flex flex-col">
@@ -1860,24 +1714,26 @@ export default function StudentDetailPage() {
                 <TableHeader>
                   <TableRow className="border-b bg-gray-50 hover:bg-gray-50 sticky top-0 z-10">
                     <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 bg-gray-50 whitespace-nowrap">Date</TableHead>
+                    <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 bg-gray-50 text-center whitespace-nowrap">Type</TableHead>
                     <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 bg-gray-50 text-center whitespace-nowrap">Citizenship</TableHead>
                     <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 bg-gray-50 text-center whitespace-nowrap">Crew</TableHead>
                     <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 bg-gray-50 text-center whitespace-nowrap">Academics</TableHead>
                     <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 bg-gray-50 text-center whitespace-nowrap">Job</TableHead>
                     <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 bg-gray-50 text-center whitespace-nowrap">Service</TableHead>
+                    <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 bg-gray-50 text-center whitespace-nowrap">Journal</TableHead>
                     <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 bg-gray-50 text-right whitespace-nowrap">View</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {loadingAllRecords ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8">
+                      <TableCell colSpan={9} className="text-center py-8">
                         <Spinner size="md" className="mx-auto" />
                       </TableCell>
                     </TableRow>
                   ) : sortedAllRecords.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                      <TableCell colSpan={9} className="text-center py-8 text-gray-500">
                         No records found
                       </TableCell>
                     </TableRow>
@@ -1891,6 +1747,30 @@ export default function StudentDetailPage() {
                         >
                           <TableCell className="px-4 py-3 whitespace-nowrap">
                             <span className="text-sm text-gray-700">{formatDetailDate(recordDate)}</span>
+                          </TableCell>
+                          <TableCell className="px-4 py-3 text-center">
+                            {(() => {
+                              const schedule = record._expedition_schedule
+                              if (schedule?.isService) {
+                                return (
+                                  <span className="inline-flex items-center justify-center h-6 w-6 rounded bg-red-50 text-red-700 text-xs font-bold border border-red-200">
+                                    S
+                                  </span>
+                                )
+                              } else if (schedule?.isOffshore) {
+                                return (
+                                  <span className="inline-flex items-center justify-center h-6 w-6 rounded bg-blue-50 text-blue-700 text-xs font-bold border border-blue-200">
+                                    O
+                                  </span>
+                                )
+                              } else {
+                                return (
+                                  <span className="inline-flex items-center justify-center h-6 w-6 rounded bg-green-50 text-green-700 text-xs font-bold border border-green-200">
+                                    A
+                                  </span>
+                                )
+                              }
+                            })()}
                           </TableCell>
                           <TableCell className={`px-4 py-3 text-center ${getScoreRowColor(record.citizenship, record.isCitizenshipUsed)}`}>
                             <span className={`text-sm ${getScoreClass(record.citizenship, record.isCitizenshipUsed)}`}>
@@ -1915,6 +1795,11 @@ export default function StudentDetailPage() {
                           <TableCell className={`px-4 py-3 text-center ${getScoreRowColor(record.service, record.isServiceUsed)}`}>
                             <span className={`text-sm ${getScoreClass(record.service, record.isServiceUsed)}`}>
                               {formatScoreValue(record.service, record.isServiceUsed)}
+                            </span>
+                          </TableCell>
+                          <TableCell className={`px-4 py-3 text-center ${(record.journaling || record.note) ? getJournalStringColor(record.journaling || record.note) : ''}`}>
+                            <span className={`text-sm ${(record.journaling || record.note) ? 'font-medium text-gray-700' : 'text-gray-400'}`}>
+                              {record.journaling || record.note || 'No Score'}
                             </span>
                           </TableCell>
                           <TableCell className="px-4 py-3 text-right">
@@ -2039,7 +1924,7 @@ export default function StudentDetailPage() {
                         <TableRow className={getJournalColor(selectedReview.journaling)}>
                           <TableCell className="px-3 py-2 font-medium text-gray-700 text-sm">Journaling</TableCell>
                           <TableCell className="px-3 py-2 text-center text-gray-700 text-sm">
-                            {selectedReview.journaling !== null && selectedReview.journaling !== undefined ? `${Math.round(selectedReview.journaling)}%` : '—'}
+                            {formatJournalPercent(selectedReview.journaling)}
                           </TableCell>
                           <TableCell className="px-3 py-2 text-gray-600 text-sm">
                             {selectedReview.journaling_evaluation || '—'}
@@ -2069,13 +1954,14 @@ export default function StudentDetailPage() {
                               <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600 text-center">Job</TableHead>
                               <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600 text-center">Crew</TableHead>
                               <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600 text-center">Serv</TableHead>
+                              <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600 text-center">Jrnl</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
                             {[...reviewDailyScores]
                               .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-                              .map((score: any) => (
-                              <TableRow key={score.date} className="border-b last:border-0">
+                              .map((score: any, index: number) => (
+                              <TableRow key={`${score.date}-${index}`} className="border-b last:border-0">
                                 <TableCell className="px-2 py-2 font-medium text-gray-700 text-sm whitespace-nowrap">
                                   {formatDateShort(score.date)}
                                 </TableCell>
@@ -2093,6 +1979,9 @@ export default function StudentDetailPage() {
                                 </TableCell>
                                 <TableCell className={`px-2 py-2 text-center text-sm ${getReviewScoreColor(score.service)}`}>
                                   {score.service !== null && score.service !== undefined ? score.service : '—'}
+                                </TableCell>
+                                <TableCell className={`px-2 py-2 text-center text-sm ${(score.journaling || score.note) ? getJournalStringColor(score.journaling || score.note) : ''}`}>
+                                  {score.journaling || score.note || '—'}
                                 </TableCell>
                               </TableRow>
                             ))}

@@ -40,6 +40,7 @@ function getScoreCategories(isOffshore: boolean, isService: boolean) {
   else if (isOffshore && isService) {
     return [
       { key: "crew", label: "CREW" },
+      { key: "job", label: "JOB" },
       { key: "citizenship", label: "CITIZENSHIP" },
       { key: "service_learning", label: "SERVICE" },
     ]
@@ -48,6 +49,7 @@ function getScoreCategories(isOffshore: boolean, isService: boolean) {
   else if (isOffshore && !isService) {
     return [
       { key: "crew", label: "CREW" },
+      { key: "job", label: "JOB" },
       { key: "citizenship", label: "CITIZENSHIP" },
     ]
   }
@@ -275,10 +277,10 @@ export function StudentCard({
       <div className="px-4 sm:px-6 pb-2">
         {isOffshore ? (
           <>
-            {/* Offshore: First Row - CREW, CITIZENSHIP */}
+            {/* Offshore: First Row - CREW, JOB */}
             <div className="grid grid-cols-2 gap-3 mb-3">
               {scoreCategories
-                .filter(({ key }) => key === "crew" || key === "citizenship")
+                .filter(({ key }) => key === "crew" || key === "job")
                 .map(({ key, label }) => {
                   const isCategoryBlocked = getCategoryDisabledFlag(record, key)
                   return (
@@ -297,29 +299,27 @@ export function StudentCard({
                 })}
             </div>
             
-            {/* Offshore: Second Row - SERVICE (if applicable) */}
-            {isService && (
-              <div className="grid grid-cols-2 gap-3">
-                {scoreCategories
-                  .filter(({ key }) => key === "service_learning")
-                  .map(({ key, label }) => {
-                    const isCategoryBlocked = getCategoryDisabledFlag(record, key)
-                    return (
-                      <ScoreControl
-                        key={key}
-                        label={label}
-                        value={(record as Record<string, number | null | undefined>)[key] ?? null}
-                        onChange={(value) => handleScoreChange(key, value)}
-                        disabled={record.isLocked}
-                        isBlocked={isCategoryBlocked}
-                        onBlockToggle={() => handleBlockToggle(key)}
-                        min={0}
-                        max={5}
-                      />
-                    )
-                  })}
-              </div>
-            )}
+            {/* Offshore: Second Row - CITIZENSHIP, SERVICE (if applicable) */}
+            <div className="grid grid-cols-2 gap-3">
+              {scoreCategories
+                .filter(({ key }) => key === "citizenship" || key === "service_learning")
+                .map(({ key, label }) => {
+                  const isCategoryBlocked = getCategoryDisabledFlag(record, key)
+                  return (
+                    <ScoreControl
+                      key={key}
+                      label={label}
+                      value={(record as Record<string, number | null | undefined>)[key] ?? null}
+                      onChange={(value) => handleScoreChange(key, value)}
+                      disabled={record.isLocked}
+                      isBlocked={isCategoryBlocked}
+                      onBlockToggle={() => handleBlockToggle(key)}
+                      min={0}
+                      max={5}
+                    />
+                  )
+                })}
+            </div>
           </>
         ) : (
           <>

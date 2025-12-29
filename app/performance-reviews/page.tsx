@@ -275,6 +275,7 @@ function PreviewModal({
                         <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600 text-center">Job</TableHead>
                         <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600 text-center">Crew</TableHead>
                         <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600 text-center">Serv</TableHead>
+                        <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600 text-center">Jrnl</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -299,6 +300,9 @@ function PreviewModal({
                           </TableCell>
                           <TableCell className={`px-2 py-2 text-center text-sm ${getEvaluationColorByScore(score.service)}`}>
                             {score.service !== null && score.service !== undefined ? score.service : '—'}
+                          </TableCell>
+                          <TableCell className={`px-2 py-2 text-center text-sm ${score.journal !== null && score.journal !== undefined ? (score.journal >= 90 ? 'bg-blue-50' : score.journal >= 70 ? 'bg-green-50' : 'bg-red-50') : ''}`}>
+                            {score.journal !== null && score.journal !== undefined ? `${Math.round(score.journal)}%` : '—'}
                           </TableCell>
                         </TableRow>
                       ))}

@@ -34,10 +34,12 @@ function StaffOffMultiSelect({
   staff,
   selectedIds,
   onUpdate,
+  disabled = false,
 }: {
   staff: any[]
   selectedIds: number[]
   onUpdate: (ids: number[]) => Promise<void>
+  disabled?: boolean
 }) {
   const [isOpen, setIsOpen] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
@@ -74,8 +76,9 @@ function StaffOffMultiSelect({
     <div className="relative" ref={dropdownRef}>
       <button
         type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full h-8 px-2 text-left text-sm rounded hover:bg-gray-100 flex items-center justify-between cursor-pointer"
+        onClick={() => !disabled && setIsOpen(!isOpen)}
+        disabled={disabled}
+        className={`w-full h-8 px-2 text-left text-sm rounded hover:bg-gray-100 flex items-center justify-between ${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
       >
         {isUpdating && !isOpen ? (
           <span className="flex items-center gap-2 text-gray-500">
@@ -179,6 +182,8 @@ export default function DashboardPage() {
   })
   const [generatingDates, setGeneratingDates] = useState(false)
   const [updatingTypeId, setUpdatingTypeId] = useState<number | null>(null)
+  const [updatingLocationId, setUpdatingLocationId] = useState<string | null>(null) // "scheduleId-location" or "scheduleId-destination"
+  const [updatingStaffOffId, setUpdatingStaffOffId] = useState<number | null>(null)
   const [editingNotesId, setEditingNotesId] = useState<number | null>(null)
   const [notesValues, setNotesValues] = useState<Record<number, string>>({})
   const [collapsedLocations, setCollapsedLocations] = useState<Set<string>>(new Set())
@@ -386,6 +391,8 @@ export default function DashboardPage() {
   }
 
   const handleLocationChange = async (schedule: any, locationId: number, isDestination: boolean) => {
+    const updateKey = `${schedule.id}-${isDestination ? 'destination' : 'location'}`
+    setUpdatingLocationId(updateKey)
     try {
       await updateExpeditionSchedule(schedule.id, {
         expedition_schedule_id: schedule.id,
@@ -397,11 +404,13 @@ export default function DashboardPage() {
         destination: isDestination ? locationId : schedule.destination,
         expeditions_id: schedule.expeditions_id,
       })
-      mutate("expedition_schedules")
+      mutate(`expedition_schedules_${schedule.expeditions_id}`)
       toast.success("Location updated")
     } catch (error) {
       console.error("Failed to update location:", error)
       toast.error("Failed to update location")
+    } finally {
+      setUpdatingLocationId(null)
     }
   }
 
@@ -425,7 +434,8 @@ export default function DashboardPage() {
         destination: isOffshore ? schedule.destination : 0, // Clear destination if not offshore
         expeditions_id: schedule.expeditions_id,
       })
-      mutate("expedition_schedules")
+      // Use the correct SWR key with expedition ID
+      mutate(`expedition_schedules_${schedule.expeditions_id}`)
       toast.success("Type updated")
     } catch (error) {
       console.error("Failed to update type:", error)
@@ -483,12 +493,12 @@ export default function DashboardPage() {
       }
       
       // Revalidate to get fresh data
-      mutate("expedition_schedules")
+      mutate(`expedition_schedules_${schedule.expeditions_id}`)
     } catch (error) {
       console.error("Failed to update notes:", error)
       toast.error("Failed to update notes")
       // Revert on error
-      mutate("expedition_schedules")
+      mutate(`expedition_schedules_${schedule.expeditions_id}`)
     }
   }
 
@@ -663,124 +673,162 @@ export default function DashboardPage() {
                                 </span>
                               </TableCell>
                               <TableCell className="h-14 px-4" onClick={(e) => e.stopPropagation()} style={{ width: "230px" }}>
-                                <Select
-                                  value={schedule.current_location?.toString() || "1"}
-                                  onValueChange={(value) => handleLocationChange(schedule, Number(value), false)}
-                                >
-                                  <SelectTrigger className="w-full h-8 text-sm border-0 hover:bg-gray-100 cursor-pointer">
-                                    <SelectValue>
-                                      <span className="text-sm text-gray-700 truncate block max-w-[200px]" title={formatLocation(schedule._expedition_current_location)}>
-                                        {formatLocation(schedule._expedition_current_location)}
-                                      </span>
-                                    </SelectValue>
-                                  </SelectTrigger>
-                                  <SelectContent className="min-w-[280px]">
-                                    {locations?.map((location: any) => (
-                                      <SelectItem 
-                                        key={location.id} 
-                                        value={location.id.toString()}
-                                        className="cursor-pointer"
-                                      >
-                                        <span className="font-medium">{location.port}</span>
-                                        <span className="text-muted-foreground ml-1">· {location.country}</span>
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
+                                <div className="relative">
+                                  <Select
+                                    value={schedule.current_location?.toString() || "1"}
+                                    onValueChange={(value) => handleLocationChange(schedule, Number(value), false)}
+                                    disabled={updatingLocationId === `${schedule.id}-location`}
+                                  >
+                                    <SelectTrigger className={`w-full h-8 text-sm border-0 hover:bg-gray-100 cursor-pointer ${updatingLocationId === `${schedule.id}-location` ? 'opacity-50' : ''}`}>
+                                      <SelectValue>
+                                        <span className="text-sm text-gray-700 truncate block max-w-[200px]" title={formatLocation(schedule._expedition_current_location)}>
+                                          {formatLocation(schedule._expedition_current_location)}
+                                        </span>
+                                      </SelectValue>
+                                    </SelectTrigger>
+                                    <SelectContent className="min-w-[280px]">
+                                      {locations?.map((location: any) => (
+                                        <SelectItem 
+                                          key={location.id} 
+                                          value={location.id.toString()}
+                                          className="cursor-pointer"
+                                        >
+                                          <span className="font-medium">{location.port}</span>
+                                          <span className="text-muted-foreground ml-1">· {location.country}</span>
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  {updatingLocationId === `${schedule.id}-location` && (
+                                    <div className="absolute inset-0 flex items-center justify-center bg-white/50">
+                                      <Spinner size="sm" className="h-4 w-4" />
+                                    </div>
+                                  )}
+                                </div>
                               </TableCell>
-                              <TableCell className="h-14 px-4" onClick={(e) => e.stopPropagation()} style={{ width: "150px" }}>
+                              <TableCell className="h-14 px-4" onClick={(e) => e.stopPropagation()} style={{ width: "100px" }}>
                                 <div className="flex gap-1">
                                   <button
                                     onClick={() => handleTypeChange(schedule, "anchored")}
                                     disabled={updatingTypeId === schedule.id}
-                                    className={`px-2 py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer flex items-center gap-1 ${
+                                    className={`relative px-2 py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer min-w-[28px] flex items-center justify-center ${
                                       !(schedule.isOffshore || schedule.is_offshore) && !(schedule.isService || schedule.is_service)
                                         ? 'bg-green-50 text-green-700 border-2 border-green-200'
                                         : 'bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100'
-                                    } ${updatingTypeId === schedule.id ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    } ${updatingTypeId === schedule.id ? 'cursor-not-allowed' : ''}`}
                                     title="Anchored"
                                   >
-                                    {updatingTypeId === schedule.id && <Spinner size="sm" className="h-3 w-3" />}
-                                    <span className="truncate max-w-[45px]">Anch</span>
+                                    <span className={updatingTypeId === schedule.id ? 'invisible' : ''}>A</span>
+                                    {updatingTypeId === schedule.id && (
+                                      <div className="absolute inset-0 flex items-center justify-center">
+                                        <Spinner size="sm" className="h-3 w-3" />
+                                      </div>
+                                    )}
                                   </button>
                                   <button
                                     onClick={() => handleTypeChange(schedule, "service")}
                                     disabled={updatingTypeId === schedule.id}
-                                    className={`px-2 py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer flex items-center gap-1 ${
+                                    className={`relative px-2 py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer min-w-[28px] flex items-center justify-center ${
                                       (schedule.isService || schedule.is_service)
                                         ? 'bg-red-50 text-red-700 border-2 border-red-200'
                                         : 'bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100'
-                                    } ${updatingTypeId === schedule.id ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    } ${updatingTypeId === schedule.id ? 'cursor-not-allowed' : ''}`}
                                     title="Service"
                                   >
-                                    {updatingTypeId === schedule.id && <Spinner size="sm" className="h-3 w-3" />}
-                                    <span className="truncate max-w-[45px]">Serv</span>
+                                    <span className={updatingTypeId === schedule.id ? 'invisible' : ''}>S</span>
+                                    {updatingTypeId === schedule.id && (
+                                      <div className="absolute inset-0 flex items-center justify-center">
+                                        <Spinner size="sm" className="h-3 w-3" />
+                                      </div>
+                                    )}
                                   </button>
                                   <button
                                     onClick={() => handleTypeChange(schedule, "offshore")}
                                     disabled={updatingTypeId === schedule.id}
-                                    className={`px-2 py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer flex items-center gap-1 ${
+                                    className={`relative px-2 py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer min-w-[28px] flex items-center justify-center ${
                                       (schedule.isOffshore || schedule.is_offshore)
                                         ? 'bg-blue-50 text-blue-700 border-2 border-blue-200'
                                         : 'bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100'
-                                    } ${updatingTypeId === schedule.id ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    } ${updatingTypeId === schedule.id ? 'cursor-not-allowed' : ''}`}
                                     title="Offshore"
                                   >
-                                    {updatingTypeId === schedule.id && <Spinner size="sm" className="h-3 w-3" />}
-                                    <span className="truncate max-w-[45px]">Offs</span>
+                                    <span className={updatingTypeId === schedule.id ? 'invisible' : ''}>O</span>
+                                    {updatingTypeId === schedule.id && (
+                                      <div className="absolute inset-0 flex items-center justify-center">
+                                        <Spinner size="sm" className="h-3 w-3" />
+                                      </div>
+                                    )}
                                   </button>
                                 </div>
                               </TableCell>
                               <TableCell className="h-14 px-4" onClick={(e) => e.stopPropagation()} style={{ width: "230px" }}>
-                                <Select
-                                  value={schedule.destination?.toString() || "0"}
-                                  onValueChange={(value) => handleLocationChange(schedule, Number(value), true)}
-                                  disabled={!(schedule.isOffshore || schedule.is_offshore)}
-                                >
-                                  <SelectTrigger className={`w-full h-8 text-sm border-0 ${(schedule.isOffshore || schedule.is_offshore) ? 'hover:bg-gray-100 cursor-pointer' : 'cursor-not-allowed'}`}>
-                                    <SelectValue>
-                                      {schedule._expedition_destination && schedule.destination !== 0 ? (
-                                        <span className="text-sm text-gray-700 truncate block max-w-[200px]" title={formatLocation(schedule._expedition_destination)}>
-                                          {formatLocation(schedule._expedition_destination)}
-                                        </span>
-                                      ) : (
-                                        <span className="text-sm text-gray-400">—</span>
-                                      )}
-                                    </SelectValue>
-                                  </SelectTrigger>
-                                  <SelectContent className="min-w-[280px]">
-                                    <SelectItem value="0" className="cursor-pointer text-muted-foreground">No destination</SelectItem>
-                                    {locations?.map((location: any) => (
-                                      <SelectItem 
-                                        key={location.id} 
-                                        value={location.id.toString()}
-                                        className="cursor-pointer"
-                                      >
-                                        <span className="font-medium">{location.port}</span>
-                                        <span className="text-muted-foreground ml-1">· {location.country}</span>
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
+                                <div className="relative">
+                                  <Select
+                                    value={schedule.destination?.toString() || "0"}
+                                    onValueChange={(value) => handleLocationChange(schedule, Number(value), true)}
+                                    disabled={!(schedule.isOffshore || schedule.is_offshore) || updatingLocationId === `${schedule.id}-destination`}
+                                  >
+                                    <SelectTrigger className={`w-full h-8 text-sm border-0 ${(schedule.isOffshore || schedule.is_offshore) ? 'hover:bg-gray-100 cursor-pointer' : 'cursor-not-allowed'} ${updatingLocationId === `${schedule.id}-destination` ? 'opacity-50' : ''}`}>
+                                      <SelectValue>
+                                        {schedule._expedition_destination && schedule.destination !== 0 ? (
+                                          <span className="text-sm text-gray-700 truncate block max-w-[200px]" title={formatLocation(schedule._expedition_destination)}>
+                                            {formatLocation(schedule._expedition_destination)}
+                                          </span>
+                                        ) : (
+                                          <span className="text-sm text-gray-400">—</span>
+                                        )}
+                                      </SelectValue>
+                                    </SelectTrigger>
+                                    <SelectContent className="min-w-[280px]">
+                                      <SelectItem value="0" className="cursor-pointer text-muted-foreground">No destination</SelectItem>
+                                      {locations?.map((location: any) => (
+                                        <SelectItem 
+                                          key={location.id} 
+                                          value={location.id.toString()}
+                                          className="cursor-pointer"
+                                        >
+                                          <span className="font-medium">{location.port}</span>
+                                          <span className="text-muted-foreground ml-1">· {location.country}</span>
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  {updatingLocationId === `${schedule.id}-destination` && (
+                                    <div className="absolute inset-0 flex items-center justify-center bg-white/50">
+                                      <Spinner size="sm" className="h-4 w-4" />
+                                    </div>
+                                  )}
+                                </div>
                               </TableCell>
                               <TableCell className="h-14 px-4" style={{ width: "200px" }} onClick={(e) => e.stopPropagation()}>
-                                <StaffOffMultiSelect
-                                  staff={staff || []}
-                                  selectedIds={schedule.staff_off || []}
-                                  onUpdate={async (ids) => {
-                                    try {
-                                      await updateExpeditionSchedule(schedule.id, {
-                                        ...schedule,
-                                        expedition_schedule_id: schedule.id,
-                                        staff_off: ids
-                                      })
-                                      mutate("expedition_schedules")
-                                      toast.success("Staff off updated")
-                                    } catch (error) {
-                                      toast.error("Failed to update")
-                                    }
-                                  }}
-                                />
+                                <div className="relative">
+                                  <StaffOffMultiSelect
+                                    staff={staff || []}
+                                    selectedIds={schedule.staff_off || []}
+                                    disabled={updatingStaffOffId === schedule.id}
+                                    onUpdate={async (ids) => {
+                                      setUpdatingStaffOffId(schedule.id)
+                                      try {
+                                        await updateExpeditionSchedule(schedule.id, {
+                                          ...schedule,
+                                          expedition_schedule_id: schedule.id,
+                                          staff_off: ids
+                                        })
+                                        mutate(`expedition_schedules_${schedule.expeditions_id}`)
+                                        toast.success("Staff off updated")
+                                      } catch (error) {
+                                        toast.error("Failed to update")
+                                      } finally {
+                                        setUpdatingStaffOffId(null)
+                                      }
+                                    }}
+                                  />
+                                  {updatingStaffOffId === schedule.id && (
+                                    <div className="absolute inset-0 flex items-center justify-center bg-white/50">
+                                      <Spinner size="sm" className="h-4 w-4" />
+                                    </div>
+                                  )}
+                                </div>
                               </TableCell>
                               <TableCell className="h-14 px-4" style={{ width: "300px" }} onClick={(e) => e.stopPropagation()}>
                                 {editingNotesId === schedule.id ? (
@@ -885,124 +933,162 @@ export default function DashboardPage() {
                                 </span>
                               </TableCell>
                               <TableCell className="h-14 px-4" onClick={(e) => e.stopPropagation()} style={{ width: "230px" }}>
-                                <Select
-                                  value={schedule.current_location?.toString() || "1"}
-                                  onValueChange={(value) => handleLocationChange(schedule, Number(value), false)}
-                                >
-                                  <SelectTrigger className="w-full h-8 text-sm border-0 hover:bg-gray-100 cursor-pointer">
-                                    <SelectValue>
-                                      <span className="text-sm text-gray-700 truncate block max-w-[200px]" title={formatLocation(schedule._expedition_current_location)}>
-                                        {formatLocation(schedule._expedition_current_location)}
-                                      </span>
-                                    </SelectValue>
-                                  </SelectTrigger>
-                                  <SelectContent className="min-w-[280px]">
-                                    {locations?.map((location: any) => (
-                                      <SelectItem 
-                                        key={location.id} 
-                                        value={location.id.toString()}
-                                        className="cursor-pointer"
-                                      >
-                                        <span className="font-medium">{location.port}</span>
-                                        <span className="text-muted-foreground ml-1">· {location.country}</span>
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
+                                <div className="relative">
+                                  <Select
+                                    value={schedule.current_location?.toString() || "1"}
+                                    onValueChange={(value) => handleLocationChange(schedule, Number(value), false)}
+                                    disabled={updatingLocationId === `${schedule.id}-location`}
+                                  >
+                                    <SelectTrigger className={`w-full h-8 text-sm border-0 hover:bg-gray-100 cursor-pointer ${updatingLocationId === `${schedule.id}-location` ? 'opacity-50' : ''}`}>
+                                      <SelectValue>
+                                        <span className="text-sm text-gray-700 truncate block max-w-[200px]" title={formatLocation(schedule._expedition_current_location)}>
+                                          {formatLocation(schedule._expedition_current_location)}
+                                        </span>
+                                      </SelectValue>
+                                    </SelectTrigger>
+                                    <SelectContent className="min-w-[280px]">
+                                      {locations?.map((location: any) => (
+                                        <SelectItem 
+                                          key={location.id} 
+                                          value={location.id.toString()}
+                                          className="cursor-pointer"
+                                        >
+                                          <span className="font-medium">{location.port}</span>
+                                          <span className="text-muted-foreground ml-1">· {location.country}</span>
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  {updatingLocationId === `${schedule.id}-location` && (
+                                    <div className="absolute inset-0 flex items-center justify-center bg-white/50">
+                                      <Spinner size="sm" className="h-4 w-4" />
+                                    </div>
+                                  )}
+                                </div>
                               </TableCell>
-                              <TableCell className="h-14 px-4" onClick={(e) => e.stopPropagation()} style={{ width: "150px" }}>
+                              <TableCell className="h-14 px-4" onClick={(e) => e.stopPropagation()} style={{ width: "100px" }}>
                                 <div className="flex gap-1">
                                   <button
                                     onClick={() => handleTypeChange(schedule, "anchored")}
                                     disabled={updatingTypeId === schedule.id}
-                                    className={`px-2 py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer flex items-center gap-1 ${
+                                    className={`relative px-2 py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer min-w-[28px] flex items-center justify-center ${
                                       !(schedule.isOffshore || schedule.is_offshore) && !(schedule.isService || schedule.is_service)
                                         ? 'bg-green-50 text-green-700 border-2 border-green-200'
                                         : 'bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100'
-                                    } ${updatingTypeId === schedule.id ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    } ${updatingTypeId === schedule.id ? 'cursor-not-allowed' : ''}`}
                                     title="Anchored"
                                   >
-                                    {updatingTypeId === schedule.id && <Spinner size="sm" className="h-3 w-3" />}
-                                    <span className="truncate max-w-[45px]">Anch</span>
+                                    <span className={updatingTypeId === schedule.id ? 'invisible' : ''}>A</span>
+                                    {updatingTypeId === schedule.id && (
+                                      <div className="absolute inset-0 flex items-center justify-center">
+                                        <Spinner size="sm" className="h-3 w-3" />
+                                      </div>
+                                    )}
                                   </button>
                                   <button
                                     onClick={() => handleTypeChange(schedule, "service")}
                                     disabled={updatingTypeId === schedule.id}
-                                    className={`px-2 py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer flex items-center gap-1 ${
+                                    className={`relative px-2 py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer min-w-[28px] flex items-center justify-center ${
                                       (schedule.isService || schedule.is_service)
                                         ? 'bg-red-50 text-red-700 border-2 border-red-200'
                                         : 'bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100'
-                                    } ${updatingTypeId === schedule.id ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    } ${updatingTypeId === schedule.id ? 'cursor-not-allowed' : ''}`}
                                     title="Service"
                                   >
-                                    {updatingTypeId === schedule.id && <Spinner size="sm" className="h-3 w-3" />}
-                                    <span className="truncate max-w-[45px]">Serv</span>
+                                    <span className={updatingTypeId === schedule.id ? 'invisible' : ''}>S</span>
+                                    {updatingTypeId === schedule.id && (
+                                      <div className="absolute inset-0 flex items-center justify-center">
+                                        <Spinner size="sm" className="h-3 w-3" />
+                                      </div>
+                                    )}
                                   </button>
                                   <button
                                     onClick={() => handleTypeChange(schedule, "offshore")}
                                     disabled={updatingTypeId === schedule.id}
-                                    className={`px-2 py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer flex items-center gap-1 ${
+                                    className={`relative px-2 py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer min-w-[28px] flex items-center justify-center ${
                                       (schedule.isOffshore || schedule.is_offshore)
                                         ? 'bg-blue-50 text-blue-700 border-2 border-blue-200'
                                         : 'bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100'
-                                    } ${updatingTypeId === schedule.id ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    } ${updatingTypeId === schedule.id ? 'cursor-not-allowed' : ''}`}
                                     title="Offshore"
                                   >
-                                    {updatingTypeId === schedule.id && <Spinner size="sm" className="h-3 w-3" />}
-                                    <span className="truncate max-w-[45px]">Offs</span>
+                                    <span className={updatingTypeId === schedule.id ? 'invisible' : ''}>O</span>
+                                    {updatingTypeId === schedule.id && (
+                                      <div className="absolute inset-0 flex items-center justify-center">
+                                        <Spinner size="sm" className="h-3 w-3" />
+                                      </div>
+                                    )}
                                   </button>
                                 </div>
                               </TableCell>
                               <TableCell className="h-14 px-4" onClick={(e) => e.stopPropagation()} style={{ width: "230px" }}>
-                                <Select
-                                  value={schedule.destination?.toString() || "0"}
-                                  onValueChange={(value) => handleLocationChange(schedule, Number(value), true)}
-                                  disabled={!(schedule.isOffshore || schedule.is_offshore)}
-                                >
-                                  <SelectTrigger className={`w-full h-8 text-sm border-0 ${(schedule.isOffshore || schedule.is_offshore) ? 'hover:bg-gray-100 cursor-pointer' : 'cursor-not-allowed'}`}>
-                                    <SelectValue>
-                                      {schedule._expedition_destination && schedule.destination !== 0 ? (
-                                        <span className="text-sm text-gray-700 truncate block max-w-[200px]" title={formatLocation(schedule._expedition_destination)}>
-                                          {formatLocation(schedule._expedition_destination)}
-                                        </span>
-                                      ) : (
-                                        <span className="text-sm text-gray-400">—</span>
-                                      )}
-                                    </SelectValue>
-                                  </SelectTrigger>
-                                  <SelectContent className="min-w-[280px]">
-                                    <SelectItem value="0" className="cursor-pointer text-muted-foreground">No destination</SelectItem>
-                                    {locations?.map((location: any) => (
-                                      <SelectItem 
-                                        key={location.id} 
-                                        value={location.id.toString()}
-                                        className="cursor-pointer"
-                                      >
-                                        <span className="font-medium">{location.port}</span>
-                                        <span className="text-muted-foreground ml-1">· {location.country}</span>
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
+                                <div className="relative">
+                                  <Select
+                                    value={schedule.destination?.toString() || "0"}
+                                    onValueChange={(value) => handleLocationChange(schedule, Number(value), true)}
+                                    disabled={!(schedule.isOffshore || schedule.is_offshore) || updatingLocationId === `${schedule.id}-destination`}
+                                  >
+                                    <SelectTrigger className={`w-full h-8 text-sm border-0 ${(schedule.isOffshore || schedule.is_offshore) ? 'hover:bg-gray-100 cursor-pointer' : 'cursor-not-allowed'} ${updatingLocationId === `${schedule.id}-destination` ? 'opacity-50' : ''}`}>
+                                      <SelectValue>
+                                        {schedule._expedition_destination && schedule.destination !== 0 ? (
+                                          <span className="text-sm text-gray-700 truncate block max-w-[200px]" title={formatLocation(schedule._expedition_destination)}>
+                                            {formatLocation(schedule._expedition_destination)}
+                                          </span>
+                                        ) : (
+                                          <span className="text-sm text-gray-400">—</span>
+                                        )}
+                                      </SelectValue>
+                                    </SelectTrigger>
+                                    <SelectContent className="min-w-[280px]">
+                                      <SelectItem value="0" className="cursor-pointer text-muted-foreground">No destination</SelectItem>
+                                      {locations?.map((location: any) => (
+                                        <SelectItem 
+                                          key={location.id} 
+                                          value={location.id.toString()}
+                                          className="cursor-pointer"
+                                        >
+                                          <span className="font-medium">{location.port}</span>
+                                          <span className="text-muted-foreground ml-1">· {location.country}</span>
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  {updatingLocationId === `${schedule.id}-destination` && (
+                                    <div className="absolute inset-0 flex items-center justify-center bg-white/50">
+                                      <Spinner size="sm" className="h-4 w-4" />
+                                    </div>
+                                  )}
+                                </div>
                               </TableCell>
                               <TableCell className="h-14 px-4" style={{ width: "200px" }} onClick={(e) => e.stopPropagation()}>
-                                <StaffOffMultiSelect
-                                  staff={staff || []}
-                                  selectedIds={schedule.staff_off || []}
-                                  onUpdate={async (ids) => {
-                                    try {
-                                      await updateExpeditionSchedule(schedule.id, {
-                                        ...schedule,
-                                        expedition_schedule_id: schedule.id,
-                                        staff_off: ids
-                                      })
-                                      mutate("expedition_schedules")
-                                      toast.success("Staff off updated")
-                                    } catch (error) {
-                                      toast.error("Failed to update")
-                                    }
-                                  }}
-                                />
+                                <div className="relative">
+                                  <StaffOffMultiSelect
+                                    staff={staff || []}
+                                    selectedIds={schedule.staff_off || []}
+                                    disabled={updatingStaffOffId === schedule.id}
+                                    onUpdate={async (ids) => {
+                                      setUpdatingStaffOffId(schedule.id)
+                                      try {
+                                        await updateExpeditionSchedule(schedule.id, {
+                                          ...schedule,
+                                          expedition_schedule_id: schedule.id,
+                                          staff_off: ids
+                                        })
+                                        mutate(`expedition_schedules_${schedule.expeditions_id}`)
+                                        toast.success("Staff off updated")
+                                      } catch (error) {
+                                        toast.error("Failed to update")
+                                      } finally {
+                                        setUpdatingStaffOffId(null)
+                                      }
+                                    }}
+                                  />
+                                  {updatingStaffOffId === schedule.id && (
+                                    <div className="absolute inset-0 flex items-center justify-center bg-white/50">
+                                      <Spinner size="sm" className="h-4 w-4" />
+                                    </div>
+                                  )}
+                                </div>
                               </TableCell>
                               <TableCell className="h-14 px-4" style={{ width: "300px" }} onClick={(e) => e.stopPropagation()}>
                                 {editingNotesId === schedule.id ? (

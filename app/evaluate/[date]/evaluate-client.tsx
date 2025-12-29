@@ -165,6 +165,12 @@ export function EvaluateClient({ date, expeditionId }: EvaluateClientProps) {
         (p: any) => p.students_id === student.id && p.expedition_schedule_id === scheduleId,
       )
 
+      // Map journaling string to journal_status_id
+      const journalingString = existing?.journaling || existing?.note || ""
+      const matchedJournalStatus = journalStatusOptions.find(
+        opt => opt.name.toLowerCase() === journalingString.toLowerCase()
+      )
+      
       const baseRecord: ExpeditionProfessionalism = existing
         ? {
             id: existing.id,
@@ -180,7 +186,7 @@ export function EvaluateClient({ date, expeditionId }: EvaluateClientProps) {
             bonuses: Array.isArray(existing.bonuses) ? existing.bonuses : (existing.bonus ? [existing.bonus] : []),
             penalties: Array.isArray(existing.penalties) ? existing.penalties : (existing.penalty ? [existing.penalty] : []),
             note: existing.note ?? existing.journaling ?? null,
-            journal_status_id: existing.journal_status_id ?? null,
+            journal_status_id: matchedJournalStatus?.id ?? null,
             // Boolean flags for disabling categories (true = disabled)
             isAcademicsUsed: existing.isAcademicsUsed ?? false,
             isJobUsed: existing.isJobUsed ?? false,
@@ -221,7 +227,7 @@ export function EvaluateClient({ date, expeditionId }: EvaluateClientProps) {
 
       return baseRecord
     })
-  }, [expeditionStudents, allProfessionalism, scheduleId, localUpdates])
+  }, [expeditionStudents, allProfessionalism, scheduleId, localUpdates, journalStatusOptions])
 
   const isIncomplete = useCallback(
     (record: ExpeditionProfessionalism) => {
@@ -246,15 +252,17 @@ export function EvaluateClient({ date, expeditionId }: EvaluateClientProps) {
       // Offshore + Service Learning
       else if (isOffshore && isService) {
         const crewNeeds = needsScore(record.crew, record.isCrewUsed)
+        const jobNeeds = needsScore(record.job, record.isJobUsed)
         const citizenshipNeeds = needsScore(record.citizenship, record.isCitizenshipUsed)
         const serviceNeeds = needsScore(record.service_learning, record.isServiceUsed)
-        return crewNeeds && citizenshipNeeds && serviceNeeds
+        return crewNeeds && jobNeeds && citizenshipNeeds && serviceNeeds
       }
       // Offshore (no service)
       else if (isOffshore && !isService) {
         const crewNeeds = needsScore(record.crew, record.isCrewUsed)
+        const jobNeeds = needsScore(record.job, record.isJobUsed)
         const citizenshipNeeds = needsScore(record.citizenship, record.isCitizenshipUsed)
-        return crewNeeds && citizenshipNeeds
+        return crewNeeds && jobNeeds && citizenshipNeeds
       }
       // Regular day: school, job, citizenship
       const schoolNeeds = needsScore(record.school, record.isAcademicsUsed)
@@ -348,6 +356,10 @@ export function EvaluateClient({ date, expeditionId }: EvaluateClientProps) {
         // Offshore: crew, citizenship (+ service if service day)
         // Anchored: school, job, citizenship (+ service if service day)
         
+        // Get the journal status name from the selected ID
+        const selectedJournalStatus = journalStatusOptions.find(opt => opt.id === record.journal_status_id)
+        const journalingValue = selectedJournalStatus?.name || ""
+        
         const data: Record<string, any> = {
           expedition_schedule_id: record.expedition_schedule_id,
           expeditions_id: effectiveExpeditionId || 0,
@@ -359,18 +371,18 @@ export function EvaluateClient({ date, expeditionId }: EvaluateClientProps) {
           isLocked: true, // Lock on submit
           bonus: record.bonuses?.[0] || {},
           penalty: record.penalties?.[0] || {},
-          journaling: record.note || "",
+          journaling: journalingValue,
         }
 
         if (isOffshore) {
-          // Offshore days: crew is visible
+          // Offshore days: crew and job are visible
           data.crew = record.crew ?? 3
           data.isCrewUsed = record.isCrewUsed ?? false
-          // Don't submit school/job on offshore days
+          data.job = record.job ?? 3
+          data.isJobUsed = record.isJobUsed ?? false
+          // Don't submit school on offshore days
           data.academics = null
-          data.job = null
           data.isAcademicsUsed = false
-          data.isJobUsed = false
         } else {
           // Anchored days: school and job are visible
           data.academics = record.school ?? 3

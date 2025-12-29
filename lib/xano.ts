@@ -359,6 +359,11 @@ export async function updateStudent(id: number, data: any) {
   })
 }
 
+// ============ Dish Days Management ============
+export async function getExpeditionDishDays() {
+  return xanoFetch<any[]>("/expedition_dish_days")
+}
+
 // ============ Intake Form Management ============
 export async function getExpeditionsStudentInformation() {
   return xanoFetch<any[]>("/expeditions_student_information")

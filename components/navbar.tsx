@@ -69,7 +69,7 @@ export function Navbar() {
   const defaultDate = getDefaultDate()
 
   // Hide navbar on public pages - MUST be after all hooks
-  if (pathname === "/intake" || pathname.startsWith("/tv")) {
+  if (pathname === "/intake" || pathname === "/apply" || pathname.startsWith("/tv")) {
     return null
   }
 

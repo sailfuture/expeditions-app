@@ -428,37 +428,37 @@ function DisciplinePageContent() {
         </div>
         
         {/* Table */}
-        <div className="bg-white rounded-lg border shadow-sm">
-          <Table>
+        <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+          <Table className="table-fixed w-full">
             <TableHeader>
-              <TableRow>
-                <TableHead className="w-[80px]">Created</TableHead>
-                <TableHead className="w-[80px]">Type</TableHead>
-                <TableHead>Student</TableHead>
-                <TableHead className="w-[120px]">Date</TableHead>
-                <TableHead>Reason</TableHead>
-                <TableHead>Consequence</TableHead>
-                <TableHead>Staff</TableHead>
-                <TableHead className="text-right w-[100px]">Actions</TableHead>
+              <TableRow className="border-b bg-gray-50/30 hover:bg-gray-50/30">
+                <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600" style={{ width: "80px" }}>Created</TableHead>
+                <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600" style={{ width: "90px" }}>Type</TableHead>
+                <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600" style={{ width: "150px" }}>Student</TableHead>
+                <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600" style={{ width: "100px" }}>Date</TableHead>
+                <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600">Reason</TableHead>
+                <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600">Consequence</TableHead>
+                <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600" style={{ width: "120px" }}>Staff</TableHead>
+                <TableHead className="h-10 px-4 text-right text-xs font-semibold text-gray-600" style={{ width: "100px" }}>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loadingDiscipline ? (
                 Array.from({ length: 3 }).map((_, i) => (
-                  <TableRow key={i}>
-                    <TableCell><Skeleton className="h-4 w-12" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-16" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-32" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-28" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                  <TableRow key={i} className="border-b last:border-0">
+                    <TableCell className="h-14 px-4"><Skeleton className="h-4 w-12" /></TableCell>
+                    <TableCell className="h-14 px-4"><Skeleton className="h-4 w-16" /></TableCell>
+                    <TableCell className="h-14 px-4"><Skeleton className="h-4 w-24" /></TableCell>
+                    <TableCell className="h-14 px-4"><Skeleton className="h-4 w-20" /></TableCell>
+                    <TableCell className="h-14 px-4"><Skeleton className="h-4 w-32" /></TableCell>
+                    <TableCell className="h-14 px-4"><Skeleton className="h-4 w-28" /></TableCell>
+                    <TableCell className="h-14 px-4"><Skeleton className="h-4 w-20" /></TableCell>
+                    <TableCell className="h-14 px-4"><Skeleton className="h-4 w-16" /></TableCell>
                   </TableRow>
                 ))
               ) : sortedRecords.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
                     No discipline records found
                   </TableCell>
                 </TableRow>
@@ -466,34 +466,34 @@ function DisciplinePageContent() {
                 sortedRecords.map((record: any) => (
                   <TableRow 
                     key={record.id} 
-                    className="cursor-pointer hover:bg-muted/50"
+                    className="border-b last:border-0 transition-colors hover:bg-gray-50/50 cursor-pointer"
                     onClick={() => handleOpenView(record)}
                   >
-                    <TableCell className="text-muted-foreground text-sm">
+                    <TableCell className="h-14 px-4 text-muted-foreground text-sm">
                       {formatRelativeTime(record.created_at)}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="h-14 px-4">
                       {record.isReferral ? (
                         <Badge variant="destructive" className="text-xs">Referral</Badge>
                       ) : (
                         <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-200">Infraction</Badge>
                       )}
                     </TableCell>
-                    <TableCell className="font-medium">{getStudentName(record.students_id)}</TableCell>
-                    <TableCell>{formatDate(record.date)}</TableCell>
-                    <TableCell className="max-w-[200px] truncate" title={record.reason}>
+                    <TableCell className="h-14 px-4 font-medium text-sm text-gray-900">{getStudentName(record.students_id)}</TableCell>
+                    <TableCell className="h-14 px-4 text-sm text-gray-700">{formatDate(record.date)}</TableCell>
+                    <TableCell className="h-14 px-4 text-sm text-gray-700 truncate" title={record.reason}>
                       {record.reason}
                     </TableCell>
-                    <TableCell className="max-w-[180px] truncate" title={record.consequence}>
+                    <TableCell className="h-14 px-4 text-sm text-gray-700 truncate" title={record.consequence}>
                       {record.consequence || "—"}
                     </TableCell>
-                    <TableCell>{getStaffName(record.expedition_staff_id)}</TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="h-14 px-4 text-sm text-gray-700">{getStaffName(record.expedition_staff_id)}</TableCell>
+                    <TableCell className="h-14 px-4 text-right">
                       <div className="flex items-center justify-end gap-1">
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 cursor-pointer"
+                          className="h-8 w-8 cursor-pointer hover:bg-gray-100"
                           onClick={(e) => {
                             e.stopPropagation()
                             handleDownloadPDF(record)
@@ -505,7 +505,7 @@ function DisciplinePageContent() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 cursor-pointer"
+                          className="h-8 w-8 cursor-pointer hover:bg-gray-100"
                           onClick={(e) => {
                             e.stopPropagation()
                             handleOpenView(record)

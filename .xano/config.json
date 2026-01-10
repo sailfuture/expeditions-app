@@ -1,0 +1,12 @@
+{
+  "instanceName": "xsc3-mvx7-r86m",
+  "workspaceName": "Passage Logs",
+  "workspaceId": 3,
+  "branch": "v1",
+  "paths": {
+    "functions": "functions",
+    "tables": "tables",
+    "apis": "apis",
+    "tasks": "tasks"
+  }
+}

@@ -3,6 +3,7 @@
 import useSWR from "swr"
 import {
   getExpeditions,
+  getActiveExpedition,
   getExpeditionSchedules,
   getExpeditionScheduleItems,
   getExpeditionScheduleItemsByDate,
@@ -30,6 +31,7 @@ import {
 // SWR fetcher keys
 const KEYS = {
   expeditions: "expeditions",
+  activeExpedition: "active_expedition",
   schedules: "expedition_schedules",
   scheduleItems: "expedition_schedule_items",
   students: "students",
@@ -43,6 +45,10 @@ const KEYS = {
 
 export function useExpeditions() {
   return useSWR(KEYS.expeditions, getExpeditions)
+}
+
+export function useActiveExpedition() {
+  return useSWR(KEYS.activeExpedition, getActiveExpedition)
 }
 
 export function useExpeditionSchedules(expeditionsId?: number, options?: { refreshInterval?: number; revalidateOnFocus?: boolean }) {

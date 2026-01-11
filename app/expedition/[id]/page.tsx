@@ -342,12 +342,7 @@ export default function ExpeditionDetailPage({ params }: PageProps) {
     return expeditions.find((e: any) => e.id === expeditionId)
   }, [expeditions, expeditionId])
 
-  // Redirect non-admin users
-  useEffect(() => {
-    if (!userLoading && currentUser && currentUser.role !== "Admin") {
-      router.push("/dashboard")
-    }
-  }, [currentUser, userLoading, router])
+  const isAdmin = currentUser?.role === "Admin"
 
   // Filter schedules for this expedition
   const expeditionSchedules = useMemo(() => {
@@ -431,10 +426,6 @@ export default function ExpeditionDetailPage({ params }: PageProps) {
     )
   }
 
-  // Don't render if not admin
-  if (!currentUser || currentUser.role !== "Admin") {
-    return null
-  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -542,16 +533,18 @@ export default function ExpeditionDetailPage({ params }: PageProps) {
         <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden mb-6">
           <div className="px-6 py-4 border-b bg-gray-50/50 flex items-center justify-between">
             <h2 className="text-lg font-semibold">Student Evaluations</h2>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleUpdateScores}
-              disabled={isUpdatingScores || !expeditionStudents || expeditionStudents.length === 0}
-              className="cursor-pointer"
-            >
-              <RefreshCw className={`h-4 w-4 mr-2 ${isUpdatingScores ? 'animate-spin' : ''}`} />
-              {isUpdatingScores ? 'Updating...' : 'Update Scores'}
-            </Button>
+            {isAdmin && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleUpdateScores}
+                disabled={isUpdatingScores || !expeditionStudents || expeditionStudents.length === 0}
+                className="cursor-pointer"
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${isUpdatingScores ? 'animate-spin' : ''}`} />
+                {isUpdatingScores ? 'Updating...' : 'Update Scores'}
+              </Button>
+            )}
           </div>
           {studentsLoading ? (
             <Table>

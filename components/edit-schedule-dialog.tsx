@@ -166,7 +166,7 @@ export function EditScheduleDialog({ schedule, open, onOpenChange }: EditSchedul
                   <SelectValue placeholder="Select destination" />
                 </SelectTrigger>
                 <SelectContent className="w-full">
-                  <SelectItem value="0">No destination</SelectItem>
+                  <SelectItem value="0">—</SelectItem>
                   {locations?.map((location: any) => (
                     <SelectItem key={location.id} value={location.id.toString()}>
                       {location.port}, {location.country}

@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/breadcrumb"
 import { Calendar, Home, Map, ClipboardList, Users, Eye, PlusCircle, FileText, AlertTriangle, ClipboardCheck } from "lucide-react"
 import { format } from "date-fns"
+import { useCurrentUser } from "@/lib/contexts/user-context"
 
 interface ExpeditionHeaderProps {
   expedition: any
@@ -36,6 +37,8 @@ const PAGE_TITLES: Record<string, string> = {
 
 export function ExpeditionHeader({ expedition, isLoading = false, currentPage = "overview" }: ExpeditionHeaderProps) {
   const router = useRouter()
+  const { currentUser } = useCurrentUser()
+  const isAdmin = currentUser?.role === "Admin"
   
   // Get the appropriate default date based on expedition status
   const defaultDate = useMemo(() => {
@@ -73,7 +76,12 @@ export function ExpeditionHeader({ expedition, isLoading = false, currentPage = 
           <Breadcrumb>
             <BreadcrumbList>
               <BreadcrumbItem>
-                <BreadcrumbLink href="/expeditions" className="cursor-pointer">All Expeditions</BreadcrumbLink>
+                <BreadcrumbLink 
+                  href={isAdmin ? "/expeditions" : "/my-expeditions"} 
+                  className="cursor-pointer"
+                >
+                  {isAdmin ? "All Expeditions" : "My Expeditions"}
+                </BreadcrumbLink>
               </BreadcrumbItem>
               {expedition && (
                 <>

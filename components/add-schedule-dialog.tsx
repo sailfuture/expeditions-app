@@ -213,7 +213,7 @@ export function AddScheduleDialog({ open, onOpenChange }: AddScheduleDialogProps
                   <SelectValue placeholder="Select destination" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="0">No destination</SelectItem>
+                  <SelectItem value="0">—</SelectItem>
                   {locations?.map((location: any) => (
                     <SelectItem key={location.id} value={location.id.toString()}>
                       {location.port}, {location.country}

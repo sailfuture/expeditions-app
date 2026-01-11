@@ -81,10 +81,12 @@ export default function ExpeditionsPage() {
     return sortedExpeditions.filter((e: any) => new Date(e.endDate) >= now)
   }, [sortedExpeditions, showPastExpeditions])
 
-  // Redirect non-admin users
+  const isAdmin = currentUser?.role === "Admin"
+
+  // Redirect non-admin users to their expeditions page
   useEffect(() => {
     if (!userLoading && currentUser && currentUser.role !== "Admin") {
-      router.push("/dashboard")
+      router.push("/my-expeditions")
     }
   }, [currentUser, userLoading, router])
   
@@ -161,10 +163,6 @@ export default function ExpeditionsPage() {
     )
   }
 
-  // Don't render if not admin
-  if (!currentUser || currentUser.role !== "Admin") {
-    return null
-  }
 
   const formatDate = (dateStr: string) => {
     try {
@@ -213,10 +211,12 @@ export default function ExpeditionsPage() {
                   Show past expeditions
                 </Label>
               </div>
-              <Button onClick={openCreateDialog} className="cursor-pointer">
-                <Plus className="h-4 w-4 mr-2" />
-                New Expedition
-              </Button>
+              {isAdmin && (
+                <Button onClick={openCreateDialog} className="cursor-pointer">
+                  <Plus className="h-4 w-4 mr-2" />
+                  New Expedition
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -314,51 +314,55 @@ export default function ExpeditionsPage() {
                       </TableCell>
                       <TableCell className="h-16 px-6 text-right">
                         <div className="flex items-center justify-end gap-1">
-                          <Button
-                            variant={expedition.isActive ? "default" : "outline"}
-                            size="sm"
-                            className="h-7 cursor-pointer text-xs"
-                            disabled={isSettingActive === expedition.id}
-                            onClick={async (e) => {
-                              e.stopPropagation()
-                              if (expedition.isActive) {
-                                // Don't allow deactivating - must set another as active
-                                return
-                              }
-                              setIsSettingActive(expedition.id)
-                              try {
-                                // First, deactivate all other expeditions
-                                const activeExpeditions = expeditions?.filter((e: any) => e.isActive && e.id !== expedition.id) || []
-                                for (const exp of activeExpeditions) {
-                                  await updateExpedition(exp.id, { isActive: false })
-                                }
-                                // Then activate this one
-                                await updateExpedition(expedition.id, { isActive: true })
-                                mutate("expeditions")
-                                toast.success("Expedition activated")
-                              } catch (error) {
-                                console.error("Failed to set active expedition:", error)
-                                toast.error("Failed to activate expedition")
-                              } finally {
-                                setIsSettingActive(null)
-                              }
-                            }}
-                          >
-                            {isSettingActive === expedition.id ? (
-                              <Spinner size="sm" className="h-3 w-3" />
-                            ) : expedition.isActive ? "Active" : "Set Active"}
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 cursor-pointer hover:bg-gray-100"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              openEditDialog(expedition)
-                            }}
-                          >
-                            <Pencil className="h-4 w-4 text-gray-500" />
-                          </Button>
+                          {isAdmin && (
+                            <>
+                              <Button
+                                variant={expedition.isActive ? "default" : "outline"}
+                                size="sm"
+                                className="h-7 cursor-pointer text-xs"
+                                disabled={isSettingActive === expedition.id}
+                                onClick={async (e) => {
+                                  e.stopPropagation()
+                                  if (expedition.isActive) {
+                                    // Don't allow deactivating - must set another as active
+                                    return
+                                  }
+                                  setIsSettingActive(expedition.id)
+                                  try {
+                                    // First, deactivate all other expeditions
+                                    const activeExpeditions = expeditions?.filter((e: any) => e.isActive && e.id !== expedition.id) || []
+                                    for (const exp of activeExpeditions) {
+                                      await updateExpedition(exp.id, { isActive: false })
+                                    }
+                                    // Then activate this one
+                                    await updateExpedition(expedition.id, { isActive: true })
+                                    mutate("expeditions")
+                                    toast.success("Expedition activated")
+                                  } catch (error) {
+                                    console.error("Failed to set active expedition:", error)
+                                    toast.error("Failed to activate expedition")
+                                  } finally {
+                                    setIsSettingActive(null)
+                                  }
+                                }}
+                              >
+                                {isSettingActive === expedition.id ? (
+                                  <Spinner size="sm" className="h-3 w-3" />
+                                ) : expedition.isActive ? "Active" : "Set Active"}
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 cursor-pointer hover:bg-gray-100"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  openEditDialog(expedition)
+                                }}
+                              >
+                                <Pencil className="h-4 w-4 text-gray-500" />
+                              </Button>
+                            </>
+                          )}
                           <Button
                             variant="ghost"
                             size="icon"

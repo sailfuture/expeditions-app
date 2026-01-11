@@ -776,7 +776,7 @@ export default function DashboardPage() {
                                       <SelectValue placeholder="—" />
                                     </SelectTrigger>
                                     <SelectContent className="min-w-[280px]">
-                                      <SelectItem value="0" className="cursor-pointer text-muted-foreground">No destination</SelectItem>
+                                      <SelectItem value="0" className="cursor-pointer text-muted-foreground">—</SelectItem>
                                       {locations?.map((location: any) => (
                                         <SelectItem 
                                           key={location.id} 
@@ -1024,7 +1024,7 @@ export default function DashboardPage() {
                                       <SelectValue placeholder="—" />
                                     </SelectTrigger>
                                     <SelectContent className="min-w-[280px]">
-                                      <SelectItem value="0" className="cursor-pointer text-muted-foreground">No destination</SelectItem>
+                                      <SelectItem value="0" className="cursor-pointer text-muted-foreground">—</SelectItem>
                                       {locations?.map((location: any) => (
                                         <SelectItem 
                                           key={location.id} 

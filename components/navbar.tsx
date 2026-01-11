@@ -81,7 +81,7 @@ export function Navbar() {
       <div className="border-b">
         <div className="container mx-auto flex h-14 items-center px-4 gap-6">
           {/* Logo */}
-          <Link href="/expeditions" className="flex items-center gap-2 cursor-pointer">
+          <Link href={currentUser?.role === "Admin" ? "/expeditions" : "/my-expeditions"} className="flex items-center gap-2 cursor-pointer">
             <div className="h-9 w-9 rounded-full overflow-hidden">
               <Image
                 src="/sailfuture-square (8).webp"
@@ -95,7 +95,7 @@ export function Navbar() {
 
           <NavigationMenu>
             <NavigationMenuList className="gap-2">
-              {currentUser?.role === "Admin" && (
+              {currentUser?.role === "Admin" ? (
                 <NavigationMenuItem>
                   <Link
                     href="/expeditions"
@@ -106,6 +106,19 @@ export function Navbar() {
                     )}
                   >
                     All Expeditions
+                  </Link>
+                </NavigationMenuItem>
+              ) : (
+                <NavigationMenuItem>
+                  <Link
+                    href="/my-expeditions"
+                    className={cn(
+                      navigationMenuTriggerStyle(),
+                      "cursor-pointer",
+                      pathname === "/my-expeditions" && "text-foreground",
+                    )}
+                  >
+                    My Expeditions
                   </Link>
                 </NavigationMenuItem>
               )}

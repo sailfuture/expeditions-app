@@ -60,6 +60,7 @@ import { toast } from "sonner"
 import { mutate } from "swr"
 import { Spinner } from "@/components/ui/spinner"
 import { useExpeditions, useEvaluationByStudent, useProfessionalismByStudent, useExpeditionPerformanceReviews } from "@/lib/hooks/use-expeditions"
+import { useCurrentUser } from "@/lib/contexts/user-context"
 import { generatePerformanceReviewPDF } from "@/lib/pdf-generator"
 import { formatDistanceToNow } from "date-fns"
 import { Eye } from "lucide-react"
@@ -71,6 +72,8 @@ export default function StudentDetailPage() {
   const router = useRouter()
   const params = useParams()
   const searchParams = useSearchParams()
+  const { currentUser } = useCurrentUser()
+  const isAdmin = currentUser?.role === "Admin"
   const studentId = parseInt(params.id as string)
   const expeditionId = searchParams.get('expedition') ? parseInt(searchParams.get('expedition')!) : null
   
@@ -597,7 +600,7 @@ export default function StudentDetailPage() {
               <Breadcrumb>
                 <BreadcrumbList>
                   <BreadcrumbItem>
-                    <BreadcrumbLink href="/expeditions" className="cursor-pointer">All Expeditions</BreadcrumbLink>
+                    <BreadcrumbLink href={isAdmin ? "/expeditions" : "/my-expeditions"} className="cursor-pointer">{isAdmin ? "All Expeditions" : "My Expeditions"}</BreadcrumbLink>
                   </BreadcrumbItem>
                   <BreadcrumbSeparator />
                   <BreadcrumbItem>

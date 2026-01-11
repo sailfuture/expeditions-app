@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/breadcrumb"
 import { ArrowLeft } from "lucide-react"
 import { useExpeditionSchedules, useExpeditionLocations } from "@/lib/hooks/use-expeditions"
+import { useCurrentUser } from "@/lib/contexts/user-context"
 import { updateExpeditionSchedule, getExpeditionScheduleById } from "@/lib/xano"
 import { mutate } from "swr"
 import { toast } from "sonner"
@@ -29,6 +30,8 @@ interface ScheduleUpdateClientProps {
 
 export function ScheduleUpdateClient({ scheduleId }: ScheduleUpdateClientProps) {
   const router = useRouter()
+  const { currentUser } = useCurrentUser()
+  const isAdmin = currentUser?.role === "Admin"
   // Fetch the specific schedule by ID first
   const { data: schedule, isLoading: loadingSchedule } = useSWR(
     scheduleId ? `expedition_schedule_${scheduleId}` : null,
@@ -208,7 +211,7 @@ export function ScheduleUpdateClient({ scheduleId }: ScheduleUpdateClientProps) 
           <Breadcrumb className="mb-4">
             <BreadcrumbList>
               <BreadcrumbItem>
-                <BreadcrumbLink href="/expeditions" className="cursor-pointer">All Expeditions</BreadcrumbLink>
+                <BreadcrumbLink href={isAdmin ? "/expeditions" : "/my-expeditions"} className="cursor-pointer">{isAdmin ? "All Expeditions" : "My Expeditions"}</BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbSeparator />
               <BreadcrumbItem>
@@ -347,10 +350,10 @@ export function ScheduleUpdateClient({ scheduleId }: ScheduleUpdateClientProps) 
                           disabled={updatingField === 'destination'}
                         >
                           <SelectTrigger className="w-[300px]">
-                            <SelectValue placeholder="No destination" />
+                            <SelectValue placeholder="—" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="0">No destination</SelectItem>
+                            <SelectItem value="0">—</SelectItem>
                             {locations?.map((location: any) => (
                               <SelectItem key={location.id} value={location.id.toString()}>
                                 {location.port}, {location.country}

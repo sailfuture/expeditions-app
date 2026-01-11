@@ -3,7 +3,7 @@
 import Link from "next/link"
 import Image from "next/image"
 import { usePathname, useSearchParams } from "next/navigation"
-import { useMemo } from "react"
+import { useMemo, useState, useEffect } from "react"
 import { signOut } from "next-auth/react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useExpeditions } from "@/lib/hooks/use-expeditions"
@@ -29,11 +29,27 @@ export function Navbar() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const { selectedExpedition, selectedExpeditionId, setSelectedExpeditionId, userExpeditions, activeExpedition, isLoading } = useExpeditionContext()
-  const { currentUser } = useCurrentUser()
+  const { currentUser, isLoading: isUserLoading } = useCurrentUser()
   const { data: allExpeditionsData } = useExpeditions()
+  
+  // Track if component has mounted (to prevent hydration mismatch)
+  const [hasMounted, setHasMounted] = useState(false)
+  useEffect(() => {
+    setHasMounted(true)
+  }, [])
 
-  // Get expedition ID from URL if present
-  const expeditionIdFromUrl = searchParams.get('expedition') ? parseInt(searchParams.get('expedition')!) : null
+  // Get expedition ID from URL - either from query param or path param
+  const expeditionIdFromUrl = useMemo(() => {
+    // Check query parameter first
+    const queryExpId = searchParams.get('expedition')
+    if (queryExpId) return parseInt(queryExpId)
+    
+    // Check if path matches /expedition/[id] pattern
+    const expeditionPathMatch = pathname.match(/\/expedition\/(\d+)/)
+    if (expeditionPathMatch) return parseInt(expeditionPathMatch[1])
+    
+    return null
+  }, [searchParams, pathname])
   
   // Find the expedition to display in the navbar - prioritize URL parameter
   const displayedExpedition = useMemo(() => {
@@ -81,7 +97,7 @@ export function Navbar() {
       <div className="border-b">
         <div className="container mx-auto flex h-14 items-center px-4 gap-6">
           {/* Logo */}
-          <Link href={currentUser?.role === "Admin" ? "/expeditions" : "/my-expeditions"} className="flex items-center gap-2 cursor-pointer">
+          <Link href={hasMounted && currentUser?.role === "Admin" ? "/expeditions" : "/my-expeditions"} className="flex items-center gap-2 cursor-pointer">
             <div className="h-9 w-9 rounded-full overflow-hidden">
               <Image
                 src="/sailfuture-square (8).webp"
@@ -95,7 +111,7 @@ export function Navbar() {
 
           <NavigationMenu>
             <NavigationMenuList className="gap-2">
-              {currentUser?.role === "Admin" ? (
+              {hasMounted && currentUser?.role === "Admin" ? (
                 <NavigationMenuItem>
                   <Link
                     href="/expeditions"
@@ -123,7 +139,7 @@ export function Navbar() {
                 </NavigationMenuItem>
               )}
 
-              {currentUser?.role === "Admin" && (
+              {hasMounted && currentUser?.role === "Admin" && (
                 <>
                   <NavigationMenuItem>
                     <DropdownMenu>
@@ -193,17 +209,17 @@ export function Navbar() {
                         "cursor-pointer flex items-center gap-1",
                         pathname.startsWith("/public/passage-logs") && "text-foreground",
                       )}>
-                        Passage Logs
+                        Logs
                         <ChevronDown className="h-3 w-3" />
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="start">
+                      <DropdownMenuContent align="start" className="min-w-[180px]">
                         <Link href="/public/passage-logs" target="_blank">
-                          <DropdownMenuItem className="cursor-pointer whitespace-nowrap">
+                          <DropdownMenuItem className="cursor-pointer">
                             Passage Log Form
                           </DropdownMenuItem>
                         </Link>
                         <Link href="/public/passage-logs/dashboard" target="_blank">
-                          <DropdownMenuItem className="cursor-pointer whitespace-nowrap">
+                          <DropdownMenuItem className="cursor-pointer">
                             Log Dashboard
                           </DropdownMenuItem>
                         </Link>
@@ -218,58 +234,50 @@ export function Navbar() {
           {/* Spacer */}
           <div className="flex-1" />
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 min-w-0">
             {expeditionIdFromUrl && displayedExpedition && (
               <>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">
-                    {isLoading ? "Loading..." : activeExpeditionName}
-                  </span>
-                  <span className={cn(
-                    "text-xs font-medium px-2 py-0.5 rounded-full",
-                    displayedExpedition.isActive 
-                      ? "bg-green-100 text-green-700 border border-green-200"
-                      : "bg-gray-100 text-gray-600 border border-gray-200"
-                  )}>
-                    {displayedExpedition.isActive ? "Active" : "Past"}
-                  </span>
-                </div>
-                <div className="h-4 w-px bg-border" />
+                <span className="text-sm font-medium text-gray-700 truncate max-w-[200px]">
+                  {isLoading ? "Loading..." : activeExpeditionName}
+                </span>
+                <div className="h-4 w-px bg-border shrink-0" />
               </>
             )}
             
             {/* User Menu */}
-            <DropdownMenu>
-              <DropdownMenuTrigger className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity">
-                <span className="text-sm font-medium">{currentUser?.name || "Loading..."}</span>
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={currentUser?.photo_url || "/diverse-user-avatars.png"} />
-                  <AvatarFallback>
-                    {currentUser?.name
-                      ?.split(" ")
-                      .map((n) => n[0])
-                      .join("") || "U"}
-                  </AvatarFallback>
-                </Avatar>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <div className="px-2 py-1.5">
-                  <p className="text-sm font-medium">{currentUser?.name}</p>
-                  <p className="text-xs text-muted-foreground">{currentUser?.email}</p>
-                  {currentUser?.role && (
-                    <p className="text-xs text-muted-foreground mt-0.5">Role: {currentUser.role}</p>
-                  )}
-                </div>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem 
-                  className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"
-                  onClick={() => signOut({ callbackUrl: "/login" })}
-                >
-                  <LogOut className="h-4 w-4 mr-2" />
-                  Sign Out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {hasMounted && (
+              <DropdownMenu>
+                <DropdownMenuTrigger className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity min-w-0">
+                  <span className="text-sm font-medium truncate max-w-[150px]">{currentUser?.name || "User"}</span>
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={currentUser?.photo_url || "/diverse-user-avatars.png"} />
+                    <AvatarFallback>
+                      {currentUser?.name
+                        ?.split(" ")
+                        .map((n) => n[0])
+                        .join("") || "U"}
+                    </AvatarFallback>
+                  </Avatar>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <div className="px-2 py-1.5">
+                    <p className="text-sm font-medium">{currentUser?.name}</p>
+                    <p className="text-xs text-muted-foreground">{currentUser?.email}</p>
+                    {currentUser?.role && (
+                      <p className="text-xs text-muted-foreground mt-0.5">Role: {currentUser.role}</p>
+                    )}
+                  </div>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem 
+                    className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"
+                    onClick={() => signOut({ callbackUrl: "/login" })}
+                  >
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Sign Out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
         </div>
       </div>

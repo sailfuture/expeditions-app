@@ -29,20 +29,24 @@ interface ScheduleDragContextProps {
   getDuration: (timeIn: number, timeOut: number) => string
   getColorForType: (typeName: string) => string
   expeditionsId?: number
+  timelineStartHour?: number
+  timelineHoursCount?: number
 }
 
-// Constants for the timeline
-const TIMELINE_START_HOUR = 4 // 4 AM
-const TIMELINE_HOURS = 20 // 20 hours (4 AM to 12 AM)
+// Default constants for the timeline (full 24-hour range)
+const DEFAULT_TIMELINE_START_HOUR = 0 // 12 AM
+const DEFAULT_TIMELINE_HOURS = 24 // 24 hours (12 AM to 12 AM)
 const SNAP_MINUTES = 15 // Snap to 15-minute intervals
 
 // Convert pixel position to military time
 const pixelToMilitaryTime = (
   pixelY: number,
-  timelineHeight: number
+  timelineHeight: number,
+  timelineStartHour: number,
+  timelineHours: number
 ): number => {
-  const minutesFromStart = (pixelY / timelineHeight) * TIMELINE_HOURS * 60
-  const totalMinutes = TIMELINE_START_HOUR * 60 + minutesFromStart
+  const minutesFromStart = (pixelY / timelineHeight) * timelineHours * 60
+  const totalMinutes = timelineStartHour * 60 + minutesFromStart
   
   // Snap to nearest interval
   const snappedMinutes = Math.round(totalMinutes / SNAP_MINUTES) * SNAP_MINUTES
@@ -59,13 +63,15 @@ const pixelToMilitaryTime = (
 // Convert military time to pixels
 const militaryTimeToPixel = (
   militaryTime: number,
-  timelineHeight: number
+  timelineHeight: number,
+  timelineStartHour: number,
+  timelineHours: number
 ): number => {
   const hours = Math.floor(militaryTime / 100)
   const minutes = militaryTime % 100
   const totalMinutes = hours * 60 + minutes
-  const minutesFromStart = totalMinutes - TIMELINE_START_HOUR * 60
-  return (minutesFromStart / (TIMELINE_HOURS * 60)) * timelineHeight
+  const minutesFromStart = totalMinutes - timelineStartHour * 60
+  return (minutesFromStart / (timelineHours * 60)) * timelineHeight
 }
 
 export function ScheduleDragContext({
@@ -79,6 +85,8 @@ export function ScheduleDragContext({
   getDuration,
   getColorForType,
   expeditionsId,
+  timelineStartHour = DEFAULT_TIMELINE_START_HOUR,
+  timelineHoursCount = DEFAULT_TIMELINE_HOURS,
 }: ScheduleDragContextProps) {
   const [activeItem, setActiveItem] = useState<any>(null)
   const [snapPreview, setSnapPreview] = useState<{
@@ -128,7 +136,7 @@ export function ScheduleDragContext({
     }
 
     const timelineHeight = timelineRef.current.getBoundingClientRect().height
-    const deltaMinutes = (delta.y / timelineHeight) * TIMELINE_HOURS * 60
+    const deltaMinutes = (delta.y / timelineHeight) * timelineHoursCount * 60
     const snappedDeltaMinutes = Math.round(deltaMinutes / SNAP_MINUTES) * SNAP_MINUTES
 
     // Calculate new times
@@ -138,9 +146,9 @@ export function ScheduleDragContext({
     const newStartMinutes = originalStartMinutes + snappedDeltaMinutes
     const newEndMinutes = originalEndMinutes + snappedDeltaMinutes
     
-    // Clamp to valid range
-    const minMinutes = TIMELINE_START_HOUR * 60
-    const maxMinutes = (TIMELINE_START_HOUR + TIMELINE_HOURS) * 60
+    // Clamp to valid range (always allow full 24-hour range for drag operations)
+    const minMinutes = 0 // 12 AM
+    const maxMinutes = 24 * 60 // 12 AM next day
     
     if (newStartMinutes < minMinutes || newEndMinutes > maxMinutes) {
       setSnapPreview(null)
@@ -151,8 +159,8 @@ export function ScheduleDragContext({
     const newTimeOut = Math.floor(newEndMinutes / 60) * 100 + (newEndMinutes % 60)
 
     // Calculate preview position
-    const previewTop = militaryTimeToPixel(newTimeIn, timelineHeight)
-    const previewBottom = militaryTimeToPixel(newTimeOut, timelineHeight)
+    const previewTop = militaryTimeToPixel(newTimeIn, timelineHeight, timelineStartHour, timelineHoursCount)
+    const previewBottom = militaryTimeToPixel(newTimeOut, timelineHeight, timelineStartHour, timelineHoursCount)
     
     setSnapPreview({
       top: previewTop,
@@ -173,7 +181,7 @@ export function ScheduleDragContext({
     }
 
     const timelineHeight = timelineRef.current.getBoundingClientRect().height
-    const deltaMinutes = (delta.y / timelineHeight) * TIMELINE_HOURS * 60
+    const deltaMinutes = (delta.y / timelineHeight) * timelineHoursCount * 60
     const snappedDeltaMinutes = Math.round(deltaMinutes / SNAP_MINUTES) * SNAP_MINUTES
 
     if (snappedDeltaMinutes === 0) {
@@ -189,9 +197,9 @@ export function ScheduleDragContext({
     const newStartMinutes = originalStartMinutes + snappedDeltaMinutes
     const newEndMinutes = originalEndMinutes + snappedDeltaMinutes
     
-    // Clamp to valid range (4 AM to 12 AM)
-    const minMinutes = TIMELINE_START_HOUR * 60
-    const maxMinutes = (TIMELINE_START_HOUR + TIMELINE_HOURS) * 60
+    // Clamp to valid range (12 AM to 12 AM - full 24 hours)
+    const minMinutes = 0
+    const maxMinutes = 24 * 60
     
     if (newStartMinutes < minMinutes || newEndMinutes > maxMinutes) {
       toast.error("Cannot move event outside schedule hours")
@@ -256,7 +264,7 @@ export function ScheduleDragContext({
       const timelineHeight = timelineRect.height
       const deltaY = e.clientY - resizing.startY
 
-      const deltaMinutes = (deltaY / timelineHeight) * TIMELINE_HOURS * 60
+      const deltaMinutes = (deltaY / timelineHeight) * timelineHoursCount * 60
       const snappedDeltaMinutes = Math.round(deltaMinutes / SNAP_MINUTES) * SNAP_MINUTES
 
       let newTimeIn = resizing.originalTimeIn
@@ -269,7 +277,7 @@ export function ScheduleDragContext({
         // Ensure minimum 15 minutes duration
         const endMinutes = Math.floor(resizing.originalTimeOut / 100) * 60 + (resizing.originalTimeOut % 100)
         if (newStartMinutes >= endMinutes - 15) return
-        if (newStartMinutes < TIMELINE_START_HOUR * 60) return
+        if (newStartMinutes < 0) return // 12 AM minimum
         
         newTimeIn = Math.floor(newStartMinutes / 60) * 100 + (newStartMinutes % 60)
       } else {
@@ -279,7 +287,7 @@ export function ScheduleDragContext({
         // Ensure minimum 15 minutes duration
         const startMinutes = Math.floor(resizing.originalTimeIn / 100) * 60 + (resizing.originalTimeIn % 100)
         if (newEndMinutes <= startMinutes + 15) return
-        if (newEndMinutes > (TIMELINE_START_HOUR + TIMELINE_HOURS) * 60) return
+        if (newEndMinutes > 24 * 60) return // 12 AM max (next day)
         
         newTimeOut = Math.floor(newEndMinutes / 60) * 100 + (newEndMinutes % 60)
       }
@@ -346,7 +354,7 @@ export function ScheduleDragContext({
       window.removeEventListener("mousemove", handleMouseMove)
       window.removeEventListener("mouseup", handleMouseUp)
     }
-  }, [resizing, timelineRef, items, date, onItemUpdate, onResizingChange, formatMilitaryTime])
+  }, [resizing, timelineRef, items, date, onItemUpdate, onResizingChange, formatMilitaryTime, timelineHoursCount])
 
   return (
     <DndContext

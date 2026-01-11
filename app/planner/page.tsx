@@ -611,16 +611,41 @@ function PlannerPageContent() {
                             <p className="text-xs text-gray-500">
                               {formatMilitaryTime(item.time_in)} - {formatMilitaryTime(item.time_out)}
                             </p>
-                            {item._expedition_staff && (
-                              <div className="flex items-center gap-1 mt-1">
-                                <Avatar className="h-4 w-4">
-                                  <AvatarFallback className="text-[8px] bg-gray-200 text-gray-600">
-                                    {item._expedition_staff.name?.split(" ").map((n: string) => n[0]).join("")}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <span className="text-xs text-gray-500 truncate">
-                                  {item._expedition_staff.name}
-                                </span>
+                            {(item._expedition_staff || (item.participants && item.participants.length > 0)) && (
+                              <div className="flex items-center gap-1.5 mt-1">
+                                {item._expedition_staff && (
+                                  <>
+                                    <Avatar className="h-4 w-4">
+                                      <AvatarFallback className="text-[8px] bg-gray-200 text-gray-600">
+                                        {item._expedition_staff.name?.split(" ").map((n: string) => n[0]).join("")}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <span className="text-xs text-gray-500 truncate max-w-[80px]">
+                                      {item._expedition_staff.name}
+                                    </span>
+                                  </>
+                                )}
+                                {item.participants && item.participants.length > 0 && (
+                                  <>
+                                    {item._expedition_staff && <span className="text-gray-300 text-xs">•</span>}
+                                    <div className="flex -space-x-1">
+                                      {item.participants.slice(0, 3).map((p: any) => (
+                                        <Avatar key={p.id} className="h-4 w-4 border border-white">
+                                          <AvatarFallback className="text-[7px] bg-gray-300 text-gray-700">
+                                            {p.name?.split(" ").map((n: string) => n[0]).join("")}
+                                          </AvatarFallback>
+                                        </Avatar>
+                                      ))}
+                                      {item.participants.length > 3 && (
+                                        <Avatar className="h-4 w-4 border border-white">
+                                          <AvatarFallback className="text-[7px] bg-gray-400 text-white">
+                                            +{item.participants.length - 3}
+                                          </AvatarFallback>
+                                        </Avatar>
+                                      )}
+                                    </div>
+                                  </>
+                                )}
                               </div>
                             )}
                           </div>

@@ -65,8 +65,9 @@ export function DraggableScheduleItem({
       wasDraggingRef.current = false
       return
     }
-    // In edit mode, don't open details modal (clicking just selects for editing)
+    // In edit mode, directly open the edit sheet
     if (editMode) {
+      onEdit()
       return
     }
     onClick()

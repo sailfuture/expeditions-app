@@ -387,11 +387,125 @@ export async function deleteExpeditionsStudentInformation(id: number) {
 }
 
 // ============ Staff Management ============
+export async function createTeacher(data: {
+  name: string
+  role?: string
+  expeditions_id?: number[]
+}) {
+  return xanoFetch<any>("/teachers", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  })
+}
+
 export async function updateTeacher(id: number, data: any) {
   return xanoFetch<any>(`/teachers/${id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
+  })
+}
+
+// ============ Laptops Management ============
+export async function getExpeditionLaptops() {
+  return xanoFetch<any[]>("/expedition_laptops")
+}
+
+// ============ Rooms Management ============
+export async function getExpeditionsRooms() {
+  return xanoFetch<any[]>("/expeditions_rooms")
+}
+
+// ============ Expedition Assignments ============
+export async function createExpeditionAssignment(data: {
+  expedition_staff_id?: number
+  students_id?: number
+  expeditions_id: number
+  department?: string
+  dish_day?: string
+  laptop?: string
+  bunk?: string
+}) {
+  return xanoFetch<any>("/expedition_student_assignments", {
+    method: "POST",
+    body: JSON.stringify({
+      expedition_staff_id: data.expedition_staff_id || 0,
+      students_id: data.students_id || 0,
+      expeditions_id: data.expeditions_id,
+      department: data.department || "",
+      dish_day: data.dish_day || "",
+      laptop: data.laptop || "",
+      bunk: data.bunk || "",
+    }),
+  })
+}
+
+export async function getExpeditionAssignments() {
+  return xanoFetch<any[]>("/expedition_student_assignments")
+}
+
+export async function getExpeditionAssignmentsByExpedition(expeditionsId: number) {
+  const allAssignments = await xanoFetch<any[]>("/expedition_student_assignments")
+  return allAssignments.filter((a: any) => a.expeditions_id === expeditionsId)
+}
+
+export async function updateExpeditionAssignment(id: number, data: {
+  expedition_staff_id?: number
+  students_id?: number
+  expeditions_id?: number
+  department?: string
+  dish_day?: string
+  laptop?: string
+  bunk?: string
+}) {
+  return xanoFetch<any>(`/expedition_student_assignments/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify({
+      expedition_student_assignments_id: id,
+      ...data,
+    }),
+  })
+}
+
+export async function deleteExpeditionAssignment(id: number) {
+  return xanoFetch<any>(`/expedition_student_assignments/${id}`, {
+    method: "DELETE",
+  })
+}
+
+// ============ Locations Management ============
+export async function createExpeditionLocation(data: {
+  port: string
+  country: string
+  lat: number
+  long: number
+  expeditions_id: number
+  timezone: string
+}) {
+  return xanoFetch<any>("/expedition_locations", {
+    method: "POST",
+    body: JSON.stringify(data),
+  })
+}
+
+export async function updateExpeditionLocation(id: number, data: Partial<{
+  port: string
+  country: string
+  lat: number
+  long: number
+  expeditions_id: number
+  timezone: string
+}>) {
+  return xanoFetch<any>(`/expedition_locations/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  })
+}
+
+export async function deleteExpeditionLocation(id: number) {
+  return xanoFetch<any>(`/expedition_locations/${id}`, {
+    method: "DELETE",
   })
 }
 

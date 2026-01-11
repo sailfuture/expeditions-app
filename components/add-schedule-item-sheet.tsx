@@ -253,16 +253,24 @@ function StaffParticipantSelector({
 // Helper to convert military time to Date
 function militaryToDate(military: number): Date {
   const date = new Date()
-  const hours = Math.floor(military / 100)
+  let hours = Math.floor(military / 100)
   const minutes = military % 100
+  // Handle 2400 (midnight end of day) as hour 0
+  if (hours === 24) hours = 0
   date.setHours(hours, minutes, 0, 0)
   return date
 }
 
 // Helper to convert Date to military time
-function dateToMilitary(date: Date | undefined): number {
+function dateToMilitary(date: Date | undefined, isEndTime: boolean = false): number {
   if (!date) return 800
-  return date.getHours() * 100 + date.getMinutes()
+  const hours = date.getHours()
+  const minutes = date.getMinutes()
+  // For end time, 12:00 AM (hour 0) should be 2400 (end of day)
+  if (isEndTime && hours === 0 && minutes === 0) {
+    return 2400
+  }
+  return hours * 100 + minutes
 }
 
 export function AddScheduleItemSheet({ 
@@ -314,8 +322,8 @@ export function AddScheduleItemSheet({
   useEffect(() => {
     setFormData(prev => ({
       ...prev,
-      time_in: dateToMilitary(timeInDate),
-      time_out: dateToMilitary(timeOutDate),
+      time_in: dateToMilitary(timeInDate, false),
+      time_out: dateToMilitary(timeOutDate, true), // isEndTime = true
     }))
   }, [timeInDate, timeOutDate])
 
@@ -440,7 +448,7 @@ export function AddScheduleItemSheet({
               <button
                 type="button"
                 onClick={() => onOpenChange(false)}
-                className="rounded-full p-1.5 hover:bg-gray-100 transition-colors"
+                className="rounded-full p-1.5 hover:bg-gray-100 transition-colors cursor-pointer"
               >
                 <X className="h-5 w-5 text-gray-500" />
               </button>
@@ -491,6 +499,7 @@ export function AddScheduleItemSheet({
                 label="End Time"
                 date={timeOutDate}
                 setDate={setTimeOutDate}
+                maxHour={24}
               />
             </div>
 

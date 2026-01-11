@@ -55,7 +55,7 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart"
-import { getStudentById, updateStudent, calculateStudentEvaluation, getPerformanceReviewById, updatePerformanceReviewNotes, getProfessionalismByStudentAndDate, getEvaluationByStudentAll } from "@/lib/xano"
+import { getStudentById, updateStudent, calculateStudentEvaluation, getPerformanceReviewById, updatePerformanceReviewNotes, getProfessionalismByStudentAndDate, getEvaluationByStudentAll, createExpeditionAssignment } from "@/lib/xano"
 import { toast } from "sonner"
 import { mutate } from "swr"
 import { Spinner } from "@/components/ui/spinner"
@@ -227,10 +227,19 @@ export default function StudentDetailPage() {
       : null
   )
   const [formData, setFormData] = useState({
-    name: "",
+    firstName: "",
+    lastName: "",
     grade: "",
     expeditions_id: [] as number[],
     isArchived: false,
+    crew_position: "",
+    crew_status: "",
+    passport_number: "",
+    issue_date: null as string | null,
+    expiration_date: null as string | null,
+    gender: "",
+    nationality: "",
+    passport_photo: "",
   })
   
   useEffect(() => {
@@ -246,6 +255,14 @@ export default function StudentDetailPage() {
         grade: student.grade || "",
         expeditions_id: expeditionIds,
         isArchived: student.isArchived || false,
+        crew_position: student.crew_position || "",
+        crew_status: student.crew_status || "",
+        passport_number: student.passport_number || "",
+        issue_date: student.issue_date || null,
+        expiration_date: student.expiration_date || null,
+        gender: student.gender || "",
+        nationality: student.nationality || "",
+        passport_photo: student.passport_photo || "",
       })
     }
   }, [student])
@@ -258,6 +275,17 @@ export default function StudentDetailPage() {
     
     setIsSubmitting(true)
     try {
+      // Get current expedition IDs from the original student data
+      const currentExpeditionIds = Array.isArray(student?.expeditions_id)
+        ? student.expeditions_id.map((e: any) => typeof e === 'object' ? e.id : e).filter(Boolean)
+        : []
+      
+      // Find newly added expeditions
+      const newExpeditions = formData.expeditions_id.filter(
+        (id: number) => !currentExpeditionIds.includes(id)
+      )
+      
+      // Update the student record
       await updateStudent(studentId, {
         students_id: studentId,
         firstName: formData.firstName,
@@ -266,6 +294,15 @@ export default function StudentDetailPage() {
         expeditions_id: formData.expeditions_id,
         isArchived: formData.isArchived,
       })
+      
+      // Create expedition assignments for newly added expeditions
+      for (const expId of newExpeditions) {
+        await createExpeditionAssignment({
+          students_id: studentId,
+          expeditions_id: expId,
+        })
+      }
+      
       mutate(`student_${studentId}`)
       mutate("students")
       toast.success("Student updated successfully")
@@ -1483,6 +1520,45 @@ export default function StudentDetailPage() {
                     <dt className="text-sm font-medium text-gray-500">Grade</dt>
                     <dd className="mt-1 text-sm text-gray-900">{student.grade || "—"}</dd>
                   </div>
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">Gender</dt>
+                    <dd className="mt-1 text-sm text-gray-900">{student.gender || "—"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">Nationality</dt>
+                    <dd className="mt-1 text-sm text-gray-900">{student.nationality || "—"}</dd>
+                  </div>
+                </dl>
+              </div>
+            </div>
+
+            {/* Crew & Passport Information */}
+            <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+              <div className="px-6 py-4 border-b bg-gray-50/30">
+                <h2 className="text-lg font-semibold">Crew & Passport Information</h2>
+              </div>
+              <div className="p-6">
+                <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">Crew Position</dt>
+                    <dd className="mt-1 text-sm text-gray-900">{student.crew_position || "—"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">Crew Status</dt>
+                    <dd className="mt-1 text-sm text-gray-900">{student.crew_status || "—"}</dd>
+                  </div>
+                  <div className="col-span-2">
+                    <dt className="text-sm font-medium text-gray-500">Passport Number</dt>
+                    <dd className="mt-1 text-sm text-gray-900">{student.passport_number || "—"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">Passport Issue Date</dt>
+                    <dd className="mt-1 text-sm text-gray-900">{student.issue_date || "—"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">Passport Expiration Date</dt>
+                    <dd className="mt-1 text-sm text-gray-900">{student.expiration_date || "—"}</dd>
+                  </div>
                 </dl>
               </div>
             </div>
@@ -1753,7 +1829,7 @@ export default function StudentDetailPage() {
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-4 py-4">
+          <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="first_name">First Name *</Label>
@@ -1787,6 +1863,86 @@ export default function StudentDetailPage() {
                 className="mt-1.5"
               />
             </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="gender">Gender</Label>
+                <Input
+                  id="gender"
+                  value={formData.gender}
+                  onChange={(e) => setFormData(prev => ({ ...prev, gender: e.target.value }))}
+                  placeholder="Gender"
+                  className="mt-1.5"
+                />
+              </div>
+              <div>
+                <Label htmlFor="nationality">Nationality</Label>
+                <Input
+                  id="nationality"
+                  value={formData.nationality}
+                  onChange={(e) => setFormData(prev => ({ ...prev, nationality: e.target.value }))}
+                  placeholder="Nationality"
+                  className="mt-1.5"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="crew_position">Crew Position</Label>
+                <Input
+                  id="crew_position"
+                  value={formData.crew_position}
+                  onChange={(e) => setFormData(prev => ({ ...prev, crew_position: e.target.value }))}
+                  placeholder="e.g. Deck Hand"
+                  className="mt-1.5"
+                />
+              </div>
+              <div>
+                <Label htmlFor="crew_status">Crew Status</Label>
+                <Input
+                  id="crew_status"
+                  value={formData.crew_status}
+                  onChange={(e) => setFormData(prev => ({ ...prev, crew_status: e.target.value }))}
+                  placeholder="e.g. Active, Training"
+                  className="mt-1.5"
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="passport_number">Passport Number</Label>
+              <Input
+                id="passport_number"
+                value={formData.passport_number}
+                onChange={(e) => setFormData(prev => ({ ...prev, passport_number: e.target.value }))}
+                placeholder="Passport number"
+                className="mt-1.5"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="issue_date">Passport Issue Date</Label>
+                <Input
+                  id="issue_date"
+                  type="date"
+                  value={formData.issue_date || ""}
+                  onChange={(e) => setFormData(prev => ({ ...prev, issue_date: e.target.value || null }))}
+                  className="mt-1.5"
+                />
+              </div>
+              <div>
+                <Label htmlFor="expiration_date">Passport Expiration</Label>
+                <Input
+                  id="expiration_date"
+                  type="date"
+                  value={formData.expiration_date || ""}
+                  onChange={(e) => setFormData(prev => ({ ...prev, expiration_date: e.target.value || null }))}
+                  className="mt-1.5"
+                />
+              </div>
+            </div>
             
             <div className="flex items-center justify-between py-2">
               <div className="space-y-0.5">
@@ -1807,40 +1963,13 @@ export default function StudentDetailPage() {
                   <Button
                     variant="outline"
                     role="combobox"
-                    className="w-full justify-between mt-1.5 h-auto min-h-[2.5rem] py-2 px-3"
+                    className="w-full justify-between mt-1.5 cursor-pointer"
                   >
-                    <div className="flex flex-wrap gap-1 flex-1">
-                      {formData.expeditions_id.length === 0 ? (
-                        <span className="text-muted-foreground text-sm">Select expeditions...</span>
-                      ) : (
-                        formData.expeditions_id.map((expId) => {
-                          const expedition = allExpeditions?.find((e: any) => e.id === expId)
-                          if (!expedition) return null
-                          return (
-                            <Badge
-                              key={expId}
-                              variant="secondary"
-                              className="gap-1 pr-0.5 hover:bg-secondary"
-                            >
-                              <span className="text-xs">{expedition.name}</span>
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  setFormData(prev => ({
-                                    ...prev,
-                                    expeditions_id: prev.expeditions_id.filter(id => id !== expId)
-                                  }))
-                                }}
-                                className="ml-1 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                              >
-                                <X className="h-3 w-3" />
-                              </button>
-                            </Badge>
-                          )
-                        })
-                      )}
-                    </div>
+                    <span className="text-sm">
+                      {formData.expeditions_id.length === 0
+                        ? "Select expeditions..."
+                        : `${formData.expeditions_id.length} expedition(s) selected`}
+                    </span>
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
@@ -1905,6 +2034,37 @@ export default function StudentDetailPage() {
                   </Command>
                 </PopoverContent>
               </Popover>
+              
+              {/* Selected expeditions display */}
+              {formData.expeditions_id.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {formData.expeditions_id.map((expId) => {
+                    const expedition = allExpeditions?.find((e: any) => e.id === expId)
+                    if (!expedition) return null
+                    return (
+                      <Badge
+                        key={expId}
+                        variant="secondary"
+                        className="gap-1 pr-1"
+                      >
+                        <span className="text-xs">{expedition.name}</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFormData(prev => ({
+                              ...prev,
+                              expeditions_id: prev.expeditions_id.filter(id => id !== expId)
+                            }))
+                          }}
+                          className="ml-1 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 cursor-pointer"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    )
+                  })}
+                </div>
+              )}
             </div>
           </div>
           

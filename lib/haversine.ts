@@ -54,3 +54,103 @@ export function calculateDistanceBetweenLocations(
   )
 }
 
+/**
+ * Validate latitude and longitude values
+ */
+function validateCoordinates(lat: number, lon: number): boolean {
+  return lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180
+}
+
+/**
+ * Waypoint interface
+ */
+export interface Waypoint {
+  name?: string
+  port?: string
+  lat: number
+  lon?: number
+  long?: number
+}
+
+/**
+ * Leg interface - represents one segment of the route
+ */
+export interface RouteLeg {
+  from: string
+  to: string
+  nm: number
+}
+
+/**
+ * Route calculation result
+ */
+export interface RouteDistance {
+  legs: RouteLeg[]
+  total_nm: number
+}
+
+/**
+ * Calculate total route distance from an ordered list of waypoints
+ * Uses great-circle distance (Haversine formula)
+ * 
+ * @param waypoints - Array of waypoints with lat/lon coordinates (minimum 2 points)
+ * @returns Object containing per-leg distances and total distance in nautical miles
+ * @throws Error if waypoints array has fewer than 2 points or invalid coordinates
+ */
+export function calculateRouteDistance(waypoints: Waypoint[]): RouteDistance {
+  if (waypoints.length < 2) {
+    throw new Error('Route requires at least 2 waypoints')
+  }
+
+  const legs: RouteLeg[] = []
+  let totalDistance = 0
+
+  for (let i = 0; i < waypoints.length - 1; i++) {
+    const from = waypoints[i]
+    const to = waypoints[i + 1]
+
+    // Get longitude (support both 'lon' and 'long' properties)
+    const fromLon = from.lon ?? from.long
+    const toLon = to.lon ?? to.long
+
+    // Validate coordinates
+    if (
+      from.lat === undefined ||
+      fromLon === undefined ||
+      to.lat === undefined ||
+      toLon === undefined
+    ) {
+      throw new Error(
+        `Missing coordinates for waypoint at index ${i} or ${i + 1}`
+      )
+    }
+
+    if (!validateCoordinates(from.lat, fromLon)) {
+      throw new Error(
+        `Invalid coordinates for waypoint "${from.name || from.port || i}": lat=${from.lat}, lon=${fromLon}`
+      )
+    }
+
+    if (!validateCoordinates(to.lat, toLon)) {
+      throw new Error(
+        `Invalid coordinates for waypoint "${to.name || to.port || i + 1}": lat=${to.lat}, lon=${toLon}`
+      )
+    }
+
+    // Calculate distance for this leg
+    const distance = calculateNauticalMiles(from.lat, fromLon, to.lat, toLon)
+
+    legs.push({
+      from: from.name || from.port || `Waypoint ${i + 1}`,
+      to: to.name || to.port || `Waypoint ${i + 2}`,
+      nm: Math.round(distance * 10) / 10, // Round to 1 decimal place
+    })
+
+    totalDistance += distance
+  }
+
+  return {
+    legs,
+    total_nm: Math.round(totalDistance * 10) / 10, // Round to 1 decimal place
+  }
+}

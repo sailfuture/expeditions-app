@@ -13,26 +13,27 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
-import { Calendar, Home, Map, ClipboardList, Users, Eye, PlusCircle, FileText, AlertTriangle, ClipboardCheck } from "lucide-react"
+import { Calendar, Home, Map, ClipboardList, Users, Eye, PlusCircle, FileText, AlertTriangle, ClipboardCheck, IdCard } from "lucide-react"
 import { format } from "date-fns"
 import { useCurrentUser } from "@/lib/contexts/user-context"
 
 interface ExpeditionHeaderProps {
   expedition: any
   isLoading?: boolean
-  currentPage?: "overview" | "trip-planner" | "weekly-planner" | "students" | "daily-view" | "add-scores" | "performance-reviews" | "discipline" | "applications"
+  currentPage?: "overview" | "trip-planner" | "weekly-planner" | "students" | "daily-view" | "add-scores" | "performance-reviews" | "discipline" | "applications" | "passport-manifest"
 }
 
 const PAGE_TITLES: Record<string, string> = {
   "overview": "Overview",
   "trip-planner": "Trip Planner",
   "weekly-planner": "Weekly Planner",
-  "students": "Students",
+  "students": "Assignments",
   "daily-view": "Daily View",
   "add-scores": "Add Scores",
   "performance-reviews": "Performance Reviews",
   "discipline": "Discipline",
   "applications": "Applications",
+  "passport-manifest": "Manifest",
 }
 
 export function ExpeditionHeader({ expedition, isLoading = false, currentPage = "overview" }: ExpeditionHeaderProps) {
@@ -110,8 +111,8 @@ export function ExpeditionHeader({ expedition, isLoading = false, currentPage = 
         </div>
       </div>
 
-      {/* Header - Always visible without skeleton */}
-      <div className="border-b bg-white">
+      {/* Header - Commented out per user request (might bring back later) */}
+      {/* <div className="border-b bg-white">
         <div className="container mx-auto px-4 py-6">
           <div>
             <h1 className="text-3xl font-bold mb-2">{expedition?.name || "Expedition"}</h1>
@@ -134,7 +135,7 @@ export function ExpeditionHeader({ expedition, isLoading = false, currentPage = 
             </div>
           </div>
         </div>
-      </div>
+      </div> */}
 
       {/* Navigation */}
       <div className="border-b bg-muted/30">
@@ -189,16 +190,16 @@ export function ExpeditionHeader({ expedition, isLoading = false, currentPage = 
                 <span className="hidden lg:inline">Daily</span>
               </Button>
               
-              {/* 5. Students */}
+              {/* 5. Assignments */}
               <Button 
                 variant={currentPage === "students" ? "default" : "ghost"}
                 size="sm"
                 className={`cursor-pointer h-7 px-2 rounded-md text-xs ${currentPage !== "students" ? "bg-white border border-gray-200 hover:bg-gray-50" : ""}`}
-                onClick={() => expedition && router.push(`/students?expedition=${expedition.id}`)}
+                onClick={() => expedition && router.push(`/expedition/${expedition.id}/assignments`)}
                 disabled={!expedition}
               >
                 <Users className="h-3.5 w-3.5 lg:mr-1" />
-                <span className="hidden lg:inline">Students</span>
+                <span className="hidden lg:inline">Assignments</span>
               </Button>
               
               {/* 6. Add Scores */}
@@ -247,6 +248,18 @@ export function ExpeditionHeader({ expedition, isLoading = false, currentPage = 
               >
                 <ClipboardCheck className="h-3.5 w-3.5 lg:mr-1" />
                 <span className="hidden lg:inline">Apps</span>
+              </Button>
+              
+              {/* 10. Passport Manifest */}
+              <Button 
+                variant={currentPage === "passport-manifest" ? "default" : "ghost"}
+                size="sm"
+                className={`cursor-pointer h-7 px-2 rounded-md text-xs ${currentPage !== "passport-manifest" ? "bg-white border border-gray-200 hover:bg-gray-50" : ""}`}
+                onClick={() => expedition && router.push(`/expedition/${expedition.id}/passport-manifest`)}
+                disabled={!expedition}
+              >
+                <IdCard className="h-3.5 w-3.5 lg:mr-1" />
+                <span className="hidden lg:inline">Manifest</span>
               </Button>
             </div>
           </div>

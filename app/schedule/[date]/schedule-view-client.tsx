@@ -66,16 +66,21 @@ interface ScheduleViewClientProps {
   expeditionId?: number
 }
 
-const HOURS = Array.from({ length: 20 }, (_, i) => i + 4) // 4 AM to 11 PM
+// Full 24-hour range: 0 (12 AM) to 24 (12 AM next day)
+const ALL_HOURS = Array.from({ length: 25 }, (_, i) => i) // 0 to 24 (12 AM to 12 AM)
 
 const formatTime = (hour: number) => {
-  if (hour === 0) return "12 AM"
+  if (hour === 0 || hour === 24) return "12 AM"
   if (hour === 12) return "12 PM"
   if (hour < 12) return `${hour} AM`
   return `${hour - 12} PM`
 }
 
 const formatMilitaryTime = (militaryTime: number) => {
+  // Handle special case: 2400 represents midnight at end of day
+  if (militaryTime === 2400) {
+    return "12:00 AM"
+  }
   const hours = Math.floor(militaryTime / 100)
   const minutes = militaryTime % 100
   const displayHours = hours % 12 || 12
@@ -356,17 +361,75 @@ export function ScheduleViewClient({ date, expeditionId }: ScheduleViewClientPro
     }
   }
 
+  // Calculate dynamic hours range based on activities (for view mode)
+  const { displayHours, timelineStartHour, timelineHoursCount } = useMemo(() => {
+    // In edit mode, always show full 24-hour range
+    if (editMode) {
+      return {
+        displayHours: ALL_HOURS,
+        timelineStartHour: 0,
+        timelineHoursCount: 24,
+      }
+    }
+
+    // In view mode, auto-adjust based on activities
+    if (!scheduledItems || scheduledItems.length === 0) {
+      // Default to reasonable daytime hours if no activities
+      const defaultStart = 6
+      const defaultEnd = 22
+      return {
+        displayHours: Array.from({ length: defaultEnd - defaultStart + 1 }, (_, i) => i + defaultStart),
+        timelineStartHour: defaultStart,
+        timelineHoursCount: defaultEnd - defaultStart,
+      }
+    }
+
+    // Find earliest and latest activity times
+    let earliestHour = 24
+    let latestHour = 0
+
+    scheduledItems.forEach((item: any) => {
+      const startHour = Math.floor(item.time_in / 100)
+      
+      // Handle 12 AM edge case: time_out of 0 means midnight (end of day = 24)
+      const effectiveTimeOut = item.time_out === 0 ? 2400 : item.time_out
+      const endHour = Math.floor(effectiveTimeOut / 100)
+      const endMinute = effectiveTimeOut % 100
+      
+      earliestHour = Math.min(earliestHour, startHour)
+      // Round up if there are minutes
+      latestHour = Math.max(latestHour, endMinute > 0 ? endHour + 1 : endHour)
+    })
+
+    // Add padding of 1 hour on each side, but clamp to 0-24
+    const paddedStart = Math.max(0, earliestHour - 1)
+    const paddedEnd = Math.min(24, latestHour + 1)
+
+    // Generate hours array including both start and end for labels
+    const hours = Array.from({ length: paddedEnd - paddedStart + 1 }, (_, i) => i + paddedStart)
+
+    return {
+      displayHours: hours,
+      timelineStartHour: paddedStart,
+      timelineHoursCount: paddedEnd - paddedStart,
+    }
+  }, [editMode, scheduledItems])
+
   const getItemPosition = (timeIn: number, timeOut: number) => {
     const startHour = Math.floor(timeIn / 100)
     const startMinute = timeIn % 100
-    const endHour = Math.floor(timeOut / 100)
-    const endMinute = timeOut % 100
     
-    const startMinutesFromStart = (startHour - 4) * 60 + startMinute
-    const endMinutesFromStart = (endHour - 4) * 60 + endMinute
+    // Handle 12 AM edge case: if time_out is 0 (12:00 AM), treat it as 24:00 (end of day)
+    // This ensures events ending at midnight appear at the bottom of the schedule
+    const effectiveTimeOut = timeOut === 0 ? 2400 : timeOut
+    const endHour = Math.floor(effectiveTimeOut / 100)
+    const endMinute = effectiveTimeOut % 100
     
-    const startPos = (startMinutesFromStart / (20 * 60)) * 100
-    const endPos = (endMinutesFromStart / (20 * 60)) * 100
+    const startMinutesFromStart = (startHour - timelineStartHour) * 60 + startMinute
+    const endMinutesFromStart = (endHour - timelineStartHour) * 60 + endMinute
+    
+    const startPos = (startMinutesFromStart / (timelineHoursCount * 60)) * 100
+    const endPos = (endMinutesFromStart / (timelineHoursCount * 60)) * 100
     const height = endPos - startPos
     
     return {
@@ -741,16 +804,18 @@ export function ScheduleViewClient({ date, expeditionId }: ScheduleViewClientPro
                 getDuration={getDuration}
                 getColorForType={getColorForType}
                 expeditionsId={effectiveExpeditionId}
+                timelineStartHour={timelineStartHour}
+                timelineHoursCount={timelineHoursCount}
               >
                 <div className="relative">
                   <div className="flex">
                     <div className="w-16 md:w-20 flex-shrink-0" />
-                    <div ref={timelineRef} className="flex-1 relative" style={{ minHeight: "2400px" }}>
-                      {HOURS.map((hour, idx) => (
+                    <div ref={timelineRef} className="flex-1 relative" style={{ minHeight: `${timelineHoursCount * 120}px` }}>
+                      {displayHours.map((hour, idx) => (
                         <div
-                          key={hour}
+                          key={`hour-${hour}`}
                           className="absolute left-0 right-0 border-t border-border"
-                          style={{ top: `${(idx / 20) * 100}%` }}
+                          style={{ top: `${(idx / timelineHoursCount) * 100}%` }}
                         >
                           <div className="absolute -left-16 md:-left-20 w-16 md:w-20 pr-3 text-right -mt-3">
                             <div className="inline-block px-2 py-1 bg-gray-100 rounded text-xs md:text-sm font-medium text-gray-900">

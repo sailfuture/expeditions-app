@@ -10,9 +10,8 @@ import { Toaster } from "sonner"
 const fontSans = Inter({ subsets: ["latin"], variable: "--font-sans" })
 
 export const metadata: Metadata = {
-  title: "Expedition Tracker",
-  description: "Track student professionalism scores",
-    generator: 'v0.app'
+  title: "SailFuture Academy: Expeditions Staff Access Portal",
+  description: "A staff dashboard for recording and managing daily operations during sailing expeditions.",
 }
 
 export default function RootLayout({

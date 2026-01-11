@@ -1,8 +1,8 @@
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
-  title: "Login - Expedition Tracker",
-  description: "Sign in to access Expedition Tracker",
+  title: "Login - SailFuture Academy Expeditions",
+  description: "Sign in to access the Expeditions Staff Access Portal",
 }
 
 export default function LoginLayout({

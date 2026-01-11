@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   },
 }
 
-export default function PublicScheduleDateLayout({
+export default function PublicScheduleLayout({
   children,
 }: {
   children: React.ReactNode

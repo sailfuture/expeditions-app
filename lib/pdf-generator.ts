@@ -10,26 +10,54 @@ const SCHOOL_INFO = {
   email: 'dean@sailfuture.org',
 }
 
+// Helper function to load image as base64
+async function loadImageAsBase64(url: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+    img.onload = () => {
+      const canvas = document.createElement('canvas')
+      canvas.width = img.width
+      canvas.height = img.height
+      const ctx = canvas.getContext('2d')
+      if (ctx) {
+        ctx.drawImage(img, 0, 0)
+        resolve(canvas.toDataURL('image/jpeg'))
+      } else {
+        reject(new Error('Failed to get canvas context'))
+      }
+    }
+    img.onerror = () => reject(new Error('Failed to load image'))
+    img.src = url
+  })
+}
+
 // Add school header to PDF - returns the Y position after the header
-export function addPDFHeader(doc: jsPDF): number {
+export async function addPDFHeader(doc: jsPDF): Promise<number> {
   const pageWidth = doc.internal.pageSize.getWidth()
   const leftMargin = 14
   
-  // Draw logo background (rounded rectangle) - smaller size
-  doc.setFillColor(30, 41, 59) // slate-800
-  doc.roundedRect(leftMargin, 10, 18, 18, 2, 2, 'F')
-  
-  // Add "SF" text as logo placeholder (since we can't easily embed the actual image)
-  doc.setFontSize(6)
-  doc.setFont('helvetica', 'bold')
-  doc.setTextColor(255, 255, 255)
-  doc.text('SAILFUTURE', leftMargin + 9, 17, { align: 'center' })
-  doc.setFontSize(5)
-  doc.text('ACADEMY', leftMargin + 9, 22, { align: 'center' })
-  doc.setTextColor(0, 0, 0)
+  // Try to load and add the logo image
+  try {
+    const logoBase64 = await loadImageAsBase64('/SFALogoWhite.jpg')
+    // Add logo image (22x22mm square)
+    doc.addImage(logoBase64, 'JPEG', leftMargin, 8, 22, 22)
+  } catch (error) {
+    console.error('Failed to load logo image:', error)
+    // Fallback: Draw logo background with text
+    doc.setFillColor(30, 41, 59) // slate-800
+    doc.roundedRect(leftMargin, 8, 22, 22, 2, 2, 'F')
+    doc.setFontSize(6)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(255, 255, 255)
+    doc.text('SAILFUTURE', leftMargin + 11, 17, { align: 'center' })
+    doc.setFontSize(5)
+    doc.text('ACADEMY', leftMargin + 11, 22, { align: 'center' })
+    doc.setTextColor(0, 0, 0)
+  }
   
   // School name and details - positioned to the right of logo, left justified
-  const textX = leftMargin + 22
+  const textX = leftMargin + 26
   
   // All text same size (9pt)
   doc.setFontSize(9)
@@ -48,9 +76,9 @@ export function addPDFHeader(doc: jsPDF): number {
   // Draw separator line
   doc.setDrawColor(229, 231, 235) // gray-200
   doc.setLineWidth(0.5)
-  doc.line(leftMargin, 32, pageWidth - leftMargin, 32)
+  doc.line(leftMargin, 34, pageWidth - leftMargin, 34)
   
-  return 40 // Return Y position after header
+  return 44 // Return Y position after header
 }
 
 export async function generatePerformanceReviewPDF(reviewId: number) {
@@ -76,25 +104,34 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
   
   const doc = new jsPDF()
   const pageWidth = doc.internal.pageSize.getWidth()
+  const leftMargin = 14
   
   // Add school header
-  let yPosition = addPDFHeader(doc)
+  let yPosition = await addPDFHeader(doc)
   
-  // Title
+  // Add top padding before title
+  yPosition += 6
+  
+  // Title - left justified
   doc.setFontSize(18)
   doc.setFont('helvetica', 'bold')
-  doc.text('Performance Review', pageWidth / 2, yPosition, { align: 'center' })
+  doc.setTextColor(30, 41, 59)
+  doc.text('Performance Review', leftMargin, yPosition)
   yPosition += 8
   
-  // Expedition name (handle if not present)
+  // Expedition name (handle if not present) - left justified
   if (review._expeditions?.name) {
     doc.setFontSize(11)
     doc.setFont('helvetica', 'normal')
-    doc.text(review._expeditions.name, pageWidth / 2, yPosition, { align: 'center' })
+    doc.setTextColor(75, 85, 99)
+    doc.text(review._expeditions.name, leftMargin, yPosition)
     yPosition += 10
   } else {
     yPosition += 5
   }
+  
+  // Reset text color
+  doc.setTextColor(0, 0, 0)
   
   // Student Information Section
   doc.setFontSize(14)
@@ -104,7 +141,7 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
   
   doc.setFontSize(11)
   doc.setFont('helvetica', 'normal')
-  const studentName = review._students?.name || `Student ID: ${review.students_id}`
+  const studentName = `${review._students?.firstName || ""} ${review._students?.lastName || ""}`.trim() || `Student ID: ${review.students_id}`
   doc.text(`Student Name: ${studentName}`, 14, yPosition)
   yPosition += 6
   doc.text(`Report Name: ${review.report_name || 'Untitled'}`, 14, yPosition)
@@ -128,6 +165,26 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
     ['Journaling', formatJournaling(review.journaling), review.journaling_evaluation || '—'],
   ]
   
+  // Helper function to get color based on score
+  const getScoreColor = (score: number | null | undefined): [number, number, number] | null => {
+    if (score === null || score === undefined) return null
+    if (score >= 3.21) return [219, 234, 254] // blue-100
+    if (score >= 2.751) return [220, 252, 231] // green-100
+    if (score >= 2.251) return [254, 249, 195] // yellow-100
+    if (score >= 1.1) return [254, 226, 226] // red-100
+    return [243, 244, 246] // gray-100
+  }
+
+  // Helper to get journaling color based on percentage
+  const getJournalingColor = (decimal: number | null | undefined): [number, number, number] | null => {
+    if (decimal === null || decimal === undefined) return null
+    const pct = decimal * 100
+    if (pct >= 80) return [220, 252, 231] // green-100
+    if (pct >= 60) return [254, 249, 195] // yellow-100
+    if (pct >= 40) return [254, 215, 170] // orange-100
+    return [254, 226, 226] // red-100
+  }
+
   autoTable(doc, {
     startY: yPosition,
     head: [['Category', 'Score', 'Evaluation']],
@@ -150,6 +207,33 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
       0: { cellWidth: 60 },
       1: { cellWidth: 40, halign: 'center' },
       2: { cellWidth: 80 },
+    },
+    didParseCell: (data) => {
+      // Color code score cells based on evaluation ranges
+      if (data.section === 'body' && data.column.index === 1) {
+        const rowIndex = data.row.index
+        let score: number | null = null
+        
+        // Get the actual score from the review data
+        switch (rowIndex) {
+          case 0: score = review.academics; break
+          case 1: score = review.citizenship; break
+          case 2: score = review.job; break
+          case 3: score = review.crew; break
+          case 4: score = review.service; break
+          case 5: // Journaling - use percentage-based color
+            const jrnlColor = getJournalingColor(review.journaling)
+            if (jrnlColor) {
+              data.cell.styles.fillColor = jrnlColor
+            }
+            return
+        }
+        
+        const color = getScoreColor(score)
+        if (color) {
+          data.cell.styles.fillColor = color
+        }
+      }
     },
   })
   
@@ -177,9 +261,21 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
       formatDailyScore(score.job),
       formatDailyScore(score.crew),
       formatDailyScore(score.service),
-      score.journal !== null && score.journal !== undefined ? `${Math.round(score.journal)}%` : '—',
+      score.journaling || score.note || score._expedition_journal_status?.name || '—',
     ])
     
+    // Helper function to get journal status color
+    const getJournalStatusColor = (status: string): [number, number, number] | null => {
+      const lower = status.toLowerCase()
+      // Check red conditions first (not started, missing)
+      if (lower.includes('not started') || lower.includes('not') || lower.includes('missing')) return [254, 226, 226] // red-100
+      // Check green (completed/complete)
+      if (lower === 'completed' || lower === 'complete') return [220, 252, 231] // green-100
+      // Check yellow (incomplete, partial, late, started)
+      if (lower.includes('incomplete') || lower.includes('partial') || lower.includes('started') || lower.includes('late')) return [254, 249, 195] // yellow-100
+      return null
+    }
+
     autoTable(doc, {
       startY: yPosition,
       head: [['Date', 'Acad', 'Citz', 'Job', 'Crew', 'Serv', 'Jrnl']],
@@ -197,32 +293,44 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
         halign: 'center',
       },
       columnStyles: {
-        0: { halign: 'left', cellWidth: 30 },
-        1: { cellWidth: 18 },
-        2: { cellWidth: 18 },
-        3: { cellWidth: 18 },
-        4: { cellWidth: 18 },
-        5: { cellWidth: 18 },
-        6: { cellWidth: 18 },
+        0: { halign: 'left', cellWidth: 'auto' },
+        1: { cellWidth: 'auto' },
+        2: { cellWidth: 'auto' },
+        3: { cellWidth: 'auto' },
+        4: { cellWidth: 'auto' },
+        5: { cellWidth: 'auto' },
+        6: { cellWidth: 'auto' },
       },
+      tableWidth: 'auto',
+      margin: { left: leftMargin, right: leftMargin },
       alternateRowStyles: {
         fillColor: [249, 250, 251],
       },
       didParseCell: (data) => {
         // Color code cells based on score
-        if (data.section === 'body' && data.column.index > 0) {
+        if (data.section === 'body' && data.column.index > 0 && data.column.index < 6) {
           const value = parseFloat(data.cell.text[0])
           if (!isNaN(value)) {
-            if (value >= 3.21) {
+            if (value >= 4) {
               data.cell.styles.fillColor = [219, 234, 254] // blue-100
-            } else if (value >= 2.751) {
+            } else if (value >= 3) {
               data.cell.styles.fillColor = [220, 252, 231] // green-100
-            } else if (value >= 2.251) {
+            } else if (value >= 2) {
               data.cell.styles.fillColor = [254, 249, 195] // yellow-100
-            } else if (value >= 1.1) {
+            } else if (value >= 1) {
               data.cell.styles.fillColor = [254, 226, 226] // red-100
             } else if (value >= 0) {
               data.cell.styles.fillColor = [243, 244, 246] // gray-100
+            }
+          }
+        }
+        // Color code journaling column (index 6)
+        if (data.section === 'body' && data.column.index === 6) {
+          const status = data.cell.text[0]
+          if (status && status !== '—') {
+            const color = getJournalStatusColor(status)
+            if (color) {
+              data.cell.styles.fillColor = color
             }
           }
         }
@@ -271,7 +379,7 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
   }
   
   // Download the PDF
-  const studentNameForFile = review._students?.name || `Student_${review.students_id}`
+  const studentNameForFile = `${review._students?.firstName || ""} ${review._students?.lastName || ""}`.trim() || `Student_${review.students_id}`
   const fileName = `${studentNameForFile.replace(/\s+/g, '_')}_Performance_Review_${review.id}.pdf`
   doc.save(fileName)
 }
@@ -310,8 +418,8 @@ function formatDailyScore(score: number | null | undefined): string {
   return score.toString()
 }
 
-function formatJournaling(percentage: number | null | undefined): string {
-  if (percentage === null || percentage === undefined) return '—'
-  return `${Math.round(percentage)}%`
+function formatJournaling(decimal: number | null | undefined): string {
+  if (decimal === null || decimal === undefined) return '—'
+  return `${Math.round(decimal * 100)}%`
 }
 

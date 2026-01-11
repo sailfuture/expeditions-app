@@ -65,10 +65,12 @@ export interface ExpeditionScheduleItem {
 
 export interface Student {
   id: number
-  name: string
+  firstName: string
+  lastName: string
   expeditions_id: number[]
   isArchived: boolean
   photo_url?: string
+  profileImage?: string
 }
 
 export interface ExpeditionBonus {

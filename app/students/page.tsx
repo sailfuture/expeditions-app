@@ -18,7 +18,7 @@ import { useStudentsByExpedition, useStudents as useAllStudents } from "@/lib/ho
 import { useCurrentUser } from "@/lib/contexts/user-context"
 import { useExpeditionContext } from "@/lib/contexts/expedition-context"
 import { Button } from "@/components/ui/button"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import {
@@ -119,7 +119,7 @@ function StudentsPageContent() {
   
   // Conditionally fetch data based on whether expedition-specific or all students
   const { data: expeditionStudents, isLoading: loadingExpeditionStudents } = useStudentsByExpedition(
-    expeditionIdFromUrl ? effectiveExpeditionId : null
+    expeditionIdFromUrl ? (effectiveExpeditionId ?? null) : null
   )
   const { data: allStudents, isLoading: loadingAllStudents } = useAllStudents()
   
@@ -128,7 +128,7 @@ function StudentsPageContent() {
   const isLoading = expeditionIdFromUrl ? loadingExpeditionStudents : loadingAllStudents
 
   // Group students by archived status
-  const { activeStudents, archivedStudents } = useMemo(() => {
+  const { activeStudents, archivedStudents} = useMemo(() => {
     if (!students) return { activeStudents: [], archivedStudents: [] }
     
     const active = students.filter((s: any) => !s.archived)
@@ -136,8 +136,8 @@ function StudentsPageContent() {
     
     // Sort both groups alphabetically
     const sortAlphabetically = (a: any, b: any) => {
-      const nameA = a.name || ""
-      const nameB = b.name || ""
+      const nameA = `${a.firstName || ""} ${a.lastName || ""}`.trim()
+      const nameB = `${b.firstName || ""} ${b.lastName || ""}`.trim()
       return nameA.localeCompare(nameB)
     }
     
@@ -147,6 +147,43 @@ function StudentsPageContent() {
     }
   }, [students])
 
+  // Group students by year group for admin view
+  const studentsByYearGroup = useMemo(() => {
+    if (!students) return []
+    
+    const filtered = students.filter((student: any) => showArchived || !student.archived)
+    
+    // Group by yearGroup
+    const grouped = filtered.reduce((acc: any, student: any) => {
+      const yearGroup = student.yearGroup || "No Year Group"
+      if (!acc[yearGroup]) {
+        acc[yearGroup] = []
+      }
+      acc[yearGroup].push(student)
+      return acc
+    }, {})
+    
+    // Sort students within each group alphabetically
+    Object.keys(grouped).forEach(yearGroup => {
+      grouped[yearGroup].sort((a: any, b: any) => {
+        const nameA = `${a.firstName || ""} ${a.lastName || ""}`.trim()
+        const nameB = `${b.firstName || ""} ${b.lastName || ""}`.trim()
+        return nameA.localeCompare(nameB)
+      })
+    })
+    
+    // Convert to array and sort year groups (oldest/lowest batch first)
+    return Object.entries(grouped)
+      .sort(([yearGroupA], [yearGroupB]) => {
+        // Extract year from "Batch of YYYY" format
+        const getYear = (yg: string) => {
+          const match = yg.match(/\d{4}/)
+          return match ? parseInt(match[0]) : 0
+        }
+        return getYear(yearGroupA) - getYear(yearGroupB)
+      })
+  }, [students, showArchived])
+
   // Handle updating student department
   const handleDepartmentChange = async (student: any, newDepartment: string) => {
     setUpdatingStudentId(student.id)
@@ -154,7 +191,8 @@ function StudentsPageContent() {
     try {
       await updateStudent(student.id, {
         students_id: student.id,
-        name: student.name,
+        firstName: student.firstName,
+        lastName: student.lastName,
         expeditions_id: Array.isArray(student.expeditions_id) ? student.expeditions_id : [student.expeditions_id].filter(Boolean),
         department: newDepartment,
       })
@@ -179,7 +217,8 @@ function StudentsPageContent() {
     try {
       await updateStudent(student.id, {
         students_id: student.id,
-        name: student.name,
+        firstName: student.firstName,
+        lastName: student.lastName,
         expeditions_id: Array.isArray(student.expeditions_id) ? student.expeditions_id : [student.expeditions_id].filter(Boolean),
         dish_day: newDishDay,
       })
@@ -206,7 +245,8 @@ function StudentsPageContent() {
     try {
       await updateStudent(selectedStudentForLink.id, {
         students_id: selectedStudentForLink.id,
-        name: selectedStudentForLink.name,
+        firstName: selectedStudentForLink.firstName,
+        lastName: selectedStudentForLink.lastName,
         expeditions_id: Array.isArray(selectedStudentForLink.expeditions_id) ? selectedStudentForLink.expeditions_id : [selectedStudentForLink.expeditions_id].filter(Boolean),
         expedition_student_application_id: applicationId,
       })
@@ -233,7 +273,8 @@ function StudentsPageContent() {
     try {
       await updateStudent(student.id, {
         students_id: student.id,
-        name: student.name,
+        firstName: student.firstName,
+        lastName: student.lastName,
         expeditions_id: Array.isArray(student.expeditions_id) ? student.expeditions_id : [student.expeditions_id].filter(Boolean),
         expedition_student_application_id: 0,
       })
@@ -382,11 +423,12 @@ function StudentsPageContent() {
                         <TableCell className="h-14 px-4">
                           <div className="flex items-center gap-3">
                             <Avatar className="h-8 w-8">
+                              <AvatarImage src={student.profileImage} alt={`${student.firstName || ""} ${student.lastName || ""}`.trim()} />
                               <AvatarFallback className="text-xs bg-gray-200 text-gray-600">
-                                {student.name?.split(" ").map((n: string) => n[0]).join("") || "?"}
+                                {`${student.firstName?.[0] || ""}${student.lastName?.[0] || ""}` || "?"}
                               </AvatarFallback>
                             </Avatar>
-                            <span className="font-medium text-gray-900">{student.name || "—"}</span>
+                            <span className="font-medium text-gray-900">{`${student.firstName || ""} ${student.lastName || ""}`.trim() || "—"}</span>
                           </div>
                         </TableCell>
                         <TableCell className="h-14 px-4" onClick={(e) => e.stopPropagation()}>
@@ -519,11 +561,12 @@ function StudentsPageContent() {
                         <TableCell className="h-14 px-4">
                           <div className="flex items-center gap-3">
                             <Avatar className="h-8 w-8">
+                              <AvatarImage src={student.profileImage} alt={`${student.firstName || ""} ${student.lastName || ""}`.trim()} />
                               <AvatarFallback className="text-xs bg-gray-200 text-gray-600">
-                                {student.name?.split(" ").map((n: string) => n[0]).join("") || "?"}
+                                {`${student.firstName?.[0] || ""}${student.lastName?.[0] || ""}` || "?"}
                               </AvatarFallback>
                             </Avatar>
-                            <span className="font-medium text-gray-900">{student.name || "—"}</span>
+                            <span className="font-medium text-gray-900">{`${student.firstName || ""} ${student.lastName || ""}`.trim() || "—"}</span>
                           </div>
                         </TableCell>
                         <TableCell className="h-14 px-4">
@@ -562,75 +605,123 @@ function StudentsPageContent() {
             )}
           </>
         ) : (
-          /* Admin view - all students from all expeditions */
-          <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow className="border-b bg-gray-50/30 hover:bg-gray-50/30">
-                  <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600">Student Name</TableHead>
-                  <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600">Department</TableHead>
-                  <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600">Dish Day</TableHead>
-                  <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600">Status</TableHead>
-                  <TableHead className="h-10 px-4 text-right text-xs font-semibold text-gray-600">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {students
-                  .filter((student: any) => showArchived || !student.archived)
-                  .sort((a: any, b: any) => {
-                    const nameA = a.name || ""
-                    const nameB = b.name || ""
-                    return nameA.localeCompare(nameB)
-                  }).map((student: any) => (
-                  <TableRow 
-                    key={student.id} 
-                    className="hover:bg-gray-50/50 cursor-pointer"
-                    onClick={() => router.push(`/student/${student.id}`)}
-                  >
-                    <TableCell className="h-14 px-4">
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-8 w-8">
-                          <AvatarFallback className="text-xs bg-gray-200 text-gray-600">
-                            {student.name?.split(" ").map((n: string) => n[0]).join("") || "?"}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span className="font-medium text-gray-900">{student.name || "—"}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="h-14 px-4">
-                      <span className="text-sm text-gray-600">{student.department || "—"}</span>
-                    </TableCell>
-                    <TableCell className="h-14 px-4">
-                      <span className="text-sm text-gray-600">{student.dish_day || "—"}</span>
-                    </TableCell>
-                    <TableCell className="h-14 px-4">
-                      {student.archived ? (
-                        <Badge variant="outline" className="bg-gray-100 border-gray-300 text-gray-600">
-                          Archived
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="bg-green-50 border-green-200 text-green-700">
-                          Active
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="h-14 px-4 text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 cursor-pointer hover:bg-gray-100"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          router.push(`/student/${student.id}`)
-                        }}
-                      >
-                        <ExternalLink className="h-4 w-4 text-gray-500" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+          /* Admin view - all students from all expeditions grouped by year */
+          <div className="space-y-6">
+            {studentsByYearGroup.map(([yearGroup, yearStudents]: [string, any]) => (
+              <div key={yearGroup} className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+                <div className="px-6 py-4 border-b bg-gray-50/30">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-lg font-semibold text-gray-900">{yearGroup}</h2>
+                    <Badge variant="outline" className="bg-white">
+                      {yearStudents.length} student{yearStudents.length !== 1 ? 's' : ''}
+                    </Badge>
+                  </div>
+                </div>
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-b bg-gray-50/30 hover:bg-gray-50/30">
+                      <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 w-[240px]">Student Name</TableHead>
+                      <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 w-[120px]">Crew</TableHead>
+                      <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 w-[200px]">Email</TableHead>
+                      <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 w-[280px]">Expeditions</TableHead>
+                      <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 w-[100px]">Status</TableHead>
+                      <TableHead className="h-10 px-4 text-right text-xs font-semibold text-gray-600 w-[80px]">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {yearStudents.map((student: any) => {
+                      // Get expedition names
+                      const expeditionNames = Array.isArray(student.expeditions_id) 
+                        ? student.expeditions_id
+                            .map((expId: any) => {
+                              const exp = allExpeditionsData?.find((e: any) => e.id === (typeof expId === 'object' ? expId.id : expId))
+                              return exp?.name
+                            })
+                            .filter(Boolean)
+                        : []
+                      
+                      return (
+                        <TableRow 
+                          key={student.id} 
+                          className="hover:bg-gray-50/50 cursor-pointer"
+                          onClick={() => router.push(`/student/${student.id}`)}
+                        >
+                          <TableCell className="h-14 px-4 w-[240px]">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <Avatar className="h-8 w-8 flex-shrink-0">
+                                <AvatarImage src={student.profileImage} alt={`${student.firstName || ""} ${student.lastName || ""}`.trim()} />
+                                <AvatarFallback className="text-xs bg-gray-200 text-gray-600">
+                                  {`${student.firstName?.[0] || ""}${student.lastName?.[0] || ""}` || "?"}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="font-medium text-gray-900 truncate" title={`${student.firstName || ""} ${student.lastName || ""}`.trim()}>
+                                {`${student.firstName || ""} ${student.lastName || ""}`.trim() || "—"}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="h-14 px-4 w-[120px]">
+                            <span className="text-sm text-gray-600 truncate block" title={student.crew_name || ""}>
+                              {student.crew_name || "—"}
+                            </span>
+                          </TableCell>
+                          <TableCell className="h-14 px-4 w-[200px]">
+                            <span className="text-sm text-gray-600 truncate block" title={student.studentEmail || ""}>
+                              {student.studentEmail || "—"}
+                            </span>
+                          </TableCell>
+                          <TableCell className="h-14 px-4 w-[280px]">
+                            {expeditionNames.length > 0 ? (
+                              <span className="text-sm text-gray-600 truncate block" title={expeditionNames.join(', ')}>
+                                {expeditionNames.join(', ')}
+                              </span>
+                            ) : (
+                              <span className="text-sm text-gray-400">—</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="h-14 px-4 w-[100px]">
+                            {student.archived ? (
+                              <Badge variant="outline" className="bg-gray-100 border-gray-300 text-gray-600 text-xs whitespace-nowrap">
+                                Archived
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="bg-green-50 border-green-200 text-green-700 text-xs whitespace-nowrap">
+                                Active
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="h-14 px-4 text-right w-[80px]">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 cursor-pointer hover:bg-gray-100"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                router.push(`/student/${student.id}`)
+                              }}
+                            >
+                              <ExternalLink className="h-4 w-4 text-gray-500" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            ))}
+            {studentsByYearGroup.length === 0 && (
+              <Empty className="bg-white border-gray-200">
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <User />
+                  </EmptyMedia>
+                  <EmptyTitle>No Students Found</EmptyTitle>
+                  <EmptyDescription>
+                    No student records found in the system.
+                  </EmptyDescription>
+                </EmptyHeader>
+              </Empty>
+            )}
           </div>
         )}
       </main>
@@ -640,7 +731,7 @@ function StudentsPageContent() {
         <DialogContent className="w-full sm:max-w-lg max-h-[80vh] flex flex-col">
           <DialogHeader className="border-b pb-4">
             <DialogTitle>
-              Link Application to {selectedStudentForLink?.name}
+              Link Application to {`${selectedStudentForLink?.firstName || ""} ${selectedStudentForLink?.lastName || ""}`.trim()}
             </DialogTitle>
           </DialogHeader>
           

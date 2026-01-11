@@ -98,9 +98,10 @@ export function StudentCard({
   isService,
   onUpdate,
 }: StudentCardProps) {
-  const studentName = record._students?.name ?? "Unknown Student"
+  const studentName = `${record._students?.firstName || ""} ${record._students?.lastName || ""}`.trim() || "Unknown Student"
   const initials = getInitials(studentName)
-  const photoUrl = record._students?.photo_url
+  // Check both possible field names for profile image
+  const photoUrl = record._students?.profileImage || record._students?.photo_url
 
   const scoreCategories = getScoreCategories(isOffshore, isService)
   const isExcluded = record.isFlagged
@@ -158,10 +159,10 @@ export function StudentCard({
 
   if (isExcluded) {
     return (
-      <Card className="w-full relative bg-gray-100 min-h-[400px]">
-        <div className="flex items-start justify-between px-4 py-3 sm:px-6 sm:py-4">
-          <div className="flex items-start gap-4">
-            <span className="relative flex shrink-0 overflow-hidden rounded-full h-12 w-12 border-2 border-gray-300">
+      <Card className="w-full relative bg-gray-100 min-h-[320px] p-0">
+        <div className="flex items-center justify-between px-3 py-2 sm:px-4 sm:py-3 border-b border-gray-200 mb-3 bg-gray-50 rounded-t-xl">
+          <div className="flex items-center gap-3">
+            <span className="relative flex shrink-0 overflow-hidden rounded-full h-10 w-10 border-2 border-gray-300">
               {photoUrl ? (
                 <img
                   className="aspect-square h-full w-full object-cover"
@@ -174,8 +175,8 @@ export function StudentCard({
                 </span>
               )}
             </span>
-            <div className="pt-2">
-              <h3 className="text-xl font-bold truncate">{studentName}</h3>
+            <div>
+              <h3 className="text-lg font-bold truncate">{studentName}</h3>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -205,7 +206,7 @@ export function StudentCard({
           </div>
         </div>
 
-        <div className="flex flex-col items-center justify-center px-6 pb-12 pt-8">
+        <div className="flex flex-col items-center justify-center px-4 pb-10 pt-6">
           <p className="text-gray-500 text-center">Scores will not be submitted for this student.</p>
         </div>
       </Card>
@@ -215,11 +216,11 @@ export function StudentCard({
   const gridCols = scoreCategories.length <= 3 ? "grid-cols-3" : "grid-cols-2 sm:grid-cols-4"
 
   return (
-    <Card className={cn("w-full relative", record.isLocked && "bg-gray-50")}>
-      <div className="flex items-start justify-between px-4 py-3 sm:px-6 sm:py-4">
-        <div className="flex items-start gap-4">
+    <Card className={cn("w-full relative p-0", record.isLocked && "bg-gray-50")}>
+      <div className="flex items-center justify-between px-3 py-2 sm:px-4 sm:py-3 border-b border-gray-200 mb-3 bg-gray-50 rounded-t-xl">
+        <div className="flex items-center gap-3">
           <span className={cn(
-            "relative flex shrink-0 overflow-hidden rounded-full h-12 w-12 border-2",
+            "relative flex shrink-0 overflow-hidden rounded-full h-10 w-10 border-2",
             record.isLocked ? "border-gray-300 grayscale" : "border-gray-300"
           )}>
             {photoUrl ? (
@@ -237,8 +238,8 @@ export function StudentCard({
               </span>
             )}
           </span>
-          <div className="pt-2">
-            <h3 className={cn("text-xl font-bold truncate", record.isLocked && "text-gray-500")}>
+          <div>
+            <h3 className={cn("text-lg font-bold truncate", record.isLocked && "text-gray-500")}>
               {studentName}
             </h3>
           </div>
@@ -274,11 +275,11 @@ export function StudentCard({
         </div>
       </div>
 
-      <div className="px-4 sm:px-6 pb-2">
+      <div className="px-3 sm:px-4 pb-3 mb-2">
         {isOffshore ? (
           <>
             {/* Offshore: First Row - CREW, JOB */}
-            <div className="grid grid-cols-2 gap-3 mb-3">
+            <div className="grid grid-cols-2 gap-2 mb-2">
               {scoreCategories
                 .filter(({ key }) => key === "crew" || key === "job")
                 .map(({ key, label }) => {
@@ -300,7 +301,7 @@ export function StudentCard({
             </div>
             
             {/* Offshore: Second Row - CITIZENSHIP, SERVICE (if applicable) */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-2">
               {scoreCategories
                 .filter(({ key }) => key === "citizenship" || key === "service_learning")
                 .map(({ key, label }) => {
@@ -324,7 +325,7 @@ export function StudentCard({
         ) : (
           <>
             {/* In Port: First Row - SCHOOL, JOB */}
-            <div className="grid grid-cols-2 gap-3 mb-3">
+            <div className="grid grid-cols-2 gap-2 mb-2">
               {scoreCategories
                 .filter(({ key }) => key === "school" || key === "job")
                 .map(({ key, label }) => {
@@ -346,7 +347,7 @@ export function StudentCard({
             </div>
             
             {/* In Port: Second Row - CITIZENSHIP, SERVICE (if applicable) */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-2">
               {scoreCategories
                 .filter(({ key }) => key === "citizenship" || key === "service_learning")
                 .map(({ key, label }) => {
@@ -370,7 +371,7 @@ export function StudentCard({
         )}
       </div>
 
-      <div className="px-4 sm:px-6 pb-4 space-y-3 relative">
+      <div className="px-3 sm:px-4 pb-4 space-y-2.5 relative">
         <SingleSelectDropdown
           label="JOURNALING"
           placeholder="Select Status"
@@ -403,7 +404,7 @@ export function StudentCard({
         <div className="w-full">
           <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">NOTE</label>
           <Input
-            className="mt-1.5 h-11 w-full rounded-lg border-gray-200 cursor-text"
+            className="mt-1 h-9 w-full rounded-lg border-gray-200 cursor-text"
             placeholder="Add a note..."
             value={record.note ?? ""}
             onChange={handleNoteChange}

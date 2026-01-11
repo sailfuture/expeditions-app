@@ -18,7 +18,7 @@ import { ExpeditionHeader } from "@/components/expedition-header"
 import { useExpeditions, useExpeditionPerformanceReviews } from "@/lib/hooks/use-expeditions"
 import { FileText, User, Download, ExternalLink, Plus, Calendar, Eye, Trash2 } from "lucide-react"
 import { Textarea } from "@/components/ui/textarea"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { generatePerformanceReviewPDF } from "@/lib/pdf-generator"
 import { toast } from "sonner"
@@ -170,18 +170,27 @@ function PreviewModal({
       <DialogContent 
         className="w-full sm:max-w-3xl max-h-[90vh] flex flex-col overflow-hidden"
       >
+        <DialogHeader>
+          <DialogTitle>
+            {loadingReview 
+              ? 'Loading...' 
+              : review 
+                ? `${`${review._students?.firstName || ""} ${review._students?.lastName || ""}`.trim() || 'Student'} — ${review.report_name || 'Performance Review'}`
+                : 'Performance Review'
+            }
+          </DialogTitle>
+          {review && (
+            <DialogDescription>
+              {formatDate(review.startDate)} - {formatDate(review.endDate)}
+            </DialogDescription>
+          )}
+        </DialogHeader>
         {loadingReview ? (
           <div className="flex justify-center items-center py-20">
             <Spinner size="lg" />
           </div>
         ) : review ? (
           <>
-            <DialogHeader>
-              <DialogTitle>{review._students?.name || 'Student'} — {review.report_name || 'Performance Review'}</DialogTitle>
-              <DialogDescription>
-                {formatDate(review.startDate)} - {formatDate(review.endDate)}
-              </DialogDescription>
-            </DialogHeader>
             
             <div className="flex-1 overflow-y-auto space-y-6">
           {/* Evaluation Summary Table */}
@@ -242,10 +251,10 @@ function PreviewModal({
                       {review.service_evaluation || '—'}
                     </TableCell>
                   </TableRow>
-                  <TableRow className={getJournalColor(review.journaling)}>
+                  <TableRow className={getJournalColor(review.journaling !== null && review.journaling !== undefined ? review.journaling * 100 : null)}>
                     <TableCell className="px-3 py-2 font-medium text-gray-700 text-sm">Journaling</TableCell>
                     <TableCell className="px-3 py-2 text-center text-gray-700 text-sm">
-                      {review.journaling !== null && review.journaling !== undefined ? `${Math.round(review.journaling)}%` : '—'}
+                      {review.journaling !== null && review.journaling !== undefined ? `${Math.round(review.journaling * 100)}%` : '—'}
                     </TableCell>
                     <TableCell className="px-3 py-2 text-gray-600 text-sm">
                       {review.journaling_evaluation || '—'}
@@ -301,8 +310,19 @@ function PreviewModal({
                           <TableCell className={`px-2 py-2 text-center text-sm ${getEvaluationColorByScore(score.service)}`}>
                             {score.service !== null && score.service !== undefined ? score.service : '—'}
                           </TableCell>
-                          <TableCell className={`px-2 py-2 text-center text-sm ${score.journal !== null && score.journal !== undefined ? (score.journal >= 90 ? 'bg-blue-50' : score.journal >= 70 ? 'bg-green-50' : 'bg-red-50') : ''}`}>
-                            {score.journal !== null && score.journal !== undefined ? `${Math.round(score.journal)}%` : '—'}
+                          <TableCell className={`px-2 py-2 text-center text-sm ${(() => {
+                            const jrnl = score.journaling || score.note || score._expedition_journal_status?.name || ''
+                            if (!jrnl) return ''
+                            const lower = jrnl.toLowerCase()
+                            // Check red conditions first (not started, missing)
+                            if (lower.includes('not started') || lower.includes('not') || lower.includes('missing')) return 'bg-red-50'
+                            // Check green (completed/complete)
+                            if (lower === 'completed' || lower === 'complete') return 'bg-green-50'
+                            // Check yellow (incomplete, partial, late, started)
+                            if (lower.includes('incomplete') || lower.includes('partial') || lower.includes('started') || lower.includes('late')) return 'bg-yellow-50'
+                            return ''
+                          })()}`}>
+                            {score.journaling || score.note || score._expedition_journal_status?.name || '—'}
                           </TableCell>
                         </TableRow>
                       ))}
@@ -487,8 +507,8 @@ function PerformanceReviewsContent() {
     
     // Convert to array, sort by student name, then back to object
     const sortedEntries = Object.entries(grouped).sort(([, reviewsA], [, reviewsB]) => {
-      const nameA = reviewsA[0]?._students?.name || ''
-      const nameB = reviewsB[0]?._students?.name || ''
+      const nameA = `${reviewsA[0]?._students?.firstName || ""} ${reviewsA[0]?._students?.lastName || ""}`.trim()
+      const nameB = `${reviewsB[0]?._students?.firstName || ""} ${reviewsB[0]?._students?.lastName || ""}`.trim()
       return nameA.localeCompare(nameB)
     })
     
@@ -584,13 +604,17 @@ function PerformanceReviewsContent() {
             
             // Get student info from first review
             const student = sortedReviews[0]?._students
-            const studentName = student?.name || `Student ${studentId}`
+            const studentName = `${student?.firstName || ""} ${student?.lastName || ""}`.trim() || `Student ${studentId}`
             
             return (
               <div key={studentId} className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
                 <div className="px-6 py-4 border-b bg-gray-50/50">
                   <div className="flex items-center gap-3">
                     <Avatar className="h-10 w-10">
+                      <AvatarImage 
+                        src={student?.profileImage || student?.photo_url} 
+                        alt={studentName} 
+                      />
                       <AvatarFallback className="text-sm bg-gray-200 text-gray-600">
                         {studentName?.split(" ").map((n: string) => n[0]).join("")}
                       </AvatarFallback>

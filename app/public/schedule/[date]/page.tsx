@@ -532,7 +532,7 @@ export default function PublicSchedulePage() {
             {scheduledItems.length > 0 && (
               <div className="relative">
                 <div className="flex">
-                  <div className="w-14 flex-shrink-0" />
+                  <div className="w-10 flex-shrink-0" />
                   <div ref={timelineRef} className="flex-1 relative" style={{ minHeight: `${totalHours * 90}px` }}>
                     {/* Hour lines */}
                     {dynamicHours.map((hour, idx) => (
@@ -541,8 +541,8 @@ export default function PublicSchedulePage() {
                         className="absolute left-0 right-0 border-t border-gray-200"
                         style={{ top: `${(idx / totalHours) * 100}%` }}
                       >
-                        <div className="absolute -left-14 w-14 pr-2 text-right -mt-2.5">
-                          <span className="text-xs font-medium text-gray-400">
+                        <div className="absolute -left-10 pr-1 text-right -mt-2">
+                          <span className="text-[10px] font-medium text-gray-400">
                             {formatTime(hour)}
                           </span>
                         </div>

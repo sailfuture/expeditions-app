@@ -480,12 +480,12 @@ export function EvaluateClient({ date, expeditionId }: EvaluateClientProps) {
               <div className="flex items-center gap-2">
                 <div className="h-10 w-10 rounded border bg-gray-100 border-gray-300 flex items-center justify-center">
                   <span className="text-sm font-semibold text-gray-600">
-                    {records.filter((r) => !r.isLocked).length}
+                    {loadingProfessionalism || isNavigating ? "–" : records.filter((r) => !r.isLocked).length}
                   </span>
                 </div>
                 <div className="h-10 w-10 rounded border bg-green-50 border-green-300 flex items-center justify-center">
                   <span className="text-sm font-semibold text-green-600">
-                    {stats.locked}
+                    {loadingProfessionalism || isNavigating ? "–" : stats.locked}
                   </span>
                 </div>
               </div>
@@ -524,10 +524,10 @@ export function EvaluateClient({ date, expeditionId }: EvaluateClientProps) {
               </Button>
               <Button
                 size="default"
-                disabled={submitCount === 0 || isNavigating || isSubmitting || !isWithinExpeditionRange}
+                disabled={submitCount === 0 || isNavigating || isSubmitting || !isWithinExpeditionRange || !allProfessionalism || allProfessionalism.length === 0 || loadingProfessionalism}
                 onClick={handleSubmitScores}
                 className="cursor-pointer h-10 px-4"
-                title={!isWithinExpeditionRange ? "Outside expedition date range" : "Submit professionalism scores"}
+                title={!isWithinExpeditionRange ? "Outside expedition date range" : (!allProfessionalism || allProfessionalism.length === 0) ? "No students loaded" : "Submit professionalism scores"}
               >
                 {isSubmitting ? (
                   <>
@@ -535,7 +535,7 @@ export function EvaluateClient({ date, expeditionId }: EvaluateClientProps) {
                     Submitting...
                   </>
                 ) : (
-                  `Submit (${submitCount})`
+                  `Submit (${(loadingProfessionalism || isNavigating || !allProfessionalism || allProfessionalism.length === 0) ? 0 : submitCount})`
                 )}
               </Button>
             </div>

@@ -33,7 +33,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Spinner } from "@/components/ui/spinner"
 import { 
   Calendar, 
@@ -123,11 +123,12 @@ function StudentEvaluationRow({
       >
         <div className="flex items-center gap-3">
           <Avatar className="h-8 w-8">
+            <AvatarImage src={student.profileImage} alt={`${student.firstName || ""} ${student.lastName || ""}`.trim()} />
             <AvatarFallback className="text-xs bg-gray-200 text-gray-600">
-              {student.name?.split(" ").map((n: string) => n[0]).join("")}
+              {`${student.firstName?.[0] || ""}${student.lastName?.[0] || ""}`}
             </AvatarFallback>
           </Avatar>
-          <span className="font-medium text-gray-900 truncate max-w-[180px]" title={student.name}>{student.name}</span>
+          <span className="font-medium text-gray-900 truncate max-w-[180px]" title={`${student.firstName || ""} ${student.lastName || ""}`.trim()}>{`${student.firstName || ""} ${student.lastName || ""}`.trim()}</span>
         </div>
       </TableCell>
       <TableCell className={`h-14 px-4 text-center ${getEvaluationColorClass(evaluation?.academics_evaluation)}`}>
@@ -677,7 +678,7 @@ export default function ExpeditionDetailPage({ params }: PageProps) {
               All Evaluation Records
             </DialogTitle>
             <DialogDescription>
-              {selectedStudent?.name} • {expedition?._schoolterms?.short_name || 'Term'} • {expedition?._schoolyears?.name || ''}
+              {`${selectedStudent?.firstName || ""} ${selectedStudent?.lastName || ""}`.trim()} • {expedition?._schoolterms?.short_name || 'Term'} • {expedition?._schoolyears?.name || ''}
             </DialogDescription>
           </DialogHeader>
           

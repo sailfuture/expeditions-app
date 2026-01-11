@@ -354,7 +354,7 @@ function DisciplinePageContent() {
     const staffMember = staff?.find((s: any) => s.id === record.expedition_staff_id)
     generateDisciplinePDF(
       record, 
-      student?.name || "Unknown Student",
+      `${student?.firstName || ""} ${student?.lastName || ""}`.trim() || "Unknown Student",
       staffMember?.name || "Unknown Staff"
     )
     toast.success("PDF downloaded")
@@ -363,7 +363,7 @@ function DisciplinePageContent() {
   // Get student and staff names for display
   const getStudentName = (id: number) => {
     const student = students?.find((s: any) => s.id === id)
-    return student?.name || "Unknown"
+    return `${student?.firstName || ""} ${student?.lastName || ""}`.trim() || "Unknown"
   }
   
   const getStaffName = (id: number) => {

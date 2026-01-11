@@ -14,7 +14,20 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import { cn } from "@/lib/utils"
 import {
   Dialog,
   DialogContent,
@@ -35,7 +48,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { FileText, ExternalLink, Check, Pencil, Trash2, Eye, X } from "lucide-react"
+import { FileText, ExternalLink, Check, Pencil, Trash2, Eye, X, ChevronsUpDown } from "lucide-react"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
 import { formatDistanceToNow } from "date-fns"
@@ -54,6 +67,7 @@ export default function IntakeRecordsPage() {
   
   const [linkingId, setLinkingId] = useState<number | null>(null)
   const [unlinkingId, setUnlinkingId] = useState<number | null>(null)
+  const [openComboboxId, setOpenComboboxId] = useState<number | null>(null)
   
   // View modal state
   const [viewModalOpen, setViewModalOpen] = useState(false)
@@ -88,7 +102,8 @@ export default function IntakeRecordsPage() {
       // Include all required fields in the PATCH request
       const updateData = {
         students_id: studentId,
-        name: student.name,
+        firstName: student.firstName,
+        lastName: student.lastName,
         expeditions_id: Array.isArray(student.expeditions_id) ? student.expeditions_id : [student.expeditions_id].filter(Boolean),
         grade: student.grade || "",
         expeditions_student_information_id: intakeId,
@@ -119,7 +134,8 @@ export default function IntakeRecordsPage() {
       // Remove the link by setting expeditions_student_information_id to null
       const updateData = {
         students_id: studentId,
-        name: student.name,
+        firstName: student.firstName,
+        lastName: student.lastName,
         expeditions_id: Array.isArray(student.expeditions_id) ? student.expeditions_id : [student.expeditions_id].filter(Boolean),
         grade: student.grade || "",
         expeditions_student_information_id: null,
@@ -194,7 +210,8 @@ export default function IntakeRecordsPage() {
       if (linkedStudent) {
         await updateStudent(linkedStudent.id, {
           students_id: linkedStudent.id,
-          name: linkedStudent.name,
+          firstName: linkedStudent.firstName,
+          lastName: linkedStudent.lastName,
           expeditions_id: Array.isArray(linkedStudent.expeditions_id) ? linkedStudent.expeditions_id : [linkedStudent.expeditions_id].filter(Boolean),
           grade: linkedStudent.grade || "",
           expeditions_student_information_id: null,
@@ -340,8 +357,8 @@ export default function IntakeRecordsPage() {
                       <TableCell className="h-16 px-6 w-[220px]">
                         {linked && linkedStudent ? (
                           <div className="flex items-center gap-1">
-                            <span className="text-sm text-gray-600 truncate max-w-[120px]" title={linkedStudent.name}>
-                              {linkedStudent.name}
+                            <span className="text-sm text-gray-600 truncate max-w-[120px]" title={`${linkedStudent.firstName || ""} ${linkedStudent.lastName || ""}`.trim()}>
+                              {`${linkedStudent.firstName || ""} ${linkedStudent.lastName || ""}`.trim()}
                             </span>
                             <Button
                               variant="ghost"
@@ -374,32 +391,60 @@ export default function IntakeRecordsPage() {
                             </Button>
                           </div>
                         ) : (
-                          <Select
-                            onValueChange={(value) => handleLinkToStudent(submission.id, parseInt(value))}
-                            disabled={linkingId === submission.id}
+                          <Popover 
+                            open={openComboboxId === submission.id} 
+                            onOpenChange={(open) => setOpenComboboxId(open ? submission.id : null)}
                           >
-                            <SelectTrigger className="w-full h-8 text-sm cursor-pointer bg-white border-gray-300 focus:ring-2 focus:ring-offset-0">
-                              {linkingId === submission.id ? (
-                                <span className="flex items-center gap-2">
-                                  <Spinner size="sm" className="h-3 w-3" />
-                                  Linking...
-                                </span>
-                              ) : (
-                                <SelectValue placeholder="Select student..." />
-                              )}
-                            </SelectTrigger>
-                            <SelectContent position="popper" className="z-[100]">
-                              {students?.filter((s: any) => !s.expeditions_student_information_id).length === 0 ? (
-                                <div className="py-2 px-3 text-sm text-gray-500">No unlinked students available</div>
-                              ) : (
-                                students?.filter((s: any) => !s.expeditions_student_information_id).map((student: any) => (
-                                  <SelectItem key={student.id} value={student.id.toString()} className="cursor-pointer">
-                                    {student.name} - {student._expeditions?.name || "No expedition"}
-                                  </SelectItem>
-                                ))
-                              )}
-                            </SelectContent>
-                          </Select>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                aria-expanded={openComboboxId === submission.id}
+                                className="w-full h-8 justify-between text-sm cursor-pointer bg-white border-gray-300"
+                                disabled={linkingId === submission.id}
+                              >
+                                {linkingId === submission.id ? (
+                                  <span className="flex items-center gap-2">
+                                    <Spinner size="sm" className="h-3 w-3" />
+                                    Linking...
+                                  </span>
+                                ) : (
+                                  <span className="text-muted-foreground">Select student...</span>
+                                )}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[280px] p-0" align="start">
+                              <Command>
+                                <CommandInput placeholder="Search students..." />
+                                <CommandList>
+                                  <CommandEmpty>No students found.</CommandEmpty>
+                                  <CommandGroup>
+                                    {students?.filter((s: any) => !s.expeditions_student_information_id).map((student: any) => {
+                                      const studentName = `${student.firstName || ""} ${student.lastName || ""}`.trim()
+                                      const expeditionName = student._expeditions?.name || "No expedition"
+                                      return (
+                                        <CommandItem
+                                          key={student.id}
+                                          value={`${studentName} ${expeditionName}`}
+                                          onSelect={() => {
+                                            setOpenComboboxId(null)
+                                            handleLinkToStudent(submission.id, student.id)
+                                          }}
+                                          className="cursor-pointer"
+                                        >
+                                          <div className="flex flex-col">
+                                            <span className="font-medium">{studentName}</span>
+                                            <span className="text-xs text-muted-foreground">{expeditionName}</span>
+                                          </div>
+                                        </CommandItem>
+                                      )
+                                    })}
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
                         )}
                       </TableCell>
                       <TableCell className="h-16 px-6 w-[120px]" onClick={(e) => e.stopPropagation()}>

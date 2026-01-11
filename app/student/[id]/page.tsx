@@ -46,8 +46,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Pencil, ExternalLink, Calendar, FileText, TrendingUp, CheckCircle2, ArrowLeft, Calculator, Download } from "lucide-react"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Pencil, ExternalLink, Calendar, FileText, TrendingUp, CheckCircle2, ArrowLeft, Calculator, Download, Check, ChevronsUpDown, X } from "lucide-react"
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts"
 import {
   ChartContainer,
@@ -63,6 +63,9 @@ import { useExpeditions, useEvaluationByStudent, useProfessionalismByStudent, us
 import { generatePerformanceReviewPDF } from "@/lib/pdf-generator"
 import { formatDistanceToNow } from "date-fns"
 import { Eye } from "lucide-react"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import { cn } from "@/lib/utils"
 
 export default function StudentDetailPage() {
   const router = useRouter()
@@ -235,7 +238,8 @@ export default function StudentDetailPage() {
         : []
       
       setFormData({
-        name: student.name || "",
+        firstName: student.firstName || "",
+        lastName: student.lastName || "",
         grade: student.grade || "",
         expeditions_id: expeditionIds,
         isArchived: student.isArchived || false,
@@ -244,8 +248,8 @@ export default function StudentDetailPage() {
   }, [student])
   
   const handleSubmit = async () => {
-    if (!formData.name) {
-      toast.error("Student name is required")
+    if (!formData.firstName || !formData.lastName) {
+      toast.error("Student first name and last name are required")
       return
     }
     
@@ -253,7 +257,8 @@ export default function StudentDetailPage() {
     try {
       await updateStudent(studentId, {
         students_id: studentId,
-        name: formData.name,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
         grade: formData.grade,
         expeditions_id: formData.expeditions_id,
         isArchived: formData.isArchived,
@@ -275,7 +280,8 @@ export default function StudentDetailPage() {
     try {
       await updateStudent(studentId, {
         students_id: studentId,
-        name: student.name,
+        firstName: student.firstName,
+        lastName: student.lastName,
         grade: student.grade,
         expeditions_id: formData.expeditions_id,
         isArchived: student.isArchived,
@@ -607,7 +613,7 @@ export default function StudentDetailPage() {
                   </BreadcrumbItem>
                   <BreadcrumbSeparator />
                   <BreadcrumbItem>
-                    <BreadcrumbPage>{student.name}</BreadcrumbPage>
+                    <BreadcrumbPage>{`${student.firstName || ""} ${student.lastName || ""}`.trim()}</BreadcrumbPage>
                   </BreadcrumbItem>
                 </BreadcrumbList>
               </Breadcrumb>
@@ -646,12 +652,13 @@ export default function StudentDetailPage() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <Avatar className="h-8 w-8">
+                    <AvatarImage src={student.profileImage} alt={`${student.firstName || ""} ${student.lastName || ""}`.trim()} />
                     <AvatarFallback className="text-sm bg-gray-200 text-gray-600">
-                      {student.name?.split(" ").map((n: string) => n[0]).join("") || "?"}
+                      {`${student.firstName?.[0] || ""}${student.lastName?.[0] || ""}` || "?"}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex items-center gap-2">
-                    <span className="font-semibold text-gray-900">{student.name}</span>
+                    <span className="font-semibold text-gray-900">{`${student.firstName || ""} ${student.lastName || ""}`.trim()}</span>
                     {student.grade && (
                       <Badge variant="outline" className="bg-white">{student.grade}</Badge>
                     )}
@@ -683,7 +690,7 @@ export default function StudentDetailPage() {
                   </BreadcrumbItem>
                   <BreadcrumbSeparator />
                   <BreadcrumbItem>
-                    <BreadcrumbPage>{student.name}</BreadcrumbPage>
+                    <BreadcrumbPage>{`${student.firstName || ""} ${student.lastName || ""}`.trim()}</BreadcrumbPage>
                   </BreadcrumbItem>
                 </BreadcrumbList>
               </Breadcrumb>
@@ -696,12 +703,13 @@ export default function StudentDetailPage() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <Avatar className="h-12 w-12">
+                    <AvatarImage src={student.profileImage} alt={`${student.firstName || ""} ${student.lastName || ""}`.trim()} />
                     <AvatarFallback className="text-lg bg-gray-200 text-gray-600">
-                      {student.name?.split(" ").map((n: string) => n[0]).join("") || "?"}
+                      {`${student.firstName?.[0] || ""}${student.lastName?.[0] || ""}` || "?"}
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <h1 className="text-3xl font-bold">{student.name}</h1>
+                    <h1 className="text-3xl font-bold">{`${student.firstName || ""} ${student.lastName || ""}`.trim()}</h1>
                     <div className="flex items-center gap-2 mt-1">
                       {student.grade && (
                         <Badge variant="outline">{student.grade}</Badge>
@@ -967,7 +975,31 @@ export default function StudentDetailPage() {
                   />
                   <ChartTooltip
                     cursor={false}
-                    content={<ChartTooltipContent />}
+                    content={
+                      <ChartTooltipContent 
+                        formatter={(value, name, item, index, payload) => {
+                          const itemConfig = chartConfig[name as keyof typeof chartConfig]
+                          const indicatorColor = item.color
+                          const displayValue = value === null || value === undefined ? "n/a" : value.toLocaleString()
+                          return (
+                            <div className="flex w-full items-center gap-2">
+                              <div
+                                className="h-2.5 w-2.5 shrink-0 rounded-[2px]"
+                                style={{ backgroundColor: indicatorColor }}
+                              />
+                              <div className="flex flex-1 justify-between items-center leading-none">
+                                <span className="text-muted-foreground">
+                                  {itemConfig?.label || name}
+                                </span>
+                                <span className={`font-mono font-medium tabular-nums ${value === null || value === undefined ? "text-muted-foreground" : "text-foreground"}`}>
+                                  {displayValue}
+                                </span>
+                              </div>
+                            </div>
+                          )
+                        }}
+                      />
+                    }
                   />
                   <Line
                     dataKey="total"
@@ -975,7 +1007,6 @@ export default function StudentDetailPage() {
                     stroke="var(--color-total)"
                     strokeWidth={3}
                     dot={{ r: 4 }}
-                    connectNulls
                   />
                   <Line
                     dataKey="academics"
@@ -983,7 +1014,6 @@ export default function StudentDetailPage() {
                     stroke="var(--color-academics)"
                     strokeWidth={2}
                     dot={false}
-                    connectNulls
                   />
                   <Line
                     dataKey="citizenship"
@@ -991,7 +1021,6 @@ export default function StudentDetailPage() {
                     stroke="var(--color-citizenship)"
                     strokeWidth={2}
                     dot={false}
-                    connectNulls
                   />
                   <Line
                     dataKey="job"
@@ -999,7 +1028,6 @@ export default function StudentDetailPage() {
                     stroke="var(--color-job)"
                     strokeWidth={2}
                     dot={false}
-                    connectNulls
                   />
                   <Line
                     dataKey="crew"
@@ -1007,7 +1035,6 @@ export default function StudentDetailPage() {
                     stroke="var(--color-crew)"
                     strokeWidth={2}
                     dot={false}
-                    connectNulls
                   />
                   <Line
                     dataKey="service"
@@ -1015,7 +1042,6 @@ export default function StudentDetailPage() {
                     stroke="var(--color-service)"
                     strokeWidth={2}
                     dot={false}
-                    connectNulls
                   />
                 </LineChart>
               </ChartContainer>
@@ -1298,7 +1324,7 @@ export default function StudentDetailPage() {
                 <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
                   <div>
                     <dt className="text-sm font-medium text-gray-500">Name</dt>
-                    <dd className="mt-1 text-sm text-gray-900">{student.name || "—"}</dd>
+                    <dd className="mt-1 text-sm text-gray-900">{`${student.firstName || ""} ${student.lastName || ""}`.trim() || "—"}</dd>
                   </div>
                   <div>
                     <dt className="text-sm font-medium text-gray-500">Grade</dt>
@@ -1575,15 +1601,27 @@ export default function StudentDetailPage() {
           </DialogHeader>
           
           <div className="space-y-4 py-4">
-            <div>
-              <Label htmlFor="student_name">Student Name *</Label>
-              <Input
-                id="student_name"
-                value={formData.name}
-                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                placeholder="Student name"
-                className="mt-1.5"
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="first_name">First Name *</Label>
+                <Input
+                  id="first_name"
+                  value={formData.firstName}
+                  onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
+                  placeholder="First name"
+                  className="mt-1.5"
+                />
+              </div>
+              <div>
+                <Label htmlFor="last_name">Last Name *</Label>
+                <Input
+                  id="last_name"
+                  value={formData.lastName}
+                  onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
+                  placeholder="Last name"
+                  className="mt-1.5"
+                />
+              </div>
             </div>
             
             <div>
@@ -1611,59 +1649,109 @@ export default function StudentDetailPage() {
             
             <div>
               <Label htmlFor="expeditions">Expedition Assignments</Label>
-              <div className="mt-1.5 space-y-2">
-                {allExpeditions?.map((expedition: any) => {
-                  const isSelected = formData.expeditions_id.includes(expedition.id)
-                  return (
-                    <div key={expedition.id} className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (isSelected) {
-                            setFormData(prev => ({
-                              ...prev,
-                              expeditions_id: prev.expeditions_id.filter(id => id !== expedition.id)
-                            }))
-                          } else {
-                            setFormData(prev => ({
-                              ...prev,
-                              expeditions_id: [...prev.expeditions_id, expedition.id]
-                            }))
-                          }
-                        }}
-                        className={`w-5 h-5 rounded border flex items-center justify-center cursor-pointer ${
-                          isSelected ? "bg-gray-800 border-gray-800" : "border-gray-300 hover:border-gray-400"
-                        }`}
-                      >
-                        {isSelected && (
-                          <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                          </svg>
-                        )}
-                      </button>
-                      <label className="text-sm text-gray-700 cursor-pointer" onClick={() => {
-                        const isSelected = formData.expeditions_id.includes(expedition.id)
-                        if (isSelected) {
-                          setFormData(prev => ({
-                            ...prev,
-                            expeditions_id: prev.expeditions_id.filter(id => id !== expedition.id)
-                          }))
-                        } else {
-                          setFormData(prev => ({
-                            ...prev,
-                            expeditions_id: [...prev.expeditions_id, expedition.id]
-                          }))
-                        }
-                      }}>
-                        {expedition.name}
-                      </label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    className="w-full justify-between mt-1.5 h-auto min-h-[2.5rem] py-2 px-3"
+                  >
+                    <div className="flex flex-wrap gap-1 flex-1">
+                      {formData.expeditions_id.length === 0 ? (
+                        <span className="text-muted-foreground text-sm">Select expeditions...</span>
+                      ) : (
+                        formData.expeditions_id.map((expId) => {
+                          const expedition = allExpeditions?.find((e: any) => e.id === expId)
+                          if (!expedition) return null
+                          return (
+                            <Badge
+                              key={expId}
+                              variant="secondary"
+                              className="gap-1 pr-0.5 hover:bg-secondary"
+                            >
+                              <span className="text-xs">{expedition.name}</span>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    expeditions_id: prev.expeditions_id.filter(id => id !== expId)
+                                  }))
+                                }}
+                                className="ml-1 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </Badge>
+                          )
+                        })
+                      )}
                     </div>
-                  )
-                })}
-                {(!allExpeditions || allExpeditions.length === 0) && (
-                  <p className="text-sm text-gray-400">No expeditions available</p>
-                )}
-              </div>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[400px] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search expeditions..." />
+                    <CommandList>
+                      <CommandEmpty>No expeditions found.</CommandEmpty>
+                      <CommandGroup>
+                        {allExpeditions?.map((expedition: any) => {
+                          const isSelected = formData.expeditions_id.includes(expedition.id)
+                          const termInfo = expedition._schoolterms?.short_name || ''
+                          const yearInfo = expedition._schoolyears?.name || ''
+                          const dateRange = expedition.startDate && expedition.endDate 
+                            ? `${format(new Date(expedition.startDate), 'MMM d')} - ${format(new Date(expedition.endDate), 'MMM d, yyyy')}`
+                            : ''
+                          
+                          return (
+                            <CommandItem
+                              key={expedition.id}
+                              value={`${expedition.name} ${termInfo} ${yearInfo}`}
+                              onSelect={() => {
+                                if (isSelected) {
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    expeditions_id: prev.expeditions_id.filter(id => id !== expedition.id)
+                                  }))
+                                } else {
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    expeditions_id: [...prev.expeditions_id, expedition.id]
+                                  }))
+                                }
+                              }}
+                              className="cursor-pointer"
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  isSelected ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              <div className="flex flex-col flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium">{expedition.name}</span>
+                                  {expedition.isActive && (
+                                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-xs h-5">
+                                      Active
+                                    </Badge>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                                  <span>{termInfo} • {yearInfo}</span>
+                                  {dateRange && <span>• {dateRange}</span>}
+                                </div>
+                              </div>
+                            </CommandItem>
+                          )
+                        })}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
           
@@ -1849,18 +1937,27 @@ export default function StudentDetailPage() {
         if (!open) setSelectedReviewId(null)
       }}>
         <DialogContent className="w-full sm:max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>
+              {loadingSelectedReview 
+                ? 'Loading...' 
+                : selectedReview 
+                  ? `${selectedReview._students?.name || 'Student'} — ${selectedReview.report_name || 'Performance Review'}`
+                  : 'Performance Review'
+              }
+            </DialogTitle>
+            {selectedReview && (
+              <DialogDescription>
+                {formatDate(selectedReview.startDate)} - {formatDate(selectedReview.endDate)}
+              </DialogDescription>
+            )}
+          </DialogHeader>
           {loadingSelectedReview ? (
             <div className="flex justify-center items-center py-20">
               <Spinner size="lg" />
             </div>
           ) : selectedReview ? (
             <>
-              <DialogHeader>
-                <DialogTitle>{selectedReview._students?.name || 'Student'} — {selectedReview.report_name || 'Performance Review'}</DialogTitle>
-                <DialogDescription>
-                  {formatDate(selectedReview.startDate)} - {formatDate(selectedReview.endDate)}
-                </DialogDescription>
-              </DialogHeader>
               
               <div className="flex-1 overflow-y-auto space-y-6">
                 {/* Evaluation Summary Table */}
@@ -1980,8 +2077,8 @@ export default function StudentDetailPage() {
                                 <TableCell className={`px-2 py-2 text-center text-sm ${getReviewScoreColor(score.service)}`}>
                                   {score.service !== null && score.service !== undefined ? score.service : '—'}
                                 </TableCell>
-                                <TableCell className={`px-2 py-2 text-center text-sm ${(score.journaling || score.note) ? getJournalStringColor(score.journaling || score.note) : ''}`}>
-                                  {score.journaling || score.note || '—'}
+                                <TableCell className={`px-2 py-2 text-center text-sm ${(score.journaling || score.note || score._expedition_journal_status?.name) ? getJournalStringColor(score.journaling || score.note || score._expedition_journal_status?.name) : ''}`}>
+                                  {score.journaling || score.note || score._expedition_journal_status?.name || '—'}
                                 </TableCell>
                               </TableRow>
                             ))}

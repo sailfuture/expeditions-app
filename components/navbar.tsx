@@ -115,25 +115,30 @@ export function Navbar() {
                       <DropdownMenuTrigger className={cn(
                         navigationMenuTriggerStyle(),
                         "cursor-pointer flex items-center gap-1",
-                        (pathname === "/students" || pathname === "/intake-records") && "text-foreground",
+                        (pathname === "/students" || pathname === "/intake-records" || pathname === "/staff") && "text-foreground",
                       )}>
-                        Student Records
+                        Records
                         <ChevronDown className="h-3 w-3" />
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="start">
                         <Link href="/students">
-                          <DropdownMenuItem className="cursor-pointer">
+                          <DropdownMenuItem className="cursor-pointer whitespace-nowrap">
                             Student Records
                           </DropdownMenuItem>
                         </Link>
+                        <Link href="/staff">
+                          <DropdownMenuItem className="cursor-pointer whitespace-nowrap">
+                            Staff Records
+                          </DropdownMenuItem>
+                        </Link>
                         <Link href="/intake-records">
-                          <DropdownMenuItem className="cursor-pointer">
+                          <DropdownMenuItem className="cursor-pointer whitespace-nowrap">
                             Intake Records
                           </DropdownMenuItem>
                         </Link>
                         <div className="h-px bg-gray-200 my-1" />
                         <Link href="/intake">
-                          <DropdownMenuItem className="cursor-pointer">
+                          <DropdownMenuItem className="cursor-pointer whitespace-nowrap">
                             Intake Form
                           </DropdownMenuItem>
                         </Link>
@@ -142,30 +147,53 @@ export function Navbar() {
                   </NavigationMenuItem>
 
                   <NavigationMenuItem>
-                    <Link
-                      href="/staff"
-                      className={cn(
+                    <DropdownMenu>
+                      <DropdownMenuTrigger className={cn(
                         navigationMenuTriggerStyle(),
-                        "cursor-pointer",
-                        pathname === "/staff" && "text-foreground",
-                      )}
-                    >
-                      Staff Records
-                    </Link>
+                        "cursor-pointer flex items-center gap-1",
+                        (pathname.startsWith("/tv") || pathname === "/public/schedule") && "text-foreground",
+                      )}>
+                        Public Pages
+                        <ChevronDown className="h-3 w-3" />
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start">
+                        <Link href="/tv" target="_blank">
+                          <DropdownMenuItem className="cursor-pointer whitespace-nowrap">
+                            TV Display
+                          </DropdownMenuItem>
+                        </Link>
+                        <Link href="/public/schedule" target="_blank">
+                          <DropdownMenuItem className="cursor-pointer whitespace-nowrap">
+                            Public Schedule
+                          </DropdownMenuItem>
+                        </Link>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </NavigationMenuItem>
 
                   <NavigationMenuItem>
-                    <Link
-                      href="/tv"
-                      className={cn(
+                    <DropdownMenu>
+                      <DropdownMenuTrigger className={cn(
                         navigationMenuTriggerStyle(),
-                        "cursor-pointer",
-                        pathname.startsWith("/tv") && "text-foreground",
-                      )}
-                      target="_blank"
-                    >
-                      Display
-                    </Link>
+                        "cursor-pointer flex items-center gap-1",
+                        pathname.startsWith("/public/passage-logs") && "text-foreground",
+                      )}>
+                        Passage Logs
+                        <ChevronDown className="h-3 w-3" />
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start">
+                        <Link href="/public/passage-logs" target="_blank">
+                          <DropdownMenuItem className="cursor-pointer whitespace-nowrap">
+                            Passage Log Form
+                          </DropdownMenuItem>
+                        </Link>
+                        <Link href="/public/passage-logs/dashboard" target="_blank">
+                          <DropdownMenuItem className="cursor-pointer whitespace-nowrap">
+                            Log Dashboard
+                          </DropdownMenuItem>
+                        </Link>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </NavigationMenuItem>
                 </>
               )}

@@ -12,6 +12,21 @@ const fontSans = Inter({ subsets: ["latin"], variable: "--font-sans" })
 export const metadata: Metadata = {
   title: "SailFuture Academy: Expeditions Staff Access Portal",
   description: "A staff dashboard for recording and managing daily operations during sailing expeditions.",
+  icons: {
+    icon: "/sailfuture-square (8).webp",
+    shortcut: "/sailfuture-square (8).webp",
+    apple: "/sailfuture-square (8).webp",
+  },
+  openGraph: {
+    title: "SailFuture Academy: Expeditions Staff Access Portal",
+    description: "A staff dashboard for recording and managing daily operations during sailing expeditions.",
+    images: ["/sailfuture-square (8).webp"],
+    type: "website",
+  },
+  appleWebApp: {
+    title: "SailFuture Expeditions",
+    statusBarStyle: "default",
+  },
 }
 
 export default function RootLayout({

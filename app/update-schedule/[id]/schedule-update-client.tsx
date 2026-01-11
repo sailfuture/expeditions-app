@@ -271,11 +271,7 @@ export function ScheduleUpdateClient({ scheduleId }: ScheduleUpdateClientProps) 
                         disabled={updatingField === 'current_location'}
                       >
                         <SelectTrigger className="w-[300px]">
-                          <SelectValue>
-                            <span className="text-sm">
-                              {formatLocation(schedule._expedition_current_location)}
-                            </span>
-                          </SelectValue>
+                          <SelectValue placeholder="Select location" />
                         </SelectTrigger>
                         <SelectContent>
                           {locations?.map((location: any) => (
@@ -351,15 +347,7 @@ export function ScheduleUpdateClient({ scheduleId }: ScheduleUpdateClientProps) 
                           disabled={updatingField === 'destination'}
                         >
                           <SelectTrigger className="w-[300px]">
-                            <SelectValue>
-                              {schedule._expedition_destination && schedule.destination !== 0 ? (
-                                <span className="text-sm">
-                                  {formatLocation(schedule._expedition_destination)}
-                                </span>
-                              ) : (
-                                <span className="text-sm text-gray-400">No destination</span>
-                              )}
-                            </SelectValue>
+                            <SelectValue placeholder="No destination" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="0">No destination</SelectItem>

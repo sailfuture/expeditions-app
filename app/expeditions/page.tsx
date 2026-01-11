@@ -490,12 +490,7 @@ export default function ExpeditionsPage() {
                 onValueChange={(value) => setFormData(prev => ({ ...prev, schoolterms_id: parseInt(value) }))}
               >
                 <SelectTrigger className="w-full mt-1.5 cursor-pointer">
-                  <SelectValue placeholder="Select school term">
-                    {formData.schoolterms_id 
-                      ? schoolTerms?.find((t: any) => t.id === formData.schoolterms_id)?.full_name || "Select school term"
-                      : "Select school term"
-                    }
-                  </SelectValue>
+                  <SelectValue placeholder="Select school term" />
                 </SelectTrigger>
                 <SelectContent>
                   {schoolTerms?.map((term: any) => (
@@ -514,12 +509,7 @@ export default function ExpeditionsPage() {
                 onValueChange={(value) => setFormData(prev => ({ ...prev, schoolyears_id: parseInt(value) }))}
               >
                 <SelectTrigger className="w-full mt-1.5 cursor-pointer">
-                  <SelectValue placeholder="Select school year">
-                    {formData.schoolyears_id 
-                      ? schoolYears?.find((y: any) => y.id === formData.schoolyears_id)?.name || "Select school year"
-                      : "Select school year"
-                    }
-                  </SelectValue>
+                  <SelectValue placeholder="Select school year" />
                 </SelectTrigger>
                 <SelectContent>
                   {schoolYears?.map((year: any) => (

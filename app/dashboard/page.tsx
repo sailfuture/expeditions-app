@@ -422,7 +422,17 @@ export default function DashboardPage() {
     }
     const { isOffshore, isService } = typeMap[type]
     
-    setUpdatingTypeId(schedule.id)
+    // Optimistically update the local data immediately
+    const swrKey = `expedition_schedules_${schedule.expeditions_id}`
+    mutate(swrKey, (currentData: any[] | undefined) => {
+      if (!currentData) return currentData
+      return currentData.map((s: any) => 
+        s.id === schedule.id 
+          ? { ...s, isOffshore, isService, is_offshore: isOffshore, is_service: isService }
+          : s
+      )
+    }, { revalidate: false })
+    
     try {
       await updateExpeditionSchedule(schedule.id, {
         expedition_schedule_id: schedule.id,
@@ -434,14 +444,12 @@ export default function DashboardPage() {
         destination: isOffshore ? schedule.destination : 0, // Clear destination if not offshore
         expeditions_id: schedule.expeditions_id,
       })
-      // Use the correct SWR key with expedition ID
-      mutate(`expedition_schedules_${schedule.expeditions_id}`)
       toast.success("Type updated")
     } catch (error) {
       console.error("Failed to update type:", error)
       toast.error("Failed to update type")
-    } finally {
-      setUpdatingTypeId(null)
+      // Revert on error by refetching
+      mutate(swrKey)
     }
   }
 
@@ -679,12 +687,8 @@ export default function DashboardPage() {
                                     onValueChange={(value) => handleLocationChange(schedule, Number(value), false)}
                                     disabled={updatingLocationId === `${schedule.id}-location`}
                                   >
-                                    <SelectTrigger className={`w-full h-8 text-sm border-0 hover:bg-gray-100 cursor-pointer ${updatingLocationId === `${schedule.id}-location` ? 'opacity-50' : ''}`}>
-                                      <SelectValue>
-                                        <span className="text-sm text-gray-700 truncate block max-w-[200px]" title={formatLocation(schedule._expedition_current_location)}>
-                                          {formatLocation(schedule._expedition_current_location)}
-                                        </span>
-                                      </SelectValue>
+                                    <SelectTrigger className={`w-full h-8 text-sm border-0 hover:bg-gray-100 cursor-pointer ${updatingLocationId === `${schedule.id}-location` ? 'opacity-50' : ''} [&>span]:truncate [&>span]:max-w-[180px]`}>
+                                      <SelectValue placeholder="Select location" />
                                     </SelectTrigger>
                                     <SelectContent className="min-w-[280px]">
                                       {locations?.map((location: any) => (
@@ -768,16 +772,8 @@ export default function DashboardPage() {
                                     onValueChange={(value) => handleLocationChange(schedule, Number(value), true)}
                                     disabled={!(schedule.isOffshore || schedule.is_offshore) || updatingLocationId === `${schedule.id}-destination`}
                                   >
-                                    <SelectTrigger className={`w-full h-8 text-sm border-0 ${(schedule.isOffshore || schedule.is_offshore) ? 'hover:bg-gray-100 cursor-pointer' : 'cursor-not-allowed'} ${updatingLocationId === `${schedule.id}-destination` ? 'opacity-50' : ''}`}>
-                                      <SelectValue>
-                                        {schedule._expedition_destination && schedule.destination !== 0 ? (
-                                          <span className="text-sm text-gray-700 truncate block max-w-[200px]" title={formatLocation(schedule._expedition_destination)}>
-                                            {formatLocation(schedule._expedition_destination)}
-                                          </span>
-                                        ) : (
-                                          <span className="text-sm text-gray-400">—</span>
-                                        )}
-                                      </SelectValue>
+                                    <SelectTrigger className={`w-full h-8 text-sm border-0 ${(schedule.isOffshore || schedule.is_offshore) ? 'hover:bg-gray-100 cursor-pointer' : 'cursor-not-allowed'} ${updatingLocationId === `${schedule.id}-destination` ? 'opacity-50' : ''} [&>span]:truncate [&>span]:max-w-[180px]`}>
+                                      <SelectValue placeholder="—" />
                                     </SelectTrigger>
                                     <SelectContent className="min-w-[280px]">
                                       <SelectItem value="0" className="cursor-pointer text-muted-foreground">No destination</SelectItem>
@@ -939,12 +935,8 @@ export default function DashboardPage() {
                                     onValueChange={(value) => handleLocationChange(schedule, Number(value), false)}
                                     disabled={updatingLocationId === `${schedule.id}-location`}
                                   >
-                                    <SelectTrigger className={`w-full h-8 text-sm border-0 hover:bg-gray-100 cursor-pointer ${updatingLocationId === `${schedule.id}-location` ? 'opacity-50' : ''}`}>
-                                      <SelectValue>
-                                        <span className="text-sm text-gray-700 truncate block max-w-[200px]" title={formatLocation(schedule._expedition_current_location)}>
-                                          {formatLocation(schedule._expedition_current_location)}
-                                        </span>
-                                      </SelectValue>
+                                    <SelectTrigger className={`w-full h-8 text-sm border-0 hover:bg-gray-100 cursor-pointer ${updatingLocationId === `${schedule.id}-location` ? 'opacity-50' : ''} [&>span]:truncate [&>span]:max-w-[180px]`}>
+                                      <SelectValue placeholder="Select location" />
                                     </SelectTrigger>
                                     <SelectContent className="min-w-[280px]">
                                       {locations?.map((location: any) => (
@@ -1028,16 +1020,8 @@ export default function DashboardPage() {
                                     onValueChange={(value) => handleLocationChange(schedule, Number(value), true)}
                                     disabled={!(schedule.isOffshore || schedule.is_offshore) || updatingLocationId === `${schedule.id}-destination`}
                                   >
-                                    <SelectTrigger className={`w-full h-8 text-sm border-0 ${(schedule.isOffshore || schedule.is_offshore) ? 'hover:bg-gray-100 cursor-pointer' : 'cursor-not-allowed'} ${updatingLocationId === `${schedule.id}-destination` ? 'opacity-50' : ''}`}>
-                                      <SelectValue>
-                                        {schedule._expedition_destination && schedule.destination !== 0 ? (
-                                          <span className="text-sm text-gray-700 truncate block max-w-[200px]" title={formatLocation(schedule._expedition_destination)}>
-                                            {formatLocation(schedule._expedition_destination)}
-                                          </span>
-                                        ) : (
-                                          <span className="text-sm text-gray-400">—</span>
-                                        )}
-                                      </SelectValue>
+                                    <SelectTrigger className={`w-full h-8 text-sm border-0 ${(schedule.isOffshore || schedule.is_offshore) ? 'hover:bg-gray-100 cursor-pointer' : 'cursor-not-allowed'} ${updatingLocationId === `${schedule.id}-destination` ? 'opacity-50' : ''} [&>span]:truncate [&>span]:max-w-[180px]`}>
+                                      <SelectValue placeholder="—" />
                                     </SelectTrigger>
                                     <SelectContent className="min-w-[280px]">
                                       <SelectItem value="0" className="cursor-pointer text-muted-foreground">No destination</SelectItem>

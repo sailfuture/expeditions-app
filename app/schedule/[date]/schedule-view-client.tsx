@@ -563,20 +563,15 @@ export function ScheduleViewClient({ date, expeditionId }: ScheduleViewClientPro
               )}
               {Array.isArray(scheduleItems) && scheduleItems.length === 0 && schedule && isWithinExpeditionRange && (
                 <>
-                  <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
+                  <Select 
+                    value={selectedTemplate} 
+                    onValueChange={setSelectedTemplate}
+                  >
                     <SelectTrigger 
                       className="w-[160px] bg-white text-sm font-medium cursor-pointer border border-input rounded-md px-3 hover:bg-accent hover:text-accent-foreground"
                       style={{ height: '40px' }}
                     >
-                      <SelectValue placeholder="Select template">
-                        {selectedTemplate ? (
-                          <span className="truncate">
-                            {templates?.find((t: any) => t.id.toString() === selectedTemplate)?.template_name || "Template"}
-                          </span>
-                        ) : (
-                          "Select template"
-                        )}
-                      </SelectValue>
+                      <SelectValue placeholder="Select template" />
                     </SelectTrigger>
                     <SelectContent className="min-w-[200px]">
                       {templates?.map((template: any) => (

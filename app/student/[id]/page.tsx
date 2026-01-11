@@ -1175,67 +1175,217 @@ export default function StudentDetailPage() {
 
         {/* Intake Information - Only show when expedition ID is present and data exists */}
         {expeditionId && intakeInfo && (
-          <Collapsible className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-            <CollapsibleTrigger className="w-full px-6 py-4 border-b bg-gray-50/30 hover:bg-gray-50/50 transition-colors cursor-pointer">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <ChevronDown className="h-5 w-5 text-gray-500 transition-transform" />
-                  <h2 className="text-lg font-semibold text-left">Intake Information</h2>
+          <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b bg-gray-50/30 flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Intake Information</h2>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="cursor-pointer h-7 text-xs"
+                  onClick={() => router.push(`/intake-records`)}
+                >
+                  <Pencil className="h-3 w-3 mr-1" />
+                  Edit
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="cursor-pointer h-7 text-xs"
+                  onClick={() => setUnlinkConfirmOpen(true)}
+                >
+                  Remove Link
+                </Button>
+              </div>
+            </div>
+            <div className="p-6">
+              {/* Basic Info */}
+              <div className="mb-6">
+                <h3 className="text-sm font-semibold text-gray-700 mb-3">Basic Information</h3>
+                <dl className="grid grid-cols-2 gap-x-6 gap-y-3">
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">Date of Birth</dt>
+                    <dd className="mt-1 text-sm text-gray-900">{intakeInfo.date_of_birth ? formatDate(intakeInfo.date_of_birth) : "—"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">Shirt Size</dt>
+                    <dd className="mt-1 text-sm text-gray-900">{intakeInfo.student_shirt_size || "—"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">Swimming Level</dt>
+                    <dd className="mt-1 text-sm text-gray-900">{intakeInfo.swimming_level || "—"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">Passport Number</dt>
+                    <dd className="mt-1 text-sm text-gray-900">{intakeInfo.passport_number || "—"}</dd>
+                  </div>
+                </dl>
+              </div>
+
+              <hr className="my-6 border-gray-200" />
+
+              {/* Medical Information */}
+              <div className="mb-6">
+                <h3 className="text-sm font-semibold text-gray-700 mb-3">Medical Information</h3>
+                <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">Health Conditions</dt>
+                    <dd className="mt-1 text-sm text-gray-900">{intakeInfo.health_conditions || "—"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">Medical History</dt>
+                    <dd className="mt-1 text-sm text-gray-900">{intakeInfo.medical_history || "—"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">Allergies</dt>
+                    <dd className="mt-1 text-sm text-gray-900">{intakeInfo.allergies || "—"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">Dietary Restrictions</dt>
+                    <dd className="mt-1 text-sm text-gray-900">{intakeInfo.dietary_restrictions || "—"}</dd>
+                  </div>
+                  <div className="col-span-2">
+                    <dt className="text-sm font-medium text-gray-500">Other Medical Information</dt>
+                    <dd className="mt-1 text-sm text-gray-900">{intakeInfo.other_medical_info || "—"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">Treatment Goals</dt>
+                    <dd className="mt-1 text-sm text-gray-900">{intakeInfo.treatment_goals || "—"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">Additional Accommodations</dt>
+                    <dd className="mt-1 text-sm text-gray-900">{intakeInfo.additional_accommodations || "—"}</dd>
+                  </div>
+                </dl>
+              </div>
+
+              <hr className="my-6 border-gray-200" />
+
+              {/* Medications */}
+              <div className="mb-6">
+                <h3 className="text-sm font-semibold text-gray-700 mb-3">Medications</h3>
+                <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">Morning Medication</dt>
+                    <dd className="mt-1 text-sm text-gray-900">
+                      {intakeInfo.takes_morning_medication ? (
+                        <div>
+                          <Badge className="bg-green-600 text-white mb-1">Yes</Badge>
+                          {intakeInfo.morning_medication_details && (
+                            <p className="mt-1 text-gray-700">{intakeInfo.morning_medication_details}</p>
+                          )}
+                        </div>
+                      ) : (
+                        <Badge variant="outline">No</Badge>
+                      )}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">Evening Medication</dt>
+                    <dd className="mt-1 text-sm text-gray-900">
+                      {intakeInfo.takes_evening_medication ? (
+                        <div>
+                          <Badge className="bg-green-600 text-white mb-1">Yes</Badge>
+                          {intakeInfo.evening_medication_details && (
+                            <p className="mt-1 text-gray-700">{intakeInfo.evening_medication_details}</p>
+                          )}
+                        </div>
+                      ) : (
+                        <Badge variant="outline">No</Badge>
+                      )}
+                    </dd>
+                  </div>
+                  <div className="col-span-2">
+                    <dt className="text-sm font-medium text-gray-500">Other Medications</dt>
+                    <dd className="mt-1 text-sm text-gray-900">
+                      {intakeInfo.takes_additional_medications ? (
+                        <div>
+                          <Badge className="bg-green-600 text-white mb-1">Yes</Badge>
+                          {intakeInfo.other_medications_details && (
+                            <p className="mt-1 text-gray-700">{intakeInfo.other_medications_details}</p>
+                          )}
+                        </div>
+                      ) : (
+                        <Badge variant="outline">No</Badge>
+                      )}
+                    </dd>
+                  </div>
+                </dl>
+              </div>
+
+              <hr className="my-6 border-gray-200" />
+
+              {/* Behavioral Information */}
+              <div className="mb-6">
+                <h3 className="text-sm font-semibold text-gray-700 mb-3">Behavioral Information</h3>
+                <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">Behavioral or Emotional Conditions</dt>
+                    <dd className="mt-1 text-sm text-gray-900">{intakeInfo.behavioral_emotional_conditions || "—"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">Behavior Management Strategies</dt>
+                    <dd className="mt-1 text-sm text-gray-900">{intakeInfo.behavior_management_strategies || "—"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">Known Fears or Anxieties</dt>
+                    <dd className="mt-1 text-sm text-gray-900">{intakeInfo.fears_or_anxieties || "—"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">Separation Concerns</dt>
+                    <dd className="mt-1 text-sm text-gray-900">{intakeInfo.separation_concerns || "—"}</dd>
+                  </div>
+                </dl>
+              </div>
+
+              <hr className="my-6 border-gray-200" />
+
+              {/* Contact Information */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700 mb-3">Emergency Contacts</h3>
+                <div className="grid grid-cols-2 gap-6">
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-600 mb-2">Primary Contact</h4>
+                    <dl className="space-y-2">
+                      <div>
+                        <dt className="text-xs text-gray-500">Name</dt>
+                        <dd className="text-sm text-gray-900">{intakeInfo.primary_contact_name || "—"}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-xs text-gray-500">Phone</dt>
+                        <dd className="text-sm text-gray-900">{intakeInfo.primary_contact_phone || "—"}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-xs text-gray-500">Email</dt>
+                        <dd className="text-sm text-gray-900">{intakeInfo.primary_contact_email || "—"}</dd>
+                      </div>
+                    </dl>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-600 mb-2">Emergency Contact</h4>
+                    <dl className="space-y-2">
+                      <div>
+                        <dt className="text-xs text-gray-500">Name</dt>
+                        <dd className="text-sm text-gray-900">{intakeInfo.emergency_contact_name || "—"}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-xs text-gray-500">Relationship</dt>
+                        <dd className="text-sm text-gray-900">{intakeInfo.emergency_contact_relationship || "—"}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-xs text-gray-500">Phone</dt>
+                        <dd className="text-sm text-gray-900">{intakeInfo.emergency_contact_phone || "—"}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-xs text-gray-500">Email</dt>
+                        <dd className="text-sm text-gray-900">{intakeInfo.emergency_contact_email || "—"}</dd>
+                      </div>
+                    </dl>
+                  </div>
                 </div>
               </div>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <div className="p-6">
-                {/* Basic Info */}
-                <div className="mb-6">
-                  <h3 className="text-sm font-semibold text-gray-700 mb-3">Basic Information</h3>
-                  <dl className="grid grid-cols-2 gap-x-6 gap-y-3">
-                    <div>
-                      <dt className="text-sm font-medium text-gray-500">Date of Birth</dt>
-                      <dd className="mt-1 text-sm text-gray-900">{intakeInfo.date_of_birth ? formatDate(intakeInfo.date_of_birth) : "—"}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-sm font-medium text-gray-500">Shirt Size</dt>
-                      <dd className="mt-1 text-sm text-gray-900">{intakeInfo.student_shirt_size || "—"}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-sm font-medium text-gray-500">Swimming Level</dt>
-                      <dd className="mt-1 text-sm text-gray-900">{intakeInfo.swimming_level || "—"}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-sm font-medium text-gray-500">Passport Number</dt>
-                      <dd className="mt-1 text-sm text-gray-900">{intakeInfo.passport_number || "—"}</dd>
-                    </div>
-                  </dl>
-                </div>
-
-                <hr className="my-6 border-gray-200" />
-
-                {/* Medical Information */}
-                <div className="mb-6">
-                  <h3 className="text-sm font-semibold text-gray-700 mb-3">Medical Information</h3>
-                  <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
-                    <div>
-                      <dt className="text-sm font-medium text-gray-500">Health Conditions</dt>
-                      <dd className="mt-1 text-sm text-gray-900">{intakeInfo.health_conditions || "—"}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-sm font-medium text-gray-500">Medical History</dt>
-                      <dd className="mt-1 text-sm text-gray-900">{intakeInfo.medical_history || "—"}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-sm font-medium text-gray-500">Allergies</dt>
-                      <dd className="mt-1 text-sm text-gray-900">{intakeInfo.allergies || "—"}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-sm font-medium text-gray-500">Dietary Restrictions</dt>
-                      <dd className="mt-1 text-sm text-gray-900">{intakeInfo.dietary_restrictions || "—"}</dd>
-                    </div>
-                  </dl>
-                </div>
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
+            </div>
+          </div>
         )}
 
         {/* Admin view sections - Only show when no expedition ID */}

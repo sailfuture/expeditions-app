@@ -213,9 +213,31 @@ function PlannerPageContent() {
   }
   
   const getLocation = (schedule: any) => {
-    if (!schedule?._expedition_current_location) return "No Location"
-    const loc = schedule._expedition_current_location
-    return loc.port ? `${loc.port}` : "No Location"
+    if (!schedule) return "No Location"
+    // Try multiple possible field names for current location
+    const loc = schedule._expedition_current_location || schedule._current_location
+    if (loc?.port) {
+      return loc.port
+    }
+    // Fallback to ID if expanded object not available
+    if (schedule.current_location && schedule.current_location > 0) {
+      return `Location ${schedule.current_location}`
+    }
+    return "No Location"
+  }
+  
+  const getDestination = (schedule: any) => {
+    if (!schedule) return null
+    // Try multiple possible field names for destination
+    const dest = schedule._expedition_destination || schedule._destination
+    if (dest?.port) {
+      return dest.port
+    }
+    // Fallback to ID if expanded object not available
+    if (schedule.destination && schedule.destination > 0) {
+      return `Location ${schedule.destination}`
+    }
+    return null
   }
   
   const getStaffOff = (schedule: any) => {
@@ -415,6 +437,7 @@ function PlannerPageContent() {
             const schedule = getScheduleForDate(dateStrings[index])
             const dayType = getDayType(schedule)
             const location = getLocation(schedule)
+            const destination = getDestination(schedule)
             const staffOff = getStaffOff(schedule)
             
             // Check if date is within expedition range
@@ -456,8 +479,8 @@ function PlannerPageContent() {
                             Off: {staffOff}
                           </span>
                         )}
-                        <span className="text-[9px] text-gray-400 truncate min-w-0 max-w-[100px]" title={location}>
-                          {location}
+                        <span className="text-[9px] text-gray-400 truncate min-w-0 max-w-[120px]" title={destination && destination !== location ? `${location} → ${destination}` : location}>
+                          {destination && destination !== location ? `${location} → ${destination}` : location}
                         </span>
                       </div>
                     </div>
@@ -520,15 +543,7 @@ function PlannerPageContent() {
                             }}
                           >
                             <SelectTrigger className="w-full h-8 text-xs cursor-pointer bg-white">
-                              <SelectValue placeholder="Select template">
-                                {selectedTemplates[dateStrings[index]] ? (
-                                  <span className="truncate text-xs">
-                                    {templates?.find((t: any) => t.id === selectedTemplates[dateStrings[index]])?.template_name || "Template"}
-                                  </span>
-                                ) : (
-                                  "Select template"
-                                )}
-                              </SelectValue>
+                              <SelectValue placeholder="Select template" />
                             </SelectTrigger>
                             <SelectContent>
                               {templates?.map((template: any) => (

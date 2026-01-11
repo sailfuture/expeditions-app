@@ -436,3 +436,17 @@ export async function deleteExpeditionDiscipline(id: number) {
     method: "DELETE",
   })
 }
+
+// ============ Staff Validation ============
+export async function validateStaffByEmail(email: string) {
+  try {
+    const res = await fetch(`${XANO_BASE_URL}/validate_staff?email=${encodeURIComponent(email)}`)
+    if (!res.ok) {
+      return null
+    }
+    return res.json()
+  } catch (error) {
+    console.error("Error validating staff:", error)
+    return null
+  }
+}

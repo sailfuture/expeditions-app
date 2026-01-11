@@ -54,6 +54,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { toast } from "sonner"
 
 // Simple native select component for reliability on mobile/iPad
 interface SimpleSelectProps {
@@ -63,16 +64,18 @@ interface SimpleSelectProps {
   placeholder?: string
   id?: string
   className?: string
+  invalid?: boolean
 }
 
-function SimpleSelect({ value, onChange, options, placeholder = "Select an option", id, className }: SimpleSelectProps) {
+function SimpleSelect({ value, onChange, options, placeholder = "Select an option", id, className, invalid }: SimpleSelectProps) {
   return (
     <select
       id={id}
       value={value}
       onChange={(e) => onChange(e.target.value)}
+      aria-invalid={invalid}
       className={cn(
-        "flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm shadow-sm transition-colors",
+        "flex h-11 w-full rounded-lg border border-input bg-transparent px-3 py-2 text-base shadow-sm transition-colors",
         "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
         "disabled:cursor-not-allowed disabled:opacity-50",
         "dark:bg-input/30 dark:hover:bg-input/50",
@@ -80,6 +83,7 @@ function SimpleSelect({ value, onChange, options, placeholder = "Select an optio
         "bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23888%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22m6%209%206%206%206-6%22%2F%3E%3C%2Fsvg%3E')]",
         "bg-[length:1rem] bg-[right_0.5rem_center]",
         !value && "text-muted-foreground",
+        invalid && "border-destructive ring-destructive",
         className
       )}
     >
@@ -472,17 +476,137 @@ export default function PassageLogsPage() {
     }))
   }
 
+  // Track which fields are invalid
+  const [invalidFields, setInvalidFields] = useState<Set<string>>(new Set())
+
+  // Validation for each step - returns field keys that are invalid
+  const validateStep = (step: number): { valid: boolean; invalidFieldKeys: string[]; missingCount: number } => {
+    const invalidFieldKeys: string[] = []
+    
+    switch (step) {
+      case 1: // Overview
+        if (!formData.date) invalidFieldKeys.push("date")
+        if (!formData.time) invalidFieldKeys.push("time")
+        if (!formData.departureLocation) invalidFieldKeys.push("departureLocation")
+        if (!formData.destinationLocation) invalidFieldKeys.push("destinationLocation")
+        if (!formData.windSpeed) invalidFieldKeys.push("windSpeed")
+        if (!formData.windDirection) invalidFieldKeys.push("windDirection")
+        if (!formData.boatSpeed) invalidFieldKeys.push("boatSpeed")
+        if (!formData.heading) invalidFieldKeys.push("heading")
+        if (!formData.courseOverGround) invalidFieldKeys.push("courseOverGround")
+        break
+      case 2: // Bridge Department
+        if (!formData.logbookEntry) invalidFieldKeys.push("logbookEntry")
+        if (!formData.plotPosition) invalidFieldKeys.push("plotPosition")
+        if (!formData.spotlightCharged) invalidFieldKeys.push("spotlightCharged")
+        if (!formData.latitudeDeg) invalidFieldKeys.push("latitudeDeg")
+        if (!formData.latitudeMin) invalidFieldKeys.push("latitudeMin")
+        if (!formData.latitudeSec) invalidFieldKeys.push("latitudeSec")
+        if (!formData.latitudeDir) invalidFieldKeys.push("latitudeDir")
+        if (!formData.longitudeDeg) invalidFieldKeys.push("longitudeDeg")
+        if (!formData.longitudeMin) invalidFieldKeys.push("longitudeMin")
+        if (!formData.longitudeSec) invalidFieldKeys.push("longitudeSec")
+        if (!formData.longitudeDir) invalidFieldKeys.push("longitudeDir")
+        if (!formData.binoculars) invalidFieldKeys.push("binoculars")
+        if (!formData.vhfChannel16) invalidFieldKeys.push("vhfChannel16")
+        if (!formData.fuelDayTank) invalidFieldKeys.push("fuelDayTank")
+        if (!formData.grayWaterTank) invalidFieldKeys.push("grayWaterTank")
+        if (!formData.blackWaterTank) invalidFieldKeys.push("blackWaterTank")
+        if (!formData.portWaterTank) invalidFieldKeys.push("portWaterTank")
+        if (!formData.starboardWaterTank) invalidFieldKeys.push("starboardWaterTank")
+        if (!formData.chilledWaterTemp) invalidFieldKeys.push("chilledWaterTemp")
+        if (!formData.voltageAmpDraw) invalidFieldKeys.push("voltageAmpDraw")
+        if (!formData.serviceBatteryVoltage) invalidFieldKeys.push("serviceBatteryVoltage")
+        if (!formData.electronicsBatteryVoltage) invalidFieldKeys.push("electronicsBatteryVoltage")
+        if (!formData.engineBatteryVoltage) invalidFieldKeys.push("engineBatteryVoltage")
+        if (!formData.emergencyBatteryVoltage) invalidFieldKeys.push("emergencyBatteryVoltage")
+        break
+      case 3: // Engineering Department
+        if (!formData.mainEngineRpm) invalidFieldKeys.push("mainEngineRpm")
+        if (!formData.mainEngineGearOilPressure) invalidFieldKeys.push("mainEngineGearOilPressure")
+        if (!formData.mainEngineOilPressure) invalidFieldKeys.push("mainEngineOilPressure")
+        if (!formData.mainEngineTemp) invalidFieldKeys.push("mainEngineTemp")
+        if (!formData.mainEngineValveCoverTemp) invalidFieldKeys.push("mainEngineValveCoverTemp")
+        if (!formData.generatorOilTemp) invalidFieldKeys.push("generatorOilTemp")
+        if (!formData.generatorOilPressure) invalidFieldKeys.push("generatorOilPressure")
+        break
+      case 4: // Deck Department
+        if (!formData.catamaranSecure) invalidFieldKeys.push("catamaranSecure")
+        if (!formData.sternRibSecure) invalidFieldKeys.push("sternRibSecure")
+        if (!formData.bowRibSecure) invalidFieldKeys.push("bowRibSecure")
+        if (!formData.fuelCansSecure) invalidFieldKeys.push("fuelCansSecure")
+        if (!formData.jackLinesSecure) invalidFieldKeys.push("jackLinesSecure")
+        if (!formData.anchorsSecure) invalidFieldKeys.push("anchorsSecure")
+        if (!formData.sailingLinesClean) invalidFieldKeys.push("sailingLinesClean")
+        if (!formData.rsCatMastSecure) invalidFieldKeys.push("rsCatMastSecure")
+        break
+      case 5: // Interior Department
+        if (!formData.salonItemsSecure) invalidFieldKeys.push("salonItemsSecure")
+        if (!formData.galleyItemsSecure) invalidFieldKeys.push("galleyItemsSecure")
+        if (!formData.allCabinItemsSecure) invalidFieldKeys.push("allCabinItemsSecure")
+        if (!formData.forepeakFreezerTemp) invalidFieldKeys.push("forepeakFreezerTemp")
+        if (!formData.salonFridgeTemp) invalidFieldKeys.push("salonFridgeTemp")
+        if (!formData.galleyTopFridgeTemp) invalidFieldKeys.push("galleyTopFridgeTemp")
+        if (!formData.galleyBottomFreezerTemp) invalidFieldKeys.push("galleyBottomFreezerTemp")
+        if (!formData.lazaretteDeepFreezerTemp) invalidFieldKeys.push("lazaretteDeepFreezerTemp")
+        if (!formData.propaneSolenoidOff) invalidFieldKeys.push("propaneSolenoidOff")
+        if (!formData.ovenBreakerOff) invalidFieldKeys.push("ovenBreakerOff")
+        break
+      case 6: // Confirmation
+        if (formData.crewMembers.length === 0) invalidFieldKeys.push("crewMembers")
+        if (!formData.approvedBy) invalidFieldKeys.push("approvedBy")
+        // generalObservations and additionalNotes are optional
+        break
+    }
+    
+    return { valid: invalidFieldKeys.length === 0, invalidFieldKeys, missingCount: invalidFieldKeys.length }
+  }
+
+  // Check if a field is invalid
+  const isFieldInvalid = (fieldKey: string) => invalidFields.has(fieldKey)
+
+  // Clear invalid state when a field is updated
+  const updateFieldAndClearInvalid = <K extends keyof PassageFormData>(key: K, value: PassageFormData[K]) => {
+    updateField(key, value)
+    if (invalidFields.has(key)) {
+      setInvalidFields(prev => {
+        const next = new Set(prev)
+        next.delete(key)
+        return next
+      })
+    }
+  }
+
   const handleNext = () => {
+    const { valid, invalidFieldKeys, missingCount } = validateStep(currentStep)
+    if (!valid) {
+      setInvalidFields(new Set(invalidFieldKeys))
+      toast.error(`Please complete all required fields`, {
+        description: `${missingCount} field${missingCount > 1 ? 's' : ''} missing on this page`,
+      })
+      return
+    }
+    setInvalidFields(new Set())
     if (currentStep < 6) setCurrentStep(currentStep + 1)
     window.scrollTo({ top: 0, behavior: "smooth" })
   }
 
   const handlePrevious = () => {
+    setInvalidFields(new Set())
     if (currentStep > 1) setCurrentStep(currentStep - 1)
     window.scrollTo({ top: 0, behavior: "smooth" })
   }
 
   const handleSubmit = async () => {
+    const { valid, invalidFieldKeys, missingCount } = validateStep(6)
+    if (!valid) {
+      setInvalidFields(new Set(invalidFieldKeys))
+      toast.error(`Please complete all required fields`, {
+        description: `${missingCount} field${missingCount > 1 ? 's' : ''} missing`,
+      })
+      return
+    }
+    setInvalidFields(new Set())
     setIsSubmitting(true)
     
     try {
@@ -715,6 +839,7 @@ export default function PassageLogsPage() {
           </CardHeader>
         </Card>
 
+
         {/* Step 1 - Overview */}
         {currentStep === 1 && (
           <>
@@ -722,14 +847,18 @@ export default function PassageLogsPage() {
               <FieldSet>
                 <FieldGroup>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <Field>
+                    <Field data-invalid={isFieldInvalid("date") || undefined}>
                       <FieldLabel htmlFor="date-picker">Date</FieldLabel>
                       <Popover open={dateOpen} onOpenChange={setDateOpen}>
                         <PopoverTrigger asChild>
                           <Button
                             variant="outline"
                             id="date-picker"
-                            className="w-full justify-between font-normal"
+                            aria-invalid={isFieldInvalid("date")}
+                            className={cn(
+                              "w-full h-11 justify-between font-normal text-base",
+                              isFieldInvalid("date") && "border-destructive"
+                            )}
                           >
                             {formData.date ? (
                               formData.date.toLocaleDateString()
@@ -744,14 +873,14 @@ export default function PassageLogsPage() {
                             mode="single"
                             selected={formData.date}
                             onSelect={(date) => {
-                              updateField("date", date)
+                              updateFieldAndClearInvalid("date", date)
                               setDateOpen(false)
                             }}
                           />
                         </PopoverContent>
                       </Popover>
                     </Field>
-                    <Field>
+                    <Field data-invalid={isFieldInvalid("time") || undefined}>
                       <FieldLabel>Time (24-hour)</FieldLabel>
                       <div className="flex items-center gap-2">
                         <Input
@@ -763,10 +892,11 @@ export default function PassageLogsPage() {
                           onChange={(e) => {
                             const val = e.target.value.replace(/\D/g, "").slice(0, 2)
                             const mins = formData.time.split(":")[1] || "00"
-                            updateField("time", `${val}:${mins}`)
+                            updateFieldAndClearInvalid("time", `${val}:${mins}`)
                           }}
                           placeholder="HH"
-                          className="flex-1 text-center"
+                          aria-invalid={isFieldInvalid("time")}
+                          className={cn("flex-1 text-center h-11 text-base", isFieldInvalid("time") && "border-destructive")}
                         />
                         <span className="text-lg font-medium">:</span>
                         <Input
@@ -778,10 +908,11 @@ export default function PassageLogsPage() {
                           onChange={(e) => {
                             const val = e.target.value.replace(/\D/g, "").slice(0, 2)
                             const hrs = formData.time.split(":")[0] || "00"
-                            updateField("time", `${hrs}:${val}`)
+                            updateFieldAndClearInvalid("time", `${hrs}:${val}`)
                           }}
                           placeholder="MM"
-                          className="flex-1 text-center"
+                          aria-invalid={isFieldInvalid("time")}
+                          className={cn("flex-1 text-center h-11 text-base", isFieldInvalid("time") && "border-destructive")}
                         />
                       </div>
                       <FieldDescription>Enter time in 24-hour format (00:00 - 23:59)</FieldDescription>
@@ -789,7 +920,7 @@ export default function PassageLogsPage() {
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <Field>
+                    <Field data-invalid={isFieldInvalid("departureLocation") || undefined}>
                       <FieldLabel>Departure Location</FieldLabel>
                       <Popover open={departureOpen} onOpenChange={setDepartureOpen}>
                         <PopoverTrigger asChild>
@@ -797,10 +928,14 @@ export default function PassageLogsPage() {
                             variant="outline"
                             role="combobox"
                             aria-expanded={departureOpen}
-                            className="w-full justify-between font-normal cursor-pointer"
+                            aria-invalid={isFieldInvalid("departureLocation")}
+                            className={cn(
+                              "w-full h-11 justify-between font-normal cursor-pointer text-base",
+                              isFieldInvalid("departureLocation") && "border-destructive"
+                            )}
                           >
                             {formData.departureLocation ? (
-                              formData.departureLocation
+                              <span className="truncate">{formData.departureLocation}</span>
                             ) : (
                               <span className="text-muted-foreground">Select An Option</span>
                             )}
@@ -809,7 +944,7 @@ export default function PassageLogsPage() {
                         </PopoverTrigger>
                         <PopoverContent className="p-0 w-[var(--radix-popover-trigger-width)]" align="start">
                           <Command>
-                            <CommandInput placeholder="Search location..." />
+                            <CommandInput placeholder="Search location..." className="h-11" />
                             <CommandList>
                               <CommandEmpty>No location found.</CommandEmpty>
                               <CommandGroup>
@@ -818,7 +953,7 @@ export default function PassageLogsPage() {
                                     key={location.id}
                                     value={`${location.port}, ${location.country}`}
                                     onSelect={(currentValue) => {
-                                      updateField("departureLocation", currentValue === formData.departureLocation ? "" : currentValue)
+                                      updateFieldAndClearInvalid("departureLocation", currentValue === formData.departureLocation ? "" : currentValue)
                                       setDepartureOpen(false)
                                     }}
                                   >
@@ -837,7 +972,7 @@ export default function PassageLogsPage() {
                         </PopoverContent>
                       </Popover>
                     </Field>
-                    <Field>
+                    <Field data-invalid={isFieldInvalid("destinationLocation") || undefined}>
                       <FieldLabel>Destination Location</FieldLabel>
                       <Popover open={destinationOpen} onOpenChange={setDestinationOpen}>
                         <PopoverTrigger asChild>
@@ -845,10 +980,14 @@ export default function PassageLogsPage() {
                             variant="outline"
                             role="combobox"
                             aria-expanded={destinationOpen}
-                            className="w-full justify-between font-normal cursor-pointer"
+                            aria-invalid={isFieldInvalid("destinationLocation")}
+                            className={cn(
+                              "w-full h-11 justify-between font-normal cursor-pointer text-base",
+                              isFieldInvalid("destinationLocation") && "border-destructive"
+                            )}
                           >
                             {formData.destinationLocation ? (
-                              formData.destinationLocation
+                              <span className="truncate">{formData.destinationLocation}</span>
                             ) : (
                               <span className="text-muted-foreground">Select An Option</span>
                             )}
@@ -857,7 +996,7 @@ export default function PassageLogsPage() {
                         </PopoverTrigger>
                         <PopoverContent className="p-0 w-[var(--radix-popover-trigger-width)]" align="start">
                           <Command>
-                            <CommandInput placeholder="Search location..." />
+                            <CommandInput placeholder="Search location..." className="h-11" />
                             <CommandList>
                               <CommandEmpty>No location found.</CommandEmpty>
                               <CommandGroup>
@@ -866,7 +1005,7 @@ export default function PassageLogsPage() {
                                     key={location.id}
                                     value={`${location.port}, ${location.country}`}
                                     onSelect={(currentValue) => {
-                                      updateField("destinationLocation", currentValue === formData.destinationLocation ? "" : currentValue)
+                                      updateFieldAndClearInvalid("destinationLocation", currentValue === formData.destinationLocation ? "" : currentValue)
                                       setDestinationOpen(false)
                                     }}
                                   >
@@ -894,11 +1033,11 @@ export default function PassageLogsPage() {
               <FieldSet>
                 <FieldGroup>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <Field>
+                    <Field data-invalid={isFieldInvalid("windSpeed") || undefined}>
                       <LabelWithTooltip htmlFor="windSpeed" tooltip="Valid range: 0-80 knots">
                         Wind Speed
                       </LabelWithTooltip>
-                      <InputGroup>
+                      <InputGroup className={isFieldInvalid("windSpeed") ? "[&>input]:border-destructive" : ""}>
                         <InputGroupInput
                           id="windSpeed"
                           type="text" inputMode="numeric" pattern="[0-9]*"
@@ -906,25 +1045,29 @@ export default function PassageLogsPage() {
                           max="80"
                           step="0.1"
                           value={formData.windSpeed}
-                          onChange={(e) => updateField("windSpeed", e.target.value)}
+                          onChange={(e) => updateFieldAndClearInvalid("windSpeed", e.target.value)}
                           placeholder="0-80"
+                          aria-invalid={isFieldInvalid("windSpeed")}
+                          className="h-11 text-base"
                         />
                         <InputGroupAddon align="inline-end">kns</InputGroupAddon>
                       </InputGroup>
                     </Field>
-                    <Field>
+                    <Field data-invalid={isFieldInvalid("windDirection") || undefined}>
                       <LabelWithTooltip htmlFor="windDirection" tooltip="Valid range: 0-359 degrees">
                         Wind Direction
                       </LabelWithTooltip>
-                      <InputGroup>
+                      <InputGroup className={isFieldInvalid("windDirection") ? "[&>input]:border-destructive" : ""}>
                         <InputGroupInput
                           id="windDirection"
                           type="text" inputMode="numeric" pattern="[0-9]*"
                           min="0"
                           max="359"
                           value={formData.windDirection}
-                          onChange={(e) => updateField("windDirection", e.target.value)}
+                          onChange={(e) => updateFieldAndClearInvalid("windDirection", e.target.value)}
                           placeholder="0-359"
+                          aria-invalid={isFieldInvalid("windDirection")}
+                          className="h-11 text-base"
                         />
                         <InputGroupAddon align="inline-end">deg</InputGroupAddon>
                       </InputGroup>
@@ -938,11 +1081,11 @@ export default function PassageLogsPage() {
               <FieldSet>
                 <FieldGroup>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <Field>
+                    <Field data-invalid={isFieldInvalid("boatSpeed") || undefined}>
                       <LabelWithTooltip htmlFor="boatSpeed" tooltip="Valid range: 0-40 knots">
                         Boat Speed
                       </LabelWithTooltip>
-                      <InputGroup>
+                      <InputGroup className={isFieldInvalid("boatSpeed") ? "[&>input]:border-destructive" : ""}>
                         <InputGroupInput
                           id="boatSpeed"
                           type="text" inputMode="numeric" pattern="[0-9]*"
@@ -950,42 +1093,48 @@ export default function PassageLogsPage() {
                           max="40"
                           step="0.1"
                           value={formData.boatSpeed}
-                          onChange={(e) => updateField("boatSpeed", e.target.value)}
+                          onChange={(e) => updateFieldAndClearInvalid("boatSpeed", e.target.value)}
                           placeholder="0-40"
+                          aria-invalid={isFieldInvalid("boatSpeed")}
+                          className="h-11 text-base"
                         />
                         <InputGroupAddon align="inline-end">kns</InputGroupAddon>
                       </InputGroup>
                     </Field>
-                    <Field>
+                    <Field data-invalid={isFieldInvalid("heading") || undefined}>
                       <LabelWithTooltip htmlFor="heading" tooltip="Valid range: 0-359 degrees">
                         Heading
                       </LabelWithTooltip>
-                      <InputGroup>
+                      <InputGroup className={isFieldInvalid("heading") ? "[&>input]:border-destructive" : ""}>
                         <InputGroupInput
                           id="heading"
                           type="text" inputMode="numeric" pattern="[0-9]*"
                           min="0"
                           max="359"
                           value={formData.heading}
-                          onChange={(e) => updateField("heading", e.target.value)}
+                          onChange={(e) => updateFieldAndClearInvalid("heading", e.target.value)}
                           placeholder="0-359"
+                          aria-invalid={isFieldInvalid("heading")}
+                          className="h-11 text-base"
                         />
                         <InputGroupAddon align="inline-end">deg</InputGroupAddon>
                       </InputGroup>
                     </Field>
-                    <Field>
+                    <Field data-invalid={isFieldInvalid("courseOverGround") || undefined}>
                       <LabelWithTooltip htmlFor="courseOverGround" tooltip="Valid range: 0-359 degrees">
                         Course Over Ground
                       </LabelWithTooltip>
-                      <InputGroup>
+                      <InputGroup className={isFieldInvalid("courseOverGround") ? "[&>input]:border-destructive" : ""}>
                         <InputGroupInput
                           id="courseOverGround"
                           type="text" inputMode="numeric" pattern="[0-9]*"
                           min="0"
                           max="359"
                           value={formData.courseOverGround}
-                          onChange={(e) => updateField("courseOverGround", e.target.value)}
+                          onChange={(e) => updateFieldAndClearInvalid("courseOverGround", e.target.value)}
                           placeholder="0-359"
+                          aria-invalid={isFieldInvalid("courseOverGround")}
+                          className="h-11 text-base"
                         />
                         <InputGroupAddon align="inline-end">deg</InputGroupAddon>
                       </InputGroup>
@@ -1004,34 +1153,37 @@ export default function PassageLogsPage() {
               <FieldSet>
                 <FieldGroup>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <Field>
+                    <Field data-invalid={isFieldInvalid("logbookEntry") || undefined}>
                       <FieldLabel htmlFor="logbookEntry">Logbook Entry</FieldLabel>
                       <SimpleSelect
                         id="logbookEntry"
                         value={formData.logbookEntry}
-                        onChange={(v) => updateField("logbookEntry", v)}
+                        onChange={(v) => updateFieldAndClearInvalid("logbookEntry", v)}
                         options={completedOptions}
                         placeholder="Select an option"
+                        invalid={isFieldInvalid("logbookEntry")}
                       />
                     </Field>
-                    <Field>
+                    <Field data-invalid={isFieldInvalid("plotPosition") || undefined}>
                       <FieldLabel htmlFor="plotPosition">Plot Position on Chart</FieldLabel>
                       <SimpleSelect
                         id="plotPosition"
                         value={formData.plotPosition}
-                        onChange={(v) => updateField("plotPosition", v)}
+                        onChange={(v) => updateFieldAndClearInvalid("plotPosition", v)}
                         options={completedOptions}
                         placeholder="Select an option"
+                        invalid={isFieldInvalid("plotPosition")}
                       />
                     </Field>
-                    <Field>
+                    <Field data-invalid={isFieldInvalid("spotlightCharged") || undefined}>
                       <FieldLabel htmlFor="spotlightCharged">Spotlight Charged</FieldLabel>
                       <SimpleSelect
                         id="spotlightCharged"
                         value={formData.spotlightCharged}
-                        onChange={(v) => updateField("spotlightCharged", v)}
+                        onChange={(v) => updateFieldAndClearInvalid("spotlightCharged", v)}
                         options={completedOptions}
                         placeholder="Select an option"
+                        invalid={isFieldInvalid("spotlightCharged")}
                       />
                     </Field>
                   </div>
@@ -1044,130 +1196,144 @@ export default function PassageLogsPage() {
                 <FieldGroup>
                   <FieldLegend variant="label">Latitude</FieldLegend>
                   <div className="grid grid-cols-4 gap-4">
-                    <Field>
+                    <Field data-invalid={isFieldInvalid("latitudeDeg") || undefined}>
                       <LabelWithTooltip htmlFor="latitudeDeg" tooltip="Degrees: 0-90">
                         Degrees (°)
                       </LabelWithTooltip>
-                      <InputGroup>
+                      <InputGroup className={isFieldInvalid("latitudeDeg") ? "[&>input]:border-destructive" : ""}>
                         <InputGroupInput
                           id="latitudeDeg"
                           type="text" inputMode="numeric" pattern="[0-9]*"
                           min="0"
                           max="90"
                           value={formData.latitudeDeg}
-                          onChange={(e) => updateField("latitudeDeg", e.target.value)}
+                          onChange={(e) => updateFieldAndClearInvalid("latitudeDeg", e.target.value)}
                           placeholder="0-90"
+                          aria-invalid={isFieldInvalid("latitudeDeg")}
+                          className="h-11 text-base"
                         />
                         <InputGroupAddon align="inline-end">°</InputGroupAddon>
                       </InputGroup>
                     </Field>
-                    <Field>
+                    <Field data-invalid={isFieldInvalid("latitudeMin") || undefined}>
                       <LabelWithTooltip htmlFor="latitudeMin" tooltip="Minutes: 0-59">
                         Minutes (&apos;)
                       </LabelWithTooltip>
-                      <InputGroup>
+                      <InputGroup className={isFieldInvalid("latitudeMin") ? "[&>input]:border-destructive" : ""}>
                         <InputGroupInput
                           id="latitudeMin"
                           type="text" inputMode="numeric" pattern="[0-9]*"
                           min="0"
                           max="59"
                           value={formData.latitudeMin}
-                          onChange={(e) => updateField("latitudeMin", e.target.value)}
+                          onChange={(e) => updateFieldAndClearInvalid("latitudeMin", e.target.value)}
                           placeholder="0-59"
+                          aria-invalid={isFieldInvalid("latitudeMin")}
+                          className="h-11 text-base"
                         />
                         <InputGroupAddon align="inline-end">&apos;</InputGroupAddon>
                       </InputGroup>
                     </Field>
-                    <Field>
+                    <Field data-invalid={isFieldInvalid("latitudeSec") || undefined}>
                       <LabelWithTooltip htmlFor="latitudeSec" tooltip="Seconds: 0-59">
                         Seconds (&quot;)
                       </LabelWithTooltip>
-                      <InputGroup>
+                      <InputGroup className={isFieldInvalid("latitudeSec") ? "[&>input]:border-destructive" : ""}>
                         <InputGroupInput
                           id="latitudeSec"
                           type="text" inputMode="numeric" pattern="[0-9]*"
                           min="0"
                           max="59"
                           value={formData.latitudeSec}
-                          onChange={(e) => updateField("latitudeSec", e.target.value)}
+                          onChange={(e) => updateFieldAndClearInvalid("latitudeSec", e.target.value)}
                           placeholder="0-59"
+                          aria-invalid={isFieldInvalid("latitudeSec")}
+                          className="h-11 text-base"
                         />
                         <InputGroupAddon align="inline-end">&quot;</InputGroupAddon>
                       </InputGroup>
                     </Field>
-                    <Field>
+                    <Field data-invalid={isFieldInvalid("latitudeDir") || undefined}>
                       <FieldLabel htmlFor="latitudeDir">Direction</FieldLabel>
                       <SimpleSelect
                         id="latitudeDir"
                         value={formData.latitudeDir}
-                        onChange={(v) => updateField("latitudeDir", v)}
+                        onChange={(v) => updateFieldAndClearInvalid("latitudeDir", v)}
                         options={latDirOptions}
                         placeholder="Select"
+                        invalid={isFieldInvalid("latitudeDir")}
                       />
                     </Field>
                   </div>
 
                   <FieldLegend variant="label">Longitude</FieldLegend>
                   <div className="grid grid-cols-4 gap-4">
-                    <Field>
+                    <Field data-invalid={isFieldInvalid("longitudeDeg") || undefined}>
                       <LabelWithTooltip htmlFor="longitudeDeg" tooltip="Degrees: 0-180">
                         Degrees (°)
                       </LabelWithTooltip>
-                      <InputGroup>
+                      <InputGroup className={isFieldInvalid("longitudeDeg") ? "[&>input]:border-destructive" : ""}>
                         <InputGroupInput
                           id="longitudeDeg"
                           type="text" inputMode="numeric" pattern="[0-9]*"
                           min="0"
                           max="180"
                           value={formData.longitudeDeg}
-                          onChange={(e) => updateField("longitudeDeg", e.target.value)}
+                          onChange={(e) => updateFieldAndClearInvalid("longitudeDeg", e.target.value)}
                           placeholder="0-180"
+                          aria-invalid={isFieldInvalid("longitudeDeg")}
+                          className="h-11 text-base"
                         />
                         <InputGroupAddon align="inline-end">°</InputGroupAddon>
                       </InputGroup>
                     </Field>
-                    <Field>
+                    <Field data-invalid={isFieldInvalid("longitudeMin") || undefined}>
                       <LabelWithTooltip htmlFor="longitudeMin" tooltip="Minutes: 0-59">
                         Minutes (&apos;)
                       </LabelWithTooltip>
-                      <InputGroup>
+                      <InputGroup className={isFieldInvalid("longitudeMin") ? "[&>input]:border-destructive" : ""}>
                         <InputGroupInput
                           id="longitudeMin"
                           type="text" inputMode="numeric" pattern="[0-9]*"
                           min="0"
                           max="59"
                           value={formData.longitudeMin}
-                          onChange={(e) => updateField("longitudeMin", e.target.value)}
+                          onChange={(e) => updateFieldAndClearInvalid("longitudeMin", e.target.value)}
                           placeholder="0-59"
+                          aria-invalid={isFieldInvalid("longitudeMin")}
+                          className="h-11 text-base"
                         />
                         <InputGroupAddon align="inline-end">&apos;</InputGroupAddon>
                       </InputGroup>
                     </Field>
-                    <Field>
+                    <Field data-invalid={isFieldInvalid("longitudeSec") || undefined}>
                       <LabelWithTooltip htmlFor="longitudeSec" tooltip="Seconds: 0-59">
                         Seconds (&quot;)
                       </LabelWithTooltip>
-                      <InputGroup>
+                      <InputGroup className={isFieldInvalid("longitudeSec") ? "[&>input]:border-destructive" : ""}>
                         <InputGroupInput
                           id="longitudeSec"
                           type="text" inputMode="numeric" pattern="[0-9]*"
                           min="0"
                           max="59"
                           value={formData.longitudeSec}
-                          onChange={(e) => updateField("longitudeSec", e.target.value)}
+                          onChange={(e) => updateFieldAndClearInvalid("longitudeSec", e.target.value)}
                           placeholder="0-59"
+                          aria-invalid={isFieldInvalid("longitudeSec")}
+                          className="h-11 text-base"
                         />
                         <InputGroupAddon align="inline-end">&quot;</InputGroupAddon>
                       </InputGroup>
                     </Field>
-                    <Field>
+                    <Field data-invalid={isFieldInvalid("longitudeDir") || undefined}>
                       <FieldLabel htmlFor="longitudeDir">Direction</FieldLabel>
                       <SimpleSelect
                         id="longitudeDir"
                         value={formData.longitudeDir}
-                        onChange={(v) => updateField("longitudeDir", v)}
+                        onChange={(v) => updateFieldAndClearInvalid("longitudeDir", v)}
                         options={lonDirOptions}
                         placeholder="Select"
+                        invalid={isFieldInvalid("longitudeDir")}
                       />
                     </Field>
                   </div>
@@ -1179,24 +1345,26 @@ export default function PassageLogsPage() {
               <FieldSet>
                 <FieldGroup>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <Field>
+                    <Field data-invalid={isFieldInvalid("binoculars") || undefined}>
                       <FieldLabel htmlFor="binoculars">Binoculars</FieldLabel>
                       <SimpleSelect
                         id="binoculars"
                         value={formData.binoculars}
-                        onChange={(v) => updateField("binoculars", v)}
+                        onChange={(v) => updateFieldAndClearInvalid("binoculars", v)}
                         options={completedOptions}
                         placeholder="Select an option"
+                        invalid={isFieldInvalid("binoculars")}
                       />
                     </Field>
-                    <Field>
+                    <Field data-invalid={isFieldInvalid("vhfChannel16") || undefined}>
                       <FieldLabel htmlFor="vhfChannel16">VHF on Channel 16</FieldLabel>
                       <SimpleSelect
                         id="vhfChannel16"
                         value={formData.vhfChannel16}
-                        onChange={(v) => updateField("vhfChannel16", v)}
+                        onChange={(v) => updateFieldAndClearInvalid("vhfChannel16", v)}
                         options={completedOptions}
                         placeholder="Select an option"
+                        invalid={isFieldInvalid("vhfChannel16")}
                       />
                     </Field>
                   </div>
@@ -1208,76 +1376,83 @@ export default function PassageLogsPage() {
               <FieldSet>
                 <FieldGroup>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <Field>
+                    <Field data-invalid={isFieldInvalid("fuelDayTank") || undefined}>
                       <FieldLabel htmlFor="fuelDayTank">Fuel Day Tank</FieldLabel>
                       <SimpleSelect
                         id="fuelDayTank"
                         value={formData.fuelDayTank}
-                        onChange={(v) => updateField("fuelDayTank", v)}
+                        onChange={(v) => updateFieldAndClearInvalid("fuelDayTank", v)}
                         options={tankLevelOptions}
                         placeholder="Select level"
+                        invalid={isFieldInvalid("fuelDayTank")}
                       />
                     </Field>
-                    <Field>
+                    <Field data-invalid={isFieldInvalid("grayWaterTank") || undefined}>
                       <FieldLabel htmlFor="grayWaterTank">Gray Water Tank</FieldLabel>
                       <SimpleSelect
                         id="grayWaterTank"
                         value={formData.grayWaterTank}
-                        onChange={(v) => updateField("grayWaterTank", v)}
+                        onChange={(v) => updateFieldAndClearInvalid("grayWaterTank", v)}
                         options={tankLevelOptions}
                         placeholder="Select level"
+                        invalid={isFieldInvalid("grayWaterTank")}
                       />
                     </Field>
-                    <Field>
+                    <Field data-invalid={isFieldInvalid("blackWaterTank") || undefined}>
                       <FieldLabel htmlFor="blackWaterTank">Black Water Tank</FieldLabel>
                       <SimpleSelect
                         id="blackWaterTank"
                         value={formData.blackWaterTank}
-                        onChange={(v) => updateField("blackWaterTank", v)}
+                        onChange={(v) => updateFieldAndClearInvalid("blackWaterTank", v)}
                         options={tankLevelOptions}
                         placeholder="Select level"
+                        invalid={isFieldInvalid("blackWaterTank")}
                       />
                     </Field>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <Field>
+                    <Field data-invalid={isFieldInvalid("portWaterTank") || undefined}>
                       <LabelWithTooltip htmlFor="portWaterTank" tooltip="Total capacity: 4 units">
                         Port Water Tank
                       </LabelWithTooltip>
                       <SimpleSelect
                         id="portWaterTank"
                         value={formData.portWaterTank}
-                        onChange={(v) => updateField("portWaterTank", v)}
+                        onChange={(v) => updateFieldAndClearInvalid("portWaterTank", v)}
                         options={tankLevelOptions}
                         placeholder="Select level"
+                        invalid={isFieldInvalid("portWaterTank")}
                       />
                     </Field>
-                    <Field>
+                    <Field data-invalid={isFieldInvalid("starboardWaterTank") || undefined}>
                       <LabelWithTooltip htmlFor="starboardWaterTank" tooltip="Total capacity: 4 units">
                         Starboard Water Tank
                       </LabelWithTooltip>
                       <SimpleSelect
                         id="starboardWaterTank"
                         value={formData.starboardWaterTank}
-                        onChange={(v) => updateField("starboardWaterTank", v)}
+                        onChange={(v) => updateFieldAndClearInvalid("starboardWaterTank", v)}
                         options={tankLevelOptions}
                         placeholder="Select level"
+                        invalid={isFieldInvalid("starboardWaterTank")}
                       />
                     </Field>
-                    <Field>
+                    <Field data-invalid={isFieldInvalid("chilledWaterTemp") || undefined}>
                       <LabelWithTooltip htmlFor="chilledWaterTemp" tooltip="Valid range: -40 to 80°F">
                         Chilled Water Temp
                       </LabelWithTooltip>
-                      <InputGroup>
+                      <InputGroup className={isFieldInvalid("chilledWaterTemp") ? "[&>input]:border-destructive" : ""}>
                         <InputGroupInput
                           id="chilledWaterTemp"
                           type="text" inputMode="numeric" pattern="[0-9]*"
                           min="-40"
                           max="80"
                           value={formData.chilledWaterTemp}
-                          onChange={(e) => updateField("chilledWaterTemp", e.target.value)}
+                          onChange={(e) => updateFieldAndClearInvalid("chilledWaterTemp", e.target.value)}
                           placeholder="-40 to 80"
+                          aria-invalid={isFieldInvalid("chilledWaterTemp")}
+                          className="h-11 text-base"
                         />
                         <InputGroupAddon align="inline-end">°F</InputGroupAddon>
                       </InputGroup>
@@ -1291,28 +1466,30 @@ export default function PassageLogsPage() {
               <FieldSet>
                 <FieldGroup>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <Field>
+                    <Field data-invalid={isFieldInvalid("voltageAmpDraw") || undefined}>
                       <LabelWithTooltip htmlFor="voltageAmpDraw" tooltip="Valid range: 0-200 A">
                         Voltage Amp Draw
                       </LabelWithTooltip>
-                      <InputGroup>
+                      <InputGroup className={isFieldInvalid("voltageAmpDraw") ? "[&>input]:border-destructive" : ""}>
                         <InputGroupInput
                           id="voltageAmpDraw"
                           type="text" inputMode="numeric" pattern="[0-9]*"
                           min="0"
                           max="200"
                           value={formData.voltageAmpDraw}
-                          onChange={(e) => updateField("voltageAmpDraw", e.target.value)}
+                          onChange={(e) => updateFieldAndClearInvalid("voltageAmpDraw", e.target.value)}
                           placeholder="0-200"
+                          aria-invalid={isFieldInvalid("voltageAmpDraw")}
+                          className="h-11 text-base"
                         />
                         <InputGroupAddon align="inline-end">A</InputGroupAddon>
                       </InputGroup>
                     </Field>
-                    <Field>
+                    <Field data-invalid={isFieldInvalid("serviceBatteryVoltage") || undefined}>
                       <LabelWithTooltip htmlFor="serviceBatteryVoltage" tooltip="Valid range: 0-32 V">
                         Service Battery
                       </LabelWithTooltip>
-                      <InputGroup>
+                      <InputGroup className={isFieldInvalid("serviceBatteryVoltage") ? "[&>input]:border-destructive" : ""}>
                         <InputGroupInput
                           id="serviceBatteryVoltage"
                           type="text" inputMode="numeric" pattern="[0-9]*"
@@ -1320,17 +1497,19 @@ export default function PassageLogsPage() {
                           max="32"
                           step="0.1"
                           value={formData.serviceBatteryVoltage}
-                          onChange={(e) => updateField("serviceBatteryVoltage", e.target.value)}
+                          onChange={(e) => updateFieldAndClearInvalid("serviceBatteryVoltage", e.target.value)}
                           placeholder="0-32"
+                          aria-invalid={isFieldInvalid("serviceBatteryVoltage")}
+                          className="h-11 text-base"
                         />
                         <InputGroupAddon align="inline-end">V</InputGroupAddon>
                       </InputGroup>
                     </Field>
-                    <Field>
+                    <Field data-invalid={isFieldInvalid("electronicsBatteryVoltage") || undefined}>
                       <LabelWithTooltip htmlFor="electronicsBatteryVoltage" tooltip="Valid range: 0-32 V">
                         Electronics Battery
                       </LabelWithTooltip>
-                      <InputGroup>
+                      <InputGroup className={isFieldInvalid("electronicsBatteryVoltage") ? "[&>input]:border-destructive" : ""}>
                         <InputGroupInput
                           id="electronicsBatteryVoltage"
                           type="text" inputMode="numeric" pattern="[0-9]*"
@@ -1338,8 +1517,10 @@ export default function PassageLogsPage() {
                           max="32"
                           step="0.1"
                           value={formData.electronicsBatteryVoltage}
-                          onChange={(e) => updateField("electronicsBatteryVoltage", e.target.value)}
+                          onChange={(e) => updateFieldAndClearInvalid("electronicsBatteryVoltage", e.target.value)}
                           placeholder="0-32"
+                          aria-invalid={isFieldInvalid("electronicsBatteryVoltage")}
+                          className="h-11 text-base"
                         />
                         <InputGroupAddon align="inline-end">V</InputGroupAddon>
                       </InputGroup>
@@ -1347,11 +1528,11 @@ export default function PassageLogsPage() {
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <Field>
+                    <Field data-invalid={isFieldInvalid("engineBatteryVoltage") || undefined}>
                       <LabelWithTooltip htmlFor="engineBatteryVoltage" tooltip="Valid range: 0-32 V">
                         Engine Battery
                       </LabelWithTooltip>
-                      <InputGroup>
+                      <InputGroup className={isFieldInvalid("engineBatteryVoltage") ? "[&>input]:border-destructive" : ""}>
                         <InputGroupInput
                           id="engineBatteryVoltage"
                           type="text" inputMode="numeric" pattern="[0-9]*"
@@ -1359,17 +1540,19 @@ export default function PassageLogsPage() {
                           max="32"
                           step="0.1"
                           value={formData.engineBatteryVoltage}
-                          onChange={(e) => updateField("engineBatteryVoltage", e.target.value)}
+                          onChange={(e) => updateFieldAndClearInvalid("engineBatteryVoltage", e.target.value)}
                           placeholder="0-32"
+                          aria-invalid={isFieldInvalid("engineBatteryVoltage")}
+                          className="h-11 text-base"
                         />
                         <InputGroupAddon align="inline-end">V</InputGroupAddon>
                       </InputGroup>
                     </Field>
-                    <Field>
+                    <Field data-invalid={isFieldInvalid("emergencyBatteryVoltage") || undefined}>
                       <LabelWithTooltip htmlFor="emergencyBatteryVoltage" tooltip="Valid range: 0-32 V">
                         Emergency Battery
                       </LabelWithTooltip>
-                      <InputGroup>
+                      <InputGroup className={isFieldInvalid("emergencyBatteryVoltage") ? "[&>input]:border-destructive" : ""}>
                         <InputGroupInput
                           id="emergencyBatteryVoltage"
                           type="text" inputMode="numeric" pattern="[0-9]*"
@@ -1377,8 +1560,10 @@ export default function PassageLogsPage() {
                           max="32"
                           step="0.1"
                           value={formData.emergencyBatteryVoltage}
-                          onChange={(e) => updateField("emergencyBatteryVoltage", e.target.value)}
+                          onChange={(e) => updateFieldAndClearInvalid("emergencyBatteryVoltage", e.target.value)}
                           placeholder="0-32"
+                          aria-invalid={isFieldInvalid("emergencyBatteryVoltage")}
+                          className="h-11 text-base"
                         />
                         <InputGroupAddon align="inline-end">V</InputGroupAddon>
                       </InputGroup>
@@ -1397,33 +1582,37 @@ export default function PassageLogsPage() {
               <FieldSet>
                 <FieldGroup>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <Field>
+                    <Field data-invalid={isFieldInvalid("mainEngineRpm") || undefined}>
                       <FieldLabel htmlFor="mainEngineRpm">Main Engine RPM</FieldLabel>
-                      <InputGroup>
+                      <InputGroup className={isFieldInvalid("mainEngineRpm") ? "[&>input]:border-destructive" : ""}>
                         <InputGroupInput
                           id="mainEngineRpm"
                           type="text" inputMode="numeric" pattern="[0-9]*"
                           min="0"
                           value={formData.mainEngineRpm}
-                          onChange={(e) => updateField("mainEngineRpm", e.target.value)}
+                          onChange={(e) => updateFieldAndClearInvalid("mainEngineRpm", e.target.value)}
                           placeholder="Enter RPM"
+                          aria-invalid={isFieldInvalid("mainEngineRpm")}
+                          className="h-11 text-base"
                         />
                         <InputGroupAddon align="inline-end">RPM</InputGroupAddon>
                       </InputGroup>
                     </Field>
-                    <Field>
+                    <Field data-invalid={isFieldInvalid("mainEngineGearOilPressure") || undefined}>
                       <LabelWithTooltip htmlFor="mainEngineGearOilPressure" tooltip="Valid range: 0-300 psi">
                         Gear Oil Pressure
                       </LabelWithTooltip>
-                      <InputGroup>
+                      <InputGroup className={isFieldInvalid("mainEngineGearOilPressure") ? "[&>input]:border-destructive" : ""}>
                         <InputGroupInput
                           id="mainEngineGearOilPressure"
                           type="text" inputMode="numeric" pattern="[0-9]*"
                           min="0"
                           max="300"
                           value={formData.mainEngineGearOilPressure}
-                          onChange={(e) => updateField("mainEngineGearOilPressure", e.target.value)}
+                          onChange={(e) => updateFieldAndClearInvalid("mainEngineGearOilPressure", e.target.value)}
                           placeholder="0-300"
+                          aria-invalid={isFieldInvalid("mainEngineGearOilPressure")}
+                          className="h-11 text-base"
                         />
                         <InputGroupAddon align="inline-end">psi</InputGroupAddon>
                       </InputGroup>
@@ -1431,53 +1620,59 @@ export default function PassageLogsPage() {
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <Field>
+                    <Field data-invalid={isFieldInvalid("mainEngineOilPressure") || undefined}>
                       <LabelWithTooltip htmlFor="mainEngineOilPressure" tooltip="Valid range: 0-300 psi">
                         Oil Pressure
                       </LabelWithTooltip>
-                      <InputGroup>
+                      <InputGroup className={isFieldInvalid("mainEngineOilPressure") ? "[&>input]:border-destructive" : ""}>
                         <InputGroupInput
                           id="mainEngineOilPressure"
                           type="text" inputMode="numeric" pattern="[0-9]*"
                           min="0"
                           max="300"
                           value={formData.mainEngineOilPressure}
-                          onChange={(e) => updateField("mainEngineOilPressure", e.target.value)}
+                          onChange={(e) => updateFieldAndClearInvalid("mainEngineOilPressure", e.target.value)}
                           placeholder="0-300"
+                          aria-invalid={isFieldInvalid("mainEngineOilPressure")}
+                          className="h-11 text-base"
                         />
                         <InputGroupAddon align="inline-end">psi</InputGroupAddon>
                       </InputGroup>
                     </Field>
-                    <Field>
+                    <Field data-invalid={isFieldInvalid("mainEngineTemp") || undefined}>
                       <LabelWithTooltip htmlFor="mainEngineTemp" tooltip="Valid range: 0-260°F">
                         Engine Temp
                       </LabelWithTooltip>
-                      <InputGroup>
+                      <InputGroup className={isFieldInvalid("mainEngineTemp") ? "[&>input]:border-destructive" : ""}>
                         <InputGroupInput
                           id="mainEngineTemp"
                           type="text" inputMode="numeric" pattern="[0-9]*"
                           min="0"
                           max="260"
                           value={formData.mainEngineTemp}
-                          onChange={(e) => updateField("mainEngineTemp", e.target.value)}
+                          onChange={(e) => updateFieldAndClearInvalid("mainEngineTemp", e.target.value)}
                           placeholder="0-260"
+                          aria-invalid={isFieldInvalid("mainEngineTemp")}
+                          className="h-11 text-base"
                         />
                         <InputGroupAddon align="inline-end">°F</InputGroupAddon>
                       </InputGroup>
                     </Field>
-                    <Field>
+                    <Field data-invalid={isFieldInvalid("mainEngineValveCoverTemp") || undefined}>
                       <LabelWithTooltip htmlFor="mainEngineValveCoverTemp" tooltip="Valid range: 0-350°F">
                         Valve Cover Temp
                       </LabelWithTooltip>
-                      <InputGroup>
+                      <InputGroup className={isFieldInvalid("mainEngineValveCoverTemp") ? "[&>input]:border-destructive" : ""}>
                         <InputGroupInput
                           id="mainEngineValveCoverTemp"
                           type="text" inputMode="numeric" pattern="[0-9]*"
                           min="0"
                           max="350"
                           value={formData.mainEngineValveCoverTemp}
-                          onChange={(e) => updateField("mainEngineValveCoverTemp", e.target.value)}
+                          onChange={(e) => updateFieldAndClearInvalid("mainEngineValveCoverTemp", e.target.value)}
                           placeholder="0-350"
+                          aria-invalid={isFieldInvalid("mainEngineValveCoverTemp")}
+                          className="h-11 text-base"
                         />
                         <InputGroupAddon align="inline-end">°F</InputGroupAddon>
                       </InputGroup>
@@ -1491,36 +1686,40 @@ export default function PassageLogsPage() {
               <FieldSet>
                 <FieldGroup>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <Field>
+                    <Field data-invalid={isFieldInvalid("generatorOilTemp") || undefined}>
                       <LabelWithTooltip htmlFor="generatorOilTemp" tooltip="Valid range: 0-260°F">
                         Generator Oil Temp
                       </LabelWithTooltip>
-                      <InputGroup>
+                      <InputGroup className={isFieldInvalid("generatorOilTemp") ? "[&>input]:border-destructive" : ""}>
                         <InputGroupInput
                           id="generatorOilTemp"
                           type="text" inputMode="numeric" pattern="[0-9]*"
                           min="0"
                           max="260"
                           value={formData.generatorOilTemp}
-                          onChange={(e) => updateField("generatorOilTemp", e.target.value)}
+                          onChange={(e) => updateFieldAndClearInvalid("generatorOilTemp", e.target.value)}
                           placeholder="0-260"
+                          aria-invalid={isFieldInvalid("generatorOilTemp")}
+                          className="h-11 text-base"
                         />
                         <InputGroupAddon align="inline-end">°F</InputGroupAddon>
                       </InputGroup>
                     </Field>
-                    <Field>
+                    <Field data-invalid={isFieldInvalid("generatorOilPressure") || undefined}>
                       <LabelWithTooltip htmlFor="generatorOilPressure" tooltip="Valid range: 0-300 psi">
                         Generator Oil Pressure
                       </LabelWithTooltip>
-                      <InputGroup>
+                      <InputGroup className={isFieldInvalid("generatorOilPressure") ? "[&>input]:border-destructive" : ""}>
                         <InputGroupInput
                           id="generatorOilPressure"
                           type="text" inputMode="numeric" pattern="[0-9]*"
                           min="0"
                           max="300"
                           value={formData.generatorOilPressure}
-                          onChange={(e) => updateField("generatorOilPressure", e.target.value)}
+                          onChange={(e) => updateFieldAndClearInvalid("generatorOilPressure", e.target.value)}
                           placeholder="0-300"
+                          aria-invalid={isFieldInvalid("generatorOilPressure")}
+                          className="h-11 text-base"
                         />
                         <InputGroupAddon align="inline-end">psi</InputGroupAddon>
                       </InputGroup>
@@ -1539,47 +1738,51 @@ export default function PassageLogsPage() {
               <FieldSet>
                 <FieldGroup>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <Field>
+                    <Field data-invalid={isFieldInvalid("catamaranSecure") || undefined}>
                       <FieldLabel htmlFor="catamaranSecure">Catamaran Secure</FieldLabel>
                       <SimpleSelect
                         id="catamaranSecure"
                         value={formData.catamaranSecure}
-                        onChange={(v) => updateField("catamaranSecure", v)}
+                        onChange={(v) => updateFieldAndClearInvalid("catamaranSecure", v)}
                         options={secureOptions}
                         placeholder="Select an option"
+                        invalid={isFieldInvalid("catamaranSecure")}
                       />
                     </Field>
-                    <Field>
+                    <Field data-invalid={isFieldInvalid("sternRibSecure") || undefined}>
                       <FieldLabel htmlFor="sternRibSecure">Stern RIB Secure</FieldLabel>
                       <SimpleSelect
                         id="sternRibSecure"
                         value={formData.sternRibSecure}
-                        onChange={(v) => updateField("sternRibSecure", v)}
+                        onChange={(v) => updateFieldAndClearInvalid("sternRibSecure", v)}
                         options={secureOptions}
                         placeholder="Select an option"
+                        invalid={isFieldInvalid("sternRibSecure")}
                       />
                     </Field>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <Field>
+                    <Field data-invalid={isFieldInvalid("bowRibSecure") || undefined}>
                       <FieldLabel htmlFor="bowRibSecure">Bow RIB Secure</FieldLabel>
                       <SimpleSelect
                         id="bowRibSecure"
                         value={formData.bowRibSecure}
-                        onChange={(v) => updateField("bowRibSecure", v)}
+                        onChange={(v) => updateFieldAndClearInvalid("bowRibSecure", v)}
                         options={secureOptions}
                         placeholder="Select an option"
+                        invalid={isFieldInvalid("bowRibSecure")}
                       />
                     </Field>
-                    <Field>
+                    <Field data-invalid={isFieldInvalid("fuelCansSecure") || undefined}>
                       <FieldLabel htmlFor="fuelCansSecure">Fuel Cans Secure</FieldLabel>
                       <SimpleSelect
                         id="fuelCansSecure"
                         value={formData.fuelCansSecure}
-                        onChange={(v) => updateField("fuelCansSecure", v)}
+                        onChange={(v) => updateFieldAndClearInvalid("fuelCansSecure", v)}
                         options={secureOptions}
                         placeholder="Select an option"
+                        invalid={isFieldInvalid("fuelCansSecure")}
                       />
                     </Field>
                   </div>
@@ -1591,47 +1794,51 @@ export default function PassageLogsPage() {
               <FieldSet>
                 <FieldGroup>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <Field>
+                    <Field data-invalid={isFieldInvalid("jackLinesSecure") || undefined}>
                       <FieldLabel htmlFor="jackLinesSecure">Jack Lines Secure</FieldLabel>
                       <SimpleSelect
                         id="jackLinesSecure"
                         value={formData.jackLinesSecure}
-                        onChange={(v) => updateField("jackLinesSecure", v)}
+                        onChange={(v) => updateFieldAndClearInvalid("jackLinesSecure", v)}
                         options={secureOptions}
                         placeholder="Select an option"
+                        invalid={isFieldInvalid("jackLinesSecure")}
                       />
                     </Field>
-                    <Field>
+                    <Field data-invalid={isFieldInvalid("anchorsSecure") || undefined}>
                       <FieldLabel htmlFor="anchorsSecure">Anchors Secure</FieldLabel>
                       <SimpleSelect
                         id="anchorsSecure"
                         value={formData.anchorsSecure}
-                        onChange={(v) => updateField("anchorsSecure", v)}
+                        onChange={(v) => updateFieldAndClearInvalid("anchorsSecure", v)}
                         options={secureOptions}
                         placeholder="Select an option"
+                        invalid={isFieldInvalid("anchorsSecure")}
                       />
                     </Field>
-                    <Field>
+                    <Field data-invalid={isFieldInvalid("sailingLinesClean") || undefined}>
                       <FieldLabel htmlFor="sailingLinesClean">Sailing Lines Coiled</FieldLabel>
                       <SimpleSelect
                         id="sailingLinesClean"
                         value={formData.sailingLinesClean}
-                        onChange={(v) => updateField("sailingLinesClean", v)}
+                        onChange={(v) => updateFieldAndClearInvalid("sailingLinesClean", v)}
                         options={secureOptions}
                         placeholder="Select an option"
+                        invalid={isFieldInvalid("sailingLinesClean")}
                       />
                     </Field>
                   </div>
 
-                  <Field>
+                  <Field data-invalid={isFieldInvalid("rsCatMastSecure") || undefined}>
                     <FieldLabel htmlFor="rsCatMastSecure">RS Cat Mast Secure to Toe Rail</FieldLabel>
                     <SimpleSelect
                       id="rsCatMastSecure"
                       value={formData.rsCatMastSecure}
-                      onChange={(v) => updateField("rsCatMastSecure", v)}
+                      onChange={(v) => updateFieldAndClearInvalid("rsCatMastSecure", v)}
                       options={secureOptions}
                       placeholder="Select an option"
                       className="md:w-1/2"
+                      invalid={isFieldInvalid("rsCatMastSecure")}
                     />
                   </Field>
                 </FieldGroup>
@@ -1647,34 +1854,37 @@ export default function PassageLogsPage() {
               <FieldSet>
                 <FieldGroup>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <Field>
+                    <Field data-invalid={isFieldInvalid("salonItemsSecure") || undefined}>
                       <FieldLabel htmlFor="salonItemsSecure">Salon Items Secure</FieldLabel>
                       <SimpleSelect
                         id="salonItemsSecure"
                         value={formData.salonItemsSecure}
-                        onChange={(v) => updateField("salonItemsSecure", v)}
+                        onChange={(v) => updateFieldAndClearInvalid("salonItemsSecure", v)}
                         options={secureOptions}
                         placeholder="Select an option"
+                        invalid={isFieldInvalid("salonItemsSecure")}
                       />
                     </Field>
-                    <Field>
+                    <Field data-invalid={isFieldInvalid("galleyItemsSecure") || undefined}>
                       <FieldLabel htmlFor="galleyItemsSecure">Galley Items Secure</FieldLabel>
                       <SimpleSelect
                         id="galleyItemsSecure"
                         value={formData.galleyItemsSecure}
-                        onChange={(v) => updateField("galleyItemsSecure", v)}
+                        onChange={(v) => updateFieldAndClearInvalid("galleyItemsSecure", v)}
                         options={secureOptions}
                         placeholder="Select an option"
+                        invalid={isFieldInvalid("galleyItemsSecure")}
                       />
                     </Field>
-                    <Field>
+                    <Field data-invalid={isFieldInvalid("allCabinItemsSecure") || undefined}>
                       <FieldLabel htmlFor="allCabinItemsSecure">All Cabin Items Secure</FieldLabel>
                       <SimpleSelect
                         id="allCabinItemsSecure"
                         value={formData.allCabinItemsSecure}
-                        onChange={(v) => updateField("allCabinItemsSecure", v)}
+                        onChange={(v) => updateFieldAndClearInvalid("allCabinItemsSecure", v)}
                         options={secureOptions}
                         placeholder="Select an option"
+                        invalid={isFieldInvalid("allCabinItemsSecure")}
                       />
                     </Field>
                   </div>
@@ -1686,53 +1896,59 @@ export default function PassageLogsPage() {
               <FieldSet>
                 <FieldGroup>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <Field>
+                    <Field data-invalid={isFieldInvalid("forepeakFreezerTemp") || undefined}>
                       <LabelWithTooltip htmlFor="forepeakFreezerTemp" tooltip="Valid range: -40 to 80°F">
                         Forepeak Freezer
                       </LabelWithTooltip>
-                      <InputGroup>
+                      <InputGroup className={isFieldInvalid("forepeakFreezerTemp") ? "[&>input]:border-destructive" : ""}>
                         <InputGroupInput
                           id="forepeakFreezerTemp"
                           type="text" inputMode="numeric" pattern="[0-9]*"
                           min="-40"
                           max="80"
                           value={formData.forepeakFreezerTemp}
-                          onChange={(e) => updateField("forepeakFreezerTemp", e.target.value)}
+                          onChange={(e) => updateFieldAndClearInvalid("forepeakFreezerTemp", e.target.value)}
                           placeholder="-40 to 80"
+                          aria-invalid={isFieldInvalid("forepeakFreezerTemp")}
+                          className="h-11 text-base"
                         />
                         <InputGroupAddon align="inline-end">°F</InputGroupAddon>
                       </InputGroup>
                     </Field>
-                    <Field>
+                    <Field data-invalid={isFieldInvalid("salonFridgeTemp") || undefined}>
                       <LabelWithTooltip htmlFor="salonFridgeTemp" tooltip="Valid range: -40 to 80°F">
                         Salon Fridge
                       </LabelWithTooltip>
-                      <InputGroup>
+                      <InputGroup className={isFieldInvalid("salonFridgeTemp") ? "[&>input]:border-destructive" : ""}>
                         <InputGroupInput
                           id="salonFridgeTemp"
                           type="text" inputMode="numeric" pattern="[0-9]*"
                           min="-40"
                           max="80"
                           value={formData.salonFridgeTemp}
-                          onChange={(e) => updateField("salonFridgeTemp", e.target.value)}
+                          onChange={(e) => updateFieldAndClearInvalid("salonFridgeTemp", e.target.value)}
                           placeholder="-40 to 80"
+                          aria-invalid={isFieldInvalid("salonFridgeTemp")}
+                          className="h-11 text-base"
                         />
                         <InputGroupAddon align="inline-end">°F</InputGroupAddon>
                       </InputGroup>
                     </Field>
-                    <Field>
+                    <Field data-invalid={isFieldInvalid("galleyTopFridgeTemp") || undefined}>
                       <LabelWithTooltip htmlFor="galleyTopFridgeTemp" tooltip="Valid range: -40 to 80°F">
                         Galley Top Fridge
                       </LabelWithTooltip>
-                      <InputGroup>
+                      <InputGroup className={isFieldInvalid("galleyTopFridgeTemp") ? "[&>input]:border-destructive" : ""}>
                         <InputGroupInput
                           id="galleyTopFridgeTemp"
                           type="text" inputMode="numeric" pattern="[0-9]*"
                           min="-40"
                           max="80"
                           value={formData.galleyTopFridgeTemp}
-                          onChange={(e) => updateField("galleyTopFridgeTemp", e.target.value)}
+                          onChange={(e) => updateFieldAndClearInvalid("galleyTopFridgeTemp", e.target.value)}
                           placeholder="-40 to 80"
+                          aria-invalid={isFieldInvalid("galleyTopFridgeTemp")}
+                          className="h-11 text-base"
                         />
                         <InputGroupAddon align="inline-end">°F</InputGroupAddon>
                       </InputGroup>
@@ -1740,36 +1956,40 @@ export default function PassageLogsPage() {
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <Field>
+                    <Field data-invalid={isFieldInvalid("galleyBottomFreezerTemp") || undefined}>
                       <LabelWithTooltip htmlFor="galleyBottomFreezerTemp" tooltip="Valid range: -40 to 80°F">
                         Galley Bottom Freezer
                       </LabelWithTooltip>
-                      <InputGroup>
+                      <InputGroup className={isFieldInvalid("galleyBottomFreezerTemp") ? "[&>input]:border-destructive" : ""}>
                         <InputGroupInput
                           id="galleyBottomFreezerTemp"
                           type="text" inputMode="numeric" pattern="[0-9]*"
                           min="-40"
                           max="80"
                           value={formData.galleyBottomFreezerTemp}
-                          onChange={(e) => updateField("galleyBottomFreezerTemp", e.target.value)}
+                          onChange={(e) => updateFieldAndClearInvalid("galleyBottomFreezerTemp", e.target.value)}
                           placeholder="-40 to 80"
+                          aria-invalid={isFieldInvalid("galleyBottomFreezerTemp")}
+                          className="h-11 text-base"
                         />
                         <InputGroupAddon align="inline-end">°F</InputGroupAddon>
                       </InputGroup>
                     </Field>
-                    <Field>
+                    <Field data-invalid={isFieldInvalid("lazaretteDeepFreezerTemp") || undefined}>
                       <LabelWithTooltip htmlFor="lazaretteDeepFreezerTemp" tooltip="Valid range: -40 to 80°F">
                         Lazarette Deep Freezer
                       </LabelWithTooltip>
-                      <InputGroup>
+                      <InputGroup className={isFieldInvalid("lazaretteDeepFreezerTemp") ? "[&>input]:border-destructive" : ""}>
                         <InputGroupInput
                           id="lazaretteDeepFreezerTemp"
                           type="text" inputMode="numeric" pattern="[0-9]*"
                           min="-40"
                           max="80"
                           value={formData.lazaretteDeepFreezerTemp}
-                          onChange={(e) => updateField("lazaretteDeepFreezerTemp", e.target.value)}
+                          onChange={(e) => updateFieldAndClearInvalid("lazaretteDeepFreezerTemp", e.target.value)}
                           placeholder="-40 to 80"
+                          aria-invalid={isFieldInvalid("lazaretteDeepFreezerTemp")}
+                          className="h-11 text-base"
                         />
                         <InputGroupAddon align="inline-end">°F</InputGroupAddon>
                       </InputGroup>
@@ -1783,24 +2003,26 @@ export default function PassageLogsPage() {
               <FieldSet>
                 <FieldGroup>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <Field>
+                    <Field data-invalid={isFieldInvalid("propaneSolenoidOff") || undefined}>
                       <FieldLabel htmlFor="propaneSolenoidOff">Propane Solenoid Off</FieldLabel>
                       <SimpleSelect
                         id="propaneSolenoidOff"
                         value={formData.propaneSolenoidOff}
-                        onChange={(v) => updateField("propaneSolenoidOff", v)}
+                        onChange={(v) => updateFieldAndClearInvalid("propaneSolenoidOff", v)}
                         options={yesNoOptions}
                         placeholder="Select an option"
+                        invalid={isFieldInvalid("propaneSolenoidOff")}
                       />
                     </Field>
-                    <Field>
+                    <Field data-invalid={isFieldInvalid("ovenBreakerOff") || undefined}>
                       <FieldLabel htmlFor="ovenBreakerOff">Oven Breaker Off</FieldLabel>
                       <SimpleSelect
                         id="ovenBreakerOff"
                         value={formData.ovenBreakerOff}
-                        onChange={(v) => updateField("ovenBreakerOff", v)}
+                        onChange={(v) => updateFieldAndClearInvalid("ovenBreakerOff", v)}
                         options={yesNoOptions}
                         placeholder="Select an option"
+                        invalid={isFieldInvalid("ovenBreakerOff")}
                       />
                     </Field>
                   </div>
@@ -1816,13 +2038,14 @@ export default function PassageLogsPage() {
             <FieldSet>
               <FieldGroup>
                 <Field>
-                  <FieldLabel htmlFor="generalObservations">General Observations</FieldLabel>
+                  <FieldLabel htmlFor="generalObservations">General Observations (Optional)</FieldLabel>
                   <Textarea
                     id="generalObservations"
                     value={formData.generalObservations}
-                    onChange={(e) => updateField("generalObservations", e.target.value)}
+                    onChange={(e) => updateFieldAndClearInvalid("generalObservations", e.target.value)}
                     placeholder="Write any specific observations or notes here..."
                     rows={5}
+                    className="text-base min-h-[120px]"
                   />
                   <FieldDescription>
                     Include any notable conditions, issues, or comments about the passage.
@@ -1830,20 +2053,21 @@ export default function PassageLogsPage() {
                 </Field>
 
                 <Field>
-                  <FieldLabel htmlFor="additionalNotes">Additional Notes</FieldLabel>
+                  <FieldLabel htmlFor="additionalNotes">Additional Notes (Optional)</FieldLabel>
                   <Textarea
                     id="additionalNotes"
                     value={formData.additionalNotes}
-                    onChange={(e) => updateField("additionalNotes", e.target.value)}
+                    onChange={(e) => updateFieldAndClearInvalid("additionalNotes", e.target.value)}
                     placeholder="Any additional notes, maintenance items, or follow-up actions..."
                     rows={5}
+                    className="text-base min-h-[120px]"
                   />
                   <FieldDescription>
                     Document any maintenance needs, follow-up items, or other relevant information.
                   </FieldDescription>
                 </Field>
 
-                <Field>
+                <Field data-invalid={isFieldInvalid("crewMembers") || undefined}>
                   <FieldLabel>Crew Members</FieldLabel>
                   <Popover open={crewMembersOpen} onOpenChange={setCrewMembersOpen}>
                     <PopoverTrigger asChild>
@@ -1851,7 +2075,11 @@ export default function PassageLogsPage() {
                         variant="outline"
                         role="combobox"
                         aria-expanded={crewMembersOpen}
-                        className="w-full justify-between font-normal min-h-[2.5rem] h-auto"
+                        aria-invalid={isFieldInvalid("crewMembers")}
+                        className={cn(
+                          "w-full justify-between font-normal min-h-[2.75rem] h-auto text-base",
+                          isFieldInvalid("crewMembers") && "border-destructive"
+                        )}
                       >
                         {formData.crewMembers.filter(Boolean).length > 0 ? (
                           <div className="flex flex-wrap gap-1">
@@ -1869,7 +2097,7 @@ export default function PassageLogsPage() {
                     </PopoverTrigger>
                     <PopoverContent className="p-0 w-[var(--radix-popover-trigger-width)]" align="start">
                       <Command>
-                        <CommandInput placeholder="Search students..." />
+                        <CommandInput placeholder="Search students..." className="h-11" />
                         <CommandList>
                           <CommandEmpty>No students found.</CommandEmpty>
                           <CommandGroup heading="Students">
@@ -1879,7 +2107,17 @@ export default function PassageLogsPage() {
                                 <CommandItem
                                   key={`crew-${person.id}`}
                                   value={fullName}
-                                  onSelect={() => toggleCrewMember(fullName)}
+                                  onSelect={() => {
+                                    toggleCrewMember(fullName)
+                                    // Clear invalid state when a crew member is selected
+                                    if (invalidFields.has("crewMembers")) {
+                                      setInvalidFields(prev => {
+                                        const next = new Set(prev)
+                                        next.delete("crewMembers")
+                                        return next
+                                      })
+                                    }
+                                  }}
                                 >
                                   <Check
                                     className={cn(
@@ -1904,7 +2142,7 @@ export default function PassageLogsPage() {
                   </FieldDescription>
                 </Field>
 
-                <Field>
+                <Field data-invalid={isFieldInvalid("approvedBy") || undefined}>
                   <FieldLabel>Approved and Completed By</FieldLabel>
                   <Popover open={approvedByOpen} onOpenChange={setApprovedByOpen}>
                     <PopoverTrigger asChild>
@@ -1912,7 +2150,11 @@ export default function PassageLogsPage() {
                         variant="outline"
                         role="combobox"
                         aria-expanded={approvedByOpen}
-                        className="w-full justify-between font-normal"
+                        aria-invalid={isFieldInvalid("approvedBy")}
+                        className={cn(
+                          "w-full h-11 justify-between font-normal text-base",
+                          isFieldInvalid("approvedBy") && "border-destructive"
+                        )}
                       >
                         {formData.approvedBy ? (
                           <div className="flex items-center gap-2">
@@ -1929,7 +2171,7 @@ export default function PassageLogsPage() {
                     </PopoverTrigger>
                     <PopoverContent className="p-0 w-[var(--radix-popover-trigger-width)]" align="start">
                       <Command>
-                        <CommandInput placeholder="Search staff..." />
+                        <CommandInput placeholder="Search staff..." className="h-11" />
                         <CommandList>
                           <CommandEmpty>No staff found.</CommandEmpty>
                           <CommandGroup>
@@ -1938,7 +2180,7 @@ export default function PassageLogsPage() {
                                 key={`staff-${person.id}`}
                                 value={person.name}
                                 onSelect={(currentValue) => {
-                                  updateField("approvedBy", currentValue === formData.approvedBy ? "" : currentValue)
+                                  updateFieldAndClearInvalid("approvedBy", currentValue === formData.approvedBy ? "" : currentValue)
                                   setApprovedByOpen(false)
                                 }}
                               >

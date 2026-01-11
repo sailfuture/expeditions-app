@@ -4,6 +4,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { usePathname, useSearchParams } from "next/navigation"
 import { useMemo } from "react"
+import { signOut } from "next-auth/react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useExpeditions } from "@/lib/hooks/use-expeditions"
 import {
@@ -16,9 +17,10 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { ChevronDown } from "lucide-react"
+import { ChevronDown, LogOut } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useExpeditionContext } from "@/lib/contexts/expedition-context"
 import { useCurrentUser } from "@/lib/contexts/user-context"
@@ -68,8 +70,8 @@ export function Navbar() {
   
   const defaultDate = getDefaultDate()
 
-  // Hide navbar on public pages - MUST be after all hooks
-  if (pathname === "/intake" || pathname === "/apply" || pathname.startsWith("/tv") || pathname.startsWith("/public")) {
+  // Hide navbar on public pages and login page - MUST be after all hooks
+  if (pathname === "/intake" || pathname === "/apply" || pathname === "/login" || pathname.startsWith("/tv") || pathname.startsWith("/public")) {
     return null
   }
 
@@ -204,10 +206,8 @@ export function Navbar() {
           <div className="flex-1" />
 
           <div className="flex items-center gap-4">
-            <span className="text-sm font-medium">{currentUser?.name || "Loading..."}</span>
             {expeditionIdFromUrl && displayedExpedition && (
               <>
-                <div className="h-4 w-px bg-border" />
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-muted-foreground">
                     {isLoading ? "Loading..." : activeExpeditionName}
@@ -221,17 +221,42 @@ export function Navbar() {
                     {displayedExpedition.isActive ? "Active" : "Past"}
                   </span>
                 </div>
+                <div className="h-4 w-px bg-border" />
               </>
             )}
-            <Avatar className="h-8 w-8">
-              <AvatarImage src="/diverse-user-avatars.png" />
-              <AvatarFallback>
-                {currentUser?.name
-                  ?.split(" ")
-                  .map((n) => n[0])
-                  .join("") || "U"}
-              </AvatarFallback>
-            </Avatar>
+            
+            {/* User Menu */}
+            <DropdownMenu>
+              <DropdownMenuTrigger className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity">
+                <span className="text-sm font-medium">{currentUser?.name || "Loading..."}</span>
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={currentUser?.photo_url || "/diverse-user-avatars.png"} />
+                  <AvatarFallback>
+                    {currentUser?.name
+                      ?.split(" ")
+                      .map((n) => n[0])
+                      .join("") || "U"}
+                  </AvatarFallback>
+                </Avatar>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <div className="px-2 py-1.5">
+                  <p className="text-sm font-medium">{currentUser?.name}</p>
+                  <p className="text-xs text-muted-foreground">{currentUser?.email}</p>
+                  {currentUser?.role && (
+                    <p className="text-xs text-muted-foreground mt-0.5">Role: {currentUser.role}</p>
+                  )}
+                </div>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"
+                  onClick={() => signOut({ callbackUrl: "/login" })}
+                >
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Sign Out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </div>

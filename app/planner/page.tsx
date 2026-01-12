@@ -456,17 +456,13 @@ function PlannerPageContent() {
       {/* Date Navigation Controls */}
       <div className="bg-gray-50 border-b flex-shrink-0">
         <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-gray-700">Weekly Planner</h2>
-            </div>
-            
+          <div className="flex items-center">
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
                 size="icon"
                 onClick={handlePrevious}
-                className="h-9 w-9 cursor-pointer bg-white"
+                className="h-10 w-10 cursor-pointer"
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
@@ -474,13 +470,13 @@ function PlannerPageContent() {
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
-                    className="h-9 px-4 cursor-pointer bg-white"
+                    className="h-10 px-4 gap-2 cursor-pointer"
                   >
-                    <Calendar className="h-4 w-4 mr-2" />
-                    {format(centerDate, "MMM d, yyyy")}
+                    <Calendar className="h-4 w-4 flex-shrink-0" />
+                    <span className="font-medium">{format(centerDate, "EEE, MMM d, yyyy")}</span>
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 bg-white" align="center">
+                <PopoverContent className="w-auto p-0" align="start">
                   <CalendarComponent
                     mode="single"
                     selected={centerDate}
@@ -502,7 +498,7 @@ function PlannerPageContent() {
                 variant="outline"
                 size="icon"
                 onClick={handleNext}
-                className="h-9 w-9 cursor-pointer bg-white"
+                className="h-10 w-10 cursor-pointer"
               >
                 <ChevronRight className="h-4 w-4" />
               </Button>
@@ -510,7 +506,7 @@ function PlannerPageContent() {
                 <Button
                   variant="outline"
                   onClick={handleToday}
-                  className="h-9 px-4 cursor-pointer bg-white"
+                  className="h-10 px-4 cursor-pointer"
                 >
                   Today
                 </Button>

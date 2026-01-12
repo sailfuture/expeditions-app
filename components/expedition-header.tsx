@@ -149,126 +149,126 @@ export function ExpeditionHeader({ expedition, isLoading = false, currentPage = 
       {/* Navigation */}
       <div className="border-b bg-muted/30">
         <div className="container mx-auto px-4 py-3">
-          <div className="flex items-center overflow-x-auto">
-            <div className="inline-flex gap-1.5 rounded-lg border border-gray-200 bg-gray-50 p-1 shadow-sm flex-shrink-0">
+          <div className="flex items-center">
+            <div className="inline-flex gap-1 rounded-lg border border-gray-200 bg-gray-50 p-1 shadow-sm flex-wrap">
               {/* 1. Overview */}
               <Button 
                 variant={currentPage === "overview" ? "default" : "ghost"}
                 size="sm"
-                className={`cursor-pointer h-7 px-2 rounded-md text-xs ${currentPage !== "overview" ? "bg-white border border-gray-200 hover:bg-gray-50" : ""}`}
+                className={`cursor-pointer h-7 px-2 rounded-md text-xs min-w-0 ${currentPage !== "overview" ? "bg-white border border-gray-200 hover:bg-gray-50" : ""}`}
                 onClick={() => expedition && router.push(`/expedition/${expedition.id}`)}
                 disabled={!expedition}
               >
-                <Home className="h-3.5 w-3.5 lg:mr-1" />
-                <span className="hidden lg:inline">Overview</span>
+                <Home className="h-3.5 w-3.5 flex-shrink-0 lg:mr-1" />
+                <span className="hidden lg:inline truncate">Overview</span>
               </Button>
               
               {/* 2. Trip Planner */}
               <Button 
                 variant={currentPage === "trip-planner" ? "default" : "ghost"}
                 size="sm"
-                className={`cursor-pointer h-7 px-2 rounded-md text-xs ${currentPage !== "trip-planner" ? "bg-white border border-gray-200 hover:bg-gray-50" : ""}`}
+                className={`cursor-pointer h-7 px-2 rounded-md text-xs min-w-0 ${currentPage !== "trip-planner" ? "bg-white border border-gray-200 hover:bg-gray-50" : ""}`}
                 onClick={() => expedition && router.push(`/dashboard?expedition=${expedition.id}`)}
                 disabled={!expedition}
               >
-                <Map className="h-3.5 w-3.5 lg:mr-1" />
-                <span className="hidden lg:inline">Planner</span>
+                <Map className="h-3.5 w-3.5 flex-shrink-0 lg:mr-1" />
+                <span className="hidden lg:inline truncate">Planner</span>
               </Button>
               
               {/* 3. Weekly Planner */}
               <Button 
                 variant={currentPage === "weekly-planner" ? "default" : "ghost"}
                 size="sm"
-                className={`cursor-pointer h-7 px-2 rounded-md text-xs ${currentPage !== "weekly-planner" ? "bg-white border border-gray-200 hover:bg-gray-50" : ""}`}
+                className={`cursor-pointer h-7 px-2 rounded-md text-xs min-w-0 ${currentPage !== "weekly-planner" ? "bg-white border border-gray-200 hover:bg-gray-50" : ""}`}
                 onClick={() => expedition && router.push(`/planner?expedition=${expedition.id}`)}
                 disabled={!expedition}
               >
-                <ClipboardList className="h-3.5 w-3.5 lg:mr-1" />
-                <span className="hidden lg:inline">Weekly</span>
+                <ClipboardList className="h-3.5 w-3.5 flex-shrink-0 lg:mr-1" />
+                <span className="hidden lg:inline truncate">Weekly</span>
               </Button>
               
               {/* 4. Daily View */}
               <Button 
                 variant={currentPage === "daily-view" ? "default" : "ghost"}
                 size="sm"
-                className={`cursor-pointer h-7 px-2 rounded-md text-xs ${currentPage !== "daily-view" ? "bg-white border border-gray-200 hover:bg-gray-50" : ""}`}
+                className={`cursor-pointer h-7 px-2 rounded-md text-xs min-w-0 ${currentPage !== "daily-view" ? "bg-white border border-gray-200 hover:bg-gray-50" : ""}`}
                 onClick={() => expedition && router.push(`/schedule/${defaultDate}?expedition=${expedition.id}`)}
                 disabled={!expedition}
               >
-                <Eye className="h-3.5 w-3.5 lg:mr-1" />
-                <span className="hidden lg:inline">Daily</span>
+                <Eye className="h-3.5 w-3.5 flex-shrink-0 lg:mr-1" />
+                <span className="hidden lg:inline truncate">Daily</span>
               </Button>
               
               {/* 5. Assignments */}
               <Button 
                 variant={currentPage === "students" ? "default" : "ghost"}
                 size="sm"
-                className={`cursor-pointer h-7 px-2 rounded-md text-xs ${currentPage !== "students" ? "bg-white border border-gray-200 hover:bg-gray-50" : ""}`}
+                className={`cursor-pointer h-7 px-2 rounded-md text-xs min-w-0 ${currentPage !== "students" ? "bg-white border border-gray-200 hover:bg-gray-50" : ""}`}
                 onClick={() => expedition && router.push(`/expedition/${expedition.id}/assignments`)}
                 disabled={!expedition}
               >
-                <Users className="h-3.5 w-3.5 lg:mr-1" />
-                <span className="hidden lg:inline">Assignments</span>
+                <Users className="h-3.5 w-3.5 flex-shrink-0 lg:mr-1" />
+                <span className="hidden lg:inline truncate">Assign</span>
               </Button>
               
               {/* 6. Add Scores */}
               <Button 
                 variant={currentPage === "add-scores" ? "default" : "ghost"}
                 size="sm"
-                className={`cursor-pointer h-7 px-2 rounded-md text-xs ${currentPage !== "add-scores" ? "bg-white border border-gray-200 hover:bg-gray-50" : ""}`}
+                className={`cursor-pointer h-7 px-2 rounded-md text-xs min-w-0 ${currentPage !== "add-scores" ? "bg-white border border-gray-200 hover:bg-gray-50" : ""}`}
                 onClick={() => expedition && router.push(`/evaluate/${defaultDate}?expedition=${expedition.id}`)}
                 disabled={!expedition}
               >
-                <PlusCircle className="h-3.5 w-3.5 lg:mr-1" />
-                <span className="hidden lg:inline">Scores</span>
+                <PlusCircle className="h-3.5 w-3.5 flex-shrink-0 lg:mr-1" />
+                <span className="hidden lg:inline truncate">Scores</span>
               </Button>
               
               {/* 7. Performance Reviews */}
               <Button 
                 variant={currentPage === "performance-reviews" ? "default" : "ghost"}
                 size="sm"
-                className={`cursor-pointer h-7 px-2 rounded-md text-xs ${currentPage !== "performance-reviews" ? "bg-white border border-gray-200 hover:bg-gray-50" : ""}`}
+                className={`cursor-pointer h-7 px-2 rounded-md text-xs min-w-0 ${currentPage !== "performance-reviews" ? "bg-white border border-gray-200 hover:bg-gray-50" : ""}`}
                 onClick={() => expedition && router.push(`/performance-reviews?expedition=${expedition.id}`)}
                 disabled={!expedition}
               >
-                <FileText className="h-3.5 w-3.5 lg:mr-1" />
-                <span className="hidden lg:inline">Reviews</span>
+                <FileText className="h-3.5 w-3.5 flex-shrink-0 lg:mr-1" />
+                <span className="hidden lg:inline truncate">Reviews</span>
               </Button>
               
               {/* 8. Discipline */}
               <Button 
                 variant={currentPage === "discipline" ? "default" : "ghost"}
                 size="sm"
-                className={`cursor-pointer h-7 px-2 rounded-md text-xs ${currentPage !== "discipline" ? "bg-white border border-gray-200 hover:bg-gray-50" : ""}`}
+                className={`cursor-pointer h-7 px-2 rounded-md text-xs min-w-0 ${currentPage !== "discipline" ? "bg-white border border-gray-200 hover:bg-gray-50" : ""}`}
                 onClick={() => expedition && router.push(`/discipline?expedition=${expedition.id}`)}
                 disabled={!expedition}
               >
-                <AlertTriangle className="h-3.5 w-3.5 lg:mr-1" />
-                <span className="hidden lg:inline">Discipline</span>
+                <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0 lg:mr-1" />
+                <span className="hidden lg:inline truncate">Discipline</span>
               </Button>
               
               {/* 9. Applications */}
               <Button 
                 variant={currentPage === "applications" ? "default" : "ghost"}
                 size="sm"
-                className={`cursor-pointer h-7 px-2 rounded-md text-xs ${currentPage !== "applications" ? "bg-white border border-gray-200 hover:bg-gray-50" : ""}`}
+                className={`cursor-pointer h-7 px-2 rounded-md text-xs min-w-0 ${currentPage !== "applications" ? "bg-white border border-gray-200 hover:bg-gray-50" : ""}`}
                 onClick={() => expedition && router.push(`/applications?expedition=${expedition.id}`)}
                 disabled={!expedition}
               >
-                <ClipboardCheck className="h-3.5 w-3.5 lg:mr-1" />
-                <span className="hidden lg:inline">Apps</span>
+                <ClipboardCheck className="h-3.5 w-3.5 flex-shrink-0 lg:mr-1" />
+                <span className="hidden lg:inline truncate">Apps</span>
               </Button>
               
               {/* 10. Passport Manifest */}
               <Button 
                 variant={currentPage === "passport-manifest" ? "default" : "ghost"}
                 size="sm"
-                className={`cursor-pointer h-7 px-2 rounded-md text-xs ${currentPage !== "passport-manifest" ? "bg-white border border-gray-200 hover:bg-gray-50" : ""}`}
+                className={`cursor-pointer h-7 px-2 rounded-md text-xs min-w-0 ${currentPage !== "passport-manifest" ? "bg-white border border-gray-200 hover:bg-gray-50" : ""}`}
                 onClick={() => expedition && router.push(`/expedition/${expedition.id}/passport-manifest`)}
                 disabled={!expedition}
               >
-                <IdCard className="h-3.5 w-3.5 lg:mr-1" />
-                <span className="hidden lg:inline">Manifest</span>
+                <IdCard className="h-3.5 w-3.5 flex-shrink-0 lg:mr-1" />
+                <span className="hidden lg:inline truncate">Manifest</span>
               </Button>
             </div>
           </div>

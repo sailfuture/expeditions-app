@@ -471,7 +471,7 @@ function TVStaticContent() {
                   if (item._expedition_staff?.name) staffNames.push(item._expedition_staff.name)
                   if (item.participants?.length > 0) {
                     item.participants.slice(0, 2).forEach((p: any) => {
-                      if (p.name && p.name !== item._expedition_staff?.name) {
+                      if (p && p.name && p.name !== item._expedition_staff?.name) {
                         staffNames.push(p.name.split(' ')[0])
                       }
                     })
@@ -591,7 +591,7 @@ function TVStaticContent() {
                   if (item._expedition_staff?.name) staffNames.push(item._expedition_staff.name)
                   if (item.participants?.length > 0) {
                     item.participants.slice(0, 2).forEach((p: any) => {
-                      if (p.name && p.name !== item._expedition_staff?.name) {
+                      if (p && p.name && p.name !== item._expedition_staff?.name) {
                         staffNames.push(p.name.split(' ')[0])
                       }
                     })

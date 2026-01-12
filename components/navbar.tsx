@@ -66,13 +66,22 @@ export function Navbar() {
   
   const activeExpeditionName = displayedExpedition?.name || "No Active Expedition"
   
+  // Get local date string (not UTC) to avoid timezone issues
+  const getLocalDateString = () => {
+    const now = new Date()
+    const year = now.getFullYear()
+    const month = String(now.getMonth() + 1).padStart(2, '0')
+    const day = String(now.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+  
   // Get the appropriate default date based on expedition status
   // If active expedition, use today. If not active, use expedition start date
   const getDefaultDate = () => {
-    if (!activeExpedition) return new Date().toISOString().split('T')[0]
+    if (!activeExpedition) return getLocalDateString()
     
     if (activeExpedition.isActive) {
-      return new Date().toISOString().split('T')[0]
+      return getLocalDateString()
     }
     
     // For non-active expeditions, use the start date
@@ -81,7 +90,7 @@ export function Navbar() {
       return startDate
     }
     
-    return new Date().toISOString().split('T')[0]
+    return getLocalDateString()
   }
   
   const defaultDate = getDefaultDate()

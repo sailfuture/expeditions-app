@@ -126,6 +126,21 @@ function CustomSelect({
   )
 }
 
+// Color mapping for activity types
+const ACTIVITY_TYPE_COLORS: Record<string, string> = {
+  orange: "#f97316",
+  blue: "#3b82f6",
+  green: "#22c55e",
+  purple: "#a855f7",
+  red: "#ef4444",
+  yellow: "#eab308",
+  gray: "#9ca3af",
+  pink: "#ec4899",
+  indigo: "#6366f1",
+  teal: "#14b8a6",
+  cyan: "#06b6d4",
+}
+
 // Activity Type selector with search
 function ActivityTypeSelector({
   value,
@@ -181,7 +196,7 @@ function ActivityTypeSelector({
           {selectedOption?.data?.color && (
             <div 
               className="w-3 h-3 rounded-full shrink-0" 
-              style={{ backgroundColor: selectedOption.data.color === 'gray' ? '#9ca3af' : undefined }}
+              style={{ backgroundColor: ACTIVITY_TYPE_COLORS[selectedOption.data.color] || selectedOption.data.color }}
             />
           )}
           <span className={selectedOption ? "text-gray-900 text-base truncate" : "text-gray-500 text-base"}>
@@ -231,7 +246,7 @@ function ActivityTypeSelector({
                   {option.data?.color && (
                     <div 
                       className="w-3 h-3 rounded-full shrink-0" 
-                      style={{ backgroundColor: option.data.color === 'gray' ? '#9ca3af' : undefined }}
+                      style={{ backgroundColor: ACTIVITY_TYPE_COLORS[option.data.color] || option.data.color }}
                     />
                   )}
                   <span className="text-sm font-medium flex-1">{option.label}</span>
@@ -757,20 +772,62 @@ export function AddScheduleItemSheet({
     return EXACT_MEAL_NAMES.includes(typeName)
   }
 
-  const getInitialFormData = () => ({
-    name: editItem?.name || "",
-    expedition_schedule_item_types_id: editItem?.expedition_schedule_item_types_id || 0,
-    time_in: editItem?.time_in || 800,
-    time_out: editItem?.time_out || 900,
-    led_by: editItem?.led_by || 0,
-    participants: editItem?.participants?.map((p: any) => p.id || p) || [],
-    students_id: editItem?.students_id?.map((s: any) => s.id || s) || [],
-    notes: editItem?.notes || "",
-    address: editItem?.address || "",
-    things_to_bring: editItem?.things_to_bring || "",
-    resources: editItem?.resources || "",
-    expedition_cookbook_id: editItem?.expedition_cookbook_id || 0,
-  })
+  const getInitialFormData = () => {
+    // Convert participants (staff) - they come as {name, isActive} objects, need to find IDs
+    let participantIds: number[] = []
+    if (editItem?.participants && Array.isArray(editItem.participants)) {
+      participantIds = editItem.participants
+        .map((p: any) => {
+          // If it's already a number, use it
+          if (typeof p === 'number') return p
+          // If it has an id, use it
+          if (p?.id) return p.id
+          // If it has a name, look up the staff member by name
+          if (p?.name && staff) {
+            const foundStaff = staff.find((s: any) => s.name === p.name)
+            return foundStaff?.id
+          }
+          return null
+        })
+        .filter((id: any) => id != null) as number[]
+    }
+
+    // Convert students_id - they come as {firstName, lastName, profileImage} objects, need to find IDs
+    let studentIds: number[] = []
+    if (editItem?.students_id && Array.isArray(editItem.students_id)) {
+      studentIds = editItem.students_id
+        .map((s: any) => {
+          // If it's already a number, use it
+          if (typeof s === 'number') return s
+          // If it has an id, use it
+          if (s?.id) return s.id
+          // If it has firstName/lastName, look up the student by name
+          if (s?.firstName && s?.lastName && students) {
+            const foundStudent = students.find((st: any) => 
+              st.firstName === s.firstName && st.lastName === s.lastName
+            )
+            return foundStudent?.id
+          }
+          return null
+        })
+        .filter((id: any) => id != null) as number[]
+    }
+
+    return {
+      name: editItem?.name || "",
+      expedition_schedule_item_types_id: editItem?.expedition_schedule_item_types_id || 0,
+      time_in: editItem?.time_in || 800,
+      time_out: editItem?.time_out || 900,
+      led_by: editItem?.led_by || 0,
+      participants: participantIds,
+      students_id: studentIds,
+      notes: editItem?.notes || "",
+      address: editItem?.address || "",
+      things_to_bring: editItem?.things_to_bring || "",
+      resources: editItem?.resources || "",
+      expedition_cookbook_id: editItem?.expedition_cookbook_id || 0,
+    }
+  }
   
   const [formData, setFormData] = useState(getInitialFormData())
   const [saving, setSaving] = useState(false)

@@ -98,23 +98,21 @@ function TVVerticalContent() {
   const [currentTime, setCurrentTime] = useState(() => getCurrentTimeForOffset(timezoneOffset))
 
   // Fetch schedule items for today
-  const { data: scheduleItems, isLoading: loadingItems } = useSWR(
+  const { data: scheduleData, isLoading: loadingItems } = useSWR(
     activeExpedition ? `tv_vertical_schedule_${todayDate}_${activeExpedition.id}` : null,
     activeExpedition ? () => getExpeditionScheduleItemsByDate(todayDate, activeExpedition.id) : null,
     { refreshInterval: 30000, revalidateOnFocus: false }
   )
 
-  // Get schedule info from first item
-  const todaySchedule = useMemo(() => {
-    if (!scheduleItems || !Array.isArray(scheduleItems) || scheduleItems.length === 0) return null
-    return scheduleItems[0]?._expedition_schedule || null
-  }, [scheduleItems])
+  // Extract items and schedule from the response
+  const scheduleItems = scheduleData?.items || []
+  const todaySchedule = scheduleData?.schedule || null
 
   // Sort items by time
   const sortedItems = useMemo(() => {
-    if (!scheduleItems || !Array.isArray(scheduleItems)) return []
+    if (!scheduleItems || scheduleItems.length === 0) return []
     return [...scheduleItems].sort((a, b) => a.time_in - b.time_in)
-  }, [scheduleItems])
+  }, [scheduleData])
 
   // Calculate overlapping items and assign columns
   const itemsWithLayout = useMemo(() => {

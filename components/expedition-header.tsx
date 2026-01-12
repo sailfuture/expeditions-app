@@ -41,12 +41,21 @@ export function ExpeditionHeader({ expedition, isLoading = false, currentPage = 
   const { currentUser } = useCurrentUser()
   const isAdmin = currentUser?.role === "Admin"
   
+  // Get local date string (not UTC) to avoid timezone issues
+  const getLocalDateString = () => {
+    const now = new Date()
+    const year = now.getFullYear()
+    const month = String(now.getMonth() + 1).padStart(2, '0')
+    const day = String(now.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+  
   // Get the appropriate default date based on expedition status
   const defaultDate = useMemo(() => {
-    if (!expedition) return new Date().toISOString().split('T')[0]
+    if (!expedition) return getLocalDateString()
     
     if (expedition.isActive) {
-      return new Date().toISOString().split('T')[0]
+      return getLocalDateString()
     }
     
     // For non-active expeditions, use the start date
@@ -55,7 +64,7 @@ export function ExpeditionHeader({ expedition, isLoading = false, currentPage = 
       return startDate
     }
     
-    return new Date().toISOString().split('T')[0]
+    return getLocalDateString()
   }, [expedition])
   
   const formatDate = (dateStr: string) => {

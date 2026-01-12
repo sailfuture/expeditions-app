@@ -219,17 +219,17 @@ export function DraggableScheduleItem({
                   {item._expedition_staff.name}
                 </span>
                 {/* Staff participants as circle initials */}
-                {item.participants && item.participants.length > 0 && (
+                {item.participants && item.participants.filter((p: any) => p?.name).length > 0 && (
                   <div className="flex items-center -space-x-0.5">
-                    {item.participants.slice(0, 3).map((p: any) => (
-                      <Avatar key={p.id} className="h-3.5 w-3.5 border border-white">
+                    {item.participants.filter((p: any) => p?.name).slice(0, 3).map((p: any, idx: number) => (
+                      <Avatar key={p.id || `participant-${idx}`} className="h-3.5 w-3.5 border border-white">
                         <AvatarFallback className="text-[7px] bg-gray-300 text-gray-700">
                           {p.name?.split(" ").map((n: string) => n[0]).join("")}
                         </AvatarFallback>
                       </Avatar>
                     ))}
-                    {item.participants.length > 3 && (
-                      <span className="text-[7px] text-gray-500 pl-0.5">+{item.participants.length - 3}</span>
+                    {item.participants.filter((p: any) => p?.name).length > 3 && (
+                      <span className="text-[7px] text-gray-500 pl-0.5">+{item.participants.filter((p: any) => p?.name).length - 3}</span>
                     )}
                   </div>
                 )}

@@ -33,7 +33,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import { ChevronLeft, ChevronRight, ExternalLink, Calendar, Plus, X, Pencil, Trash2 } from "lucide-react"
-import { useExpeditionScheduleItemsByDate, useExpeditionSchedules, useTeachers, useExpeditionScheduleTemplates } from "@/lib/hooks/use-expeditions"
+import { useExpeditionScheduleItemsByDate, useExpeditionSchedules, useTeachers, useExpeditionScheduleTemplates, useStudentsByExpedition } from "@/lib/hooks/use-expeditions"
 import { useExpeditionContext } from "@/lib/contexts/expedition-context"
 import { cn, isDateWithinExpeditionRange, getExpeditionFirstDate } from "@/lib/utils"
 import { AddScheduleItemSheet } from "@/components/add-schedule-item-sheet"
@@ -130,6 +130,9 @@ function PlannerPageContent() {
   
   // Fetch staff for the add/edit sheet
   const { data: staff } = useTeachers()
+  
+  // Fetch students for the add/edit sheet
+  const { data: students } = useStudentsByExpedition(effectiveExpeditionId || null)
   
   // Fetch templates for empty day states
   const { data: templates } = useExpeditionScheduleTemplates()
@@ -282,7 +285,7 @@ function PlannerPageContent() {
   const getLocation = (schedule: any) => {
     if (!schedule) return "No Location"
     // Try multiple possible field names for current location
-    const loc = schedule._expedition_current_location || schedule._current_location
+    const loc = schedule._expedition_locations || schedule._expedition_current_location || schedule._current_location
     if (loc?.port) {
       return loc.port
     }
@@ -1197,6 +1200,7 @@ function PlannerPageContent() {
         date={addSheetDate}
         editItem={editingItem}
         staff={staff || []}
+        students={students?.filter((s: any) => !s.isArchived) || []}
         expeditionsId={effectiveExpeditionId}
       />
     </div>

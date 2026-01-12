@@ -606,8 +606,8 @@ export function ScheduleViewClient({ date, expeditionId }: ScheduleViewClientPro
                 <>
                   <div className="flex items-center gap-1.5 text-muted-foreground text-sm max-w-[100px]">
                     <MapPin className="h-4 w-4 flex-shrink-0" />
-                    <span className="truncate" title={schedule._expedition_current_location ? formatLocation(schedule._expedition_current_location) : "No Location"}>
-                      {schedule._expedition_current_location ? formatLocation(schedule._expedition_current_location) : "No Location"}
+                    <span className="truncate" title={(schedule._expedition_locations || schedule._expedition_current_location) ? formatLocation(schedule._expedition_locations || schedule._expedition_current_location) : "No Location"}>
+                      {(schedule._expedition_locations || schedule._expedition_current_location) ? formatLocation(schedule._expedition_locations || schedule._expedition_current_location) : "No Location"}
                     </span>
                   </div>
                   {schedule.staff_off && schedule.staff_off.length > 0 && staff && (
@@ -1034,8 +1034,8 @@ export function ScheduleViewClient({ date, expeditionId }: ScheduleViewClientPro
                 </div>
                 {selectedItem.participants && selectedItem.participants.length > 0 ? (
                   <div className="space-y-2">
-                    {selectedItem.participants.map((participant: any) => (
-                      <div key={participant.id} className="flex items-center gap-3">
+                    {selectedItem.participants.map((participant: any, idx: number) => (
+                      <div key={participant.id || `participant-${idx}`} className="flex items-center gap-3">
                         <Avatar className="h-8 w-8">
                           <AvatarFallback className="text-xs bg-gray-200 text-gray-700">
                             {participant.name?.split(" ").map((n: string) => n[0]).join("")}

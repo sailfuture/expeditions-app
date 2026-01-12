@@ -111,21 +111,19 @@ function TVDisplayContent() {
   })
 
   // Fetch schedule items
-  const { data: scheduleItems, isLoading: loadingItems } = useSWR(
+  const { data: scheduleData, isLoading: loadingItems } = useSWR(
     activeExpedition ? `tv_schedule_${todayDate}_${activeExpedition.id}` : null,
     activeExpedition ? () => getExpeditionScheduleItemsByDate(todayDate, activeExpedition.id) : null,
     { refreshInterval: 30000, revalidateOnFocus: false }
   )
 
-  // Get schedule info from first item
-  const todaySchedule = useMemo(() => {
-    if (!scheduleItems || !Array.isArray(scheduleItems) || scheduleItems.length === 0) return null
-    return scheduleItems[0]?._expedition_schedule || null
-  }, [scheduleItems])
+  // Extract items and schedule from the response
+  const scheduleItems = scheduleData?.items || []
+  const todaySchedule = scheduleData?.schedule || null
 
   // Calculate layout for overlapping items
   const itemsWithLayout = useMemo(() => {
-    if (!scheduleItems || !Array.isArray(scheduleItems)) return []
+    if (!scheduleItems || scheduleItems.length === 0) return []
     
     const items = scheduleItems.map((item: any, idx: number) => ({
       ...item,
@@ -172,7 +170,7 @@ function TVDisplayContent() {
     })
     
     return items
-  }, [scheduleItems])
+  }, [scheduleData])
 
   // Filter items for each row
   const row1Items = useMemo(() => {
@@ -275,70 +273,167 @@ function TVDisplayContent() {
 
   const isLoading = loadingItems
 
-  // Get location names from schedule
-  const currentLocationName = todaySchedule?._expedition_current_location?.port || 
+  // Get location names from schedule - try multiple field names
+  // API returns _expedition_locations for current location
+  const currentLocationName = todaySchedule?._expedition_locations?.port ||
+                               todaySchedule?._expedition_current_location?.port || 
                                todaySchedule?._current_location?.port ||
                                (todaySchedule?.current_location > 0 ? `Location ${todaySchedule.current_location}` : null)
   const destinationName = todaySchedule?._expedition_destination?.port ||
                           todaySchedule?._destination?.port ||
-                          (todaySchedule?.destination > 0 ? `Location ${todaySchedule.destination}` : null)
+                          (todaySchedule?.destination > 0 ? `Destination ${todaySchedule.destination}` : null)
+
+  // Get dish and galley team info from schedule
+  const dishTeam = todaySchedule?._expedition_dish_days
+  const galleyTeam = todaySchedule?._expeditions_galley_team
+
+  // Helper to get student initials
+  const getInitials = (firstName?: string, lastName?: string) => {
+    return `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase() || '?'
+  }
 
   return (
     <div className="fixed inset-0 z-[100] bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="h-16 flex-shrink-0 bg-slate-900/80 border-b border-white/10 flex items-center justify-between px-6">
-        <div className="flex items-center gap-8">
-          <div>
-            <h1 className="text-4xl font-bold text-white">
-              {format(displayDate, "EEEE, MMMM d, yyyy")}
-            </h1>
-            <div className="flex items-center gap-3 mt-2">
-              <span className="text-lg text-white/70">{activeExpedition.name}</span>
-              
-              {/* Location info */}
-              {currentLocationName && (
-                <span className="px-3 py-1 rounded-md bg-white/10 text-white/90 text-sm font-medium">
-                  {currentLocationName}
-                  {destinationName && (
-                    <span className="text-white/50"> → {destinationName}</span>
-                  )}
-                </span>
-              )}
-              
-              {/* Status badges */}
-              {todaySchedule?.isOffshore && (
-                <span className="px-3 py-1 rounded-md bg-cyan-500/20 text-cyan-300 text-sm font-medium">
-                  Offshore
-                </span>
-              )}
-              {!todaySchedule?.isOffshore && todaySchedule && (
-                <span className="px-3 py-1 rounded-md bg-emerald-500/20 text-emerald-300 text-sm font-medium">
-                  In Port
-                </span>
-              )}
-              {todaySchedule?.isService && (
-                <span className="px-3 py-1 rounded-md bg-purple-500/20 text-purple-300 text-sm font-medium">
-                  Service Day
-                </span>
-              )}
-              {(testDate || testTime) && (
-                <span className="px-3 py-1 rounded-md bg-amber-500/20 text-amber-300 text-sm font-medium">
-                  Test Mode
-                </span>
-              )}
+      <div className="h-auto flex-shrink-0 bg-slate-900/80 border-b border-white/10 px-6 py-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-6">
+            <div>
+              <h1 className="text-xl font-semibold text-white">
+                {format(displayDate, "EEEE, MMMM d, yyyy")}
+              </h1>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-sm text-white/60">{activeExpedition.name}</span>
+                
+                {/* Location info */}
+                {currentLocationName && (
+                  <span className="px-2 py-0.5 rounded bg-white/10 text-white/80 text-xs font-medium">
+                    {currentLocationName}
+                    {destinationName && (
+                      <span className="text-white/40"> → {destinationName}</span>
+                    )}
+                  </span>
+                )}
+                
+                {/* Day Type Badge - A (Anchored/green), O (Offshore/blue), S (Service/red) */}
+                {todaySchedule && (
+                  <>
+                    {(todaySchedule.isOffshore || todaySchedule.is_offshore) ? (
+                      <span className="px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 text-xs font-medium">
+                        O — Offshore
+                      </span>
+                    ) : (todaySchedule.isService || todaySchedule.is_service) ? (
+                      <span className="px-2 py-0.5 rounded bg-red-500/20 text-red-300 text-xs font-medium">
+                        S — Service
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-xs font-medium">
+                        A — Anchored
+                      </span>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
+          </div>
+          
+          <div className="text-right">
+            <p className="text-3xl font-light text-white tabular-nums">
+              {format(currentTime, "h:mm")}
+              <span className="text-lg text-white/50 ml-1">{format(currentTime, "a")}</span>
+            </p>
+            {!testDate && !testTime && (
+              <p className="text-xs text-green-400 font-medium">Live</p>
+            )}
           </div>
         </div>
         
-        <div className="text-right">
-          <p className="text-5xl font-light text-white tabular-nums">
-            {format(currentTime, "h:mm")}
-            <span className="text-2xl text-white/50 ml-2">{format(currentTime, "a")}</span>
-          </p>
-          {!testDate && !testTime && (
-            <p className="text-lg text-green-400 font-medium">Live</p>
-          )}
-        </div>
+        {/* Sub-navigation: Dish & Galley Teams */}
+        {(dishTeam || galleyTeam) && (
+          <div className="flex items-start justify-between mt-3 pt-3 border-t border-white/10">
+            {/* Dish Team - Left */}
+            {dishTeam && (
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-white/90 font-medium">Dish Team:</span>
+                  <span className="px-2 py-0.5 rounded bg-white/20 text-white text-sm font-semibold">
+                    {dishTeam.dishteam?.replace('Dish Team ', '') || dishTeam.name?.replace('Dish Team ', '') || '—'}
+                  </span>
+                </div>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+                  {/* Wash students */}
+                  {dishTeam.wash && dishTeam.wash.filter((s: any) => s).length > 0 && (
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs text-white/50 font-medium">Wash:</span>
+                      <span className="text-white/80">
+                        {dishTeam.wash.filter((s: any) => s).map((student: any) => 
+                          `${student?.firstName || ''} ${student?.lastName?.[0] || ''}.`
+                        ).join(', ')}
+                      </span>
+                    </div>
+                  )}
+                  {/* Dry students */}
+                  {dishTeam.dry && dishTeam.dry.filter((s: any) => s).length > 0 && (
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs text-white/50 font-medium">Dry:</span>
+                      <span className="text-white/80">
+                        {dishTeam.dry.filter((s: any) => s).map((student: any) => 
+                          `${student?.firstName || ''} ${student?.lastName?.[0] || ''}.`
+                        ).join(', ')}
+                      </span>
+                    </div>
+                  )}
+                  {/* Support staff */}
+                  {dishTeam.support_staff_dishes?.name && (
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs text-white/50 font-medium">Support:</span>
+                      <span className="text-white/80">{dishTeam.support_staff_dishes.name}</span>
+                    </div>
+                  )}
+                  {/* Supervisor staff */}
+                  {dishTeam.supervisor_staff_dishes?.name && (
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs text-white/50 font-medium">Supervisor:</span>
+                      <span className="text-white/80">{dishTeam.supervisor_staff_dishes.name}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+            
+            {/* Galley Team - Right */}
+            {galleyTeam && (
+              <div className="flex flex-col gap-1 items-end text-right">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-white/90 font-medium">Galley Team:</span>
+                  <span className="px-2 py-0.5 rounded bg-white/20 text-white text-sm font-semibold">
+                    {galleyTeam.name?.replace('Galley Team ', '') || '—'}
+                  </span>
+                </div>
+                <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-1 text-sm">
+                  {/* Galley students */}
+                  {galleyTeam.students_id && galleyTeam.students_id.filter((s: any) => s).length > 0 && (
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs text-white/50 font-medium">Students:</span>
+                      <span className="text-white/80">
+                        {galleyTeam.students_id.filter((s: any) => s).map((student: any) => 
+                          `${student?.firstName || ''} ${student?.lastName?.[0] || ''}.`
+                        ).join(', ')}
+                      </span>
+                    </div>
+                  )}
+                  {/* Supervisor */}
+                  {(galleyTeam._galley_supervisor?.name || galleyTeam.expedition_staff?.name) && (
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs text-white/50 font-medium">Supervisor:</span>
+                      <span className="text-white/80">{galleyTeam._galley_supervisor?.name || galleyTeam.expedition_staff?.name}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Timeline Container - Two rows */}
@@ -556,7 +651,7 @@ function TVDisplayContent() {
           Auto-refreshes every 30s
         </div>
         
-        {/* TV Display Navigation */}
+        {/* TV Display Navigation - commented out for now
         <div className="flex items-center gap-2">
           <Link href="/tv?date=2026-01-11">
             <Button 
@@ -586,6 +681,7 @@ function TVDisplayContent() {
             </Button>
           </Link>
         </div>
+        */}
       </div>
     </div>
   )

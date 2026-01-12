@@ -179,12 +179,12 @@ export default function PublicScheduleTodayPage() {
             <ChevronLeft className="h-5 w-5 text-gray-600" />
           </button>
 
-          <div className="flex-1 mx-3 flex items-center justify-center gap-2">
+          <div className="flex-1 mx-3 flex items-center justify-center">
             <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
               <PopoverTrigger asChild>
                 <Button
                   variant="ghost"
-                  className="h-9 text-base font-semibold text-gray-900 rounded-full border border-gray-200 bg-white hover:bg-gray-50 cursor-pointer"
+                  className="w-full h-9 text-base font-semibold text-gray-900 rounded-full border border-gray-200 bg-white hover:bg-gray-50 cursor-pointer"
                 >
                   {formatDateDisplay(currentDate)}
                 </Button>
@@ -217,7 +217,7 @@ export default function PublicScheduleTodayPage() {
       {/* Team Assignments Sub-Nav - Minimalist */}
       {schedule && (schedule._expedition_dish_days || schedule._expeditions_galley_team) && (
         <div className="px-4 py-2.5 bg-gray-50 border-b border-gray-200">
-          <div className="flex items-center gap-6 flex-wrap">
+          <div className="flex items-center justify-center gap-6 flex-wrap">
             {/* Dish Team */}
             {schedule._expedition_dish_days && (
               <div className="flex items-center gap-3">
@@ -232,13 +232,13 @@ export default function PublicScheduleTodayPage() {
                         <TooltipTrigger asChild>
                           <div className="flex items-center gap-1">
                             <span className="text-[10px] text-gray-400">W</span>
-                            <div className="flex -space-x-1">
+                            <div className="flex -space-x-1.5">
                               {schedule._expedition_dish_days.wash.filter((s: any) => s).map((s: any, idx: number) => (
-                                <Avatar key={idx} className="h-6 w-6 border-2 border-white">
+                                <Avatar key={idx} className="h-7 w-7 border-2 border-white">
                                   {s.profileImage ? (
                                     <AvatarImage src={s.profileImage} alt={`${s.firstName} ${s.lastName}`} />
                                   ) : null}
-                                  <AvatarFallback className="text-[9px] bg-blue-100 text-blue-700">
+                                  <AvatarFallback className="text-[10px] bg-gray-200 text-gray-700">
                                     {s.firstName?.[0]}{s.lastName?.[0]}
                                   </AvatarFallback>
                                 </Avatar>
@@ -259,13 +259,13 @@ export default function PublicScheduleTodayPage() {
                         <TooltipTrigger asChild>
                           <div className="flex items-center gap-1">
                             <span className="text-[10px] text-gray-400">D</span>
-                            <div className="flex -space-x-1">
+                            <div className="flex -space-x-1.5">
                               {schedule._expedition_dish_days.dry.filter((s: any) => s).map((s: any, idx: number) => (
-                                <Avatar key={idx} className="h-6 w-6 border-2 border-white">
+                                <Avatar key={idx} className="h-7 w-7 border-2 border-white">
                                   {s.profileImage ? (
                                     <AvatarImage src={s.profileImage} alt={`${s.firstName} ${s.lastName}`} />
                                   ) : null}
-                                  <AvatarFallback className="text-[9px] bg-green-100 text-green-700">
+                                  <AvatarFallback className="text-[10px] bg-gray-200 text-gray-700">
                                     {s.firstName?.[0]}{s.lastName?.[0]}
                                   </AvatarFallback>
                                 </Avatar>
@@ -286,8 +286,8 @@ export default function PublicScheduleTodayPage() {
                         <TooltipTrigger asChild>
                           <div className="flex items-center gap-1">
                             <span className="text-[10px] text-gray-400">Sp</span>
-                            <Avatar className="h-6 w-6 border-2 border-white">
-                              <AvatarFallback className="text-[9px] bg-orange-100 text-orange-700">
+                            <Avatar className="h-7 w-7 border-2 border-white">
+                              <AvatarFallback className="text-[10px] bg-gray-200 text-gray-700">
                                 {schedule._expedition_dish_days.support_staff_dishes.name.split(' ').map((n: string) => n[0]).join('')}
                               </AvatarFallback>
                             </Avatar>
@@ -306,8 +306,8 @@ export default function PublicScheduleTodayPage() {
                         <TooltipTrigger asChild>
                           <div className="flex items-center gap-1">
                             <span className="text-[10px] text-gray-400">Sv</span>
-                            <Avatar className="h-6 w-6 border-2 border-white">
-                              <AvatarFallback className="text-[9px] bg-purple-100 text-purple-700">
+                            <Avatar className="h-7 w-7 border-2 border-white">
+                              <AvatarFallback className="text-[10px] bg-gray-200 text-gray-700">
                                 {schedule._expedition_dish_days.supervisor_staff_dishes.name.split(' ').map((n: string) => n[0]).join('')}
                               </AvatarFallback>
                             </Avatar>
@@ -339,13 +339,13 @@ export default function PublicScheduleTodayPage() {
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <div className="flex -space-x-1">
+                          <div className="flex -space-x-1.5">
                             {schedule._expeditions_galley_team.students_id.filter((s: any) => s).map((s: any, idx: number) => (
-                              <Avatar key={idx} className="h-6 w-6 border-2 border-white">
+                              <Avatar key={idx} className="h-7 w-7 border-2 border-white">
                                 {s.profileImage ? (
                                   <AvatarImage src={s.profileImage} alt={`${s.firstName} ${s.lastName}`} />
                                 ) : null}
-                                <AvatarFallback className="text-[9px] bg-gray-200 text-gray-700">
+                                <AvatarFallback className="text-[10px] bg-gray-200 text-gray-700">
                                   {s.firstName?.[0]}{s.lastName?.[0]}
                                 </AvatarFallback>
                               </Avatar>
@@ -365,8 +365,8 @@ export default function PublicScheduleTodayPage() {
                         <TooltipTrigger asChild>
                           <div className="flex items-center gap-1">
                             <span className="text-[10px] text-gray-400">Sv</span>
-                            <Avatar className="h-6 w-6 border-2 border-white">
-                              <AvatarFallback className="text-[9px] bg-purple-100 text-purple-700">
+                            <Avatar className="h-7 w-7 border-2 border-white">
+                              <AvatarFallback className="text-[10px] bg-gray-200 text-gray-700">
                                 {schedule._expeditions_galley_team._galley_supervisor.name.split(' ').map((n: string) => n[0]).join('')}
                               </AvatarFallback>
                             </Avatar>

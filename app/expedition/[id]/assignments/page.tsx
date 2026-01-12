@@ -578,10 +578,10 @@ export default function AssignmentsPage({ params }: PageProps) {
                               <Button
                                 variant="outline"
                                 role="combobox"
-                                className="w-[160px] min-w-[160px] max-w-[160px] justify-between h-9 text-sm cursor-pointer [&_[data-placeholder]]:text-gray-400"
+                                className="w-full justify-between h-9 text-sm cursor-pointer [&_[data-placeholder]]:text-gray-400"
                                 disabled={updatingId === washUpdateKey}
                               >
-                                <span className="truncate text-left flex-1 max-w-[120px]">
+                                <span className="truncate text-left flex-1">
                                   {team.wash && team.wash.length > 0 ? (
                                     team.wash.map((studentId: number) => {
                                       const student = studentAssignments.find((s: any) => s.personId === studentId)
@@ -654,10 +654,10 @@ export default function AssignmentsPage({ params }: PageProps) {
                               <Button
                                 variant="outline"
                                 role="combobox"
-                                className="w-[160px] min-w-[160px] max-w-[160px] justify-between h-9 text-sm cursor-pointer [&_[data-placeholder]]:text-gray-400"
+                                className="w-full justify-between h-9 text-sm cursor-pointer [&_[data-placeholder]]:text-gray-400"
                                 disabled={updatingId === dryUpdateKey}
                               >
-                                <span className="truncate text-left flex-1 max-w-[120px]">
+                                <span className="truncate text-left flex-1">
                                   {team.dry && team.dry.length > 0 ? (
                                     team.dry.map((studentId: number) => {
                                       const student = studentAssignments.find((s: any) => s.personId === studentId)
@@ -730,7 +730,7 @@ export default function AssignmentsPage({ params }: PageProps) {
                             onValueChange={(value) => handleDishTeamFieldChange(team.id, "support", parseInt(value))}
                             disabled={updatingId === supportUpdateKey}
                           >
-                            <SelectTrigger className="w-[140px] min-w-[140px] max-w-[140px] cursor-pointer">
+                            <SelectTrigger className="w-full cursor-pointer">
                               <SelectValue placeholder="Select staff..." className="truncate" />
                             </SelectTrigger>
                             <SelectContent>
@@ -763,7 +763,7 @@ export default function AssignmentsPage({ params }: PageProps) {
                             onValueChange={(value) => handleDishTeamFieldChange(team.id, "supervisor", parseInt(value))}
                             disabled={updatingId === supervisorUpdateKey}
                           >
-                            <SelectTrigger className="w-[140px] min-w-[140px] max-w-[140px] cursor-pointer">
+                            <SelectTrigger className="w-full cursor-pointer">
                               <SelectValue placeholder="Select staff..." className="truncate" />
                             </SelectTrigger>
                             <SelectContent>

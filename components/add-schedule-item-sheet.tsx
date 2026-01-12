@@ -25,10 +25,10 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Spinner } from "@/components/ui/spinner"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Check, ChevronDown, X, Trash2 } from "lucide-react"
-import { createExpeditionScheduleItem, updateExpeditionScheduleItem, deleteExpeditionScheduleItem } from "@/lib/xano"
+import { Check, ChevronDown, X, Trash2, ExternalLink, Search } from "lucide-react"
+import { createExpeditionScheduleItem, updateExpeditionScheduleItem, deleteExpeditionScheduleItem, getExpeditionCookbookByType } from "@/lib/xano"
 import { useExpeditionScheduleItemTypes } from "@/lib/hooks/use-expeditions"
-import { mutate } from "swr"
+import useSWR, { mutate } from "swr"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 
@@ -38,6 +38,7 @@ interface AddScheduleItemSheetProps {
   scheduleId: number
   date: string
   staff?: any[]
+  students?: any[] // Students for this expedition
   editItem?: any // If provided, sheet is in edit mode
   expeditionsId?: number // For cache invalidation
 }
@@ -125,18 +126,20 @@ function CustomSelect({
   )
 }
 
-// Multi-select for staff participants with avatars (grayscale)
-function StaffParticipantSelector({
-  staff,
-  selectedIds,
+// Activity Type selector with search
+function ActivityTypeSelector({
+  value,
   onChange,
+  options,
 }: {
-  staff: any[]
-  selectedIds: number[]
-  onChange: (ids: number[]) => void
+  value: number
+  onChange: (value: number, option?: any) => void
+  options: { value: number; label: string; data?: any }[]
 }) {
   const [isOpen, setIsOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("")
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -148,7 +151,139 @@ function StaffParticipantSelector({
     return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [])
 
+  // Focus input when dropdown opens
+  useEffect(() => {
+    if (isOpen && inputRef.current) {
+      inputRef.current.focus()
+    }
+  }, [isOpen])
+
+  // Filter options based on search
+  const filteredOptions = options.filter((option) => {
+    if (!searchQuery) return true
+    return option.label.toLowerCase().includes(searchQuery.toLowerCase())
+  })
+
+  const selectedOption = options.find(o => o.value === value) || null
+
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className={cn(
+          "w-full h-12 rounded-lg border border-gray-200 bg-white px-4 flex items-center justify-between gap-2 text-left cursor-pointer",
+          "hover:bg-gray-50 transition-colors",
+          isOpen && "ring-2 ring-gray-400 ring-offset-2"
+        )}
+      >
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          {selectedOption?.data?.color && (
+            <div 
+              className="w-3 h-3 rounded-full shrink-0" 
+              style={{ backgroundColor: selectedOption.data.color === 'gray' ? '#9ca3af' : undefined }}
+            />
+          )}
+          <span className={selectedOption ? "text-gray-900 text-base truncate" : "text-gray-500 text-base"}>
+            {selectedOption?.label || "Select type..."}
+          </span>
+        </div>
+        <ChevronDown className={cn("h-4 w-4 text-gray-400 transition-transform shrink-0", isOpen && "rotate-180")} />
+      </button>
+
+      {isOpen && (
+        <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
+          {/* Search input */}
+          <div className="p-2 border-b border-gray-100">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                ref={inputRef}
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search activity types..."
+                className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-400"
+              />
+            </div>
+          </div>
+
+          <div className="max-h-64 overflow-y-auto py-1">
+            {filteredOptions.length === 0 ? (
+              <div className="px-4 py-3 text-gray-500 text-sm">
+                {searchQuery ? "No types match your search" : "No types available"}
+              </div>
+            ) : (
+              filteredOptions.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => {
+                    onChange(option.value, option)
+                    setIsOpen(false)
+                    setSearchQuery("")
+                  }}
+                  className={cn(
+                    "w-full px-4 py-2.5 flex items-center gap-3 hover:bg-gray-100 transition-colors text-left cursor-pointer",
+                    option.value === value && "bg-gray-50"
+                  )}
+                >
+                  {option.data?.color && (
+                    <div 
+                      className="w-3 h-3 rounded-full shrink-0" 
+                      style={{ backgroundColor: option.data.color === 'gray' ? '#9ca3af' : undefined }}
+                    />
+                  )}
+                  <span className="text-sm font-medium flex-1">{option.label}</span>
+                  {option.value === value && <Check className="h-4 w-4 text-gray-700 shrink-0" />}
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Multi-select for staff participants with avatars and search
+function StaffParticipantSelector({
+  staff,
+  selectedIds,
+  onChange,
+}: {
+  staff: any[]
+  selectedIds: number[]
+  onChange: (ids: number[]) => void
+}) {
+  const [isOpen, setIsOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("")
+  const dropdownRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
+
+  useEffect(() => {
+    if (isOpen && inputRef.current) {
+      inputRef.current.focus()
+    }
+  }, [isOpen])
+
   const selectedStaff = staff?.filter((s) => selectedIds.includes(s.id)) || []
+
+  // Filter staff based on search
+  const filteredStaff = staff?.filter((member) => {
+    if (!searchQuery) return true
+    return member.name.toLowerCase().includes(searchQuery.toLowerCase())
+  }) || []
 
   const toggleParticipant = (id: number) => {
     if (selectedIds.includes(id)) {
@@ -214,11 +349,27 @@ function StaffParticipantSelector({
 
       {isOpen && (
         <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
-          <div className="max-h-64 overflow-y-auto py-2">
-            {staff?.length === 0 && (
-              <div className="px-4 py-3 text-gray-500 text-sm">No staff members available</div>
+          {/* Search input */}
+          <div className="p-2 border-b border-gray-100">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                ref={inputRef}
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search staff..."
+                className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-400"
+              />
+            </div>
+          </div>
+          <div className="max-h-64 overflow-y-auto py-1">
+            {filteredStaff.length === 0 && (
+              <div className="px-4 py-3 text-gray-500 text-sm">
+                {searchQuery ? "No staff match your search" : "No staff members available"}
+              </div>
             )}
-            {staff?.map((member) => {
+            {filteredStaff.map((member) => {
               const isSelected = selectedIds.includes(member.id)
               return (
                 <button
@@ -243,6 +394,315 @@ function StaffParticipantSelector({
                 </button>
               )
             })}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Multi-select for student participants with avatars and search
+function StudentParticipantSelector({
+  students,
+  selectedIds,
+  onChange,
+}: {
+  students: any[]
+  selectedIds: number[]
+  onChange: (ids: number[]) => void
+}) {
+  const [isOpen, setIsOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("")
+  const dropdownRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
+
+  useEffect(() => {
+    if (isOpen && inputRef.current) {
+      inputRef.current.focus()
+    }
+  }, [isOpen])
+
+  const selectedStudents = students?.filter((s) => selectedIds.includes(s.id)) || []
+
+  const getInitials = (firstName: string, lastName: string) => {
+    return `${firstName?.[0] || ""}${lastName?.[0] || ""}`.toUpperCase() || "?"
+  }
+
+  const getFullName = (student: any) => {
+    return `${student.firstName || ""} ${student.lastName || ""}`.trim() || "Unknown"
+  }
+
+  // Filter students based on search
+  const filteredStudents = students?.filter((student) => {
+    if (!searchQuery) return true
+    const fullName = getFullName(student).toLowerCase()
+    return fullName.includes(searchQuery.toLowerCase())
+  }) || []
+
+  const toggleParticipant = (id: number) => {
+    if (selectedIds.includes(id)) {
+      onChange(selectedIds.filter((sid) => sid !== id))
+    } else {
+      onChange([...selectedIds, id])
+    }
+  }
+
+  return (
+    <div className="space-y-2 relative" ref={dropdownRef}>
+      <Label className="text-sm font-medium">Participants (Students)</Label>
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className={cn(
+          "w-full min-h-12 rounded-lg border border-gray-200 bg-white px-4 py-2 flex items-center justify-between gap-2 text-left cursor-pointer",
+          "hover:bg-gray-50 transition-colors",
+          isOpen && "ring-2 ring-gray-400 ring-offset-2"
+        )}
+      >
+        {selectedStudents.length === 0 ? (
+          <span className="text-gray-500 text-base">Select student participants...</span>
+        ) : (
+          <div className="flex flex-wrap gap-1.5">
+            {selectedStudents.slice(0, 3).map((student) => (
+              <span
+                key={student.id}
+                className="inline-flex items-center gap-1.5 bg-gray-100 text-gray-800 px-2.5 py-1 rounded-md text-sm font-medium"
+              >
+                <Avatar className="h-5 w-5">
+                  {student.profileImage && <AvatarImage src={student.profileImage} alt={getFullName(student)} />}
+                  <AvatarFallback className="text-[10px] bg-gray-200 text-gray-700">
+                    {getInitials(student.firstName, student.lastName)}
+                  </AvatarFallback>
+                </Avatar>
+                {student.firstName}
+              </span>
+            ))}
+            {selectedStudents.length > 3 && (
+              <span className="inline-flex items-center bg-gray-200 text-gray-700 px-2.5 py-1 rounded-md text-sm font-medium">
+                +{selectedStudents.length - 3} more
+              </span>
+            )}
+          </div>
+        )}
+        <div className="flex items-center gap-2 shrink-0">
+          {selectedStudents.length > 0 && (
+            <span className="inline-flex items-center justify-center h-6 min-w-6 px-1.5 rounded-md bg-gray-800 text-white text-xs font-semibold">
+              {selectedStudents.length}
+            </span>
+          )}
+          <ChevronDown className={cn("h-4 w-4 text-gray-400 transition-transform", isOpen && "rotate-180")} />
+        </div>
+      </button>
+
+      {isOpen && (
+        <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
+          {/* Search input */}
+          <div className="p-2 border-b border-gray-100">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                ref={inputRef}
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search students..."
+                className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-400"
+              />
+            </div>
+          </div>
+          <div className="max-h-64 overflow-y-auto py-1">
+            {filteredStudents.length === 0 && (
+              <div className="px-4 py-3 text-gray-500 text-sm">
+                {searchQuery ? "No students match your search" : "No students available"}
+              </div>
+            )}
+            {filteredStudents.map((student) => {
+              const isSelected = selectedIds.includes(student.id)
+              return (
+                <button
+                  key={student.id}
+                  type="button"
+                  onClick={() => toggleParticipant(student.id)}
+                  className="w-full px-4 py-2.5 flex items-center gap-3 hover:bg-gray-100 transition-colors text-left cursor-pointer"
+                >
+                  <span
+                    className={cn(
+                      "h-5 w-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors",
+                      isSelected ? "border-gray-800 bg-gray-800" : "border-gray-300"
+                    )}
+                  >
+                    {isSelected && <Check className="h-3 w-3 text-white" />}
+                  </span>
+                  <Avatar className="h-8 w-8">
+                    {student.profileImage && <AvatarImage src={student.profileImage} alt={getFullName(student)} />}
+                    <AvatarFallback className="text-xs bg-gray-100 text-gray-800">
+                      {getInitials(student.firstName, student.lastName)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="text-sm font-medium">{getFullName(student)}</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Cookbook/Recipe selector with search
+function CookbookSelector({
+  selectedId,
+  onChange,
+  mealTypeName,
+}: {
+  selectedId: number
+  onChange: (id: number) => void
+  mealTypeName: string | undefined
+}) {
+  const [isOpen, setIsOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("")
+  const dropdownRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  // Fetch cookbook recipes by type
+  const { data: recipes = [], isLoading } = useSWR(
+    mealTypeName ? `cookbook_by_type_${mealTypeName}` : null,
+    () => mealTypeName ? getExpeditionCookbookByType(mealTypeName) : Promise.resolve([]),
+    { revalidateOnFocus: false }
+  )
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
+
+  // Focus input when dropdown opens
+  useEffect(() => {
+    if (isOpen && inputRef.current) {
+      inputRef.current.focus()
+    }
+  }, [isOpen])
+
+  // Filter recipes based on search
+  const filteredRecipes = recipes.filter((recipe: any) => {
+    if (!searchQuery) return true
+    const name = recipe.recipe_name || ""
+    return name.toLowerCase().includes(searchQuery.toLowerCase())
+  })
+
+  // Find selected recipe
+  const selectedRecipe = recipes.find((r: any) => r.id === selectedId)
+
+  return (
+    <div className="space-y-2 relative" ref={dropdownRef}>
+      <Label className="text-sm font-medium">Meal Plan</Label>
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className={cn(
+          "w-full h-12 rounded-lg border border-gray-200 bg-white px-4 flex items-center justify-between gap-2 text-left cursor-pointer",
+          "hover:bg-gray-50 transition-colors",
+          isOpen && "ring-2 ring-gray-400 ring-offset-2"
+        )}
+      >
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          {selectedRecipe?.recipe_photo && (
+            <Avatar className="h-7 w-7 shrink-0">
+              <AvatarImage src={selectedRecipe.recipe_photo} alt={selectedRecipe.recipe_name} />
+              <AvatarFallback className="text-[10px] bg-orange-100 text-orange-600">🍽</AvatarFallback>
+            </Avatar>
+          )}
+          <span className={selectedRecipe ? "text-gray-900 text-base truncate" : "text-gray-500 text-base"}>
+            {selectedRecipe ? selectedRecipe.recipe_name : "Select a meal plan..."}
+          </span>
+        </div>
+        <ChevronDown className={cn("h-4 w-4 text-gray-400 transition-transform shrink-0", isOpen && "rotate-180")} />
+      </button>
+
+      {isOpen && (
+        <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
+          {/* Search input */}
+          <div className="p-2 border-b border-gray-100">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                ref={inputRef}
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search meal plans..."
+                className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-400"
+              />
+            </div>
+          </div>
+
+          <div className="max-h-64 overflow-y-auto py-1">
+            {/* None option */}
+            <button
+              type="button"
+              onClick={() => {
+                onChange(0)
+                setIsOpen(false)
+                setSearchQuery("")
+              }}
+              className={cn(
+                "w-full px-4 py-2.5 flex items-center gap-3 hover:bg-gray-100 transition-colors text-left cursor-pointer",
+                selectedId === 0 && "bg-gray-50"
+              )}
+            >
+              <span className="text-sm text-gray-500">None</span>
+            </button>
+
+            {isLoading ? (
+              <div className="px-4 py-3 text-gray-500 text-sm">Loading meal plans...</div>
+            ) : filteredRecipes.length === 0 ? (
+              <div className="px-4 py-3 text-gray-500 text-sm">
+                {searchQuery ? "No meal plans match your search" : "No meal plans available"}
+              </div>
+            ) : (
+              filteredRecipes.map((recipe: any) => (
+                <button
+                  key={recipe.id}
+                  type="button"
+                  onClick={() => {
+                    onChange(recipe.id)
+                    setIsOpen(false)
+                    setSearchQuery("")
+                  }}
+                  className={cn(
+                    "w-full px-4 py-2.5 flex items-center gap-3 hover:bg-gray-100 transition-colors text-left cursor-pointer",
+                    recipe.id === selectedId && "bg-gray-50"
+                  )}
+                >
+                  <Avatar className="h-8 w-8 shrink-0">
+                    {recipe.recipe_photo ? (
+                      <AvatarImage src={recipe.recipe_photo} alt={recipe.recipe_name} />
+                    ) : null}
+                    <AvatarFallback className="text-xs bg-orange-100 text-orange-600">🍽</AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm font-medium block truncate">{recipe.recipe_name}</span>
+                  </div>
+                  {recipe.id === selectedId && <Check className="h-4 w-4 text-gray-700 shrink-0" />}
+                </button>
+              ))
+            )}
           </div>
         </div>
       )}
@@ -279,6 +739,7 @@ export function AddScheduleItemSheet({
   scheduleId, 
   date,
   staff = [],
+  students = [],
   expeditionsId,
   editItem,
 }: AddScheduleItemSheetProps) {
@@ -287,6 +748,15 @@ export function AddScheduleItemSheet({
   
   const isEditMode = !!editItem
   
+  // Check if an activity type is a meal (Breakfast=1, Lunch=2, Dinner=3)
+  // Check if type is an actual meal (Breakfast, Lunch, Dinner) - not prep or dishes
+  const EXACT_MEAL_NAMES = ['breakfast', 'lunch', 'dinner']
+  const isMealType = (typeId: number) => {
+    if (![1, 2, 3, 5, 6, 7].includes(typeId)) return false
+    const typeName = itemTypes.find((t: any) => t.id === typeId)?.name?.toLowerCase().trim() || ''
+    return EXACT_MEAL_NAMES.includes(typeName)
+  }
+
   const getInitialFormData = () => ({
     name: editItem?.name || "",
     expedition_schedule_item_types_id: editItem?.expedition_schedule_item_types_id || 0,
@@ -294,9 +764,12 @@ export function AddScheduleItemSheet({
     time_out: editItem?.time_out || 900,
     led_by: editItem?.led_by || 0,
     participants: editItem?.participants?.map((p: any) => p.id || p) || [],
+    students_id: editItem?.students_id?.map((s: any) => s.id || s) || [],
     notes: editItem?.notes || "",
     address: editItem?.address || "",
     things_to_bring: editItem?.things_to_bring || "",
+    resources: editItem?.resources || "",
+    expedition_cookbook_id: editItem?.expedition_cookbook_id || 0,
   })
   
   const [formData, setFormData] = useState(getInitialFormData())
@@ -355,10 +828,13 @@ export function AddScheduleItemSheet({
         time_in: formData.time_in,
         time_out: formData.time_out,
         participants: formData.participants,
+        students_id: formData.students_id,
         led_by: formData.led_by,
         notes: formData.notes,
         address: formData.address,
         things_to_bring: formData.things_to_bring,
+        resources: formData.resources,
+        expedition_cookbook_id: isMealType(formData.expedition_schedule_item_types_id) ? formData.expedition_cookbook_id : 0,
       }
 
       if (isEditMode && editItem) {
@@ -380,9 +856,12 @@ export function AddScheduleItemSheet({
         time_out: 900,
         led_by: 0,
         participants: [],
+        students_id: [],
         notes: "",
         address: "",
         things_to_bring: "",
+        resources: "",
+        expedition_cookbook_id: 0,
       })
       setTimeInDate(militaryToDate(800))
       setTimeOutDate(militaryToDate(900))
@@ -462,17 +941,10 @@ export function AddScheduleItemSheet({
             {/* Activity Type */}
             <div className="space-y-2">
               <Label className="text-sm font-medium">Activity Type</Label>
-              <CustomSelect
+              <ActivityTypeSelector
                 value={formData.expedition_schedule_item_types_id}
-                onChange={handleTypeChange}
+                onChange={(val, opt) => handleTypeChange(val, opt)}
                 options={typeOptions}
-                placeholder="Select type"
-                className="h-12 text-base"
-                renderValue={(option) => (
-                  <span className={option && option.value !== 0 ? "text-gray-900 text-base" : "text-gray-500 text-base"}>
-                    {option?.label || "Select type"}
-                  </span>
-                )}
               />
             </div>
 
@@ -549,6 +1021,47 @@ export function AddScheduleItemSheet({
               selectedIds={formData.participants}
               onChange={(ids) => setFormData({ ...formData, participants: ids })}
             />
+
+            {/* Participants Selector (Students) */}
+            <StudentParticipantSelector
+              students={students}
+              selectedIds={formData.students_id}
+              onChange={(ids) => setFormData({ ...formData, students_id: ids })}
+            />
+
+            {/* Meal Plan - Only show for meal types (Breakfast, Lunch, Dinner) */}
+            {isMealType(formData.expedition_schedule_item_types_id) && (
+              <CookbookSelector
+                selectedId={formData.expedition_cookbook_id}
+                onChange={(id) => setFormData({ ...formData, expedition_cookbook_id: id })}
+                mealTypeName={itemTypes.find((t: any) => t.id === formData.expedition_schedule_item_types_id)?.name}
+              />
+            )}
+
+            {/* Resources URL */}
+            <div className="space-y-2">
+              <Label htmlFor="resources" className="text-sm font-medium">Resources</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="resources"
+                  type="url"
+                  value={formData.resources}
+                  onChange={(e) => setFormData({ ...formData, resources: e.target.value })}
+                  placeholder="https://example.com/resource"
+                  className="h-12 text-base flex-1"
+                />
+                {formData.resources && (
+                  <a
+                    href={formData.resources}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="h-12 w-12 flex items-center justify-center rounded-lg border border-gray-200 bg-white hover:bg-gray-50 transition-colors cursor-pointer shrink-0"
+                  >
+                    <ExternalLink className="h-4 w-4 text-gray-600" />
+                  </a>
+                )}
+              </div>
+            </div>
 
             {/* Address */}
             <div className="space-y-2">

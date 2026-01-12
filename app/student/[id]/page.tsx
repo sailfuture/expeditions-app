@@ -55,7 +55,7 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart"
-import { getStudentById, updateStudent, calculateStudentEvaluation, getPerformanceReviewById, updatePerformanceReviewNotes, getProfessionalismByStudentAndDate, getEvaluationByStudentAll, createExpeditionAssignment } from "@/lib/xano"
+import { getStudentById, updateStudent, calculateStudentEvaluation, getPerformanceReviewById, updatePerformanceReviewNotes, getProfessionalismByStudentAndDate, getEvaluationByStudentAll, createExpeditionAssignment, getExpeditionAssignments } from "@/lib/xano"
 import { toast } from "sonner"
 import { mutate } from "swr"
 import { Spinner } from "@/components/ui/spinner"
@@ -116,6 +116,19 @@ export default function StudentDetailPage() {
     expeditionId && studentId ? `evaluation_by_student_all_${studentId}_${expeditionId}` : null,
     expeditionId && studentId ? () => getEvaluationByStudentAll(studentId, expeditionId) : null
   )
+  
+  // Fetch assignment data for this student and expedition
+  const { data: allAssignments } = useSWR(
+    "expedition_student_assignments",
+    getExpeditionAssignments
+  )
+  
+  const studentAssignment = useMemo(() => {
+    if (!allAssignments || !expeditionId) return null
+    return allAssignments.find(
+      (a: any) => a.students_id === studentId && a.expeditions_id === expeditionId
+    )
+  }, [allAssignments, studentId, expeditionId])
   
   // Format relative time (abbreviated) - defined early for useMemo usage
   const formatRelativeTimeForChart = (timestamp: number | null) => {
@@ -647,8 +660,8 @@ export default function StudentDetailPage() {
                   </BreadcrumbItem>
                   <BreadcrumbSeparator />
                   <BreadcrumbItem>
-                    <BreadcrumbLink href={`/students?expedition=${currentExpedition.id}`} className="cursor-pointer">
-                      Students
+                    <BreadcrumbLink href={`/expedition/${currentExpedition.id}/assignments`} className="cursor-pointer">
+                      Assignments
                     </BreadcrumbLink>
                   </BreadcrumbItem>
                   <BreadcrumbSeparator />
@@ -660,8 +673,8 @@ export default function StudentDetailPage() {
             </div>
           </div>
 
-          {/* Header - matching expedition header style */}
-          <div className="border-b bg-white">
+          {/* Header - Expedition info commented out (might bring back later) */}
+          {/* <div className="border-b bg-white">
             <div className="container mx-auto px-4 py-6">
               <div>
                 <h1 className="text-3xl font-bold mb-2">{currentExpedition.name}</h1>
@@ -684,35 +697,61 @@ export default function StudentDetailPage() {
                 </div>
               </div>
             </div>
-          </div>
+          </div> */}
 
-          {/* Student Info Bar */}
-          <div className="border-b bg-muted/30">
-            <div className="container mx-auto px-4 py-4">
+          {/* Student Header - Prominent */}
+          <div className="border-b bg-white">
+            <div className="container mx-auto px-4 py-6">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-8 w-8">
+                <div className="flex items-center gap-4">
+                  <Avatar className="h-16 w-16">
                     <AvatarImage src={student.profileImage} alt={`${student.firstName || ""} ${student.lastName || ""}`.trim()} />
-                    <AvatarFallback className="text-sm bg-gray-200 text-gray-600">
+                    <AvatarFallback className="text-lg bg-gray-200 text-gray-600">
                       {`${student.firstName?.[0] || ""}${student.lastName?.[0] || ""}` || "?"}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold text-gray-900">{`${student.firstName || ""} ${student.lastName || ""}`.trim()}</span>
-                    {student.grade && (
-                      <Badge variant="outline" className="bg-white">{student.grade}</Badge>
-                    )}
-                    {student.isArchived && (
-                      <Badge variant="outline" className="bg-gray-100 text-gray-600">Archived</Badge>
-                    )}
+                  <div>
+                    <h1 className="text-3xl font-bold mb-1">{`${student.firstName || ""} ${student.lastName || ""}`.trim()}</h1>
+                    <div className="flex items-center gap-2">
+                      {student.grade && (
+                        <Badge variant="outline" className="bg-white">{student.grade}</Badge>
+                      )}
+                      {studentAssignment?.department && (
+                        <Badge variant="outline" className="bg-white">
+                          {studentAssignment.department}
+                        </Badge>
+                      )}
+                      {studentAssignment?.dish_day && (
+                        <Badge variant="outline" className="bg-white">
+                          Dish: {studentAssignment.dish_day}
+                        </Badge>
+                      )}
+                      {studentAssignment?.laptop && (
+                        <Badge variant="outline" className="bg-white">
+                          {studentAssignment.laptop}
+                        </Badge>
+                      )}
+                      {studentAssignment?.bunk && (
+                        <Badge variant="outline" className="bg-white">
+                          {studentAssignment.bunk}
+                        </Badge>
+                      )}
+                      {student.isArchived && (
+                        <Badge variant="outline" className="bg-gray-100 text-gray-600">Archived</Badge>
+                      )}
+                    </div>
                   </div>
-                  {student.department && (
-                    <>
-                      <div className="h-6 w-px bg-border" />
-                      <span className="text-sm text-muted-foreground">{student.department}</span>
-                    </>
-                  )}
                 </div>
+                {isAdmin && (
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setDialogOpen(true)}
+                    className="cursor-pointer"
+                  >
+                    <Pencil className="h-4 w-4 mr-2" />
+                    Edit Student
+                  </Button>
+                )}
               </div>
             </div>
           </div>
@@ -741,18 +780,18 @@ export default function StudentDetailPage() {
           <div className="border-b bg-white">
             <div className="container mx-auto px-4 py-6">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-12 w-12">
+                <div className="flex items-center gap-4">
+                  <Avatar className="h-16 w-16">
                     <AvatarImage src={student.profileImage} alt={`${student.firstName || ""} ${student.lastName || ""}`.trim()} />
                     <AvatarFallback className="text-lg bg-gray-200 text-gray-600">
                       {`${student.firstName?.[0] || ""}${student.lastName?.[0] || ""}` || "?"}
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <h1 className="text-3xl font-bold">{`${student.firstName || ""} ${student.lastName || ""}`.trim()}</h1>
-                    <div className="flex items-center gap-2 mt-1">
+                    <h1 className="text-3xl font-bold mb-1">{`${student.firstName || ""} ${student.lastName || ""}`.trim()}</h1>
+                    <div className="flex items-center gap-2">
                       {student.grade && (
-                        <Badge variant="outline">{student.grade}</Badge>
+                        <Badge variant="outline" className="bg-white">{student.grade}</Badge>
                       )}
                       {student.isArchived && (
                         <Badge variant="outline" className="bg-gray-100 text-gray-600">Archived</Badge>

@@ -325,54 +325,53 @@ function TVStaticContent() {
 
   return (
     <div className="fixed inset-0 z-[100] bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col overflow-hidden">
-      {/* Header - Compact */}
-      <div className="h-10 flex-shrink-0 bg-slate-900/80 border-b border-white/10 flex items-center justify-between px-6">
-        <div className="flex items-center gap-3">
-          <h1 className="text-lg font-bold text-white">
-            {format(displayDate, "EEE, MMM d")}
-          </h1>
-          <span className="text-sm text-white/60">{activeExpedition.name}</span>
-          
-          {/* Location info */}
-          {currentLocationName && (
-            <span className="px-2 py-0.5 rounded-md bg-white/10 text-white/80 text-xs font-medium">
-              {currentLocationName}
-              {destinationName && (
-                <span className="text-white/50"> → {destinationName}</span>
+      {/* Header */}
+      <div className="h-16 flex-shrink-0 bg-slate-900/80 border-b border-white/10 flex items-center justify-between px-6">
+        <div className="flex items-center gap-8">
+          <div>
+            <h1 className="text-4xl font-bold text-white">
+              {format(displayDate, "EEEE, MMMM d, yyyy")}
+            </h1>
+            <div className="flex items-center gap-3 mt-2">
+              <span className="text-lg text-white/70">{activeExpedition.name}</span>
+              
+              {/* Location info */}
+              {currentLocationName && (
+                <span className="px-3 py-1 rounded-md bg-white/10 text-white/90 text-sm font-medium">
+                  {currentLocationName}
+                  {destinationName && (
+                    <span className="text-white/50"> → {destinationName}</span>
+                  )}
+                </span>
               )}
-            </span>
-          )}
-          
-          {/* Status badges */}
-          {todaySchedule?.isOffshore && (
-            <span className="px-2 py-0.5 rounded-md bg-cyan-500/20 text-cyan-300 text-xs font-medium">
-              Offshore
-            </span>
-          )}
-          {!todaySchedule?.isOffshore && todaySchedule && (
-            <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 text-xs font-medium">
-              In Port
-            </span>
-          )}
-          {todaySchedule?.isService && (
-            <span className="px-2 py-0.5 rounded-md bg-purple-500/20 text-purple-300 text-xs font-medium">
-              Service Day
-            </span>
-          )}
-          {testDate && (
-            <span className="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 text-xs font-medium">
-              Test Mode
-            </span>
-          )}
+              
+              {/* Status badges */}
+              {todaySchedule?.isOffshore && (
+                <span className="px-3 py-1 rounded-md bg-cyan-500/20 text-cyan-300 text-sm font-medium">
+                  Offshore
+                </span>
+              )}
+              {!todaySchedule?.isOffshore && todaySchedule && (
+                <span className="px-3 py-1 rounded-md bg-emerald-500/20 text-emerald-300 text-sm font-medium">
+                  In Port
+                </span>
+              )}
+              {todaySchedule?.isService && (
+                <span className="px-3 py-1 rounded-md bg-purple-500/20 text-purple-300 text-sm font-medium">
+                  Service Day
+                </span>
+              )}
+            </div>
+          </div>
         </div>
         
-        <div className="flex items-center gap-2">
-          <p className="text-2xl font-light text-white tabular-nums">
+        <div className="text-right">
+          <p className="text-5xl font-light text-white tabular-nums">
             {format(currentTime, "h:mm")}
-            <span className="text-sm text-white/50 ml-1">{format(currentTime, "a")}</span>
+            <span className="text-2xl text-white/50 ml-2">{format(currentTime, "a")}</span>
           </p>
           {!testDate && (
-            <span className="text-xs text-green-400 font-medium">Live</span>
+            <p className="text-lg text-green-400 font-medium">Live</p>
           )}
         </div>
       </div>

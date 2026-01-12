@@ -2,9 +2,28 @@
 
 import React, { useRef, useEffect } from "react"
 import { useDraggable } from "@dnd-kit/core"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { MessageSquare, GripVertical, Pencil } from "lucide-react"
 import { cn } from "@/lib/utils"
+
+// Check if an item is an actual meal type (Breakfast, Lunch, Dinner) - not prep or dishes
+const MEAL_TYPE_IDS = [5, 6, 7] // Breakfast, Lunch, Dinner type IDs
+const EXACT_MEAL_NAMES = ['breakfast', 'lunch', 'dinner']
+
+function isMealType(item: any): boolean {
+  if (!item) return false
+  const typeId = item.expedition_schedule_item_types_id || item._expedition_schedule_item_types?.id
+  const typeName = (item._expedition_schedule_item_types?.name || '').toLowerCase().trim()
+  // Only match exact meal names, not prep/dishes variants
+  if (MEAL_TYPE_IDS.includes(typeId)) {
+    // If we have a type name, make sure it's an exact match
+    if (typeName && !EXACT_MEAL_NAMES.includes(typeName)) {
+      return false
+    }
+    return true
+  }
+  return EXACT_MEAL_NAMES.includes(typeName)
+}
 
 interface DraggableScheduleItemProps {
   item: any
@@ -93,7 +112,7 @@ export function DraggableScheduleItem({
     <div
       ref={setNodeRef}
       className={cn(
-        "absolute mx-2 md:mx-4 rounded-2xl border-2 p-3 bg-white overflow-hidden group",
+        "absolute mx-2 md:mx-4 rounded-xl border-2 p-2 bg-white overflow-hidden group",
         isCurrentlyDragging 
           ? "border-blue-400 shadow-2xl cursor-grabbing" 
           : editMode 
@@ -114,21 +133,21 @@ export function DraggableScheduleItem({
       )}
 
       {/* Edit button and duration - top right, inline */}
-      <div className="absolute top-2 right-2 flex items-center gap-1.5">
+      <div className="absolute top-1.5 right-1.5 flex items-center gap-1">
         {/* Edit button - visible for admins (always), not just in edit mode */}
         {isAdmin && (
           <button
-            className="bg-white rounded-full h-6 w-6 border border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-colors cursor-pointer flex items-center justify-center z-50 relative opacity-0 group-hover:opacity-100"
+            className="bg-white rounded-full h-5 w-5 border border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-colors cursor-pointer flex items-center justify-center z-50 relative opacity-0 group-hover:opacity-100"
             onClick={(e) => {
               e.stopPropagation()
               onEdit()
             }}
           >
-            <Pencil className="h-3 w-3 text-gray-500" />
+            <Pencil className="h-2.5 w-2.5 text-gray-500" />
           </button>
         )}
         {/* Duration - under gradient */}
-        <span className="text-xs text-gray-500 font-medium z-20 relative">
+        <span className="text-[10px] text-gray-500 font-medium z-20 relative">
           {getDuration(item.time_in, item.time_out)}
         </span>
       </div>
@@ -174,58 +193,83 @@ export function DraggableScheduleItem({
       <div className="absolute inset-0 bg-gradient-to-b from-gray-50/0 via-gray-50/20 to-gray-50/40 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
 
       {item.notes && (
-        <div className="absolute bottom-3 right-3 text-gray-400 z-20">
-          <MessageSquare className="h-4 w-4" />
+        <div className="absolute bottom-1.5 right-1.5 text-gray-400 z-20">
+          <MessageSquare className="h-3 w-3" />
         </div>
       )}
 
-      <div className="relative z-10 flex gap-3 h-full">
+      <div className="relative z-10 flex gap-2 h-full">
         <div className={`w-1 rounded-full ${getColorForType(item)} flex-shrink-0`} />
         
-            <div className="flex-1 min-w-0 overflow-hidden pr-14">
-          <h3 className="font-semibold text-base text-gray-900 mb-1 line-clamp-1">
+            <div className="flex-1 min-w-0 overflow-hidden pr-12">
+          <h3 className="font-semibold text-sm text-gray-900 leading-tight line-clamp-1">
             {item.name}
           </h3>
-          <p className="text-xs text-gray-600 mb-1">
+          <p className="text-[11px] text-gray-600 leading-tight">
             {formatMilitaryTime(item.time_in)} - {formatMilitaryTime(item.time_out)}
           </p>
           {item._expedition_staff && (
-            <>
-              <div className="flex items-center gap-2">
-                <Avatar className="h-4 w-4">
-                  <AvatarFallback className="text-[9px] bg-gray-200 text-gray-700">
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <Avatar className="h-3.5 w-3.5">
+                  <AvatarFallback className="text-[8px] bg-gray-200 text-gray-700">
                     {item._expedition_staff.name?.split(" ").map((n: string) => n[0]).join("")}
                   </AvatarFallback>
                 </Avatar>
-                <span className="text-xs text-gray-500 truncate">
+                <span className="text-[11px] text-gray-500 truncate">
                   {item._expedition_staff.name}
-                  {item.participants && item.participants.length > 0 && (
-                    <span> • {item.participants.map((p: any) => p.name).join(", ")}</span>
-                  )}
                 </span>
+                {/* Staff participants as circle initials */}
+                {item.participants && item.participants.length > 0 && (
+                  <div className="flex items-center -space-x-0.5">
+                    {item.participants.slice(0, 3).map((p: any) => (
+                      <Avatar key={p.id} className="h-3.5 w-3.5 border border-white">
+                        <AvatarFallback className="text-[7px] bg-gray-300 text-gray-700">
+                          {p.name?.split(" ").map((n: string) => n[0]).join("")}
+                        </AvatarFallback>
+                      </Avatar>
+                    ))}
+                    {item.participants.length > 3 && (
+                      <span className="text-[7px] text-gray-500 pl-0.5">+{item.participants.length - 3}</span>
+                    )}
+                  </div>
+                )}
+                {/* Student participants with photos */}
+                {item.students_id && item.students_id.filter((s: any) => s != null).length > 0 && (
+                  <div className="flex items-center -space-x-0.5">
+                    {item.students_id.filter((s: any) => s != null).slice(0, 3).map((s: any, idx: number) => (
+                      <Avatar key={s.id || `student-${idx}`} className="h-3.5 w-3.5 border border-white">
+                        {s.profileImage ? (
+                          <AvatarImage src={s.profileImage} alt={`${s.firstName} ${s.lastName}`} />
+                        ) : null}
+                        <AvatarFallback className="text-[7px] bg-gray-300 text-gray-700">
+                          {s.firstName?.[0]}{s.lastName?.[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                    ))}
+                    {item.students_id.filter((s: any) => s != null).length > 3 && (
+                      <span className="text-[7px] text-gray-500 pl-0.5">+{item.students_id.filter((s: any) => s != null).length - 3}</span>
+                    )}
+                  </div>
+                )}
               </div>
-              {(item.address || item.things_to_bring || item.notes) && (
-                <div className="h-px bg-gray-100 my-1.5" />
+          )}
+          {/* Meal Plan - for meal type items */}
+          {isMealType(item) && (
+            <div className="flex items-center gap-1 mt-0.5">
+              {item._expedition_cookbook?.recipe_photo && (
+                <Avatar className="h-3.5 w-3.5">
+                  <AvatarImage src={item._expedition_cookbook.recipe_photo} alt={item._expedition_cookbook.recipe_name} />
+                  <AvatarFallback className="text-[6px] bg-orange-100 text-orange-600">🍽</AvatarFallback>
+                </Avatar>
               )}
-            </>
-          )}
-          {item.address && (
-            <p className="text-xs text-gray-500 line-clamp-1">
-              {item.address}
-            </p>
-          )}
-          {item.things_to_bring && (
-            <p className="text-xs text-gray-500 line-clamp-1">
-              {item.things_to_bring}
-            </p>
-          )}
-          {(item.address || item.things_to_bring) && item.notes && (
-            <div className="h-px bg-gray-100 my-1.5" />
-          )}
-          {item.notes && (
-            <p className="text-xs text-gray-600 line-clamp-1">
-              {item.notes}
-            </p>
+              <p className={`text-[10px] truncate ${
+                item._expedition_cookbook?.recipe_name || item.expedition_cookbook_id > 0 
+                  ? 'text-gray-600' 
+                  : 'text-gray-400 italic'
+              }`}>
+                {item._expedition_cookbook?.recipe_name || (item.expedition_cookbook_id > 0 ? `Meal Plan #${item.expedition_cookbook_id}` : 'No Meal Plan')}
+              </p>
+            </div>
           )}
         </div>
       </div>

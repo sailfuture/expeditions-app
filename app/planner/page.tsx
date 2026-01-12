@@ -6,7 +6,7 @@ import { format, addDays, subDays, isToday } from "date-fns"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   Dialog,
   DialogContent,
@@ -32,19 +32,21 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
-import { ChevronLeft, ChevronRight, ExternalLink, Calendar, Plus, X, Clock, User, MapPin, Backpack, Pencil, Trash2 } from "lucide-react"
+import { ChevronLeft, ChevronRight, ExternalLink, Calendar, Plus, X, Pencil, Trash2 } from "lucide-react"
 import { useExpeditionScheduleItemsByDate, useExpeditionSchedules, useTeachers, useExpeditionScheduleTemplates } from "@/lib/hooks/use-expeditions"
 import { useExpeditionContext } from "@/lib/contexts/expedition-context"
 import { cn, isDateWithinExpeditionRange, getExpeditionFirstDate } from "@/lib/utils"
 import { AddScheduleItemSheet } from "@/components/add-schedule-item-sheet"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { deleteExpeditionScheduleItem, addExpeditionScheduleTemplate } from "@/lib/xano"
+import { deleteExpeditionScheduleItem, addExpeditionScheduleTemplate, getExpeditionDishDays, getExpeditionsGalleyTeam, updateExpeditionSchedule } from "@/lib/xano"
+import useSWR from "swr"
 import { mutate } from "swr"
 import { toast } from "sonner"
 import { Spinner } from "@/components/ui/spinner"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { ExpeditionHeader } from "@/components/expedition-header"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { useExpeditions } from "@/lib/hooks/use-expeditions"
 
 export default function PlannerPage() {
@@ -132,6 +134,49 @@ function PlannerPageContent() {
   // Fetch templates for empty day states
   const { data: templates } = useExpeditionScheduleTemplates()
   
+  // Fetch dish days and galley teams
+  const { data: dishDays } = useSWR(
+    effectiveExpeditionId ? `expedition_dish_days_${effectiveExpeditionId}` : null,
+    () => getExpeditionDishDays(effectiveExpeditionId!)
+  )
+  const { data: galleyTeams } = useSWR(
+    effectiveExpeditionId ? `expeditions_galley_team_${effectiveExpeditionId}` : null,
+    () => getExpeditionsGalleyTeam(effectiveExpeditionId!)
+  )
+  
+  // State for tracking updates
+  const [updatingScheduleField, setUpdatingScheduleField] = useState<string | null>(null)
+  
+  // Handler for updating schedule dish day or galley team (using IDs)
+  const handleScheduleFieldChange = async (scheduleId: number, field: string, value: string) => {
+    const updateKey = `${scheduleId}-${field}`
+    setUpdatingScheduleField(updateKey)
+    
+    try {
+      const updateData: Record<string, any> = {}
+      // Use the ID fields instead of string names
+      if (field === 'expedition_dish_days_id') {
+        updateData.expedition_dish_days_id = value === "none" ? 0 : parseInt(value)
+      } else if (field === 'expeditions_galley_team_id') {
+        updateData.expeditions_galley_team_id = value === "none" ? 0 : parseInt(value)
+      } else {
+        updateData[field] = value === "none" ? "" : value
+      }
+      
+      await updateExpeditionSchedule(scheduleId, updateData)
+      
+      // Refresh the schedules data
+      mutate((key: any) => typeof key === 'string' && key.includes('expedition_schedule'))
+      
+      toast.success(`${field === 'expedition_dish_days_id' ? 'Dish Team' : 'Galley Team'} updated`)
+    } catch (error) {
+      console.error(`Failed to update ${field}:`, error)
+      toast.error(`Failed to update ${field}`)
+    } finally {
+      setUpdatingScheduleField(null)
+    }
+  }
+  
   // Generate the 5 days to display
   const days = useMemo(() => {
     return [
@@ -148,20 +193,25 @@ function PlannerPageContent() {
     return days.map(d => format(d, "yyyy-MM-dd"))
   }, [days])
   
-  // Get schedule info for each day
-  const getScheduleForDate = (dateString: string) => {
+  // Get schedule info for each day (fallback to allSchedules if no schedule in items response)
+  const getScheduleForDate = (dateString: string, itemsData?: any) => {
+    // First try to use the schedule from the items response (has expanded dish/galley data)
+    if (itemsData?.schedule) return itemsData.schedule
+    // Fallback to allSchedules
     if (!allSchedules) return null
     return allSchedules.find((s: any) => s.date === dateString)
   }
   
-  // Fetch items for each day
-  const { data: items0, isLoading: loading0 } = useExpeditionScheduleItemsByDate(dateStrings[0], effectiveExpeditionId)
-  const { data: items1, isLoading: loading1 } = useExpeditionScheduleItemsByDate(dateStrings[1], effectiveExpeditionId)
-  const { data: items2, isLoading: loading2 } = useExpeditionScheduleItemsByDate(dateStrings[2], effectiveExpeditionId)
-  const { data: items3, isLoading: loading3 } = useExpeditionScheduleItemsByDate(dateStrings[3], effectiveExpeditionId)
-  const { data: items4, isLoading: loading4 } = useExpeditionScheduleItemsByDate(dateStrings[4], effectiveExpeditionId)
+  // Fetch items for each day - now returns { items, schedule }
+  const { data: data0, isLoading: loading0 } = useExpeditionScheduleItemsByDate(dateStrings[0], effectiveExpeditionId)
+  const { data: data1, isLoading: loading1 } = useExpeditionScheduleItemsByDate(dateStrings[1], effectiveExpeditionId)
+  const { data: data2, isLoading: loading2 } = useExpeditionScheduleItemsByDate(dateStrings[2], effectiveExpeditionId)
+  const { data: data3, isLoading: loading3 } = useExpeditionScheduleItemsByDate(dateStrings[3], effectiveExpeditionId)
+  const { data: data4, isLoading: loading4 } = useExpeditionScheduleItemsByDate(dateStrings[4], effectiveExpeditionId)
   
-  const allItems = [items0, items1, items2, items3, items4]
+  // Extract items arrays for backward compatibility
+  const allData = [data0, data1, data2, data3, data4]
+  const allItems = allData.map(d => d?.items || d || [])
   const allLoading = [loading0, loading1, loading2, loading3, loading4]
   
   const formatMilitaryTime = (time: number) => {
@@ -173,6 +223,23 @@ function PlannerPageContent() {
     return `${displayHours}:${minutes.toString().padStart(2, "0")} ${period}`
   }
   
+  // Check if item is a meal type (Breakfast=1, Lunch=2, Dinner=3)
+  // Check if an item is an actual meal type (Breakfast, Lunch, Dinner) - not prep or dishes
+  const EXACT_MEAL_NAMES = ['breakfast', 'lunch', 'dinner']
+  const isMealType = (item: any) => {
+    if (!item) return false
+    const typeId = item?.expedition_schedule_item_types_id || item?._expedition_schedule_item_types?.id
+    const typeName = (item?._expedition_schedule_item_types?.name || '').toLowerCase().trim()
+    // Only match exact meal names, not prep/dishes variants
+    if ([1, 2, 3, 5, 6, 7].includes(typeId)) {
+      if (typeName && !EXACT_MEAL_NAMES.includes(typeName)) {
+        return false
+      }
+      return EXACT_MEAL_NAMES.includes(typeName) || !typeName
+    }
+    return EXACT_MEAL_NAMES.includes(typeName)
+  }
+
   const getColorForType = (item: any) => {
     const colorMap: Record<string, string> = {
       "amber": "bg-amber-500",
@@ -247,6 +314,16 @@ function PlannerPageContent() {
       return staffMember?.name?.split(' ')[0] || 'Unknown'
     })
     return staffOffNames.join(', ')
+  }
+
+  const getDishDay = (schedule: any) => {
+    if (!schedule?.dish_day) return null
+    return schedule.dish_day
+  }
+
+  const getGalleyTeam = (schedule: any) => {
+    if (!schedule?.galley_team) return null
+    return schedule.galley_team
   }
   
   const handlePrevious = () => {
@@ -434,11 +511,13 @@ function PlannerPageContent() {
             const isLoadingDay = allLoading[index]
             const isTodayColumn = isToday(day)
             const sortedItems = [...items].sort((a: any, b: any) => a.time_in - b.time_in)
-            const schedule = getScheduleForDate(dateStrings[index])
+            const schedule = getScheduleForDate(dateStrings[index], allData[index])
             const dayType = getDayType(schedule)
             const location = getLocation(schedule)
             const destination = getDestination(schedule)
             const staffOff = getStaffOff(schedule)
+            const dishDay = getDishDay(schedule)
+            const galleyTeam = getGalleyTeam(schedule)
             
             // Check if date is within expedition range
             const isWithinRange = isDateWithinExpeditionRange(
@@ -459,32 +538,26 @@ function PlannerPageContent() {
               >
                 {/* Day Header - fixed height */}
                 <div className="px-3 py-2.5 border-b bg-white flex-shrink-0 h-[88px]">
-                  <div className="flex items-start justify-between">
+                  <div className="flex items-start justify-between mb-0.5">
                     <div className="min-w-0 flex-1">
-                      <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400">
-                        {format(day, "EEE")}
-                      </p>
+                      <div className="flex items-center gap-1">
+                        <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400">
+                          {format(day, "EEE")}
+                        </p>
+                        {location && (
+                          <>
+                            <span className="text-[8px] text-gray-300">•</span>
+                            <span className="text-[9px] text-gray-400 truncate max-w-[60px]" title={destination && destination !== location ? `${location} → ${destination}` : location}>
+                              {destination && destination !== location ? `→ ${destination}` : location}
+                            </span>
+                          </>
+                        )}
+                      </div>
                       <p className="text-base font-bold text-gray-900">
                         {format(day, "MMM d")}
                       </p>
-                      <div className="flex items-center gap-1 mt-1 flex-wrap">
-                        <Badge variant="outline" className="text-[9px] font-medium px-1.5 py-0 h-5 rounded bg-white border-gray-200 text-gray-600 flex-shrink-0">
-                          {dayType.label}
-                        </Badge>
-                        {staffOff && (
-                          <span 
-                            className="inline-flex items-center text-[9px] font-medium px-1.5 py-0 h-5 rounded bg-orange-50 border border-orange-200 text-orange-700 flex-shrink-0" 
-                            title={`Staff Off: ${staffOff}`}
-                          >
-                            Off: {staffOff}
-                          </span>
-                        )}
-                        <span className="text-[9px] text-gray-400 truncate min-w-0 max-w-[120px]" title={destination && destination !== location ? `${location} → ${destination}` : location}>
-                          {destination && destination !== location ? `${location} → ${destination}` : location}
-                        </span>
-                      </div>
                     </div>
-                    <div className="flex items-center gap-0.5 flex-shrink-0">
+                    <div className="flex items-center gap-1 flex-shrink-0">
                       <Button
                         variant="ghost"
                         size="icon"
@@ -505,6 +578,161 @@ function PlannerPageContent() {
                       </Button>
                     </div>
                   </div>
+                  {/* Tags row - full width */}
+                  <div className="flex items-center gap-1 flex-wrap">
+                        <Badge variant="outline" className="text-[9px] font-medium px-1.5 py-0 h-5 rounded bg-white border-gray-200 text-gray-600 flex-shrink-0">
+                          {dayType.label}
+                        </Badge>
+                        {/* Dish Team Select - inline with day type */}
+                        {schedule && isWithinRange && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="flex items-center">
+                                  {updatingScheduleField === `${schedule.id}-expedition_dish_days_id` ? (
+                                    <Spinner className="h-3 w-3" />
+                                  ) : (
+                                    <Select
+                                      value={schedule.expedition_dish_days_id ? String(schedule.expedition_dish_days_id) : "none"}
+                                      onValueChange={(value) => handleScheduleFieldChange(schedule.id, "expedition_dish_days_id", value)}
+                                    >
+                                      <SelectTrigger className="h-5 w-auto min-w-[55px] text-[9px] px-1.5 py-0 border-blue-200 bg-blue-50 text-blue-700 cursor-pointer">
+                                        <SelectValue placeholder="Dish" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="none" className="text-xs text-gray-500">None</SelectItem>
+                                        {dishDays?.sort((a: any, b: any) => {
+                                          const dayOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+                                          return dayOrder.indexOf(a.day_of_week) - dayOrder.indexOf(b.day_of_week)
+                                        }).map((dish: any) => (
+                                          <SelectItem key={dish.id} value={String(dish.id)} className="text-xs">
+                                            {dish.dishteam?.replace('Dish Team ', 'Dish ') || `Dish ${dish.id}`}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  )}
+                                </div>
+                              </TooltipTrigger>
+                              {schedule._expedition_dish_days && (
+                                <TooltipContent side="top" className="max-w-xs">
+                                  <div className="text-xs space-y-1">
+                                    <p className="font-semibold">{schedule._expedition_dish_days.dishteam?.replace('Dish Team ', 'Dish ')}</p>
+                                    <p>
+                                      <span className="text-gray-500">Wash:</span>{' '}
+                                      {schedule._expedition_dish_days.wash?.filter((s: any) => s)?.length > 0 
+                                        ? schedule._expedition_dish_days.wash.filter((s: any) => s).map((s: any) => `${s.firstName || ''} ${s.lastName || ''}`.trim() || 'Unknown').join(', ')
+                                        : <span className="text-gray-400">Not Assigned</span>}
+                                    </p>
+                                    <p>
+                                      <span className="text-gray-500">Dry:</span>{' '}
+                                      {schedule._expedition_dish_days.dry?.filter((s: any) => s)?.length > 0 
+                                        ? schedule._expedition_dish_days.dry.filter((s: any) => s).map((s: any) => `${s.firstName || ''} ${s.lastName || ''}`.trim() || 'Unknown').join(', ')
+                                        : <span className="text-gray-400">Not Assigned</span>}
+                                    </p>
+                                    {schedule._expedition_dish_days.support_staff_dishes?.name && (
+                                      <p>
+                                        <span className="text-gray-500">Support:</span>{' '}
+                                        {schedule._expedition_dish_days.support_staff_dishes.name}
+                                      </p>
+                                    )}
+                                    {schedule._expedition_dish_days.supervisor_staff_dishes?.name && (
+                                      <p>
+                                        <span className="text-gray-500">Supervisor:</span>{' '}
+                                        {schedule._expedition_dish_days.supervisor_staff_dishes.name}
+                                      </p>
+                                    )}
+                                  </div>
+                                </TooltipContent>
+                              )}
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                        {/* Galley Team Select - inline with day type */}
+                        {schedule && isWithinRange && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="flex items-center">
+                                  {updatingScheduleField === `${schedule.id}-expeditions_galley_team_id` ? (
+                                    <Spinner className="h-3 w-3" />
+                                  ) : (
+                                    <Select
+                                      value={schedule.expeditions_galley_team_id ? String(schedule.expeditions_galley_team_id) : "none"}
+                                      onValueChange={(value) => handleScheduleFieldChange(schedule.id, "expeditions_galley_team_id", value)}
+                                    >
+                                      <SelectTrigger className="h-5 w-auto min-w-[60px] text-[9px] px-1.5 py-0 border-green-200 bg-green-50 text-green-700 cursor-pointer">
+                                        <SelectValue placeholder="Galley" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="none" className="text-xs text-gray-500">None</SelectItem>
+                                        {galleyTeams?.sort((a: any, b: any) => (a.name || "").localeCompare(b.name || "")).map((team: any) => (
+                                          <SelectItem key={team.id} value={String(team.id)} className="text-xs">
+                                            {team.name?.replace('Galley Team ', 'Galley ') || `Galley ${team.id}`}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  )}
+                                </div>
+                              </TooltipTrigger>
+                              {schedule._expeditions_galley_team && (
+                                <TooltipContent side="top" className="max-w-xs">
+                                  <div className="text-xs space-y-1">
+                                    <p className="font-semibold">{schedule._expeditions_galley_team.name?.replace('Galley Team ', 'Galley ')}</p>
+                                    <p>
+                                      <span className="text-gray-500">Students:</span>{' '}
+                                      {schedule._expeditions_galley_team.students_id?.filter((s: any) => s)?.length > 0 
+                                        ? schedule._expeditions_galley_team.students_id.filter((s: any) => s).map((s: any) => `${s.firstName || ''} ${s.lastName || ''}`.trim() || 'Unknown').join(', ')
+                                        : <span className="text-gray-400">Not Assigned</span>}
+                                    </p>
+                                    {schedule._expeditions_galley_team._galley_supervisor?.name && (
+                                      <p>
+                                        <span className="text-gray-500">Supervisor:</span>{' '}
+                                        {schedule._expeditions_galley_team._galley_supervisor.name}
+                                      </p>
+                                    )}
+                                  </div>
+                                </TooltipContent>
+                              )}
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                        {staffOff && (
+                          <div className="flex items-center -space-x-1.5">
+                            {staffOff.split(', ').slice(0, 3).map((name: string, idx: number) => (
+                              <TooltipProvider key={idx}>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div 
+                                      className="h-5 w-5 rounded-full bg-orange-50 border border-orange-200 flex items-center justify-center text-[8px] font-medium text-orange-700 cursor-default"
+                                    >
+                                      {name.split(' ').map((n: string) => n[0]).join('')}
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top" className="text-xs">
+                                    {name} (Off)
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            ))}
+                            {staffOff.split(', ').length > 3 && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="h-5 w-5 rounded-full bg-orange-100 border border-orange-200 flex items-center justify-center text-[8px] font-medium text-orange-700 cursor-default">
+                                      +{staffOff.split(', ').length - 3}
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top" className="text-xs">
+                                    {staffOff.split(', ').slice(3).join(', ')} (Off)
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+                          </div>
+                        )}
+                      </div>
                 </div>
                 
                 {/* Events List - scrollable with subtle scrollbar */}
@@ -625,27 +853,69 @@ function PlannerPageContent() {
                                     </span>
                                   </>
                                 )}
-                                {item.participants && item.participants.length > 0 && (
+                                {item.participants && item.participants.filter((p: any) => p?.name).length > 0 && (
                                   <>
                                     {item._expedition_staff && <span className="text-gray-300 text-xs">•</span>}
                                     <div className="flex -space-x-1">
-                                      {item.participants.slice(0, 3).map((p: any) => (
-                                        <Avatar key={p.id} className="h-4 w-4 border border-white">
+                                      {item.participants.filter((p: any) => p?.name).slice(0, 3).map((p: any, idx: number) => (
+                                        <Avatar key={p.id || `participant-${idx}`} className="h-4 w-4 border border-white">
                                           <AvatarFallback className="text-[7px] bg-gray-300 text-gray-700">
-                                            {p.name?.split(" ").map((n: string) => n[0]).join("")}
+                                            {p.name.split(" ").map((n: string) => n[0]).join("")}
                                           </AvatarFallback>
                                         </Avatar>
                                       ))}
-                                      {item.participants.length > 3 && (
+                                      {item.participants.filter((p: any) => p?.name).length > 3 && (
                                         <Avatar className="h-4 w-4 border border-white">
                                           <AvatarFallback className="text-[7px] bg-gray-400 text-white">
-                                            +{item.participants.length - 3}
+                                            +{item.participants.filter((p: any) => p?.name).length - 3}
                                           </AvatarFallback>
                                         </Avatar>
                                       )}
                                     </div>
                                   </>
                                 )}
+                                {item.students_id && item.students_id.filter((s: any) => s != null).length > 0 && (
+                                  <>
+                                    {(item._expedition_staff || item.participants?.length > 0) && <span className="text-gray-300 text-xs">•</span>}
+                                    <div className="flex -space-x-1">
+                                      {item.students_id.filter((s: any) => s != null).slice(0, 3).map((s: any, idx: number) => (
+                                        <Avatar key={s.id || `student-${idx}`} className="h-4 w-4 border border-white">
+                                          {s.profileImage ? (
+                                            <AvatarImage src={s.profileImage} alt={`${s.firstName} ${s.lastName}`} />
+                                          ) : null}
+                                          <AvatarFallback className="text-[7px] bg-gray-300 text-gray-700">
+                                            {s.firstName?.[0]}{s.lastName?.[0]}
+                                          </AvatarFallback>
+                                        </Avatar>
+                                      ))}
+                                      {item.students_id.filter((s: any) => s != null).length > 3 && (
+                                        <Avatar className="h-4 w-4 border border-white">
+                                          <AvatarFallback className="text-[7px] bg-gray-400 text-white">
+                                            +{item.students_id.filter((s: any) => s != null).length - 3}
+                                          </AvatarFallback>
+                                        </Avatar>
+                                      )}
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            )}
+                            {/* Meal Plan - for meal type items */}
+                            {isMealType(item) && (
+                              <div className="flex items-center gap-1 mt-0.5">
+                                {item._expedition_cookbook?.recipe_photo && (
+                                  <Avatar className="h-3.5 w-3.5">
+                                    <AvatarImage src={item._expedition_cookbook.recipe_photo} alt={item._expedition_cookbook.recipe_name} />
+                                    <AvatarFallback className="text-[6px] bg-orange-100 text-orange-600">🍽</AvatarFallback>
+                                  </Avatar>
+                                )}
+                                <p className={`text-[10px] truncate ${
+                                  item._expedition_cookbook?.recipe_name || item.expedition_cookbook_id > 0 
+                                    ? 'text-gray-600' 
+                                    : 'text-gray-400 italic'
+                                }`}>
+                                  {item._expedition_cookbook?.recipe_name || (item.expedition_cookbook_id > 0 ? `Meal Plan #${item.expedition_cookbook_id}` : 'No Meal Plan')}
+                                </p>
                               </div>
                             )}
                           </div>
@@ -688,8 +958,7 @@ function PlannerPageContent() {
                 <DialogTitle className="text-2xl">
                   {selectedItem?.name || "Activity"}
                 </DialogTitle>
-                <DialogDescription className="text-base flex items-center gap-2">
-                  <Clock className="h-4 w-4" />
+                <DialogDescription className="text-base">
                   {selectedItem?.time_in || selectedItem?.time_out 
                     ? `${formatMilitaryTime(selectedItem.time_in)} - ${formatMilitaryTime(selectedItem.time_out)}`
                     : "No time set"
@@ -711,18 +980,19 @@ function PlannerPageContent() {
           {/* Content section */}
           <div className="p-6 pt-4 space-y-4 flex-1 min-h-0 overflow-y-auto max-h-[60vh]">
             {/* Activity Type */}
-            <div className="flex items-center gap-3">
-              <div className="w-5 h-5 flex items-center justify-center text-gray-400">
-                <div className={cn("w-3 h-3 rounded-full", selectedItem ? getColorForType(selectedItem) : "bg-gray-300")} />
+            <div>
+              <p className="text-xs text-gray-400 mb-1">Type</p>
+              <div className="flex items-center gap-2">
+                <div className={cn("w-3 h-3 rounded-full shrink-0", selectedItem ? getColorForType(selectedItem) : "bg-gray-300")} />
+                <span className="text-sm text-gray-700">
+                  {selectedItem?._expedition_schedule_item_types?.name || "No Type"}
+                </span>
               </div>
-              <span className="text-sm text-gray-700">
-                {selectedItem?._expedition_schedule_item_types?.name || "No Type"}
-              </span>
             </div>
             
             {/* Led By */}
-            <div className="flex items-center gap-3">
-              <User className="h-5 w-5 text-gray-400" />
+            <div>
+              <p className="text-xs text-gray-400 mb-1">Led By</p>
               {selectedItem?._expedition_staff ? (
                 <div className="flex items-center gap-2">
                   <Avatar className="h-6 w-6">
@@ -737,40 +1007,97 @@ function PlannerPageContent() {
               )}
             </div>
             
-            {/* Participants */}
-            <div className="flex items-start gap-3">
-              <User className="h-5 w-5 text-gray-400 mt-0.5" />
-              {selectedItem?.participants && selectedItem.participants.length > 0 ? (
+            {/* Participants (Staff) */}
+            <div>
+              <p className="text-xs text-gray-400 mb-1.5">Staff</p>
+              {selectedItem?.participants && selectedItem.participants.filter((p: any) => p?.name).length > 0 ? (
                 <div className="flex flex-wrap gap-2">
-                  {selectedItem.participants.map((p: any) => (
-                    <div key={p.id} className="flex items-center gap-1.5 bg-gray-100 rounded-full px-2 py-1">
+                  {selectedItem.participants.filter((p: any) => p?.name).map((p: any, idx: number) => (
+                    <div key={p.id || `participant-${idx}`} className="flex items-center gap-1.5 bg-gray-100 rounded-full px-2 py-1">
+                        <Avatar className="h-5 w-5">
+                          <AvatarFallback className="text-[10px] bg-gray-300 text-gray-700">
+                            {p.name.split(" ").map((n: string) => n[0]).join("")}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="text-xs text-gray-700">{p.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <span className="text-sm text-gray-400">No staff participants</span>
+                )}
+            </div>
+
+            {/* Participants (Students) */}
+            <div>
+              <p className="text-xs text-gray-400 mb-1.5">Students</p>
+              {selectedItem?.students_id && selectedItem.students_id.filter((s: any) => s != null).length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {selectedItem.students_id.filter((s: any) => s != null).map((s: any, idx: number) => (
+                    <div key={s.id || `student-${idx}`} className="flex items-center gap-1.5 bg-gray-100 rounded-full px-2 py-1">
                       <Avatar className="h-5 w-5">
+                        {s.profileImage ? (
+                          <AvatarImage src={s.profileImage} alt={`${s.firstName} ${s.lastName}`} />
+                        ) : null}
                         <AvatarFallback className="text-[10px] bg-gray-300 text-gray-700">
-                          {p.name?.split(" ").map((n: string) => n[0]).join("")}
+                          {s.firstName?.[0]}{s.lastName?.[0]}
                         </AvatarFallback>
                       </Avatar>
-                      <span className="text-xs text-gray-700">{p.name}</span>
+                      <span className="text-xs text-gray-700">{s.firstName} {s.lastName}</span>
                     </div>
                   ))}
                 </div>
               ) : (
-                <span className="text-sm text-gray-400">No participants</span>
+                <span className="text-sm text-gray-400">No student participants</span>
               )}
             </div>
+
+            {/* Resources */}
+            {selectedItem?.resources && (
+              <div>
+                <p className="text-xs text-gray-400 mb-1">Resources</p>
+                <a
+                  href={selectedItem.resources}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-blue-600 hover:text-blue-800 hover:underline break-all"
+                >
+                  {selectedItem.resources}
+                </a>
+              </div>
+            )}
+
+            {/* Meal Plan - for meal types */}
+            {selectedItem && isMealType(selectedItem) && (
+              <div>
+                <p className="text-xs text-gray-400 mb-1">Meal Plan</p>
+                <div className="flex items-center gap-2">
+                  {selectedItem._expedition_cookbook?.recipe_photo && (
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={selectedItem._expedition_cookbook.recipe_photo} alt={selectedItem._expedition_cookbook.recipe_name} />
+                      <AvatarFallback className="text-xs bg-orange-100 text-orange-600">🍽</AvatarFallback>
+                    </Avatar>
+                  )}
+                  <span className={`text-sm ${!selectedItem._expedition_cookbook?.recipe_name && !selectedItem.expedition_cookbook_id ? 'text-gray-400 italic' : 'text-gray-700'}`}>
+                    {selectedItem._expedition_cookbook?.recipe_name || (selectedItem.expedition_cookbook_id > 0 ? `Meal Plan #${selectedItem.expedition_cookbook_id}` : 'No Meal Plan')}
+                  </span>
+                </div>
+              </div>
+            )}
             
             <div className="h-px bg-gray-200" />
             
             {/* Address */}
-            <div className="flex items-start gap-3">
-              <MapPin className="h-5 w-5 text-gray-400 mt-0.5" />
+            <div>
+              <p className="text-xs text-gray-400 mb-1">Address</p>
               <p className="text-sm text-gray-700">
                 {selectedItem?.address || <span className="text-gray-400">No address</span>}
               </p>
             </div>
             
             {/* Things to Bring */}
-            <div className="flex items-start gap-3">
-              <Backpack className="h-5 w-5 text-gray-400 mt-0.5" />
+            <div>
+              <p className="text-xs text-gray-400 mb-1">Things to Bring</p>
               <p className="text-sm text-gray-700">
                 {selectedItem?.things_to_bring || <span className="text-gray-400">Nothing to bring</span>}
               </p>
@@ -779,9 +1106,9 @@ function PlannerPageContent() {
             <div className="h-px bg-gray-200" />
             
             {/* Notes */}
-            <div className="bg-gray-100 rounded-lg p-4">
+            <div className="bg-gray-100 rounded-lg p-4 overflow-hidden">
               <p className="text-xs font-medium text-gray-500 mb-1">Notes</p>
-              <p className="text-sm text-gray-700 whitespace-pre-wrap">
+              <p className="text-sm text-gray-700 whitespace-pre-wrap break-words">
                 {selectedItem?.notes || <span className="text-gray-400">No notes</span>}
               </p>
             </div>

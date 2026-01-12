@@ -89,7 +89,7 @@ import {
   useTeachersByExpedition,
   useEvaluationByStudent
 } from "@/lib/hooks/use-expeditions"
-import { getProfessionalismByStudent, calculateStudentEvaluation, getExpeditionLocations, createExpeditionLocation, updateExpeditionLocation, deleteExpeditionLocation } from "@/lib/xano"
+import { getProfessionalismByStudent, calculateStudentEvaluation, getExpeditionLocations, createExpeditionLocation, updateExpeditionLocation, deleteExpeditionLocation, getExpeditionAssignmentsByExpedition, getExpeditionDepartments } from "@/lib/xano"
 import { useCurrentUser } from "@/lib/contexts/user-context"
 import { calculateDistanceBetweenLocations, calculateRouteDistance } from "@/lib/haversine"
 import { ExpeditionHeader } from "@/components/expedition-header"
@@ -305,6 +305,15 @@ export default function ExpeditionDetailPage({ params }: PageProps) {
   const { data: expeditions, isLoading: expeditionsLoading } = useExpeditions()
   const { data: schedules, isLoading: schedulesLoading } = useExpeditionSchedules(expeditionId)
   const { data: expeditionStudents, isLoading: studentsLoading } = useStudentsByExpedition(expeditionId)
+  
+  // Fetch assignments for department grouping
+  const { data: assignments } = useSWR(
+    expeditionId ? `expedition_assignments_${expeditionId}` : null,
+    () => getExpeditionAssignmentsByExpedition(expeditionId)
+  )
+  
+  // Fetch departments
+  const { data: departmentsData } = useSWR("expedition_departments", getExpeditionDepartments)
   
   // State for all evaluation records modal
   const [allRecordsModalOpen, setAllRecordsModalOpen] = useState(false)
@@ -744,6 +753,95 @@ export default function ExpeditionDetailPage({ params }: PageProps) {
               expeditionId={expeditionId}
               onViewRecords={handleViewAllRecords}
             />
+          )}
+        </div>
+
+        {/* Department Assignments Table */}
+        <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden mb-6">
+          <div className="px-6 py-4 border-b bg-gray-50/50">
+            <h2 className="text-lg font-semibold">Department Assignments</h2>
+            <p className="text-sm text-gray-600 mt-1">Students and staff grouped by department</p>
+          </div>
+          
+          {!assignments || assignments.length === 0 || !departmentsData || departmentsData.length === 0 ? (
+            <div className="p-12 text-center text-muted-foreground">
+              <p className="text-lg font-medium text-gray-600">No department assignments</p>
+              <p className="text-sm text-gray-500 mt-1">Assignments will appear here once configured.</p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow className="border-b bg-gray-50/30 hover:bg-gray-50/30">
+                  <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600">Department</TableHead>
+                  <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600">Supervisor (Staff)</TableHead>
+                  <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600">Students</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {(departmentsData || []).sort((a: any, b: any) => a.name.localeCompare(b.name)).map((dept: any) => {
+                  // Filter assignments that have this department in their expedition_departments_id array
+                  const deptAssignments = assignments.filter((a: any) => 
+                    Array.isArray(a.expedition_departments_id) && 
+                    a.expedition_departments_id.some((d: any) => (d.id || d) === dept.id)
+                  )
+                  const students = deptAssignments.filter((a: any) => a.students_id > 0 && a._students)
+                  const staff = deptAssignments.filter((a: any) => a.expedition_staff_id > 0 && a._expedition_staff)
+                  
+                  // Skip if no assignments
+                  if (deptAssignments.length === 0) return null
+                  
+                  return (
+                    <TableRow key={dept.id} className="hover:bg-gray-50/50">
+                      <TableCell className="h-16 px-6">
+                        <span className="font-semibold text-gray-900">{dept.name}</span>
+                      </TableCell>
+                      <TableCell className="h-16 px-6">
+                        {staff.length > 0 ? (
+                          <div className="flex flex-wrap gap-2">
+                            {staff.map((s: any) => (
+                              <div key={s.id} className="flex items-center gap-1.5">
+                                <Avatar className="h-6 w-6">
+                                  {s._expedition_staff?.passport_photo ? (
+                                    <AvatarImage src={s._expedition_staff.passport_photo} alt={s._expedition_staff.name} />
+                                  ) : null}
+                                  <AvatarFallback className="text-[10px] bg-gray-200 text-gray-600">
+                                    {s._expedition_staff?.name?.split(" ").map((n: string) => n[0]).join("") || "?"}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <span className="text-sm text-gray-700">{s._expedition_staff?.name}</span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-sm text-gray-400">No supervisor</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="h-16 px-6">
+                        {students.length > 0 ? (
+                          <div className="flex flex-wrap gap-2">
+                            {students.map((s: any) => (
+                              <div key={s.id} className="flex items-center gap-1.5">
+                                <Avatar className="h-6 w-6">
+                                  {s._students?.profileImage ? (
+                                    <AvatarImage src={s._students.profileImage} alt={`${s._students.firstName} ${s._students.lastName}`} />
+                                  ) : null}
+                                  <AvatarFallback className="text-[10px] bg-gray-200 text-gray-600">
+                                    {s._students?.firstName?.[0]}{s._students?.lastName?.[0]}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <span className="text-sm text-gray-700">{s._students?.firstName} {s._students?.lastName}</span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-sm text-gray-400">No students</span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
+              </TableBody>
+            </Table>
           )}
         </div>
 

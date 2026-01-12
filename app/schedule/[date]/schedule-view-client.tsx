@@ -42,7 +42,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import { Clock, User, MessageSquare, ChevronLeft, ChevronRight, Plus, Pencil, Trash2, X, Settings, MapPin, ClipboardList } from "lucide-react"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { DateNavigation } from "@/components/date-navigation"
 import { AddScheduleItemSheet } from "@/components/add-schedule-item-sheet"
 import { DraggableScheduleItem } from "@/components/draggable-schedule-item"
@@ -52,8 +52,10 @@ import {
   useExpeditionScheduleItemsByDate,
   useExpeditionScheduleTemplates,
   useTeachers,
+  useStudentsByExpedition,
 } from "@/lib/hooks/use-expeditions"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { addExpeditionScheduleTemplate, deleteExpeditionScheduleItem } from "@/lib/xano"
 import { useCurrentUser } from "@/lib/contexts/user-context"
 import { useExpeditionContext } from "@/lib/contexts/expedition-context"
@@ -74,6 +76,23 @@ const formatTime = (hour: number) => {
   if (hour === 12) return "12 PM"
   if (hour < 12) return `${hour} AM`
   return `${hour - 12} PM`
+}
+
+// Check if item is a meal type (Breakfast=1, Lunch=2, Dinner=3)
+// Check if an item is an actual meal type (Breakfast, Lunch, Dinner) - not prep or dishes
+const EXACT_MEAL_NAMES = ['breakfast', 'lunch', 'dinner']
+const isMealType = (item: any) => {
+  if (!item) return false
+  const typeId = item?.expedition_schedule_item_types_id || item?._expedition_schedule_item_types?.id
+  const typeName = (item?._expedition_schedule_item_types?.name || '').toLowerCase().trim()
+  // Only match exact meal names, not prep/dishes variants
+  if ([1, 2, 3, 5, 6, 7].includes(typeId)) {
+    if (typeName && !EXACT_MEAL_NAMES.includes(typeName)) {
+      return false
+    }
+    return EXACT_MEAL_NAMES.includes(typeName) || !typeName
+  }
+  return EXACT_MEAL_NAMES.includes(typeName)
 }
 
 const formatMilitaryTime = (militaryTime: number) => {
@@ -145,9 +164,12 @@ export function ScheduleViewClient({ date, expeditionId }: ScheduleViewClientPro
   }, [expeditionId, allExpeditionsData, userExpeditions, activeExpedition])
   
   const { data: schedules, isLoading: loadingSchedules } = useExpeditionSchedules(effectiveExpeditionId)
-  const { data: scheduleItems, isLoading: loadingItems } = useExpeditionScheduleItemsByDate(date, effectiveExpeditionId)
+  const { data: scheduleItemsData, isLoading: loadingItems } = useExpeditionScheduleItemsByDate(date, effectiveExpeditionId)
+  // Extract items from the new response format
+  const scheduleItems = scheduleItemsData?.items || scheduleItemsData || []
   const { data: templates, isLoading: loadingTemplates } = useExpeditionScheduleTemplates()
   const { data: staff } = useTeachers()
+  const { data: students } = useStudentsByExpedition(effectiveExpeditionId || null)
   
   // Edit mode - only admins can enable this
   const isAdmin = currentUser?.role === "Admin"
@@ -280,13 +302,16 @@ export function ScheduleViewClient({ date, expeditionId }: ScheduleViewClientPro
     router.push(url)
   }
 
-  // Find schedule by date
+  // Find schedule by date - prefer scheduleItemsData.schedule (has expanded dish/galley data)
   const schedule = useMemo(() => {
+    // First try the schedule from items response (has expanded _expedition_dish_days and _expeditions_galley_team)
+    if (scheduleItemsData?.schedule) return scheduleItemsData.schedule
+    // Fallback to schedules list
     if (!schedules) return null
     // Compare date strings directly (both in YYYY-MM-DD format)
     const found = schedules.find((s: any) => s.date === date)
     return found
-  }, [schedules, date])
+  }, [schedules, date, scheduleItemsData])
 
   // Merge local updates with schedule items for optimistic UI
   // But keep original items for layout calculation to prevent column jumping during drag
@@ -599,26 +624,86 @@ export function ScheduleViewClient({ date, expeditionId }: ScheduleViewClientPro
                       </span>
                     </>
                   )}
-                  {schedule.galley_team && (
+                  {(schedule.galley_team || schedule._expeditions_galley_team) && (
                     <>
                       <div className="h-6 w-px bg-border" />
-                      <span 
-                        className="inline-flex items-center h-8 text-sm font-medium px-3 rounded bg-gray-50 border border-gray-200 text-gray-700 truncate max-w-[180px]" 
-                        title={schedule.galley_team}
-                      >
-                        {schedule.galley_team.replace(/\s*Team\s*/gi, ' ').trim()}
-                      </span>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span 
+                              className="inline-flex items-center h-8 text-sm font-medium px-3 rounded bg-gray-50 border border-gray-200 text-gray-700 truncate max-w-[180px] cursor-help"
+                            >
+                              {(schedule.galley_team || schedule._expeditions_galley_team?.name || '').replace(/\s*Team\s*/gi, ' ').trim()}
+                            </span>
+                          </TooltipTrigger>
+                          {schedule._expeditions_galley_team && (
+                            <TooltipContent side="bottom" className="max-w-xs">
+                              <div className="text-xs space-y-1">
+                                <p className="font-semibold">{schedule._expeditions_galley_team.name?.replace('Galley Team ', 'Galley ')}</p>
+                                <p>
+                                  <span className="text-gray-500">Students:</span>{' '}
+                                  {schedule._expeditions_galley_team.students_id?.filter((s: any) => s)?.length > 0 
+                                    ? schedule._expeditions_galley_team.students_id.filter((s: any) => s).map((s: any) => `${s.firstName || ''} ${s.lastName || ''}`.trim() || 'Unknown').join(', ')
+                                    : <span className="text-gray-400">Not Assigned</span>}
+                                </p>
+                                {schedule._expeditions_galley_team._galley_supervisor?.name && (
+                                  <p>
+                                    <span className="text-gray-500">Supervisor:</span>{' '}
+                                    {schedule._expeditions_galley_team._galley_supervisor.name}
+                                  </p>
+                                )}
+                              </div>
+                            </TooltipContent>
+                          )}
+                        </Tooltip>
+                      </TooltipProvider>
                     </>
                   )}
-                  {schedule.dishday && (
+                  {(schedule.dishday || schedule._expedition_dish_days) && (
                     <>
                       <div className="h-6 w-px bg-border" />
-                      <span 
-                        className="inline-flex items-center h-8 text-sm font-medium px-3 rounded bg-gray-50 border border-gray-200 text-gray-700 truncate max-w-[180px]" 
-                        title={schedule.dishday}
-                      >
-                        {schedule.dishday.replace(/\s*Team\s*/gi, ' ').trim()}
-                      </span>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span 
+                              className="inline-flex items-center h-8 text-sm font-medium px-3 rounded bg-gray-50 border border-gray-200 text-gray-700 truncate max-w-[180px] cursor-help"
+                            >
+                              {(schedule.dishday || schedule._expedition_dish_days?.dishteam || '').replace(/\s*Team\s*/gi, ' ').trim()}
+                            </span>
+                          </TooltipTrigger>
+                          {schedule._expedition_dish_days && (
+                            <TooltipContent side="bottom" className="max-w-xs">
+                              <div className="text-xs space-y-1">
+                                <p className="font-semibold">{schedule._expedition_dish_days.dishteam?.replace('Dish Team ', 'Dish ')}</p>
+                                <p>
+                                  <span className="text-gray-500">Wash:</span>{' '}
+                                  {schedule._expedition_dish_days.wash?.filter((s: any) => s)?.length > 0 
+                                    ? schedule._expedition_dish_days.wash.filter((s: any) => s).map((s: any) => `${s.firstName || ''} ${s.lastName || ''}`.trim() || 'Unknown').join(', ')
+                                    : <span className="text-gray-400">Not Assigned</span>}
+                                </p>
+                                <p>
+                                  <span className="text-gray-500">Dry:</span>{' '}
+                                  {schedule._expedition_dish_days.dry?.filter((s: any) => s)?.length > 0 
+                                    ? schedule._expedition_dish_days.dry.filter((s: any) => s).map((s: any) => `${s.firstName || ''} ${s.lastName || ''}`.trim() || 'Unknown').join(', ')
+                                    : <span className="text-gray-400">Not Assigned</span>}
+                                </p>
+                                {schedule._expedition_dish_days.support_staff_dishes?.name && (
+                                  <p>
+                                    <span className="text-gray-500">Support:</span>{' '}
+                                    {schedule._expedition_dish_days.support_staff_dishes.name}
+                                  </p>
+                                )}
+                                {schedule._expedition_dish_days.supervisor_staff_dishes?.name && (
+                                  <p>
+                                    <span className="text-gray-500">Supervisor:</span>{' '}
+                                    {schedule._expedition_dish_days.supervisor_staff_dishes.name}
+                                  </p>
+                                )}
+                              </div>
+                            </TooltipContent>
+                          )}
+                        </Tooltip>
+                      </TooltipProvider>
                     </>
                   )}
                   <div className="h-6 w-px bg-border" />
@@ -945,7 +1030,7 @@ export function ScheduleViewClient({ date, expeditionId }: ScheduleViewClientPro
 
               <div>
                 <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">
-                  Participants {selectedItem.participants?.length > 0 && `(${selectedItem.participants.length})`}
+                  Participants (Staff) {selectedItem.participants?.length > 0 && `(${selectedItem.participants.length})`}
                 </div>
                 {selectedItem.participants && selectedItem.participants.length > 0 ? (
                   <div className="space-y-2">
@@ -969,6 +1054,72 @@ export function ScheduleViewClient({ date, expeditionId }: ScheduleViewClientPro
                   <p className="text-base">—</p>
                 )}
               </div>
+
+              <div>
+                <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">
+                  Participants (Students) {selectedItem.students_id?.filter((s: any) => s != null).length > 0 && `(${selectedItem.students_id.filter((s: any) => s != null).length})`}
+                </div>
+                {selectedItem.students_id && selectedItem.students_id.filter((s: any) => s != null).length > 0 ? (
+                  <div className="space-y-2">
+                    {selectedItem.students_id.filter((s: any) => s != null).map((student: any, idx: number) => (
+                      <div key={student.id || `student-${idx}`} className="flex items-center gap-3">
+                        <Avatar className="h-8 w-8">
+                          {student.profileImage ? (
+                            <AvatarImage src={student.profileImage} alt={`${student.firstName} ${student.lastName}`} />
+                          ) : null}
+                          <AvatarFallback className="text-xs bg-gray-200 text-gray-700">
+                            {student.firstName?.[0]}{student.lastName?.[0]}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="text-base font-medium">{student.firstName} {student.lastName}</p>
+                          {student.studentEmail && (
+                            <p className="text-sm text-muted-foreground">{student.studentEmail}</p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-base">—</p>
+                )}
+              </div>
+
+              {selectedItem.resources && (
+                <div>
+                  <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">
+                    Resources
+                  </div>
+                  <a
+                    href={selectedItem.resources}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-base text-blue-600 hover:text-blue-800 hover:underline inline-flex items-center gap-1.5"
+                  >
+                    {selectedItem.resources}
+                  </a>
+                </div>
+              )}
+
+              {/* Meal Plan - for meal types */}
+              {isMealType(selectedItem) && (
+                <div>
+                  <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">
+                    Meal Plan
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {selectedItem._expedition_cookbook?.recipe_photo && (
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage src={selectedItem._expedition_cookbook.recipe_photo} alt={selectedItem._expedition_cookbook.recipe_name} />
+                        <AvatarFallback className="text-sm bg-orange-100 text-orange-600">🍽</AvatarFallback>
+                      </Avatar>
+                    )}
+                    <p className={`text-base ${!selectedItem._expedition_cookbook?.recipe_name && !selectedItem.expedition_cookbook_id ? 'text-gray-400 italic' : ''}`}>
+                      {selectedItem._expedition_cookbook?.recipe_name || (selectedItem.expedition_cookbook_id > 0 ? `Meal Plan #${selectedItem.expedition_cookbook_id}` : 'No Meal Plan')}
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           )}
           
@@ -1056,6 +1207,7 @@ export function ScheduleViewClient({ date, expeditionId }: ScheduleViewClientPro
         scheduleId={schedule?.id || 0}
         date={date}
         staff={staff}
+        students={students?.filter((s: any) => !s.isArchived) || []}
         editItem={editingItem}
         expeditionsId={effectiveExpeditionId}
       />

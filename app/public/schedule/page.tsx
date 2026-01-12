@@ -10,8 +10,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Clock, ChevronLeft, ChevronRight, MapPin, Briefcase, StickyNote, Users, X } from "lucide-react"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Clock, ChevronLeft, ChevronRight, MapPin, Briefcase, StickyNote, Users, X, ExternalLink } from "lucide-react"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   useExpeditionSchedules,
   useExpeditionScheduleItemsByDate,
@@ -19,6 +19,7 @@ import {
 } from "@/lib/hooks/use-expeditions"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 const formatMilitaryTime = (militaryTime: number) => {
   const hours = Math.floor(militaryTime / 100)
@@ -26,6 +27,23 @@ const formatMilitaryTime = (militaryTime: number) => {
   const displayHours = hours % 12 || 12
   const period = hours >= 12 ? 'PM' : 'AM'
   return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`
+}
+
+// Check if item is a meal type (Breakfast=1, Lunch=2, Dinner=3)
+// Check if an item is an actual meal type (Breakfast, Lunch, Dinner) - not prep or dishes
+const EXACT_MEAL_NAMES = ['breakfast', 'lunch', 'dinner']
+const isMealType = (item: any) => {
+  if (!item) return false
+  const typeId = item?.expedition_schedule_item_types_id || item?._expedition_schedule_item_types?.id
+  const typeName = (item?._expedition_schedule_item_types?.name || '').toLowerCase().trim()
+  // Only match exact meal names, not prep/dishes variants
+  if ([1, 2, 3, 5, 6, 7].includes(typeId)) {
+    if (typeName && !EXACT_MEAL_NAMES.includes(typeName)) {
+      return false
+    }
+    return EXACT_MEAL_NAMES.includes(typeName) || !typeName
+  }
+  return EXACT_MEAL_NAMES.includes(typeName)
 }
 
 const getColorForType = (item: any) => {
@@ -83,10 +101,12 @@ export default function PublicScheduleTodayPage() {
   const expeditionId = activeExpedition?.id
 
   const { data: schedules, isLoading: loadingSchedules } = useExpeditionSchedules(expeditionId)
-  const { data: scheduleItems, isLoading: loadingItems } = useExpeditionScheduleItemsByDate(currentDateStr, expeditionId, {
+  const { data: scheduleItemsData, isLoading: loadingItems } = useExpeditionScheduleItemsByDate(currentDateStr, expeditionId, {
     refreshInterval: 30000,
     revalidateOnFocus: true,
   })
+  // Extract items from the new response format
+  const scheduleItems = scheduleItemsData?.items || scheduleItemsData || []
 
   const currentDate = useMemo(() => {
     const [year, month, day] = currentDateStr.split('-').map(Number)
@@ -115,9 +135,12 @@ export default function PublicScheduleTodayPage() {
   }
 
   const schedule = useMemo(() => {
+    // Prefer schedule from items response (has expanded dish/galley data)
+    if (scheduleItemsData?.schedule) return scheduleItemsData.schedule
+    // Fallback to schedules list
     if (!schedules) return null
     return schedules.find((s: any) => s.date === currentDateStr)
-  }, [schedules, currentDateStr])
+  }, [schedules, currentDateStr, scheduleItemsData])
 
   const sortedItems = useMemo(() => {
     if (!scheduleItems || !Array.isArray(scheduleItems)) return []
@@ -156,28 +179,31 @@ export default function PublicScheduleTodayPage() {
             <ChevronLeft className="h-5 w-5 text-gray-600" />
           </button>
 
-          <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="ghost"
-                className="flex-1 h-9 mx-3 text-base font-semibold text-gray-900 rounded-full border border-gray-200 bg-white hover:bg-gray-50 cursor-pointer"
-              >
-                {formatDateDisplay(currentDate)}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="center">
-              <CalendarComponent
-                mode="single"
-                selected={currentDate}
-                defaultMonth={currentDate}
-                onSelect={(selectedDate) => {
-                  if (selectedDate) handleDateChange(selectedDate)
-                }}
-                initialFocus
-                className="rounded-md border"
-              />
-            </PopoverContent>
-          </Popover>
+          <div className="flex-1 mx-3 flex items-center justify-center gap-2">
+            <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="h-9 text-base font-semibold text-gray-900 rounded-full border border-gray-200 bg-white hover:bg-gray-50 cursor-pointer"
+                >
+                  {formatDateDisplay(currentDate)}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="center">
+                <CalendarComponent
+                  mode="single"
+                  selected={currentDate}
+                  defaultMonth={currentDate}
+                  onSelect={(selectedDate) => {
+                    if (selectedDate) handleDateChange(selectedDate)
+                  }}
+                  initialFocus
+                  className="rounded-md border"
+                />
+              </PopoverContent>
+            </Popover>
+            
+          </div>
 
           <button
             onClick={goToNextDay}
@@ -187,6 +213,177 @@ export default function PublicScheduleTodayPage() {
           </button>
         </div>
       </header>
+
+      {/* Team Assignments Sub-Nav - Minimalist */}
+      {schedule && (schedule._expedition_dish_days || schedule._expeditions_galley_team) && (
+        <div className="px-4 py-2.5 bg-gray-50 border-b border-gray-200">
+          <div className="flex items-center gap-6 flex-wrap">
+            {/* Dish Team */}
+            {schedule._expedition_dish_days && (
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-semibold text-gray-600">
+                  Dish {schedule._expedition_dish_days.dishteam?.replace('Dish Team ', '') || schedule.dish_day?.replace('Dish Team ', '')}
+                </span>
+                <div className="flex items-center gap-2">
+                  {/* Wash */}
+                  {schedule._expedition_dish_days.wash?.filter((s: any) => s)?.length > 0 && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center gap-1">
+                            <span className="text-[10px] text-gray-400">W</span>
+                            <div className="flex -space-x-1">
+                              {schedule._expedition_dish_days.wash.filter((s: any) => s).map((s: any, idx: number) => (
+                                <Avatar key={idx} className="h-6 w-6 border-2 border-white">
+                                  {s.profileImage ? (
+                                    <AvatarImage src={s.profileImage} alt={`${s.firstName} ${s.lastName}`} />
+                                  ) : null}
+                                  <AvatarFallback className="text-[9px] bg-blue-100 text-blue-700">
+                                    {s.firstName?.[0]}{s.lastName?.[0]}
+                                  </AvatarFallback>
+                                </Avatar>
+                              ))}
+                            </div>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" className="text-xs">
+                          <span className="font-medium">Wash:</span> {schedule._expedition_dish_days.wash.filter((s: any) => s).map((s: any) => `${s.firstName} ${s.lastName}`).join(', ')}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                  {/* Dry */}
+                  {schedule._expedition_dish_days.dry?.filter((s: any) => s)?.length > 0 && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center gap-1">
+                            <span className="text-[10px] text-gray-400">D</span>
+                            <div className="flex -space-x-1">
+                              {schedule._expedition_dish_days.dry.filter((s: any) => s).map((s: any, idx: number) => (
+                                <Avatar key={idx} className="h-6 w-6 border-2 border-white">
+                                  {s.profileImage ? (
+                                    <AvatarImage src={s.profileImage} alt={`${s.firstName} ${s.lastName}`} />
+                                  ) : null}
+                                  <AvatarFallback className="text-[9px] bg-green-100 text-green-700">
+                                    {s.firstName?.[0]}{s.lastName?.[0]}
+                                  </AvatarFallback>
+                                </Avatar>
+                              ))}
+                            </div>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" className="text-xs">
+                          <span className="font-medium">Dry:</span> {schedule._expedition_dish_days.dry.filter((s: any) => s).map((s: any) => `${s.firstName} ${s.lastName}`).join(', ')}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                  {/* Support */}
+                  {schedule._expedition_dish_days.support_staff_dishes?.name && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center gap-1">
+                            <span className="text-[10px] text-gray-400">Sp</span>
+                            <Avatar className="h-6 w-6 border-2 border-white">
+                              <AvatarFallback className="text-[9px] bg-orange-100 text-orange-700">
+                                {schedule._expedition_dish_days.support_staff_dishes.name.split(' ').map((n: string) => n[0]).join('')}
+                              </AvatarFallback>
+                            </Avatar>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" className="text-xs">
+                          <span className="font-medium">Support:</span> {schedule._expedition_dish_days.support_staff_dishes.name}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                  {/* Supervisor */}
+                  {schedule._expedition_dish_days.supervisor_staff_dishes?.name && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center gap-1">
+                            <span className="text-[10px] text-gray-400">Sv</span>
+                            <Avatar className="h-6 w-6 border-2 border-white">
+                              <AvatarFallback className="text-[9px] bg-purple-100 text-purple-700">
+                                {schedule._expedition_dish_days.supervisor_staff_dishes.name.split(' ').map((n: string) => n[0]).join('')}
+                              </AvatarFallback>
+                            </Avatar>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" className="text-xs">
+                          <span className="font-medium">Supervisor:</span> {schedule._expedition_dish_days.supervisor_staff_dishes.name}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {schedule._expedition_dish_days && schedule._expeditions_galley_team && (
+              <div className="h-5 w-px bg-gray-300" />
+            )}
+
+            {/* Galley Team */}
+            {schedule._expeditions_galley_team && (
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-semibold text-gray-600">
+                  Galley {schedule._expeditions_galley_team.name?.replace('Galley Team ', '')}
+                </span>
+                <div className="flex items-center gap-2">
+                  {/* Students */}
+                  {schedule._expeditions_galley_team.students_id?.filter((s: any) => s)?.length > 0 && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex -space-x-1">
+                            {schedule._expeditions_galley_team.students_id.filter((s: any) => s).map((s: any, idx: number) => (
+                              <Avatar key={idx} className="h-6 w-6 border-2 border-white">
+                                {s.profileImage ? (
+                                  <AvatarImage src={s.profileImage} alt={`${s.firstName} ${s.lastName}`} />
+                                ) : null}
+                                <AvatarFallback className="text-[9px] bg-gray-200 text-gray-700">
+                                  {s.firstName?.[0]}{s.lastName?.[0]}
+                                </AvatarFallback>
+                              </Avatar>
+                            ))}
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" className="text-xs">
+                          <span className="font-medium">Students:</span> {schedule._expeditions_galley_team.students_id.filter((s: any) => s).map((s: any) => `${s.firstName} ${s.lastName}`).join(', ')}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                  {/* Supervisor */}
+                  {schedule._expeditions_galley_team._galley_supervisor?.name && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center gap-1">
+                            <span className="text-[10px] text-gray-400">Sv</span>
+                            <Avatar className="h-6 w-6 border-2 border-white">
+                              <AvatarFallback className="text-[9px] bg-purple-100 text-purple-700">
+                                {schedule._expeditions_galley_team._galley_supervisor.name.split(' ').map((n: string) => n[0]).join('')}
+                              </AvatarFallback>
+                            </Avatar>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" className="text-xs">
+                          <span className="font-medium">Supervisor:</span> {schedule._expeditions_galley_team._galley_supervisor.name}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Content */}
       <main className="px-4 py-4">
@@ -252,8 +449,8 @@ export default function PublicScheduleTodayPage() {
                           <div className="flex items-center gap-1">
                             {item._expedition_staff && <span className="text-gray-300 mx-1">•</span>}
                             <div className="flex -space-x-1.5">
-                              {item.participants.slice(0, 4).map((p: any) => (
-                                <Avatar key={p.id} className="h-6 w-6 border-2 border-white">
+                              {item.participants.filter((p: any) => p?.name).slice(0, 4).map((p: any, idx: number) => (
+                                <Avatar key={p.id || `participant-${idx}`} className="h-6 w-6 border-2 border-white">
                                   <AvatarFallback className="text-[10px] font-medium bg-gray-200 text-gray-600">
                                     {getInitials(p.name)}
                                   </AvatarFallback>
@@ -262,6 +459,26 @@ export default function PublicScheduleTodayPage() {
                             </div>
                             {item.participants.length > 4 && (
                               <span className="text-xs text-gray-500 ml-1">+{item.participants.length - 4}</span>
+                            )}
+                          </div>
+                        )}
+                        {item.students_id && item.students_id.filter((s: any) => s != null).length > 0 && (
+                          <div className="flex items-center gap-1">
+                            {(item._expedition_staff || item.participants?.length > 0) && <span className="text-gray-300 mx-1">•</span>}
+                            <div className="flex -space-x-1.5">
+                              {item.students_id.filter((s: any) => s != null).slice(0, 4).map((s: any, idx: number) => (
+                                <Avatar key={s.id || `student-${idx}`} className="h-6 w-6 border-2 border-white">
+                                  {s.profileImage ? (
+                                    <AvatarImage src={s.profileImage} alt={`${s.firstName} ${s.lastName}`} />
+                                  ) : null}
+                                  <AvatarFallback className="text-[10px] font-medium bg-gray-200 text-gray-600">
+                                    {s.firstName?.[0]}{s.lastName?.[0]}
+                                  </AvatarFallback>
+                                </Avatar>
+                              ))}
+                            </div>
+                            {item.students_id.filter((s: any) => s != null).length > 4 && (
+                              <span className="text-xs text-gray-500 ml-1">+{item.students_id.filter((s: any) => s != null).length - 4}</span>
                             )}
                           </div>
                         )}
@@ -289,6 +506,27 @@ export default function PublicScheduleTodayPage() {
                       <div className="flex items-center gap-1.5 mt-2 text-gray-500">
                         <Briefcase className="h-3.5 w-3.5 flex-shrink-0" />
                         <span className="text-sm truncate">{item.things_to_bring}</span>
+                      </div>
+                    )}
+
+                    {/* Resources */}
+                    {item.resources && (
+                      <div className="flex items-center gap-1.5 mt-2 text-blue-600">
+                        <ExternalLink className="h-3.5 w-3.5 flex-shrink-0" />
+                        <span className="text-sm truncate">{item.resources}</span>
+                      </div>
+                    )}
+
+                    {/* Meal Plan (for meal types) */}
+                    {isMealType(item) && (
+                      <div className={`flex items-center gap-1.5 mt-2 ${!item._expedition_cookbook?.recipe_name && !item.expedition_cookbook_id ? 'text-gray-400 italic' : 'text-gray-600'}`}>
+                        {item._expedition_cookbook?.recipe_photo && (
+                          <Avatar className="h-5 w-5">
+                            <AvatarImage src={item._expedition_cookbook.recipe_photo} alt={item._expedition_cookbook.recipe_name} />
+                            <AvatarFallback className="text-[8px] bg-orange-100 text-orange-600">MP</AvatarFallback>
+                          </Avatar>
+                        )}
+                        <span className="text-sm">{item._expedition_cookbook?.recipe_name || (item.expedition_cookbook_id > 0 ? `Meal Plan #${item.expedition_cookbook_id}` : 'No Meal Plan')}</span>
                       </div>
                     )}
                   </div>
@@ -357,32 +595,78 @@ export default function PublicScheduleTodayPage() {
                   </div>
                 )}
 
-                {/* Participants */}
-                {selectedItem.participants && selectedItem.participants.length > 0 && (
+                {/* Participants (Staff) */}
+                {selectedItem.participants && selectedItem.participants.filter((p: any) => p?.name).length > 0 && (
                   <div className="flex items-start gap-3">
                     <Users className="h-4 w-4 text-gray-400 mt-0.5" />
-                    <div className="flex flex-wrap gap-2">
-                      {selectedItem.participants.map((participant: any) => (
-                        <div
-                          key={participant.id}
-                          className="flex items-center gap-1.5 px-2 py-1 bg-gray-100 rounded-lg"
-                        >
-                          <Avatar className="h-6 w-6">
-                            <AvatarFallback className="text-[10px] font-medium bg-gray-200 text-gray-600">
-                              {getInitials(participant.name)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="text-xs text-gray-700">{participant.name}</span>
-                        </div>
-                      ))}
+                    <div>
+                      <p className="text-xs text-gray-400 mb-1">Staff</p>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedItem.participants.filter((p: any) => p?.name).map((participant: any, idx: number) => (
+                          <div
+                            key={participant.id || `participant-${idx}`}
+                            className="flex items-center gap-1.5 px-2 py-1 bg-gray-100 rounded-lg"
+                          >
+                            <Avatar className="h-6 w-6">
+                              <AvatarFallback className="text-[10px] font-medium bg-gray-200 text-gray-600">
+                                {getInitials(participant.name)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="text-xs text-gray-700">{participant.name}</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 )}
 
+                {/* Participants (Students) */}
+                {selectedItem.students_id && selectedItem.students_id.filter((s: any) => s != null).length > 0 && (
+                  <div className="flex items-start gap-3">
+                    <Users className="h-4 w-4 text-gray-400 mt-0.5" />
+                    <div>
+                      <p className="text-xs text-gray-400 mb-1">Students</p>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedItem.students_id.filter((s: any) => s != null).map((student: any, idx: number) => (
+                          <div
+                            key={student.id || `student-${idx}`}
+                            className="flex items-center gap-1.5 px-2 py-1 bg-gray-100 rounded-lg"
+                          >
+                            <Avatar className="h-6 w-6">
+                              {student.profileImage ? (
+                                <AvatarImage src={student.profileImage} alt={`${student.firstName} ${student.lastName}`} />
+                              ) : null}
+                              <AvatarFallback className="text-[10px] font-medium bg-gray-200 text-gray-600">
+                                {student.firstName?.[0]}{student.lastName?.[0]}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="text-xs text-gray-700">{student.firstName} {student.lastName}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Resources */}
+                {selectedItem.resources && (
+                  <div className="flex items-start gap-3 min-w-0">
+                    <ExternalLink className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                    <a
+                      href={selectedItem.resources}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-blue-600 hover:underline truncate min-w-0"
+                    >
+                      {selectedItem.resources}
+                    </a>
+                  </div>
+                )}
+
                 {/* Location */}
-                <div className="flex items-center gap-3">
-                  <MapPin className="h-4 w-4 text-gray-400" />
-                  {selectedItem.address ? (
+                {selectedItem.address && (
+                  <div className="flex items-center gap-3">
+                    <MapPin className="h-4 w-4 text-gray-400" />
                     <a
                       href={`https://maps.google.com/?q=${encodeURIComponent(selectedItem.address)}`}
                       target="_blank"
@@ -391,26 +675,40 @@ export default function PublicScheduleTodayPage() {
                     >
                       {selectedItem.address}
                     </a>
-                  ) : (
-                    <span className="text-sm text-gray-400 italic">No location</span>
-                  )}
-                </div>
+                  </div>
+                )}
 
                 {/* Things to Bring */}
-                <div className="flex items-center gap-3">
-                  <Briefcase className="h-4 w-4 text-gray-400" />
-                  {selectedItem.things_to_bring ? (
+                {selectedItem.things_to_bring && (
+                  <div className="flex items-center gap-3">
+                    <Briefcase className="h-4 w-4 text-gray-400" />
                     <span className="text-sm text-gray-700">{selectedItem.things_to_bring}</span>
-                  ) : (
-                    <span className="text-sm text-gray-400 italic">Nothing to bring</span>
-                  )}
-                </div>
+                  </div>
+                )}
+
+                {/* Meal Plan (for meal types) */}
+                {isMealType(selectedItem) && (
+                  <div>
+                    <p className="text-xs text-gray-400 mb-1">Meal Plan</p>
+                    <div className="flex items-center gap-2">
+                      {selectedItem._expedition_cookbook?.recipe_photo && (
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={selectedItem._expedition_cookbook.recipe_photo} alt={selectedItem._expedition_cookbook.recipe_name} />
+                          <AvatarFallback className="text-xs bg-orange-100 text-orange-600">MP</AvatarFallback>
+                        </Avatar>
+                      )}
+                      <span className={`text-sm ${!selectedItem._expedition_cookbook?.recipe_name && !selectedItem.expedition_cookbook_id ? 'text-gray-400 italic' : 'text-gray-700'}`}>
+                        {selectedItem._expedition_cookbook?.recipe_name || (selectedItem.expedition_cookbook_id > 0 ? `Meal Plan #${selectedItem.expedition_cookbook_id}` : 'No Meal Plan')}
+                      </span>
+                    </div>
+                  </div>
+                )}
 
                 {/* Notes */}
                 <div className="bg-gray-50 rounded-lg p-3 mt-2">
                   <p className="text-xs font-medium text-gray-500 mb-1">Notes</p>
                   {selectedItem.notes ? (
-                    <p className="text-sm text-gray-700 whitespace-pre-wrap">{selectedItem.notes}</p>
+                    <p className="text-sm text-gray-700 whitespace-pre-wrap break-words">{selectedItem.notes}</p>
                   ) : (
                     <p className="text-sm text-gray-400 italic">No notes</p>
                   )}

@@ -84,15 +84,20 @@ export async function getExpeditionScheduleItemsByDate(date: string, expeditions
     ? `/expedition_schedule_items_date?date=${date}&expeditions_id=${expeditionsId}`
     : `/expedition_schedule_items_date?date=${date}`
   try {
-    const response = await xanoFetch<{ out: string; expedition_schedule_items: any[] } | any[]>(url)
+    const response = await xanoFetch<{ out: string; expedition_schedule_items: any[]; expedition?: any[] } | any[]>(url)
     // Handle both object response and empty array (from 500 error handling)
     if (Array.isArray(response)) {
-      return response
+      return { items: response, schedule: null }
     }
-    return response.expedition_schedule_items || []
+    // Return both items and the schedule data (which includes expanded _expedition_dish_days and _expeditions_galley_team)
+    const schedule = response.expedition?.[0] || null
+    return { 
+      items: response.expedition_schedule_items || [], 
+      schedule 
+    }
   } catch (error) {
     console.error("Error fetching schedule items by date:", error)
-    return []
+    return { items: [], schedule: null }
   }
 }
 
@@ -360,8 +365,42 @@ export async function updateStudent(id: number, data: any) {
 }
 
 // ============ Dish Days Management ============
-export async function getExpeditionDishDays() {
+export async function getExpeditionDishDays(expeditionsId?: number) {
+  if (expeditionsId) {
+    const allDishDays = await xanoFetch<any[]>("/expedition_dish_days")
+    return allDishDays.filter((d: any) => d.expeditions_id === expeditionsId)
+  }
   return xanoFetch<any[]>("/expedition_dish_days")
+}
+
+export async function updateExpeditionDishDay(id: number, data: {
+  wash?: number[]
+  dry?: number[]
+  support?: number
+  supervisor?: number
+}) {
+  return xanoFetch<any>(`/expedition_dish_days/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  })
+}
+
+// ============ Galley Team Management ============
+export async function getExpeditionsGalleyTeam(expeditionsId?: number) {
+  const url = expeditionsId 
+    ? `/expeditions_galley_team?expeditions_id=${expeditionsId}`
+    : "/expeditions_galley_team"
+  return xanoFetch<any[]>(url)
+}
+
+export async function updateExpeditionsGalleyTeam(id: number, data: {
+  students_id?: number[]
+  expedition_staff_id?: number
+}) {
+  return xanoFetch<any>(`/expeditions_galley_team/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  })
 }
 
 // ============ Intake Form Management ============
@@ -454,10 +493,10 @@ export async function updateExpeditionAssignment(id: number, data: {
   expedition_staff_id?: number
   students_id?: number
   expeditions_id?: number
-  department?: string
-  dish_day?: string
-  laptop?: string
-  bunk?: string
+  expedition_departments_id?: number[]
+  dish_day?: string | null
+  laptop?: string | null
+  bunk?: string | null
 }) {
   return xanoFetch<any>(`/expedition_student_assignments/${id}`, {
     method: "PATCH",
@@ -473,6 +512,7 @@ export async function deleteExpeditionAssignment(id: number) {
     method: "DELETE",
   })
 }
+
 
 // ============ Locations Management ============
 export async function createExpeditionLocation(data: {
@@ -563,4 +603,14 @@ export async function validateStaffByEmail(email: string) {
     console.error("Error validating staff:", error)
     return null
   }
+}
+
+// ============ Cookbook / Recipes ============
+export async function getExpeditionCookbookByType(type: string) {
+  return xanoFetch<any[]>(`/expedition_cookbook_by_type?type=${encodeURIComponent(type)}`)
+}
+
+// ============ Expedition Departments ============
+export async function getExpeditionDepartments() {
+  return xanoFetch<any[]>("/expedition_departments")
 }

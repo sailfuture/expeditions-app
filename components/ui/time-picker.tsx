@@ -281,7 +281,7 @@ export function TimePicker({ date, setDate, label, maxHour }: TimePickerProps) {
             type="button"
             onClick={togglePeriod}
             className={cn(
-              "flex-1 px-3 text-sm font-semibold rounded-t-lg border border-b-0 transition-colors cursor-pointer",
+              "flex-1 px-3 text-xs font-semibold rounded-t-lg border border-b-0 transition-colors cursor-pointer",
               !isPM
                 ? "bg-gray-800 text-white border-gray-800"
                 : "bg-gray-50 text-gray-400 border-gray-200 hover:bg-gray-100"
@@ -293,7 +293,7 @@ export function TimePicker({ date, setDate, label, maxHour }: TimePickerProps) {
             type="button"
             onClick={togglePeriod}
             className={cn(
-              "flex-1 px-3 text-sm font-semibold rounded-b-lg border border-t-0 transition-colors cursor-pointer",
+              "flex-1 px-3 text-xs font-semibold rounded-b-lg border border-t-0 transition-colors cursor-pointer",
               isPM
                 ? "bg-gray-800 text-white border-gray-800"
                 : "bg-gray-50 text-gray-400 border-gray-200 hover:bg-gray-100"

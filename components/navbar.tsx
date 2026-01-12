@@ -235,6 +235,19 @@ export function Navbar() {
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </NavigationMenuItem>
+
+                  <NavigationMenuItem>
+                    <Link
+                      href="/meal-planning"
+                      className={cn(
+                        navigationMenuTriggerStyle(),
+                        "cursor-pointer",
+                        pathname.startsWith("/meal-planning") && "text-foreground",
+                      )}
+                    >
+                      Meal Planning
+                    </Link>
+                  </NavigationMenuItem>
                 </>
               )}
             </NavigationMenuList>

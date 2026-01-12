@@ -606,8 +606,20 @@ export async function validateStaffByEmail(email: string) {
 }
 
 // ============ Cookbook / Recipes ============
+export async function getExpeditionCookbook() {
+  return xanoFetch<any[]>("/expedition_cookbook")
+}
+
 export async function getExpeditionCookbookByType(type: string) {
   return xanoFetch<any[]>(`/expedition_cookbook_by_type?type=${encodeURIComponent(type)}`)
+}
+
+export async function getExpeditionCookbookById(id: number) {
+  return xanoFetch<any>(`/expedition_cookbook/${id}`)
+}
+
+export async function getIndividualRecipe(cookbookId: number) {
+  return xanoFetch<any[]>(`/individual_recipe?expedition_cookbook_id=${cookbookId}`)
 }
 
 // ============ Expedition Departments ============

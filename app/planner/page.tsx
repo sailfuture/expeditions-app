@@ -147,12 +147,16 @@ function PlannerPageContent() {
     () => getExpeditionsGalleyTeam(effectiveExpeditionId!)
   )
   
-  // State for tracking updates
+  // State for tracking updates and optimistic values
   const [updatingScheduleField, setUpdatingScheduleField] = useState<string | null>(null)
+  const [optimisticValues, setOptimisticValues] = useState<Record<string, string>>({})
   
   // Handler for updating schedule dish day or galley team (using IDs)
   const handleScheduleFieldChange = async (scheduleId: number, field: string, value: string) => {
     const updateKey = `${scheduleId}-${field}`
+    
+    // Set optimistic value immediately
+    setOptimisticValues(prev => ({ ...prev, [updateKey]: value }))
     setUpdatingScheduleField(updateKey)
     
     try {
@@ -168,15 +172,26 @@ function PlannerPageContent() {
       
       await updateExpeditionSchedule(scheduleId, updateData)
       
-      // Refresh the schedules data
-      mutate((key: any) => typeof key === 'string' && key.includes('expedition_schedule'))
+      // Refresh only the specific schedule data that was updated (not all schedule items)
+      await mutate(`expedition_schedules_${effectiveExpeditionId}`)
+      // Also refresh the specific day's items since they include schedule info
+      const scheduleDate = allSchedules?.find((s: any) => s.id === scheduleId)?.date
+      if (scheduleDate) {
+        await mutate(`expedition_schedule_items_date_${scheduleDate}_${effectiveExpeditionId || 'all'}`)
+      }
       
       toast.success(`${field === 'expedition_dish_days_id' ? 'Dish Team' : 'Galley Team'} updated`)
     } catch (error) {
       console.error(`Failed to update ${field}:`, error)
       toast.error(`Failed to update ${field}`)
     } finally {
+      // Clear optimistic value and spinner together after mutate completes
       setUpdatingScheduleField(null)
+      setOptimisticValues(prev => {
+        const newValues = { ...prev }
+        delete newValues[updateKey]
+        return newValues
+      })
     }
   }
   
@@ -587,33 +602,37 @@ function PlannerPageContent() {
                           {dayType.label}
                         </Badge>
                         {/* Dish Team Select - inline with day type */}
-                        {schedule && isWithinRange && (
+                        {schedule && isWithinRange && (() => {
+                          const dishUpdateKey = `${schedule.id}-expedition_dish_days_id`
+                          const dishValue = optimisticValues[dishUpdateKey] ?? (schedule.expedition_dish_days_id ? String(schedule.expedition_dish_days_id) : "none")
+                          const isUpdatingDish = updatingScheduleField === dishUpdateKey
+                          return (
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <div className="flex items-center">
-                                  {updatingScheduleField === `${schedule.id}-expedition_dish_days_id` ? (
-                                    <Spinner className="h-3 w-3" />
-                                  ) : (
-                                    <Select
-                                      value={schedule.expedition_dish_days_id ? String(schedule.expedition_dish_days_id) : "none"}
-                                      onValueChange={(value) => handleScheduleFieldChange(schedule.id, "expedition_dish_days_id", value)}
-                                    >
-                                      <SelectTrigger className="h-5 w-auto min-w-[55px] text-[9px] px-1.5 py-0 border-blue-200 bg-blue-50 text-blue-700 cursor-pointer">
-                                        <SelectValue placeholder="Dish" />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="none" className="text-xs text-gray-500">None</SelectItem>
-                                        {dishDays?.sort((a: any, b: any) => {
-                                          const dayOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-                                          return dayOrder.indexOf(a.day_of_week) - dayOrder.indexOf(b.day_of_week)
-                                        }).map((dish: any) => (
-                                          <SelectItem key={dish.id} value={String(dish.id)} className="text-xs">
-                                            {dish.dishteam?.replace('Dish Team ', 'Dish ') || `Dish ${dish.id}`}
-                                          </SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
+                                <div className="flex items-center relative">
+                                  <Select
+                                    value={dishValue}
+                                    onValueChange={(value) => handleScheduleFieldChange(schedule.id, "expedition_dish_days_id", value)}
+                                    disabled={isUpdatingDish}
+                                  >
+                                    <SelectTrigger className={cn("h-5 w-auto min-w-[55px] text-[9px] px-1.5 py-0 border-blue-200 bg-blue-50 text-blue-700 cursor-pointer", isUpdatingDish && "pr-5")}>
+                                      <SelectValue placeholder="Dish" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="none" className="text-xs text-gray-500">None</SelectItem>
+                                      {dishDays?.sort((a: any, b: any) => {
+                                        const dayOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+                                        return dayOrder.indexOf(a.day_of_week) - dayOrder.indexOf(b.day_of_week)
+                                      }).map((dish: any) => (
+                                        <SelectItem key={dish.id} value={String(dish.id)} className="text-xs">
+                                          {dish.dishteam?.replace('Dish Team ', 'Dish ') || `Dish ${dish.id}`}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  {isUpdatingDish && (
+                                    <Spinner className="h-3 w-3 absolute right-1 top-1/2 -translate-y-1/2" />
                                   )}
                                 </div>
                               </TooltipTrigger>
@@ -650,32 +669,36 @@ function PlannerPageContent() {
                               )}
                             </Tooltip>
                           </TooltipProvider>
-                        )}
+                        )})()}
                         {/* Galley Team Select - inline with day type */}
-                        {schedule && isWithinRange && (
+                        {schedule && isWithinRange && (() => {
+                          const galleyUpdateKey = `${schedule.id}-expeditions_galley_team_id`
+                          const galleyValue = optimisticValues[galleyUpdateKey] ?? (schedule.expeditions_galley_team_id ? String(schedule.expeditions_galley_team_id) : "none")
+                          const isUpdatingGalley = updatingScheduleField === galleyUpdateKey
+                          return (
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <div className="flex items-center">
-                                  {updatingScheduleField === `${schedule.id}-expeditions_galley_team_id` ? (
-                                    <Spinner className="h-3 w-3" />
-                                  ) : (
-                                    <Select
-                                      value={schedule.expeditions_galley_team_id ? String(schedule.expeditions_galley_team_id) : "none"}
-                                      onValueChange={(value) => handleScheduleFieldChange(schedule.id, "expeditions_galley_team_id", value)}
-                                    >
-                                      <SelectTrigger className="h-5 w-auto min-w-[60px] text-[9px] px-1.5 py-0 border-green-200 bg-green-50 text-green-700 cursor-pointer">
-                                        <SelectValue placeholder="Galley" />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="none" className="text-xs text-gray-500">None</SelectItem>
-                                        {galleyTeams?.sort((a: any, b: any) => (a.name || "").localeCompare(b.name || "")).map((team: any) => (
-                                          <SelectItem key={team.id} value={String(team.id)} className="text-xs">
-                                            {team.name?.replace('Galley Team ', 'Galley ') || `Galley ${team.id}`}
-                                          </SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
+                                <div className="flex items-center relative">
+                                  <Select
+                                    value={galleyValue}
+                                    onValueChange={(value) => handleScheduleFieldChange(schedule.id, "expeditions_galley_team_id", value)}
+                                    disabled={isUpdatingGalley}
+                                  >
+                                    <SelectTrigger className={cn("h-5 w-auto min-w-[60px] text-[9px] px-1.5 py-0 border-green-200 bg-green-50 text-green-700 cursor-pointer", isUpdatingGalley && "pr-5")}>
+                                      <SelectValue placeholder="Galley" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="none" className="text-xs text-gray-500">None</SelectItem>
+                                      {galleyTeams?.sort((a: any, b: any) => (a.name || "").localeCompare(b.name || "")).map((team: any) => (
+                                        <SelectItem key={team.id} value={String(team.id)} className="text-xs">
+                                          {team.name?.replace('Galley Team ', 'Galley ') || `Galley ${team.id}`}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  {isUpdatingGalley && (
+                                    <Spinner className="h-3 w-3 absolute right-1 top-1/2 -translate-y-1/2" />
                                   )}
                                 </div>
                               </TooltipTrigger>
@@ -700,7 +723,7 @@ function PlannerPageContent() {
                               )}
                             </Tooltip>
                           </TooltipProvider>
-                        )}
+                        )})()}
                         {staffOff && (
                           <div className="flex items-center -space-x-1.5">
                             {staffOff.split(', ').slice(0, 3).map((name: string, idx: number) => (

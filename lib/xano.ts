@@ -614,3 +614,32 @@ export async function getExpeditionCookbookByType(type: string) {
 export async function getExpeditionDepartments() {
   return xanoFetch<any[]>("/expedition_departments")
 }
+
+// ============ Passage Logs ============
+export async function getExpeditionPassageLogs() {
+  return xanoFetch<any[]>("/expedition_passage_logs")
+}
+
+export async function getExpeditionPassageLogById(id: number) {
+  return xanoFetch<any>(`/expedition_passage_logs/${id}`)
+}
+
+export async function createExpeditionPassageLog(data: Record<string, any>) {
+  return xanoFetch<any>("/expedition_passage_logs", {
+    method: "POST",
+    body: JSON.stringify(data),
+  })
+}
+
+export async function updateExpeditionPassageLog(id: number, data: Record<string, any>) {
+  return xanoFetch<any>(`/expedition_passage_logs/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  })
+}
+
+export async function deleteExpeditionPassageLog(id: number) {
+  return xanoFetch<any>(`/expedition_passage_logs/${id}`, {
+    method: "DELETE",
+  })
+}

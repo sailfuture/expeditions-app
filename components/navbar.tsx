@@ -216,7 +216,7 @@ export function Navbar() {
                       <DropdownMenuTrigger className={cn(
                         navigationMenuTriggerStyle(),
                         "cursor-pointer flex items-center gap-1",
-                        pathname.startsWith("/public/passage-logs") && "text-foreground",
+                        (pathname.startsWith("/public/passage-logs") || pathname === "/passage-logs") && "text-foreground",
                       )}>
                         Logs
                         <ChevronDown className="h-3 w-3" />
@@ -227,7 +227,7 @@ export function Navbar() {
                             Passage Log Form
                           </DropdownMenuItem>
                         </Link>
-                        <Link href="/public/passage-logs/dashboard" target="_blank">
+                        <Link href="/passage-logs">
                           <DropdownMenuItem className="cursor-pointer">
                             Log Dashboard
                           </DropdownMenuItem>

@@ -7,7 +7,11 @@ import { ExpeditionProvider } from "@/lib/contexts/expedition-context"
 
 export function Providers({ children }: { children: ReactNode }) {
   return (
-    <SessionProvider>
+    <SessionProvider
+      // Disable automatic session polling to reduce server requests
+      refetchInterval={0}
+      refetchOnWindowFocus={false}
+    >
       <UserProvider>
         <ExpeditionProvider>
           {children}

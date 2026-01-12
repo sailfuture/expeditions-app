@@ -76,11 +76,16 @@ function TVDisplayContent() {
   const testDate = searchParams.get('date')
   const testTime = searchParams.get('time') // Optional: test specific time like "1430" for 2:30 PM
 
-  // Fetch the active expedition
+  // Fetch the active expedition - with stable config to prevent excessive requests
   const { data: activeExpedition, isLoading: loadingExpedition } = useSWR(
-    'active_expedition',
+    'active_expedition_tv',
     getActiveExpedition,
-    { refreshInterval: 60000, revalidateOnFocus: false }
+    { 
+      refreshInterval: 21600000, // 6 hours - expedition rarely changes
+      revalidateOnFocus: false,
+      revalidateIfStale: false,
+      dedupingInterval: 300000, // Dedupe requests within 5 minutes
+    }
   )
 
   // Get timezone offset from expedition
@@ -110,18 +115,23 @@ function TVDisplayContent() {
     return getCurrentTimeForOffset(timezoneOffset)
   })
 
-  // Fetch schedule items
+  // Fetch schedule items - with stable config to prevent excessive requests
   const { data: scheduleData, isLoading: loadingItems } = useSWR(
-    activeExpedition ? `tv_schedule_${todayDate}_${activeExpedition.id}` : null,
-    activeExpedition ? () => getExpeditionScheduleItemsByDate(todayDate, activeExpedition.id) : null,
-    { refreshInterval: 30000, revalidateOnFocus: false }
+    activeExpedition?.id ? `tv_schedule_${todayDate}_${activeExpedition.id}` : null,
+    activeExpedition?.id ? () => getExpeditionScheduleItemsByDate(todayDate, activeExpedition.id) : null,
+    { 
+      refreshInterval: 21600000, // 6 hours
+      revalidateOnFocus: false,
+      revalidateIfStale: false,
+      dedupingInterval: 300000, // Dedupe requests within 5 minutes
+    }
   )
 
   // Extract items and schedule from the response
   const scheduleItems = scheduleData?.items || []
   const todaySchedule = scheduleData?.schedule || null
 
-  // Calculate layout for overlapping items
+  // Calculate layout for overlapping items - use stable dependency
   const itemsWithLayout = useMemo(() => {
     if (!scheduleItems || scheduleItems.length === 0) return []
     
@@ -170,7 +180,7 @@ function TVDisplayContent() {
     })
     
     return items
-  }, [scheduleData])
+  }, [scheduleItems])
 
   // Filter items for each row
   const row1Items = useMemo(() => {
@@ -519,8 +529,8 @@ function TVDisplayContent() {
                     <div
                       key={item.id}
                       className={cn(
-                        "absolute bg-white rounded-lg shadow-lg overflow-hidden border border-gray-200",
-                        isPast && "opacity-40"
+                        "absolute bg-white rounded-lg shadow-lg overflow-hidden border border-gray-200 transition-opacity duration-1000 ease-in-out",
+                        isPast ? "opacity-30" : "opacity-100"
                       )}
                       style={{
                         left: position.left,
@@ -616,8 +626,8 @@ function TVDisplayContent() {
                     <div
                       key={item.id}
                       className={cn(
-                        "absolute bg-white rounded-lg shadow-lg overflow-hidden border border-gray-200",
-                        isPast && "opacity-40"
+                        "absolute bg-white rounded-lg shadow-lg overflow-hidden border border-gray-200 transition-opacity duration-1000 ease-in-out",
+                        isPast ? "opacity-30" : "opacity-100"
                       )}
                       style={{
                         left: position.left,
@@ -648,7 +658,7 @@ function TVDisplayContent() {
       {/* Footer with navigation */}
       <div className="h-10 flex-shrink-0 px-6 flex items-center justify-between">
         <div className="text-xs text-white/30">
-          Auto-refreshes every 30s
+          Data refreshes every 6 hours
         </div>
         
         {/* TV Display Navigation - commented out for now

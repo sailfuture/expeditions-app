@@ -72,11 +72,16 @@ function TVVerticalContent() {
   const searchParams = useSearchParams()
   const testDate = searchParams.get('date')
 
-  // Fetch the active expedition
+  // Fetch the active expedition - with stable config to prevent excessive requests
   const { data: activeExpedition, isLoading: loadingExpedition } = useSWR(
-    'active_expedition',
+    'active_expedition_tv',
     getActiveExpedition,
-    { refreshInterval: 60000, revalidateOnFocus: false }
+    { 
+      refreshInterval: 21600000, // 6 hours - expedition rarely changes
+      revalidateOnFocus: false,
+      revalidateIfStale: false,
+      dedupingInterval: 300000,
+    }
   )
 
   // Get timezone offset from expedition
@@ -97,22 +102,27 @@ function TVVerticalContent() {
   // Current time state
   const [currentTime, setCurrentTime] = useState(() => getCurrentTimeForOffset(timezoneOffset))
 
-  // Fetch schedule items for today
+  // Fetch schedule items for today - with stable config to prevent excessive requests
   const { data: scheduleData, isLoading: loadingItems } = useSWR(
-    activeExpedition ? `tv_vertical_schedule_${todayDate}_${activeExpedition.id}` : null,
-    activeExpedition ? () => getExpeditionScheduleItemsByDate(todayDate, activeExpedition.id) : null,
-    { refreshInterval: 30000, revalidateOnFocus: false }
+    activeExpedition?.id ? `tv_vertical_schedule_${todayDate}_${activeExpedition.id}` : null,
+    activeExpedition?.id ? () => getExpeditionScheduleItemsByDate(todayDate, activeExpedition.id) : null,
+    { 
+      refreshInterval: 21600000, // 6 hours
+      revalidateOnFocus: false,
+      revalidateIfStale: false,
+      dedupingInterval: 300000,
+    }
   )
 
   // Extract items and schedule from the response
   const scheduleItems = scheduleData?.items || []
   const todaySchedule = scheduleData?.schedule || null
 
-  // Sort items by time
+  // Sort items by time - use stable dependency
   const sortedItems = useMemo(() => {
     if (!scheduleItems || scheduleItems.length === 0) return []
     return [...scheduleItems].sort((a, b) => a.time_in - b.time_in)
-  }, [scheduleData])
+  }, [scheduleItems])
 
   // Calculate overlapping items and assign columns
   const itemsWithLayout = useMemo(() => {
@@ -304,7 +314,7 @@ function TVVerticalContent() {
 
         <div className="mt-auto space-y-3">
           <div className="text-xs text-white/30">
-            Auto-refreshes every 30s
+            Data refreshes every 6 hours
           </div>
           
           {/* TV Display Navigation */}
@@ -414,8 +424,8 @@ function TVVerticalContent() {
                   <div
                     key={item.id}
                     className={cn(
-                      "absolute bg-white rounded-xl shadow-lg overflow-hidden p-3 border-2 border-gray-200 transition-opacity duration-300",
-                      isPast && "opacity-40"
+                      "absolute bg-white rounded-xl shadow-lg overflow-hidden p-3 border-2 border-gray-200 transition-opacity duration-1000 ease-in-out",
+                      isPast ? "opacity-30" : "opacity-100"
                     )}
                     style={{
                       top: position.top,

@@ -25,6 +25,20 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import {
   Breadcrumb,
   BreadcrumbItem,
   BreadcrumbLink,
@@ -32,7 +46,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
-import { ChevronLeft, ChevronRight, ExternalLink, Calendar, Plus, X, Pencil, Trash2 } from "lucide-react"
+import { ChevronLeft, ChevronRight, ExternalLink, Calendar, Plus, X, Pencil, Trash2, Clock, Wrench } from "lucide-react"
 import { useExpeditionScheduleItemsByDate, useExpeditionSchedules, useTeachers, useExpeditionScheduleTemplates, useStudentsByExpedition } from "@/lib/hooks/use-expeditions"
 import { useExpeditionContext } from "@/lib/contexts/expedition-context"
 import { cn, isDateWithinExpeditionRange, getExpeditionFirstDate } from "@/lib/utils"
@@ -111,6 +125,23 @@ function PlannerPageContent() {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [itemToDelete, setItemToDelete] = useState<any>(null)
   const [deleting, setDeleting] = useState(false)
+  
+  // Meal Plan Sheet state
+  const [mealPlanSheetOpen, setMealPlanSheetOpen] = useState(false)
+  const [selectedRecipeId, setSelectedRecipeId] = useState<number | null>(null)
+  
+  // Meal Plan data fetching
+  const XANO_COOKBOOK_URL = "https://xsc3-mvx7-r86m.n7e.xano.io/api:bXFdqx8y"
+  const recipeFetcher = (url: string) => fetch(url).then((res) => res.json())
+  const { data: selectedRecipe, isLoading: loadingRecipe } = useSWR(
+    selectedRecipeId ? `${XANO_COOKBOOK_URL}/expedition_cookbook/${selectedRecipeId}` : null,
+    recipeFetcher
+  )
+  
+  const handleMealPlanClick = (recipeId: number) => {
+    setSelectedRecipeId(recipeId)
+    setMealPlanSheetOpen(true)
+  }
   
   // Scroll gradient tracking for each day column
   const [scrollGradients, setScrollGradients] = useState<Record<number, boolean>>({})
@@ -1093,17 +1124,24 @@ function PlannerPageContent() {
             {selectedItem && isMealType(selectedItem) && (
               <div>
                 <p className="text-xs text-gray-400 mb-1">Meal Plan</p>
-                <div className="flex items-center gap-2">
-                  {selectedItem._expedition_cookbook?.recipe_photo && (
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={selectedItem._expedition_cookbook.recipe_photo} alt={selectedItem._expedition_cookbook.recipe_name} />
-                      <AvatarFallback className="text-xs bg-orange-100 text-orange-600">🍽</AvatarFallback>
-                    </Avatar>
-                  )}
-                  <span className={`text-sm ${!selectedItem._expedition_cookbook?.recipe_name && !selectedItem.expedition_cookbook_id ? 'text-gray-400 italic' : 'text-gray-700'}`}>
-                    {selectedItem._expedition_cookbook?.recipe_name || (selectedItem.expedition_cookbook_id > 0 ? `Meal Plan #${selectedItem.expedition_cookbook_id}` : 'No Meal Plan')}
-                  </span>
-                </div>
+                {selectedItem._expedition_cookbook?.id || selectedItem.expedition_cookbook_id > 0 ? (
+                  <button
+                    onClick={() => handleMealPlanClick(selectedItem._expedition_cookbook?.id || selectedItem.expedition_cookbook_id)}
+                    className="flex items-center gap-2 w-full text-left p-2 -m-2 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+                  >
+                    {selectedItem._expedition_cookbook?.recipe_photo && (
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={selectedItem._expedition_cookbook.recipe_photo} alt={selectedItem._expedition_cookbook.recipe_name} />
+                        <AvatarFallback className="text-xs bg-orange-100 text-orange-600">🍽</AvatarFallback>
+                      </Avatar>
+                    )}
+                    <span className="text-sm font-medium text-gray-900">
+                      {selectedItem._expedition_cookbook?.recipe_name || `Meal Plan #${selectedItem.expedition_cookbook_id}`}
+                    </span>
+                  </button>
+                ) : (
+                  <span className="text-sm text-gray-400 italic">No Meal Plan</span>
+                )}
               </div>
             )}
             
@@ -1222,6 +1260,154 @@ function PlannerPageContent() {
         students={students?.filter((s: any) => !s.isArchived) || []}
         expeditionsId={effectiveExpeditionId}
       />
+
+      {/* Meal Plan Detail Sheet */}
+      <Sheet open={mealPlanSheetOpen} onOpenChange={setMealPlanSheetOpen}>
+        <SheetContent className="w-full sm:w-[600px] sm:max-w-[90vw] p-0 flex flex-col h-full overflow-hidden">
+          <SheetHeader className="p-6 pb-4 border-b shrink-0">
+            <div className="flex items-center justify-between">
+              <SheetTitle className="text-xl">
+                {loadingRecipe ? "Loading..." : (selectedRecipe?.recipe_name || "Recipe Details")}
+              </SheetTitle>
+              <button
+                onClick={() => setMealPlanSheetOpen(false)}
+                className="rounded-full p-1.5 hover:bg-gray-100 transition-colors cursor-pointer"
+              >
+                <X className="h-5 w-5 text-gray-500" />
+              </button>
+            </div>
+          </SheetHeader>
+          
+          <div className="flex-1 overflow-y-auto p-6">
+            {loadingRecipe ? (
+              <div className="space-y-4">
+                <Skeleton className="h-48 w-full rounded-xl" />
+                <Skeleton className="h-6 w-48" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-3/4" />
+              </div>
+            ) : selectedRecipe ? (
+              <div className="space-y-6">
+                {/* Recipe Header */}
+                <div className="flex flex-col sm:flex-row gap-4">
+                  {selectedRecipe.recipe_photo && (
+                    <div className="w-full sm:w-40 h-40 rounded-xl overflow-hidden bg-gray-100 shrink-0">
+                      <img
+                        src={selectedRecipe.recipe_photo}
+                        alt={selectedRecipe.recipe_name}
+                        className="object-cover w-full h-full"
+                      />
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-xs text-muted-foreground bg-gray-100 px-2 py-0.5 rounded">{selectedRecipe.type}</span>
+                    </div>
+                    {selectedRecipe.summary && (
+                      <p className="text-sm text-gray-600">{selectedRecipe.summary}</p>
+                    )}
+                    <div className="flex flex-wrap gap-3 mt-3">
+                      {selectedRecipe.duration_minutes && (
+                        <div className="flex items-center gap-1.5 text-sm text-gray-600">
+                          <Clock className="h-4 w-4 text-gray-400" />
+                          <span>{selectedRecipe.duration_minutes}</span>
+                        </div>
+                      )}
+                      {selectedRecipe.equipment_required && (
+                        <div className="flex items-center gap-1.5 text-sm text-gray-600">
+                          <Wrench className="h-4 w-4 text-gray-400" />
+                          <span>{selectedRecipe.equipment_required}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Instructions */}
+                {selectedRecipe.instructions && selectedRecipe.instructions.length > 0 && (
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-900 mb-3">Instructions</h3>
+                    <div className="space-y-3">
+                      {[...selectedRecipe.instructions]
+                        .sort((a: any, b: any) => a.step - b.step)
+                        .map((instruction: any) => (
+                          <div
+                            key={instruction.id}
+                            className="border rounded-lg p-3 bg-white"
+                          >
+                            <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                              Step {instruction.step}
+                            </div>
+                            <p className="text-sm text-gray-900 mb-2">{instruction.instructions}</p>
+                            <div className="flex flex-wrap items-center gap-3 text-xs">
+                              {instruction.duration && (
+                                <div className="flex items-center gap-1 text-gray-600">
+                                  <Clock className="h-3 w-3 text-gray-400" />
+                                  <span>{instruction.duration} min</span>
+                                </div>
+                              )}
+                              {instruction.equipment && (
+                                <div className="flex items-center gap-1 text-gray-600">
+                                  <Wrench className="h-3 w-3 text-gray-400" />
+                                  <span>{instruction.equipment}</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Ingredients */}
+                {selectedRecipe.ingredients && selectedRecipe.ingredients.length > 0 && (
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-900 mb-3">Ingredients</h3>
+                    <div className="border rounded-lg overflow-hidden">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-gray-50/80">
+                            <TableHead className="h-9 px-3 text-xs font-semibold text-gray-600">Ingredient</TableHead>
+                            <TableHead className="h-9 px-3 text-xs font-semibold text-gray-600 w-20">Oz/Meal</TableHead>
+                            <TableHead className="h-9 px-3 text-xs font-semibold text-gray-600">Prep</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {selectedRecipe.ingredients.map((ingredient: any) => (
+                            <TableRow key={ingredient.id}>
+                              <TableCell className="h-10 px-3">
+                                <span className="text-sm font-medium text-gray-900">{ingredient.ingredient}</span>
+                              </TableCell>
+                              <TableCell className="h-10 px-3">
+                                <span className="text-sm text-gray-600">{ingredient.oz_per_meal}</span>
+                              </TableCell>
+                              <TableCell className="h-10 px-3">
+                                <span className="text-sm text-gray-500">{ingredient.prep_notes || "—"}</span>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                )}
+
+                {/* Empty states */}
+                {(!selectedRecipe.instructions || selectedRecipe.instructions.length === 0) && 
+                 (!selectedRecipe.ingredients || selectedRecipe.ingredients.length === 0) && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No detailed recipe information available.
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                Recipe not found.
+              </div>
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   )
 }

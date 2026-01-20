@@ -183,8 +183,8 @@ export function EvaluateClient({ date, expeditionId }: EvaluateClientProps) {
             service_learning: existing.service ?? existing.service_learning ?? null,
             isFlagged: existing.isFlagged ?? existing.is_flagged ?? false,
             isLocked: existing.isLocked ?? existing.is_locked ?? false,
-            bonuses: Array.isArray(existing.bonuses) ? existing.bonuses : (existing.bonus ? [existing.bonus] : []),
-            penalties: Array.isArray(existing.penalties) ? existing.penalties : (existing.penalty ? [existing.penalty] : []),
+            bonuses: Array.isArray(existing.bonus) ? existing.bonus : (Array.isArray(existing.bonuses) ? existing.bonuses : []),
+            penalties: Array.isArray(existing.penalty) ? existing.penalty : (Array.isArray(existing.penalties) ? existing.penalties : []),
             note: existing.note ?? existing.journaling ?? null,
             journal_status_id: matchedJournalStatus?.id ?? null,
             // Boolean flags for disabling categories (true = disabled)
@@ -369,8 +369,8 @@ export function EvaluateClient({ date, expeditionId }: EvaluateClientProps) {
           isCitizenshipUsed: record.isCitizenshipUsed ?? false,
           isFlagged: record.isFlagged,
           isLocked: true, // Lock on submit
-          bonus: record.bonuses?.[0] || {},
-          penalty: record.penalties?.[0] || {},
+          bonus: record.bonuses || [],
+          penalty: record.penalties || [],
           journaling: journalingValue,
         }
 

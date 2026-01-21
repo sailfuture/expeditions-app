@@ -553,7 +553,9 @@ function DisciplinePageContent() {
                       </SelectTrigger>
                       <SelectContent>
                         {students?.map((s: any) => (
-                          <SelectItem key={s.id} value={s.id.toString()}>{s.name}</SelectItem>
+                          <SelectItem key={s.id} value={s.id.toString()}>
+                            {`${s.firstName || ""} ${s.lastName || ""}`.trim() || `Student ${s.id}`}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -736,7 +738,9 @@ function DisciplinePageContent() {
                   </SelectTrigger>
                   <SelectContent>
                     {students?.map((s: any) => (
-                      <SelectItem key={s.id} value={s.id.toString()}>{s.name}</SelectItem>
+                      <SelectItem key={s.id} value={s.id.toString()}>
+                        {`${s.firstName || ""} ${s.lastName || ""}`.trim() || `Student ${s.id}`}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>

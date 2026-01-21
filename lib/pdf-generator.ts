@@ -1,6 +1,6 @@
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import { getPerformanceReviewById, getProfessionalismByStudentAndDate } from './xano'
+import { getPerformanceReviewById, getProfessionalismByStudentAndDate, getExpeditionTransactionsByDateByStudent } from './xano'
 
 // School header information
 const SCHOOL_INFO = {
@@ -102,6 +102,27 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
     }
   }
   
+  // Fetch bonuses and penalties for this student and date range
+  let transactions: any[] = []
+  if (review.students_id && review.expeditions_id && review.startDate && review.endDate) {
+    try {
+      transactions = await getExpeditionTransactionsByDateByStudent(
+        review.students_id,
+        review.expeditions_id,
+        review.startDate,
+        review.endDate
+      )
+      // Sort by date
+      transactions.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    } catch (error) {
+      console.error('Error fetching transactions:', error)
+    }
+  }
+  
+  // Separate bonuses and penalties
+  const bonuses = transactions.filter((t: any) => t.type === 'bonus' || t.amount > 0)
+  const penalties = transactions.filter((t: any) => t.type === 'penalty' || t.amount < 0)
+  
   const doc = new jsPDF()
   const pageWidth = doc.internal.pageSize.getWidth()
   const leftMargin = 14
@@ -146,6 +167,13 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
   yPosition += 6
   doc.text(`Report Name: ${review.report_name || 'Untitled'}`, 14, yPosition)
   yPosition += 6
+  
+  // Add Reviewed By if staff is present
+  const reviewedBy = review._expedition_staff?.name || null
+  if (reviewedBy) {
+    doc.text(`Reviewed By: ${reviewedBy}`, 14, yPosition)
+    yPosition += 6
+  }
   doc.text(`Review Period: ${formatDate(review.startDate)} - ${formatDate(review.endDate)}`, 14, yPosition)
   yPosition += 12
   
@@ -332,6 +360,96 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
             if (color) {
               data.cell.styles.fillColor = color
             }
+          }
+        }
+      },
+    })
+    
+    yPosition = (doc as any).lastAutoTable.finalY + 15
+  }
+  
+  // Daily Transaction History Section
+  if (bonuses.length > 0 || penalties.length > 0) {
+    // Check if we need a new page
+    if (yPosition > 200) {
+      doc.addPage()
+      yPosition = 20
+    }
+    
+    doc.setFontSize(14)
+    doc.setFont('helvetica', 'bold')
+    doc.text('Daily Transaction History', 14, yPosition)
+    yPosition += 8
+    
+    // Combine and sort transactions
+    const allTransactions = [...bonuses, ...penalties].sort(
+      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+    )
+    
+    // Calculate total
+    const total = allTransactions.reduce((sum, t) => sum + (t.amount || 0), 0)
+    
+    // Create transactions table data
+    const transactionsTableData = allTransactions.map((t: any) => {
+      const isBonus = t.type === 'bonus' || t.amount > 0
+      return [
+        formatDateShort(t.date),
+        `${isBonus ? '+' : ''}${t.amount || 0}`,
+      ]
+    })
+    
+    // Add total row
+    transactionsTableData.push([
+      'Total',
+      `${total >= 0 ? '+' : ''}${total}`,
+    ])
+    
+    autoTable(doc, {
+      startY: yPosition,
+      head: [['Date', 'Amount']],
+      body: transactionsTableData,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [249, 250, 251],
+        textColor: [55, 65, 81],
+        fontStyle: 'bold',
+        fontSize: 9,
+      },
+      bodyStyles: {
+        fontSize: 9,
+        textColor: [55, 65, 81],
+      },
+      columnStyles: {
+        0: { cellWidth: 60 },
+        1: { cellWidth: 40, halign: 'right' },
+      },
+      tableWidth: 'auto',
+      margin: { left: leftMargin, right: leftMargin },
+      alternateRowStyles: {
+        fillColor: [249, 250, 251],
+      },
+      didParseCell: (data) => {
+        const isLastRow = data.row.index === transactionsTableData.length - 1
+        
+        // Style the total row
+        if (data.section === 'body' && isLastRow) {
+          data.cell.styles.fillColor = [249, 250, 251] // gray-50
+          data.cell.styles.fontStyle = 'bold'
+          if (data.column.index === 1) {
+            if (total >= 0) {
+              data.cell.styles.textColor = [22, 163, 74] // green-600
+            } else {
+              data.cell.styles.textColor = [220, 38, 38] // red-600
+            }
+          }
+        }
+        // Color code the Amount column for non-total rows
+        else if (data.section === 'body' && data.column.index === 1) {
+          const amount = data.cell.text[0]
+          if (amount.startsWith('+')) {
+            data.cell.styles.textColor = [22, 163, 74] // green-600
+          } else {
+            data.cell.styles.textColor = [220, 38, 38] // red-600
           }
         }
       },

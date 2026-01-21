@@ -265,10 +265,14 @@ export async function getPerformanceReviewById(reviewId: number) {
   return xanoFetch<any>(`/expedition_performance_reviews/${reviewId}`)
 }
 
-export async function updatePerformanceReviewNotes(id: number, notes: string) {
+export async function updatePerformanceReviewNotes(id: number, notes: string, expedition_staff_id?: number) {
+  const data: any = { notes }
+  if (expedition_staff_id !== undefined) {
+    data.expedition_staff_id = expedition_staff_id
+  }
   return xanoFetch<any>(`/expedition_performance_reviews/${id}`, {
     method: "PATCH",
-    body: JSON.stringify({ notes }),
+    body: JSON.stringify(data),
   })
 }
 
@@ -654,4 +658,24 @@ export async function deleteExpeditionPassageLog(id: number) {
   return xanoFetch<any>(`/expedition_passage_logs/${id}`, {
     method: "DELETE",
   })
+}
+
+// ============ Toddle Integration ============
+export async function reloadToddleStudents() {
+  return xanoFetch<any>("/toddle_students_api")
+}
+
+// ============ Expedition Transactions ============
+export async function getExpeditionTransactionsByDateByStudent(
+  studentsId: number,
+  expeditionsId: number,
+  startDate: string | null,
+  endDate: string | null
+) {
+  const params = new URLSearchParams()
+  if (startDate) params.append('startDate', startDate)
+  if (endDate) params.append('endDate', endDate)
+  params.append('students_id', studentsId.toString())
+  params.append('expeditions_id', expeditionsId.toString())
+  return xanoFetch<any[]>(`/expedition_transactions_by_date_by_student?${params.toString()}`)
 }

@@ -13,7 +13,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
-import { ExternalLink, User, Users, Link2, Link2Off } from "lucide-react"
+import { ExternalLink, User, Users, Link2, Link2Off, RefreshCw } from "lucide-react"
 import { useStudentsByExpedition, useStudents as useAllStudents } from "@/lib/hooks/use-expeditions"
 import { useCurrentUser } from "@/lib/contexts/user-context"
 import { useExpeditionContext } from "@/lib/contexts/expedition-context"
@@ -44,7 +44,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { updateStudent } from "@/lib/xano"
+import { updateStudent, reloadToddleStudents } from "@/lib/xano"
 import { mutate } from "swr"
 import { toast } from "sonner"
 import useSWR from "swr"
@@ -96,6 +96,7 @@ function StudentsPageContent() {
   const [updatingField, setUpdatingField] = useState<string | null>(null)
   const [linkModalOpen, setLinkModalOpen] = useState(false)
   const [selectedStudentForLink, setSelectedStudentForLink] = useState<any>(null)
+  const [isReloadingToddle, setIsReloadingToddle] = useState(false)
   
   // Fetch applications for linking
   const { data: applications } = useSWR("expedition_student_applications", fetchApplications)
@@ -299,6 +300,21 @@ function StudentsPageContent() {
     setLinkModalOpen(true)
   }
 
+  // Reload Toddle students
+  const handleReloadToddleStudents = async () => {
+    setIsReloadingToddle(true)
+    try {
+      await reloadToddleStudents()
+      mutate("students")
+      toast.success("Toddle students reloaded successfully")
+    } catch (error) {
+      console.error("Failed to reload Toddle students:", error)
+      toast.error("Failed to reload Toddle students")
+    } finally {
+      setIsReloadingToddle(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {expeditionIdFromUrl ? (
@@ -335,15 +351,26 @@ function StudentsPageContent() {
                     All students across all expeditions
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Switch
-                    id="show-archived"
-                    checked={showArchived}
-                    onCheckedChange={setShowArchived}
-                  />
-                  <Label htmlFor="show-archived" className="text-sm cursor-pointer">
-                    Show archived students
-                  </Label>
+                <div className="flex items-center gap-4">
+                  <Button
+                    variant="outline"
+                    onClick={handleReloadToddleStudents}
+                    disabled={isReloadingToddle}
+                    className="cursor-pointer"
+                  >
+                    <RefreshCw className={`h-4 w-4 mr-2 ${isReloadingToddle ? 'animate-spin' : ''}`} />
+                    {isReloadingToddle ? 'Reloading...' : 'Reload Toddle Students'}
+                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      id="show-archived"
+                      checked={showArchived}
+                      onCheckedChange={setShowArchived}
+                    />
+                    <Label htmlFor="show-archived" className="text-sm cursor-pointer">
+                      Show archived students
+                    </Label>
+                  </div>
                 </div>
               </div>
             </div>

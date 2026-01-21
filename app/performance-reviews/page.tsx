@@ -15,14 +15,14 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ExpeditionHeader } from "@/components/expedition-header"
-import { useExpeditions, useExpeditionPerformanceReviews } from "@/lib/hooks/use-expeditions"
+import { useExpeditions, useExpeditionPerformanceReviews, useTeachersByExpedition } from "@/lib/hooks/use-expeditions"
 import { FileText, User, Download, ExternalLink, Plus, Calendar, Eye, Trash2 } from "lucide-react"
 import { Textarea } from "@/components/ui/textarea"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { generatePerformanceReviewPDF } from "@/lib/pdf-generator"
 import { toast } from "sonner"
-import { getProfessionalismByStudentAndDate, createPerformanceReview, updatePerformanceReviewNotes, getPerformanceReviewById, deletePerformanceReview } from "@/lib/xano"
+import { getProfessionalismByStudentAndDate, createPerformanceReview, updatePerformanceReviewNotes, getPerformanceReviewById, deletePerformanceReview, getExpeditionTransactionsByDateByStudent } from "@/lib/xano"
 import { Spinner } from "@/components/ui/spinner"
 import { mutate } from "swr"
 import {
@@ -51,6 +51,13 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 // Helper function to format dates
 function formatDate(dateStr: string | null) {
@@ -107,6 +114,9 @@ function PreviewModal({
   onOpenChange,
   notes,
   onNotesChange,
+  selectedStaffId,
+  onStaffChange,
+  staff,
   onSave,
   saving
 }: { 
@@ -115,6 +125,9 @@ function PreviewModal({
   onOpenChange: (open: boolean) => void
   notes: string
   onNotesChange: (notes: string) => void
+  selectedStaffId: string
+  onStaffChange: (staffId: string) => void
+  staff: any[] | undefined
   onSave: () => void
   saving: boolean
 }) {
@@ -124,9 +137,12 @@ function PreviewModal({
     open && reviewId ? () => getPerformanceReviewById(reviewId) : null,
     {
       onSuccess: (data) => {
-        // Update notes when review data loads
+        // Update notes and staff when review data loads
         if (data && data.notes !== undefined) {
           onNotesChange(data.notes || "")
+        }
+        if (data && data.expedition_staff_id) {
+          onStaffChange(data.expedition_staff_id.toString())
         }
       }
     }
@@ -146,6 +162,29 @@ function PreviewModal({
         )
       : null
   )
+  
+  // Fetch bonuses and penalties for this student and date range
+  const { data: transactions, isLoading: loadingTransactions } = useSWR(
+    open && review?.students_id && review?.expeditions_id && review?.startDate && review?.endDate
+      ? `transactions_${review.students_id}_${review.expeditions_id}_${review.startDate}_${review.endDate}`
+      : null,
+    open && review?.students_id && review?.expeditions_id && review?.startDate && review?.endDate
+      ? () => getExpeditionTransactionsByDateByStudent(
+          review.students_id,
+          review.expeditions_id,
+          review.startDate,
+          review.endDate
+        )
+      : null
+  )
+  
+  // Separate bonuses and penalties from transactions
+  const { bonuses, penalties } = useMemo(() => {
+    if (!transactions) return { bonuses: [], penalties: [] }
+    const bonusList = transactions.filter((t: any) => t.type === 'bonus' || t.amount > 0)
+    const penaltyList = transactions.filter((t: any) => t.type === 'penalty' || t.amount < 0)
+    return { bonuses: bonusList, penalties: penaltyList }
+  }, [transactions])
   
   const getEvaluationColorByScore = (score: number | null | undefined) => {
     if (score === null || score === undefined) return ""
@@ -335,6 +374,60 @@ function PreviewModal({
             )}
           </div>
           
+          {/* Daily Transaction History Table */}
+          <div>
+            <h3 className="text-sm font-semibold text-gray-700 mb-3">Daily Transaction History</h3>
+            {loadingTransactions ? (
+              <div className="flex justify-center py-4">
+                <Spinner size="sm" />
+              </div>
+            ) : (bonuses.length > 0 || penalties.length > 0) ? (
+              (() => {
+                const allTransactions = [...bonuses, ...penalties].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+                const total = allTransactions.reduce((sum, t) => sum + (t.amount || 0), 0)
+                return (
+                  <div className="border rounded-lg overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="border-b bg-gray-50 hover:bg-gray-50">
+                            <TableHead className="h-10 px-3 text-xs font-semibold text-gray-600">Date</TableHead>
+                            <TableHead className="h-10 px-3 text-xs font-semibold text-gray-600 text-right">Amount</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {allTransactions.map((transaction: any, idx: number) => {
+                            const isBonus = transaction.type === 'bonus' || transaction.amount > 0
+                            return (
+                              <TableRow key={transaction.id || idx} className="border-b">
+                                <TableCell className="px-3 py-2 text-sm text-gray-700">
+                                  {formatDateShort(transaction.date)}
+                                </TableCell>
+                                <TableCell className={`px-3 py-2 text-sm text-right font-medium ${isBonus ? 'text-green-600' : 'text-red-600'}`}>
+                                  {isBonus ? '+' : ''}{transaction.amount || 0}
+                                </TableCell>
+                              </TableRow>
+                            )
+                          })}
+                          <TableRow className="bg-gray-50 border-t-2">
+                            <TableCell className="px-3 py-2 text-sm font-semibold text-gray-900">
+                              Total
+                            </TableCell>
+                            <TableCell className={`px-3 py-2 text-sm text-right font-bold ${total >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                              {total >= 0 ? '+' : ''}{total}
+                            </TableCell>
+                          </TableRow>
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                )
+              })()
+            ) : (
+              <p className="text-sm text-gray-500 text-center py-4">No transactions for this period.</p>
+            )}
+          </div>
+          
           {/* Notes Section */}
           <div>
             <Label htmlFor="notes" className="text-sm font-semibold text-gray-700">Notes</Label>
@@ -345,6 +438,23 @@ function PreviewModal({
               onChange={(e) => onNotesChange(e.target.value)}
               className="mt-2 min-h-[120px]"
             />
+          </div>
+          
+          {/* Staff Selection */}
+          <div>
+            <Label htmlFor="staff" className="text-sm font-semibold text-gray-700">Reviewed By</Label>
+            <Select value={selectedStaffId} onValueChange={onStaffChange}>
+              <SelectTrigger className="mt-2">
+                <SelectValue placeholder="Select staff member" />
+              </SelectTrigger>
+              <SelectContent>
+                {staff?.map((s: any) => (
+                  <SelectItem key={s.id} value={s.id.toString()}>
+                    {s.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
         
@@ -368,7 +478,7 @@ function PreviewModal({
                 Saving...
               </>
             ) : (
-              'Save Notes'
+              'Save Review'
             )}
           </Button>
         </DialogFooter>
@@ -386,6 +496,7 @@ function PerformanceReviewsContent() {
   
   const { data: allExpeditions } = useExpeditions()
   const { data: performanceReviews, isLoading } = useExpeditionPerformanceReviews(expeditionId)
+  const { data: staff } = useTeachersByExpedition(expeditionId)
   
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [reportName, setReportName] = useState("")
@@ -398,6 +509,7 @@ function PerformanceReviewsContent() {
   const [previewModalOpen, setPreviewModalOpen] = useState(false)
   const [selectedReviewId, setSelectedReviewId] = useState<number | null>(null)
   const [editedNotes, setEditedNotes] = useState("")
+  const [selectedStaffId, setSelectedStaffId] = useState("")
   const [savingNotes, setSavingNotes] = useState(false)
   
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
@@ -449,6 +561,7 @@ function PerformanceReviewsContent() {
   const handlePreviewReview = async (reviewId: number, currentNotes: string) => {
     setSelectedReviewId(reviewId)
     setEditedNotes(currentNotes || "")
+    setSelectedStaffId("")
     setPreviewModalOpen(true)
   }
   
@@ -457,14 +570,15 @@ function PerformanceReviewsContent() {
     
     setSavingNotes(true)
     try {
-      await updatePerformanceReviewNotes(selectedReviewId, editedNotes)
-      toast.success("Notes saved successfully")
+      const staffId = selectedStaffId ? parseInt(selectedStaffId) : undefined
+      await updatePerformanceReviewNotes(selectedReviewId, editedNotes, staffId)
+      toast.success("Review saved successfully")
       await mutate(`expedition_performance_reviews_${expeditionId}`)
       await mutate(`performance_review_${selectedReviewId}`)
       setPreviewModalOpen(false)
     } catch (error) {
-      console.error("Error saving notes:", error)
-      toast.error("Failed to save notes")
+      console.error("Error saving review:", error)
+      toast.error("Failed to save review")
     } finally {
       setSavingNotes(false)
     }
@@ -720,6 +834,9 @@ function PerformanceReviewsContent() {
           }}
           notes={editedNotes}
           onNotesChange={setEditedNotes}
+          selectedStaffId={selectedStaffId}
+          onStaffChange={setSelectedStaffId}
+          staff={staff}
           onSave={handleSaveNotes}
           saving={savingNotes}
         />

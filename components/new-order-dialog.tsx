@@ -426,28 +426,21 @@ export function NewOrderDialog({ open, onOpenChange, expeditionId }: NewOrderDia
                 </div>
               ) : (
                 <Table>
-                  <TableHeader>
-                    <TableRow className="bg-gray-50/50 hover:bg-gray-50/50">
-                      <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600">Item</TableHead>
-                      <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 text-right">Price</TableHead>
-                      <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 text-center w-32">Qty</TableHead>
-                    </TableRow>
-                  </TableHeader>
                   <TableBody>
                     {availableItems.map((item: StoreItem) => {
                       const cartQty = getCartQuantity(item.id)
                       const canAfford = canAffordItem(item)
-                      const isInCart = cartQty > 0
-                      const isDisabled = !canAfford && !isInCart
+                      const remainingStock = item.quantity - cartQty
+                      const isDisabled = !canAfford && cartQty === 0
 
                       return (
                         <TableRow 
                           key={item.id}
-                          className={`${isDisabled ? 'opacity-50 bg-gray-50' : ''} ${isInCart ? 'bg-blue-50/50' : ''}`}
+                          className={isDisabled ? 'opacity-50 bg-gray-50' : ''}
                         >
-                          <TableCell className="h-14 px-4 sm:px-6">
+                          <TableCell className="h-14 px-4 sm:px-6 w-[50%]">
                             <div className="flex items-center gap-2 sm:gap-3">
-                              <div className="h-10 w-10 flex-shrink-0 bg-gray-100 rounded overflow-hidden">
+                              <div className="h-10 w-10 flex-shrink-0 bg-gray-100 rounded-full overflow-hidden">
                                 {item.product_image ? (
                                   <img
                                     src={item.product_image}
@@ -464,57 +457,47 @@ export function NewOrderDialog({ open, onOpenChange, expeditionId }: NewOrderDia
                                 <p className="font-medium text-gray-900 truncate text-sm">
                                   {item.product_name}
                                 </p>
-                                {isDisabled && !isInCart && (
+                                {isDisabled ? (
                                   <p className="text-xs text-red-500 flex items-center gap-1">
                                     <AlertCircle className="h-3 w-3" />
                                     Insufficient balance
+                                  </p>
+                                ) : (
+                                  <p className={`text-xs ${remainingStock <= 0 ? 'text-red-500' : 'text-gray-500'}`}>
+                                    {remainingStock} in stock
                                   </p>
                                 )}
                               </div>
                             </div>
                           </TableCell>
-                          <TableCell className="h-14 px-4 sm:px-6 text-right">
+                          <TableCell className="h-14 px-4 sm:px-6 text-right w-[20%]">
                             <span className="font-bold text-gray-900 text-sm">
                               {formatPrice(item.price)}
                             </span>
                           </TableCell>
-                          <TableCell className="h-14 px-4 sm:px-6">
+                          <TableCell className="h-14 px-4 sm:px-6 w-[30%]">
                             <div className="flex items-center justify-center gap-1">
-                              {isInCart ? (
-                                <>
-                                  <Button
-                                    variant="outline"
-                                    size="icon"
-                                    className="h-7 w-7 cursor-pointer"
-                                    onClick={() => removeFromCart(item.id)}
-                                  >
-                                    <Minus className="h-3 w-3" />
-                                  </Button>
-                                  <span className="w-8 text-center font-medium text-sm">
-                                    {cartQty}
-                                  </span>
-                                  <Button
-                                    variant="outline"
-                                    size="icon"
-                                    className="h-7 w-7 cursor-pointer"
-                                    onClick={() => addToCart(item)}
-                                    disabled={!canAfford}
-                                  >
-                                    <Plus className="h-3 w-3" />
-                                  </Button>
-                                </>
-                              ) : (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="cursor-pointer h-7 text-xs"
-                                  onClick={() => addToCart(item)}
-                                  disabled={isDisabled}
-                                >
-                                  <Plus className="h-3 w-3 mr-1" />
-                                  Add
-                                </Button>
-                              )}
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                className="h-7 w-7 cursor-pointer"
+                                onClick={() => removeFromCart(item.id)}
+                                disabled={cartQty === 0}
+                              >
+                                <Minus className="h-3 w-3" />
+                              </Button>
+                              <span className="w-8 text-center font-medium text-sm">
+                                {cartQty}
+                              </span>
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                className="h-7 w-7 cursor-pointer"
+                                onClick={() => addToCart(item)}
+                                disabled={!canAfford || remainingStock <= 0}
+                              >
+                                <Plus className="h-3 w-3" />
+                              </Button>
                             </div>
                           </TableCell>
                         </TableRow>
@@ -526,10 +509,15 @@ export function NewOrderDialog({ open, onOpenChange, expeditionId }: NewOrderDia
             </div>
 
             {/* Cart Summary Footer */}
-            {cart.length > 0 && (
-              <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t flex-shrink-0">
-                <div className="space-y-0.5 sm:space-y-1 mb-2 sm:mb-3 max-h-20 overflow-y-auto">
-                  {cart.map((cartItem) => (
+            <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t flex-shrink-0">
+              <div className="space-y-0.5 sm:space-y-1 mb-2 sm:mb-3 max-h-20 overflow-y-auto">
+                {cart.length === 0 ? (
+                  <div className="flex items-center justify-between text-xs sm:text-sm">
+                    <span className="text-gray-400">—</span>
+                    <span className="text-gray-400">—</span>
+                  </div>
+                ) : (
+                  cart.map((cartItem) => (
                     <div key={cartItem.storeItem.id} className="flex items-center justify-between text-xs sm:text-sm">
                       <span className="text-gray-600 truncate mr-2">
                         {cartItem.storeItem.product_name} x{cartItem.quantity}
@@ -538,14 +526,14 @@ export function NewOrderDialog({ open, onOpenChange, expeditionId }: NewOrderDia
                         {formatPrice(cartItem.storeItem.price * cartItem.quantity)}
                       </span>
                     </div>
-                  ))}
-                </div>
-                <div className="flex items-center justify-between font-bold text-base sm:text-lg border-t pt-2">
-                  <span>Total</span>
-                  <span>{formatPrice(cartTotal)}</span>
-                </div>
+                  ))
+                )}
               </div>
-            )}
+              <div className="flex items-center justify-between font-bold text-base sm:text-lg border-t pt-2">
+                <span>Total</span>
+                <span>{cart.length === 0 ? '—' : formatPrice(cartTotal)}</span>
+              </div>
+            </div>
           </div>
         )}
 

@@ -97,7 +97,7 @@ function formatRelativeTime(timestamp: number | null) {
 }
 
 // Generate PDF for discipline record
-function generateDisciplinePDF(record: any, studentName: string, staffName: string) {
+async function generateDisciplinePDF(record: any, studentName: string, staffName: string) {
   const doc = new jsPDF()
   const pageWidth = doc.internal.pageSize.getWidth()
   const margin = 14
@@ -106,30 +106,12 @@ function generateDisciplinePDF(record: any, studentName: string, staffName: stri
   const docType = record.isReferral ? "Referral" : "Infraction"
   
   // Add school header
-  let yPos = addPDFHeader(doc)
+  let yPos = await addPDFHeader(doc)
   
   // Title
   doc.setFontSize(18)
   doc.setFont("helvetica", "bold")
-  doc.text(`Student ${docType} Report`, pageWidth / 2, yPos, { align: "center" })
-  yPos += 10
-  
-  // Document type badge
-  doc.setFontSize(10)
-  doc.setFont("helvetica", "normal")
-  if (record.isReferral) {
-    doc.setFillColor(239, 68, 68) // Red
-    doc.roundedRect(pageWidth / 2 - 20, yPos - 5, 40, 7, 2, 2, 'F')
-    doc.setTextColor(255, 255, 255)
-    doc.text("REFERRAL", pageWidth / 2, yPos, { align: "center" })
-  } else {
-    doc.setFillColor(234, 179, 8) // Yellow
-    doc.roundedRect(pageWidth / 2 - 20, yPos - 5, 40, 7, 2, 2, 'F')
-    doc.setTextColor(0, 0, 0)
-    doc.text("INFRACTION", pageWidth / 2, yPos, { align: "center" })
-  }
-  doc.setTextColor(0, 0, 0)
-  
+  doc.text(`Student ${docType} Report`, margin, yPos)
   yPos += 12
   
   // Info section
@@ -349,10 +331,10 @@ function DisciplinePageContent() {
     }
   }
   
-  const handleDownloadPDF = (record: any) => {
+  const handleDownloadPDF = async (record: any) => {
     const student = students?.find((s: any) => s.id === record.students_id)
     const staffMember = staff?.find((s: any) => s.id === record.expedition_staff_id)
-    generateDisciplinePDF(
+    await generateDisciplinePDF(
       record, 
       `${student?.firstName || ""} ${student?.lastName || ""}`.trim() || "Unknown Student",
       staffMember?.name || "Unknown Staff"
@@ -681,10 +663,10 @@ function DisciplinePageContent() {
           <DialogFooter className="border-t pt-4">
             {isEditing ? (
               <>
-                <Button variant="outline" onClick={() => setIsEditing(false)} disabled={isSaving}>
+                <Button variant="outline" className="cursor-pointer" onClick={() => setIsEditing(false)} disabled={isSaving}>
                   Cancel
                 </Button>
-                <Button onClick={handleSaveEdit} disabled={isSaving}>
+                <Button className="cursor-pointer" onClick={handleSaveEdit} disabled={isSaving}>
                   {isSaving ? <Spinner className="mr-2" /> : null}
                   Save Changes
                 </Button>
@@ -693,6 +675,7 @@ function DisciplinePageContent() {
               <>
                 <Button
                   variant="outline"
+                  className="cursor-pointer"
                   onClick={() => selectedRecord && handleDownloadPDF(selectedRecord)}
                 >
                   <Download className="h-4 w-4 mr-2" />
@@ -700,6 +683,7 @@ function DisciplinePageContent() {
                 </Button>
                 <Button
                   variant="outline"
+                  className="cursor-pointer"
                   onClick={() => setIsEditing(true)}
                 >
                   <Pencil className="h-4 w-4 mr-2" />
@@ -707,6 +691,7 @@ function DisciplinePageContent() {
                 </Button>
                 <Button
                   variant="destructive"
+                  className="cursor-pointer"
                   onClick={() => setDeleteDialogOpen(true)}
                 >
                   <Trash2 className="h-4 w-4 mr-2" />
@@ -839,10 +824,10 @@ function DisciplinePageContent() {
           </div>
           
           <DialogFooter className="border-t pt-4">
-            <Button variant="outline" onClick={() => setCreateModalOpen(false)} disabled={isSaving}>
+            <Button variant="outline" className="cursor-pointer" onClick={() => setCreateModalOpen(false)} disabled={isSaving}>
               Cancel
             </Button>
-            <Button onClick={handleCreate} disabled={isSaving}>
+            <Button className="cursor-pointer" onClick={handleCreate} disabled={isSaving}>
               {isSaving ? <Spinner className="mr-2" /> : null}
               Create {formData.isReferral ? "Referral" : "Infraction"}
             </Button>
@@ -861,11 +846,11 @@ function DisciplinePageContent() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel className="cursor-pointer" disabled={isDeleting}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
               disabled={isDeleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="cursor-pointer bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {isDeleting ? <Spinner className="mr-2" /> : null}
               Delete

@@ -158,26 +158,6 @@ export default function RecipeDetailPage() {
             </div>
           </div>
           
-          {/* Instructions Skeleton */}
-          <div>
-            <Skeleton className="h-7 w-32 mb-4" />
-            <div className="space-y-4">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="border rounded-lg p-4">
-                  <Skeleton className="h-3 w-16 mb-2" />
-                  <div className="space-y-2">
-                    <Skeleton className="h-4 w-full" />
-                    <Skeleton className="h-4 w-3/4" />
-                    <div className="flex gap-4 mt-2">
-                      <Skeleton className="h-4 w-20" />
-                      <Skeleton className="h-4 w-32" />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
           {/* Ingredients Skeleton */}
           <div className="border rounded-lg overflow-hidden">
             <Table>
@@ -200,6 +180,26 @@ export default function RecipeDetailPage() {
                 ))}
               </TableBody>
             </Table>
+          </div>
+
+          {/* Instructions Skeleton */}
+          <div>
+            <Skeleton className="h-7 w-32 mb-4" />
+            <div className="space-y-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="border rounded-lg p-4">
+                  <Skeleton className="h-3 w-16 mb-2" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-3/4" />
+                    <div className="flex gap-4 mt-2">
+                      <Skeleton className="h-4 w-20" />
+                      <Skeleton className="h-4 w-32" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       ) : recipe ? (
@@ -247,49 +247,6 @@ export default function RecipeDetailPage() {
               </div>
             </div>
           </div>
-
-          {/* Instructions */}
-          {sortedInstructions.length > 0 && (
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Instructions</h2>
-              <div className="space-y-4">
-                {sortedInstructions.map((instruction) => (
-                  <div
-                    key={instruction.id}
-                    className="border rounded-lg p-4 bg-white hover:shadow-sm transition-shadow"
-                  >
-                    {/* Step Label */}
-                    <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                      Step {instruction.step}
-                    </div>
-                    
-                    {/* Content */}
-                    <div>
-                      <p className="text-gray-900 leading-relaxed mb-3">
-                        {instruction.instructions}
-                      </p>
-                      
-                      {/* Meta information */}
-                      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
-                        {instruction.duration && (
-                          <div className="flex items-center gap-1.5 text-gray-600">
-                            <Clock className="h-4 w-4 text-gray-400" />
-                            <span>{instruction.duration} min</span>
-                          </div>
-                        )}
-                        {instruction.equipment && (
-                          <div className="flex items-center gap-1.5 text-gray-600">
-                            <Wrench className="h-4 w-4 text-gray-400" />
-                            <span className="break-words">{instruction.equipment}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
 
           {/* Ingredients Table */}
           {recipe.ingredients && recipe.ingredients.length > 0 && (
@@ -352,6 +309,49 @@ export default function RecipeDetailPage() {
           {(!recipe.ingredients || recipe.ingredients.length === 0) && (
             <div className="border rounded-lg p-8 text-center text-muted-foreground">
               No ingredients found for this recipe.
+            </div>
+          )}
+
+          {/* Instructions */}
+          {sortedInstructions.length > 0 && (
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Instructions</h2>
+              <div className="space-y-4">
+                {sortedInstructions.map((instruction) => (
+                  <div
+                    key={instruction.id}
+                    className="border rounded-lg p-4 bg-white hover:shadow-sm transition-shadow"
+                  >
+                    {/* Step Label */}
+                    <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                      Step {instruction.step}
+                    </div>
+                    
+                    {/* Content */}
+                    <div>
+                      <p className="text-gray-900 leading-relaxed mb-3">
+                        {instruction.instructions}
+                      </p>
+                      
+                      {/* Meta information */}
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+                        {instruction.duration && (
+                          <div className="flex items-center gap-1.5 text-gray-600">
+                            <Clock className="h-4 w-4 text-gray-400" />
+                            <span>{instruction.duration} min</span>
+                          </div>
+                        )}
+                        {instruction.equipment && (
+                          <div className="flex items-center gap-1.5 text-gray-600">
+                            <Wrench className="h-4 w-4 text-gray-400" />
+                            <span className="break-words">{instruction.equipment}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>

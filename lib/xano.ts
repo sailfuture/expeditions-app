@@ -679,3 +679,100 @@ export async function getExpeditionTransactionsByDateByStudent(
   params.append('expeditions_id', expeditionsId.toString())
   return xanoFetch<any[]>(`/expedition_transactions_by_date_by_student?${params.toString()}`)
 }
+
+// ============ Expeditions Store ============
+export async function getExpeditionsStore(expeditionsId?: number) {
+  const url = expeditionsId 
+    ? `/expeditions_store?expeditions_id=${expeditionsId}`
+    : "/expeditions_store"
+  return xanoFetch<any[]>(url)
+}
+
+export async function getExpeditionsStoreItem(id: number) {
+  return xanoFetch<any>(`/expeditions_store/${id}`)
+}
+
+export async function createExpeditionsStoreItem(data: {
+  product_name: string
+  quantity: number
+  description: string
+  isArchived: boolean
+  product_image: string
+  price: number
+  expeditions_id: number
+}) {
+  return xanoFetch<any>("/expeditions_store", {
+    method: "POST",
+    body: JSON.stringify(data),
+  })
+}
+
+export async function updateExpeditionsStoreItem(id: number, data: Record<string, any>) {
+  return xanoFetch<any>(`/expeditions_store/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  })
+}
+
+export async function deleteExpeditionsStoreItem(id: number) {
+  return xanoFetch<any>(`/expeditions_store/${id}`, {
+    method: "DELETE",
+  })
+}
+
+// ============ Expedition Transactions (All types including purchases) ============
+export async function getExpeditionTransactions(expeditionsId?: number) {
+  const url = expeditionsId 
+    ? `/expedition_transactions?expeditions_id=${expeditionsId}`
+    : "/expedition_transactions"
+  return xanoFetch<any[]>(url)
+}
+
+export async function getExpeditionTransactionById(id: number) {
+  return xanoFetch<any>(`/expedition_transactions/${id}`)
+}
+
+export async function updateExpeditionTransaction(id: number, data: {
+  date?: string
+  transaction?: string
+  amount?: number
+  students_id?: number
+  expeditions_id?: number
+  expeditions_store_id?: number
+  quantity?: number
+}) {
+  return xanoFetch<any>(`/expedition_transactions/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  })
+}
+
+export async function deleteExpeditionTransaction(id: number) {
+  return xanoFetch<any>(`/expedition_transactions/${id}`, {
+    method: "DELETE",
+  })
+}
+
+// ============ Students with Balance ============
+export async function getStudentsWithBalance(expeditionsId?: number) {
+  const url = expeditionsId 
+    ? `/students_with_balance?expeditions_id=${expeditionsId}`
+    : "/students_with_balance"
+  return xanoFetch<any[]>(url)
+}
+
+// ============ Expedition Transactions (for store purchases) ============
+export async function createExpeditionTransaction(data: {
+  date: string | null
+  transaction: string
+  amount: number
+  students_id: number
+  expeditions_id: number
+  expeditions_store_id: number
+  quantity: number
+}) {
+  return xanoFetch<any>("/expedition_transactions", {
+    method: "POST",
+    body: JSON.stringify(data),
+  })
+}

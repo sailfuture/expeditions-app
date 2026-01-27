@@ -119,13 +119,10 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
     }
   }
   
-  // Separate bonuses and penalties (excluding Purchases)
-  const bonuses = transactions.filter((t: any) => 
-    t.transaction === 'Bonus' || (t.transaction !== 'Purchase' && t.transaction !== 'Penalty' && t.amount > 0)
-  )
-  const penalties = transactions.filter((t: any) => 
-    t.transaction === 'Penalty' || (t.transaction !== 'Purchase' && t.transaction !== 'Bonus' && t.amount < 0)
-  )
+  // Separate bonuses (positive) and penalties (negative), excluding store Purchases
+  const nonPurchases = transactions.filter((t: any) => t.transaction !== 'Purchase')
+  const bonuses = nonPurchases.filter((t: any) => t.amount > 0)
+  const penalties = nonPurchases.filter((t: any) => t.amount < 0)
   
   const doc = new jsPDF()
   const pageWidth = doc.internal.pageSize.getWidth()

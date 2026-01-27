@@ -206,16 +206,13 @@ function PreviewModal({
       : null
   )
   
-  // Separate bonuses and penalties from transactions (excluding Purchases)
+  // Separate bonuses (positive) and penalties (negative) from transactions, excluding store Purchases
   const { bonuses, penalties } = useMemo(() => {
-    if (!transactions) return { bonuses: [], penalties: [] }
-    // The field is 'transaction' not 'type', with values like "Bonus", "Penalty", "Purchase"
-    const bonusList = transactions.filter((t: any) => 
-      t.transaction === 'Bonus' || (t.transaction !== 'Purchase' && t.transaction !== 'Penalty' && t.amount > 0)
-    )
-    const penaltyList = transactions.filter((t: any) => 
-      t.transaction === 'Penalty' || (t.transaction !== 'Purchase' && t.transaction !== 'Bonus' && t.amount < 0)
-    )
+    if (!transactions || !Array.isArray(transactions)) return { bonuses: [], penalties: [] }
+    // Filter out store purchases, then split by positive/negative amount
+    const nonPurchases = transactions.filter((t: any) => t.transaction !== 'Purchase')
+    const bonusList = nonPurchases.filter((t: any) => t.amount > 0)
+    const penaltyList = nonPurchases.filter((t: any) => t.amount < 0)
     return { bonuses: bonusList, penalties: penaltyList }
   }, [transactions])
   

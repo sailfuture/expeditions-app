@@ -379,10 +379,7 @@ function DisciplinePageContent() {
   // Consequence options
   const consequenceOptions = [
     "Shore Leave Revoked",
-    "Loss of Privileges",
-    "Parent Contact",
-    "Written Warning",
-    "Community Service",
+    "Cell Phone Confiscated",
     "Suspension from Activity",
     "Other",
   ]

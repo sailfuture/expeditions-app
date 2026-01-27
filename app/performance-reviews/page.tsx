@@ -22,7 +22,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { generatePerformanceReviewPDF } from "@/lib/pdf-generator"
 import { toast } from "sonner"
-import { getProfessionalismByStudentAndDate, getEvaluationByStudent, createPerformanceReview, updatePerformanceReviewNotes, getPerformanceReviewById, deletePerformanceReview, getExpeditionTransactionsByDateByStudent } from "@/lib/xano"
+import { getProfessionalismByStudentAndDate, createPerformanceReview, updatePerformanceReviewNotes, getPerformanceReviewById, deletePerformanceReview, getExpeditionTransactionsByDateByStudent } from "@/lib/xano"
 import { Spinner } from "@/components/ui/spinner"
 import { mutate } from "swr"
 import {
@@ -163,15 +163,7 @@ function PreviewModal({
       : null
   )
   
-  // Fetch stored evaluation for the student (same as overview page uses)
-  const { data: studentEvaluation, isLoading: loadingEvaluation } = useSWR(
-    open && review?.students_id && review?.expeditions_id
-      ? `evaluation_by_student_${review.students_id}_${review.expeditions_id}`
-      : null,
-    open && review?.students_id && review?.expeditions_id
-      ? () => getEvaluationByStudent(review.students_id, review.expeditions_id)
-      : null
-  )
+  // Use the stored snapshot evaluation from the review (not live data)
   
   // Helper to get evaluation text based on score
   const getEvaluationText = (score: number | null | undefined) => {
@@ -262,10 +254,10 @@ function PreviewModal({
           <>
             
             <div className="flex-1 overflow-y-auto space-y-6">
-          {/* Evaluation Summary Table - Based on stored evaluation (same as overview page) */}
+          {/* Evaluation Summary Table - Using stored snapshot from review */}
           <div>
-            <h3 className="text-sm font-semibold text-gray-700 mb-3">Evaluation Summary <span className="text-xs font-normal text-gray-500">(All Days)</span></h3>
-            {loadingEvaluation ? (
+            <h3 className="text-sm font-semibold text-gray-700 mb-3">Evaluation Summary <span className="text-xs font-normal text-gray-500">(Snapshot from {review?.startDate ? formatDateShort(review.startDate) : ''} - {review?.endDate ? formatDateShort(review.endDate) : ''})</span></h3>
+            {loadingReview ? (
               <div className="flex justify-center py-4">
                 <Spinner size="sm" />
               </div>
@@ -280,60 +272,60 @@ function PreviewModal({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  <TableRow className={`border-b ${getEvaluationColorByScore(studentEvaluation?.academics ?? null)}`}>
+                  <TableRow className={`border-b ${getEvaluationColorByScore(review?.academics ?? null)}`}>
                     <TableCell className="px-3 py-2 font-medium text-gray-700 text-sm">Academics</TableCell>
                     <TableCell className="px-3 py-2 text-center text-gray-700 text-sm">
-                      {studentEvaluation?.academics !== null && studentEvaluation?.academics !== undefined ? studentEvaluation.academics.toFixed(2) : '—'}
+                      {review?.academics !== null && review?.academics !== undefined ? review.academics.toFixed(2) : '—'}
                     </TableCell>
                     <TableCell className="px-3 py-2 text-gray-600 text-sm">
-                      {studentEvaluation?.academics_evaluation || getEvaluationText(studentEvaluation?.academics)}
+                      {review?.academics_evaluation || getEvaluationText(review?.academics)}
                     </TableCell>
                   </TableRow>
-                  <TableRow className={`border-b ${getEvaluationColorByScore(studentEvaluation?.citizenship ?? null)}`}>
+                  <TableRow className={`border-b ${getEvaluationColorByScore(review?.citizenship ?? null)}`}>
                     <TableCell className="px-3 py-2 font-medium text-gray-700 text-sm">Citizenship</TableCell>
                     <TableCell className="px-3 py-2 text-center text-gray-700 text-sm">
-                      {studentEvaluation?.citizenship !== null && studentEvaluation?.citizenship !== undefined ? studentEvaluation.citizenship.toFixed(2) : '—'}
+                      {review?.citizenship !== null && review?.citizenship !== undefined ? review.citizenship.toFixed(2) : '—'}
                     </TableCell>
                     <TableCell className="px-3 py-2 text-gray-600 text-sm">
-                      {studentEvaluation?.citizenship_evaluation || getEvaluationText(studentEvaluation?.citizenship)}
+                      {review?.citizenship_evaluation || getEvaluationText(review?.citizenship)}
                     </TableCell>
                   </TableRow>
-                  <TableRow className={`border-b ${getEvaluationColorByScore(studentEvaluation?.job ?? null)}`}>
+                  <TableRow className={`border-b ${getEvaluationColorByScore(review?.job ?? null)}`}>
                     <TableCell className="px-3 py-2 font-medium text-gray-700 text-sm">Job Duties</TableCell>
                     <TableCell className="px-3 py-2 text-center text-gray-700 text-sm">
-                      {studentEvaluation?.job !== null && studentEvaluation?.job !== undefined ? studentEvaluation.job.toFixed(2) : '—'}
+                      {review?.job !== null && review?.job !== undefined ? review.job.toFixed(2) : '—'}
                     </TableCell>
                     <TableCell className="px-3 py-2 text-gray-600 text-sm">
-                      {studentEvaluation?.job_evaluation || getEvaluationText(studentEvaluation?.job)}
+                      {review?.job_evaluation || getEvaluationText(review?.job)}
                     </TableCell>
                   </TableRow>
-                  <TableRow className={`border-b ${getEvaluationColorByScore(studentEvaluation?.crew ?? null)}`}>
+                  <TableRow className={`border-b ${getEvaluationColorByScore(review?.crew ?? null)}`}>
                     <TableCell className="px-3 py-2 font-medium text-gray-700 text-sm">Crew</TableCell>
                     <TableCell className="px-3 py-2 text-center text-gray-700 text-sm">
-                      {studentEvaluation?.crew !== null && studentEvaluation?.crew !== undefined ? studentEvaluation.crew.toFixed(2) : '—'}
+                      {review?.crew !== null && review?.crew !== undefined ? review.crew.toFixed(2) : '—'}
                     </TableCell>
                     <TableCell className="px-3 py-2 text-gray-600 text-sm">
-                      {studentEvaluation?.crew_evaluation || getEvaluationText(studentEvaluation?.crew)}
+                      {review?.crew_evaluation || getEvaluationText(review?.crew)}
                     </TableCell>
                   </TableRow>
-                  <TableRow className={`border-b ${getEvaluationColorByScore(studentEvaluation?.service ?? null)}`}>
+                  <TableRow className={`border-b ${getEvaluationColorByScore(review?.service ?? null)}`}>
                     <TableCell className="px-3 py-2 font-medium text-gray-700 text-sm">Service</TableCell>
                     <TableCell className="px-3 py-2 text-center text-gray-700 text-sm">
-                      {studentEvaluation?.service !== null && studentEvaluation?.service !== undefined ? studentEvaluation.service.toFixed(2) : '—'}
+                      {review?.service !== null && review?.service !== undefined ? review.service.toFixed(2) : '—'}
                     </TableCell>
                     <TableCell className="px-3 py-2 text-gray-600 text-sm">
-                      {studentEvaluation?.service_evaluation || getEvaluationText(studentEvaluation?.service)}
+                      {review?.service_evaluation || getEvaluationText(review?.service)}
                     </TableCell>
                   </TableRow>
-                  <TableRow className={getJournalColor(studentEvaluation?.journal !== null && studentEvaluation?.journal !== undefined ? (studentEvaluation.journal <= 1 ? studentEvaluation.journal * 100 : studentEvaluation.journal) : null)}>
+                  <TableRow className={getJournalColor(review?.journaling !== null && review?.journaling !== undefined ? (review.journaling <= 1 ? review.journaling * 100 : review.journaling) : null)}>
                     <TableCell className="px-3 py-2 font-medium text-gray-700 text-sm">Journaling</TableCell>
                     <TableCell className="px-3 py-2 text-center text-gray-700 text-sm">
-                      {studentEvaluation?.journal !== null && studentEvaluation?.journal !== undefined 
-                        ? `${(studentEvaluation.journal <= 1 ? studentEvaluation.journal * 100 : studentEvaluation.journal).toFixed(2)}%` 
+                      {review?.journaling !== null && review?.journaling !== undefined 
+                        ? `${(review.journaling <= 1 ? review.journaling * 100 : review.journaling).toFixed(2)}%` 
                         : '—'}
                     </TableCell>
                     <TableCell className="px-3 py-2 text-gray-600 text-sm">
-                      {studentEvaluation?.journal_evaluation || getJournalingEvaluation(studentEvaluation?.journal)}
+                      {review?.journaling_evaluation || getJournalingEvaluation(review?.journaling)}
                     </TableCell>
                   </TableRow>
                 </TableBody>
@@ -600,10 +592,10 @@ function PerformanceReviewsContent() {
     }
   }
   
-  const handlePreviewReview = async (reviewId: number, currentNotes: string) => {
+  const handlePreviewReview = async (reviewId: number, currentNotes: string, staffId?: number) => {
     setSelectedReviewId(reviewId)
     setEditedNotes(currentNotes || "")
-    setSelectedStaffId("")
+    setSelectedStaffId(staffId ? staffId.toString() : "")
     setPreviewModalOpen(true)
   }
   
@@ -820,7 +812,7 @@ function PerformanceReviewsContent() {
                               variant="outline"
                               size="icon"
                               className="cursor-pointer h-9 w-9"
-                              onClick={() => handlePreviewReview(review.id, review.notes)}
+                              onClick={() => handlePreviewReview(review.id, review.notes, review.expedition_staff_id)}
                               title="Preview"
                             >
                               <Eye className="h-4 w-4" />

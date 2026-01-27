@@ -22,7 +22,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { generatePerformanceReviewPDF } from "@/lib/pdf-generator"
 import { toast } from "sonner"
-import { getProfessionalismByStudentAndDate, getProfessionalismByStudent, createPerformanceReview, updatePerformanceReviewNotes, getPerformanceReviewById, deletePerformanceReview, getExpeditionTransactionsByDateByStudent } from "@/lib/xano"
+import { getProfessionalismByStudentAndDate, getEvaluationByStudent, createPerformanceReview, updatePerformanceReviewNotes, getPerformanceReviewById, deletePerformanceReview, getExpeditionTransactionsByDateByStudent } from "@/lib/xano"
 import { Spinner } from "@/components/ui/spinner"
 import { mutate } from "swr"
 import {
@@ -163,74 +163,33 @@ function PreviewModal({
       : null
   )
   
-  // Fetch ALL professionalism data for the student (for Evaluation Summary)
-  const { data: allScores, isLoading: loadingAllScores } = useSWR(
+  // Fetch stored evaluation for the student (same as overview page uses)
+  const { data: studentEvaluation, isLoading: loadingEvaluation } = useSWR(
     open && review?.students_id && review?.expeditions_id
-      ? `all_scores_${review.students_id}_${review.expeditions_id}`
+      ? `evaluation_by_student_${review.students_id}_${review.expeditions_id}`
       : null,
     open && review?.students_id && review?.expeditions_id
-      ? () => getProfessionalismByStudent(review.students_id, review.expeditions_id)
+      ? () => getEvaluationByStudent(review.students_id, review.expeditions_id)
       : null
   )
   
-  // Calculate evaluation summary from ALL scores
-  const evaluationSummary = useMemo(() => {
-    if (!allScores || allScores.length === 0) return null
-    
-    const categories = ['academics', 'citizenship', 'job', 'crew', 'service']
-    const result: Record<string, { score: number | null; evaluation: string }> = {}
-    
-    // Helper to get evaluation text based on score
-    const getEvaluationText = (score: number | null) => {
-      if (score === null || score === undefined) return '—'
-      if (score >= 3.21) return 'Exceptional'
-      if (score >= 2.751) return 'Proficient'
-      if (score >= 2.251) return 'Developing'
-      if (score >= 1.1) return 'Needs Improvement'
-      return 'Unsatisfactory'
-    }
-    
-    categories.forEach(cat => {
-      const validScores = allScores
-        .map((s: any) => s[cat])
-        .filter((v: any) => v !== null && v !== undefined && typeof v === 'number')
-      
-      if (validScores.length > 0) {
-        const avg = validScores.reduce((a: number, b: number) => a + b, 0) / validScores.length
-        result[cat] = { score: avg, evaluation: getEvaluationText(avg) }
-      } else {
-        result[cat] = { score: null, evaluation: '—' }
-      }
-    })
-    
-    // Calculate journaling percentage
-    const journalStatuses = allScores
-      .map((s: any) => s.journaling || s.note || s._expedition_journal_status?.name || '')
-      .filter((v: string) => v !== '')
-    
-    const completedCount = journalStatuses.filter((s: string) => {
-      const lower = s.toLowerCase()
-      return lower === 'completed' || lower === 'complete'
-    }).length
-    
-    const journalingPercentage = journalStatuses.length > 0 
-      ? completedCount / journalStatuses.length 
-      : null
-    
-    const getJournalingEvaluation = (pct: number | null) => {
-      if (pct === null) return '—'
-      if (pct < 0.7) return 'Needs Improvement'
-      if (pct >= 0.9) return 'Exceptional'
-      return 'Proficient'
-    }
-    
-    result.journaling = { 
-      score: journalingPercentage, 
-      evaluation: getJournalingEvaluation(journalingPercentage) 
-    }
-    
-    return result
-  }, [allScores])
+  // Helper to get evaluation text based on score
+  const getEvaluationText = (score: number | null | undefined) => {
+    if (score === null || score === undefined) return '—'
+    if (score >= 3.21) return 'Exceptional'
+    if (score >= 2.751) return 'Proficient'
+    if (score >= 2.251) return 'Developing'
+    if (score >= 1.1) return 'Needs Improvement'
+    return 'Unsatisfactory'
+  }
+  
+  const getJournalingEvaluation = (pct: number | null | undefined) => {
+    if (pct === null || pct === undefined) return '—'
+    const normalizedPct = pct <= 1 ? pct : pct / 100
+    if (normalizedPct < 0.7) return 'Needs Improvement'
+    if (normalizedPct >= 0.9) return 'Exceptional'
+    return 'Proficient'
+  }
   
   // Fetch bonuses and penalties for this student and date range
   const { data: transactions, isLoading: loadingTransactions } = useSWR(
@@ -247,11 +206,16 @@ function PreviewModal({
       : null
   )
   
-  // Separate bonuses and penalties from transactions
+  // Separate bonuses and penalties from transactions (excluding Purchases)
   const { bonuses, penalties } = useMemo(() => {
     if (!transactions) return { bonuses: [], penalties: [] }
-    const bonusList = transactions.filter((t: any) => t.type === 'bonus' || t.amount > 0)
-    const penaltyList = transactions.filter((t: any) => t.type === 'penalty' || t.amount < 0)
+    // The field is 'transaction' not 'type', with values like "Bonus", "Penalty", "Purchase"
+    const bonusList = transactions.filter((t: any) => 
+      t.transaction === 'Bonus' || (t.transaction !== 'Purchase' && t.transaction !== 'Penalty' && t.amount > 0)
+    )
+    const penaltyList = transactions.filter((t: any) => 
+      t.transaction === 'Penalty' || (t.transaction !== 'Purchase' && t.transaction !== 'Bonus' && t.amount < 0)
+    )
     return { bonuses: bonusList, penalties: penaltyList }
   }, [transactions])
   
@@ -301,10 +265,10 @@ function PreviewModal({
           <>
             
             <div className="flex-1 overflow-y-auto space-y-6">
-          {/* Evaluation Summary Table - Based on ALL evaluations */}
+          {/* Evaluation Summary Table - Based on stored evaluation (same as overview page) */}
           <div>
             <h3 className="text-sm font-semibold text-gray-700 mb-3">Evaluation Summary <span className="text-xs font-normal text-gray-500">(All Days)</span></h3>
-            {loadingAllScores ? (
+            {loadingEvaluation ? (
               <div className="flex justify-center py-4">
                 <Spinner size="sm" />
               </div>
@@ -319,58 +283,60 @@ function PreviewModal({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  <TableRow className={`border-b ${getEvaluationColorByScore(evaluationSummary?.academics?.score ?? null)}`}>
+                  <TableRow className={`border-b ${getEvaluationColorByScore(studentEvaluation?.academics ?? null)}`}>
                     <TableCell className="px-3 py-2 font-medium text-gray-700 text-sm">Academics</TableCell>
                     <TableCell className="px-3 py-2 text-center text-gray-700 text-sm">
-                      {evaluationSummary?.academics?.score !== null && evaluationSummary?.academics?.score !== undefined ? evaluationSummary.academics.score.toFixed(2) : '—'}
+                      {studentEvaluation?.academics !== null && studentEvaluation?.academics !== undefined ? studentEvaluation.academics.toFixed(2) : '—'}
                     </TableCell>
                     <TableCell className="px-3 py-2 text-gray-600 text-sm">
-                      {evaluationSummary?.academics?.evaluation || '—'}
+                      {studentEvaluation?.academics_evaluation || getEvaluationText(studentEvaluation?.academics)}
                     </TableCell>
                   </TableRow>
-                  <TableRow className={`border-b ${getEvaluationColorByScore(evaluationSummary?.citizenship?.score ?? null)}`}>
+                  <TableRow className={`border-b ${getEvaluationColorByScore(studentEvaluation?.citizenship ?? null)}`}>
                     <TableCell className="px-3 py-2 font-medium text-gray-700 text-sm">Citizenship</TableCell>
                     <TableCell className="px-3 py-2 text-center text-gray-700 text-sm">
-                      {evaluationSummary?.citizenship?.score !== null && evaluationSummary?.citizenship?.score !== undefined ? evaluationSummary.citizenship.score.toFixed(2) : '—'}
+                      {studentEvaluation?.citizenship !== null && studentEvaluation?.citizenship !== undefined ? studentEvaluation.citizenship.toFixed(2) : '—'}
                     </TableCell>
                     <TableCell className="px-3 py-2 text-gray-600 text-sm">
-                      {evaluationSummary?.citizenship?.evaluation || '—'}
+                      {studentEvaluation?.citizenship_evaluation || getEvaluationText(studentEvaluation?.citizenship)}
                     </TableCell>
                   </TableRow>
-                  <TableRow className={`border-b ${getEvaluationColorByScore(evaluationSummary?.job?.score ?? null)}`}>
+                  <TableRow className={`border-b ${getEvaluationColorByScore(studentEvaluation?.job ?? null)}`}>
                     <TableCell className="px-3 py-2 font-medium text-gray-700 text-sm">Job Duties</TableCell>
                     <TableCell className="px-3 py-2 text-center text-gray-700 text-sm">
-                      {evaluationSummary?.job?.score !== null && evaluationSummary?.job?.score !== undefined ? evaluationSummary.job.score.toFixed(2) : '—'}
+                      {studentEvaluation?.job !== null && studentEvaluation?.job !== undefined ? studentEvaluation.job.toFixed(2) : '—'}
                     </TableCell>
                     <TableCell className="px-3 py-2 text-gray-600 text-sm">
-                      {evaluationSummary?.job?.evaluation || '—'}
+                      {studentEvaluation?.job_evaluation || getEvaluationText(studentEvaluation?.job)}
                     </TableCell>
                   </TableRow>
-                  <TableRow className={`border-b ${getEvaluationColorByScore(evaluationSummary?.crew?.score ?? null)}`}>
+                  <TableRow className={`border-b ${getEvaluationColorByScore(studentEvaluation?.crew ?? null)}`}>
                     <TableCell className="px-3 py-2 font-medium text-gray-700 text-sm">Crew</TableCell>
                     <TableCell className="px-3 py-2 text-center text-gray-700 text-sm">
-                      {evaluationSummary?.crew?.score !== null && evaluationSummary?.crew?.score !== undefined ? evaluationSummary.crew.score.toFixed(2) : '—'}
+                      {studentEvaluation?.crew !== null && studentEvaluation?.crew !== undefined ? studentEvaluation.crew.toFixed(2) : '—'}
                     </TableCell>
                     <TableCell className="px-3 py-2 text-gray-600 text-sm">
-                      {evaluationSummary?.crew?.evaluation || '—'}
+                      {studentEvaluation?.crew_evaluation || getEvaluationText(studentEvaluation?.crew)}
                     </TableCell>
                   </TableRow>
-                  <TableRow className={`border-b ${getEvaluationColorByScore(evaluationSummary?.service?.score ?? null)}`}>
+                  <TableRow className={`border-b ${getEvaluationColorByScore(studentEvaluation?.service ?? null)}`}>
                     <TableCell className="px-3 py-2 font-medium text-gray-700 text-sm">Service</TableCell>
                     <TableCell className="px-3 py-2 text-center text-gray-700 text-sm">
-                      {evaluationSummary?.service?.score !== null && evaluationSummary?.service?.score !== undefined ? evaluationSummary.service.score.toFixed(2) : '—'}
+                      {studentEvaluation?.service !== null && studentEvaluation?.service !== undefined ? studentEvaluation.service.toFixed(2) : '—'}
                     </TableCell>
                     <TableCell className="px-3 py-2 text-gray-600 text-sm">
-                      {evaluationSummary?.service?.evaluation || '—'}
+                      {studentEvaluation?.service_evaluation || getEvaluationText(studentEvaluation?.service)}
                     </TableCell>
                   </TableRow>
-                  <TableRow className={getJournalColor(evaluationSummary?.journaling?.score !== null && evaluationSummary?.journaling?.score !== undefined ? evaluationSummary.journaling.score * 100 : null)}>
+                  <TableRow className={getJournalColor(studentEvaluation?.journal !== null && studentEvaluation?.journal !== undefined ? (studentEvaluation.journal <= 1 ? studentEvaluation.journal * 100 : studentEvaluation.journal) : null)}>
                     <TableCell className="px-3 py-2 font-medium text-gray-700 text-sm">Journaling</TableCell>
                     <TableCell className="px-3 py-2 text-center text-gray-700 text-sm">
-                      {evaluationSummary?.journaling?.score !== null && evaluationSummary?.journaling?.score !== undefined ? `${Math.round(evaluationSummary.journaling.score * 100)}%` : '—'}
+                      {studentEvaluation?.journal !== null && studentEvaluation?.journal !== undefined 
+                        ? `${(studentEvaluation.journal <= 1 ? studentEvaluation.journal * 100 : studentEvaluation.journal).toFixed(2)}%` 
+                        : '—'}
                     </TableCell>
                     <TableCell className="px-3 py-2 text-gray-600 text-sm">
-                      {evaluationSummary?.journaling?.evaluation || '—'}
+                      {studentEvaluation?.journal_evaluation || getJournalingEvaluation(studentEvaluation?.journal)}
                     </TableCell>
                   </TableRow>
                 </TableBody>
@@ -467,16 +433,20 @@ function PreviewModal({
                         <TableHeader>
                           <TableRow className="border-b bg-gray-50 hover:bg-gray-50">
                             <TableHead className="h-10 px-3 text-xs font-semibold text-gray-600">Date</TableHead>
+                            <TableHead className="h-10 px-3 text-xs font-semibold text-gray-600">Type</TableHead>
                             <TableHead className="h-10 px-3 text-xs font-semibold text-gray-600 text-right">Amount</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {allTransactions.map((transaction: any, idx: number) => {
-                            const isBonus = transaction.type === 'bonus' || transaction.amount > 0
+                            const isBonus = transaction.transaction === 'Bonus' || transaction.amount > 0
                             return (
                               <TableRow key={transaction.id || idx} className="border-b">
                                 <TableCell className="px-3 py-2 text-sm text-gray-700">
                                   {formatDateShort(transaction.date)}
+                                </TableCell>
+                                <TableCell className="px-3 py-2 text-sm text-gray-600">
+                                  {transaction.transaction || '—'}
                                 </TableCell>
                                 <TableCell className={`px-3 py-2 text-sm text-right font-medium ${isBonus ? 'text-green-600' : 'text-red-600'}`}>
                                   {isBonus ? '+' : ''}{transaction.amount || 0}
@@ -485,7 +455,7 @@ function PreviewModal({
                             )
                           })}
                           <TableRow className="bg-gray-50 border-t-2">
-                            <TableCell className="px-3 py-2 text-sm font-semibold text-gray-900">
+                            <TableCell colSpan={2} className="px-3 py-2 text-sm font-semibold text-gray-900">
                               Total
                             </TableCell>
                             <TableCell className={`px-3 py-2 text-sm text-right font-bold ${total >= 0 ? 'text-green-600' : 'text-red-600'}`}>

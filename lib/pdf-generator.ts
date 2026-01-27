@@ -391,9 +391,10 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
     
     // Create transactions table data
     const transactionsTableData = allTransactions.map((t: any) => {
-      const isBonus = t.type === 'bonus' || t.amount > 0
+      const isBonus = t.transaction === 'Bonus' || t.amount > 0
       return [
         formatDateShort(t.date),
+        t.transaction || '—',
         `${isBonus ? '+' : ''}${t.amount || 0}`,
       ]
     })
@@ -401,12 +402,13 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
     // Add total row
     transactionsTableData.push([
       'Total',
+      '',
       `${total >= 0 ? '+' : ''}${total}`,
     ])
     
     autoTable(doc, {
       startY: yPosition,
-      head: [['Date', 'Amount']],
+      head: [['Date', 'Type', 'Amount']],
       body: transactionsTableData,
       theme: 'grid',
       headStyles: {
@@ -420,8 +422,9 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
         textColor: [55, 65, 81],
       },
       columnStyles: {
-        0: { cellWidth: 60 },
-        1: { cellWidth: 40, halign: 'right' },
+        0: { cellWidth: 50 },
+        1: { cellWidth: 40 },
+        2: { cellWidth: 40, halign: 'right' },
       },
       tableWidth: 'auto',
       margin: { left: leftMargin, right: leftMargin },
@@ -435,7 +438,7 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
         if (data.section === 'body' && isLastRow) {
           data.cell.styles.fillColor = [249, 250, 251] // gray-50
           data.cell.styles.fontStyle = 'bold'
-          if (data.column.index === 1) {
+          if (data.column.index === 2) {
             if (total >= 0) {
               data.cell.styles.textColor = [22, 163, 74] // green-600
             } else {
@@ -444,7 +447,7 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
           }
         }
         // Color code the Amount column for non-total rows
-        else if (data.section === 'body' && data.column.index === 1) {
+        else if (data.section === 'body' && data.column.index === 2) {
           const amount = data.cell.text[0]
           if (amount.startsWith('+')) {
             data.cell.styles.textColor = [22, 163, 74] // green-600

@@ -273,22 +273,22 @@ export default function StorePage({ params }: PageProps) {
           </div>
 
           {isLoading ? (
-            <div className="overflow-x-auto">
-              <Table>
+            <div>
+              <Table className="table-fixed w-full">
                 <TableHeader>
                   <TableRow className="border-b bg-gray-50/30 hover:bg-gray-50/30">
-                    <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600">Product</TableHead>
-                    <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden sm:table-cell">Description</TableHead>
-                    <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 text-right">Price</TableHead>
-                    <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 text-center">Qty</TableHead>
-                    <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 text-right">Actions</TableHead>
+                    <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[30%]">Product</TableHead>
+                    <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden sm:table-cell w-[30%]">Description</TableHead>
+                    <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 text-right w-[15%]">Price</TableHead>
+                    <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 text-center w-[10%]">Qty</TableHead>
+                    <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 text-right w-[15%]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {Array.from({ length: 5 }).map((_, i) => (
                     <TableRow key={i}>
-                      <TableCell className="h-16 px-4 sm:px-6"><Skeleton className="h-4 w-32" /></TableCell>
-                      <TableCell className="h-16 px-4 sm:px-6 hidden sm:table-cell"><Skeleton className="h-4 w-48" /></TableCell>
+                      <TableCell className="h-16 px-4 sm:px-6"><Skeleton className="h-4 w-full max-w-[120px]" /></TableCell>
+                      <TableCell className="h-16 px-4 sm:px-6 hidden sm:table-cell"><Skeleton className="h-4 w-full" /></TableCell>
                       <TableCell className="h-16 px-4 sm:px-6"><Skeleton className="h-4 w-16 ml-auto" /></TableCell>
                       <TableCell className="h-16 px-4 sm:px-6"><Skeleton className="h-4 w-12 mx-auto" /></TableCell>
                       <TableCell className="h-16 px-4 sm:px-6"><Skeleton className="h-8 w-20 ml-auto" /></TableCell>
@@ -304,15 +304,15 @@ export default function StorePage({ params }: PageProps) {
               <p className="text-sm text-gray-500 mt-1">Add items that can be purchased during this expedition</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
+            <div>
+              <Table className="table-fixed w-full">
                 <TableHeader>
                   <TableRow className="border-b bg-gray-50/30 hover:bg-gray-50/30">
-                    <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600">Product</TableHead>
-                    <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden sm:table-cell">Description</TableHead>
-                    <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 text-right">Price</TableHead>
-                    <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 text-center">Qty</TableHead>
-                    {isAdmin && <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 text-right">Actions</TableHead>}
+                    <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[30%]">Product</TableHead>
+                    <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden sm:table-cell w-[30%]">Description</TableHead>
+                    <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 text-right w-[15%]">Price</TableHead>
+                    <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 text-center w-[10%]">Qty</TableHead>
+                    {isAdmin && <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 text-right w-[15%]">Actions</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -332,14 +332,14 @@ export default function StorePage({ params }: PageProps) {
                               <ImageIcon className="h-5 w-5 text-gray-400" />
                             </div>
                           )}
-                          <div className="min-w-0">
+                          <div className="min-w-0 flex-1">
                             <span className="font-medium text-gray-900 block truncate">{item.product_name}</span>
                             <span className="text-xs text-gray-500 block sm:hidden truncate">{item.description || ""}</span>
                           </div>
                         </div>
                       </TableCell>
                       <TableCell className="h-16 px-4 sm:px-6 hidden sm:table-cell">
-                        <span className="text-sm text-gray-600 line-clamp-2">{item.description || "—"}</span>
+                        <span className="text-sm text-gray-600 block truncate">{item.description || "—"}</span>
                       </TableCell>
                       <TableCell className="h-16 px-4 sm:px-6 text-right">
                         <span className="font-medium text-gray-900">{formatPrice(item.price)}</span>
@@ -399,14 +399,14 @@ export default function StorePage({ params }: PageProps) {
                                   <ImageIcon className="h-5 w-5 text-gray-400" />
                                 </div>
                               )}
-                              <div className="min-w-0">
+                              <div className="min-w-0 flex-1">
                                 <span className="font-medium text-gray-600 block truncate">{item.product_name}</span>
                                 <span className="text-xs text-gray-400 block sm:hidden truncate">{item.description || ""}</span>
                               </div>
                             </div>
                           </TableCell>
                           <TableCell className="h-16 px-4 sm:px-6 hidden sm:table-cell">
-                            <span className="text-sm text-gray-500 line-clamp-2">{item.description || "—"}</span>
+                            <span className="text-sm text-gray-500 block truncate">{item.description || "—"}</span>
                           </TableCell>
                           <TableCell className="h-16 px-4 sm:px-6 text-right">
                             <span className="text-gray-600">{formatPrice(item.price)}</span>

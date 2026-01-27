@@ -22,7 +22,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { generatePerformanceReviewPDF } from "@/lib/pdf-generator"
 import { toast } from "sonner"
-import { getProfessionalismByStudentAndDate, createPerformanceReview, updatePerformanceReviewNotes, getPerformanceReviewById, deletePerformanceReview, getExpeditionTransactionsByDateByStudent } from "@/lib/xano"
+import { getProfessionalismByStudentAndDate, getProfessionalismByStudent, createPerformanceReview, updatePerformanceReviewNotes, getPerformanceReviewById, deletePerformanceReview, getExpeditionTransactionsByDateByStudent } from "@/lib/xano"
 import { Spinner } from "@/components/ui/spinner"
 import { mutate } from "swr"
 import {
@@ -148,7 +148,7 @@ function PreviewModal({
     }
   )
   
-  // Fetch daily scores for this student and date range
+  // Fetch daily scores for this student and date range (for Daily Scores table)
   const { data: dailyScores, isLoading: loadingDailyScores } = useSWR(
     open && review?.students_id && review?.expeditions_id && review?.startDate && review?.endDate
       ? `daily_scores_${review.students_id}_${review.expeditions_id}_${review.startDate}_${review.endDate}`
@@ -162,6 +162,75 @@ function PreviewModal({
         )
       : null
   )
+  
+  // Fetch ALL professionalism data for the student (for Evaluation Summary)
+  const { data: allScores, isLoading: loadingAllScores } = useSWR(
+    open && review?.students_id && review?.expeditions_id
+      ? `all_scores_${review.students_id}_${review.expeditions_id}`
+      : null,
+    open && review?.students_id && review?.expeditions_id
+      ? () => getProfessionalismByStudent(review.students_id, review.expeditions_id)
+      : null
+  )
+  
+  // Calculate evaluation summary from ALL scores
+  const evaluationSummary = useMemo(() => {
+    if (!allScores || allScores.length === 0) return null
+    
+    const categories = ['academics', 'citizenship', 'job', 'crew', 'service']
+    const result: Record<string, { score: number | null; evaluation: string }> = {}
+    
+    // Helper to get evaluation text based on score
+    const getEvaluationText = (score: number | null) => {
+      if (score === null || score === undefined) return '—'
+      if (score >= 3.21) return 'Exceptional'
+      if (score >= 2.751) return 'Proficient'
+      if (score >= 2.251) return 'Developing'
+      if (score >= 1.1) return 'Needs Improvement'
+      return 'Unsatisfactory'
+    }
+    
+    categories.forEach(cat => {
+      const validScores = allScores
+        .map((s: any) => s[cat])
+        .filter((v: any) => v !== null && v !== undefined && typeof v === 'number')
+      
+      if (validScores.length > 0) {
+        const avg = validScores.reduce((a: number, b: number) => a + b, 0) / validScores.length
+        result[cat] = { score: avg, evaluation: getEvaluationText(avg) }
+      } else {
+        result[cat] = { score: null, evaluation: '—' }
+      }
+    })
+    
+    // Calculate journaling percentage
+    const journalStatuses = allScores
+      .map((s: any) => s.journaling || s.note || s._expedition_journal_status?.name || '')
+      .filter((v: string) => v !== '')
+    
+    const completedCount = journalStatuses.filter((s: string) => {
+      const lower = s.toLowerCase()
+      return lower === 'completed' || lower === 'complete'
+    }).length
+    
+    const journalingPercentage = journalStatuses.length > 0 
+      ? completedCount / journalStatuses.length 
+      : null
+    
+    const getJournalingEvaluation = (pct: number | null) => {
+      if (pct === null) return '—'
+      if (pct < 0.7) return 'Needs Improvement'
+      if (pct >= 0.9) return 'Exceptional'
+      return 'Proficient'
+    }
+    
+    result.journaling = { 
+      score: journalingPercentage, 
+      evaluation: getJournalingEvaluation(journalingPercentage) 
+    }
+    
+    return result
+  }, [allScores])
   
   // Fetch bonuses and penalties for this student and date range
   const { data: transactions, isLoading: loadingTransactions } = useSWR(
@@ -232,9 +301,14 @@ function PreviewModal({
           <>
             
             <div className="flex-1 overflow-y-auto space-y-6">
-          {/* Evaluation Summary Table */}
+          {/* Evaluation Summary Table - Based on ALL evaluations */}
           <div>
-            <h3 className="text-sm font-semibold text-gray-700 mb-3">Evaluation Summary</h3>
+            <h3 className="text-sm font-semibold text-gray-700 mb-3">Evaluation Summary <span className="text-xs font-normal text-gray-500">(All Days)</span></h3>
+            {loadingAllScores ? (
+              <div className="flex justify-center py-4">
+                <Spinner size="sm" />
+              </div>
+            ) : (
             <div className="border rounded-lg overflow-hidden">
               <Table>
                 <TableHeader>
@@ -245,63 +319,64 @@ function PreviewModal({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  <TableRow className={`border-b ${getEvaluationColorByScore(review.academics)}`}>
+                  <TableRow className={`border-b ${getEvaluationColorByScore(evaluationSummary?.academics?.score ?? null)}`}>
                     <TableCell className="px-3 py-2 font-medium text-gray-700 text-sm">Academics</TableCell>
                     <TableCell className="px-3 py-2 text-center text-gray-700 text-sm">
-                      {review.academics !== null && review.academics !== undefined ? review.academics.toFixed(2) : '—'}
+                      {evaluationSummary?.academics?.score !== null && evaluationSummary?.academics?.score !== undefined ? evaluationSummary.academics.score.toFixed(2) : '—'}
                     </TableCell>
                     <TableCell className="px-3 py-2 text-gray-600 text-sm">
-                      {review.academics_evaluation || '—'}
+                      {evaluationSummary?.academics?.evaluation || '—'}
                     </TableCell>
                   </TableRow>
-                  <TableRow className={`border-b ${getEvaluationColorByScore(review.citizenship)}`}>
+                  <TableRow className={`border-b ${getEvaluationColorByScore(evaluationSummary?.citizenship?.score ?? null)}`}>
                     <TableCell className="px-3 py-2 font-medium text-gray-700 text-sm">Citizenship</TableCell>
                     <TableCell className="px-3 py-2 text-center text-gray-700 text-sm">
-                      {review.citizenship !== null && review.citizenship !== undefined ? review.citizenship.toFixed(2) : '—'}
+                      {evaluationSummary?.citizenship?.score !== null && evaluationSummary?.citizenship?.score !== undefined ? evaluationSummary.citizenship.score.toFixed(2) : '—'}
                     </TableCell>
                     <TableCell className="px-3 py-2 text-gray-600 text-sm">
-                      {review.citizenship_evaluation || '—'}
+                      {evaluationSummary?.citizenship?.evaluation || '—'}
                     </TableCell>
                   </TableRow>
-                  <TableRow className={`border-b ${getEvaluationColorByScore(review.job)}`}>
+                  <TableRow className={`border-b ${getEvaluationColorByScore(evaluationSummary?.job?.score ?? null)}`}>
                     <TableCell className="px-3 py-2 font-medium text-gray-700 text-sm">Job Duties</TableCell>
                     <TableCell className="px-3 py-2 text-center text-gray-700 text-sm">
-                      {review.job !== null && review.job !== undefined ? review.job.toFixed(2) : '—'}
+                      {evaluationSummary?.job?.score !== null && evaluationSummary?.job?.score !== undefined ? evaluationSummary.job.score.toFixed(2) : '—'}
                     </TableCell>
                     <TableCell className="px-3 py-2 text-gray-600 text-sm">
-                      {review.job_evaluation || '—'}
+                      {evaluationSummary?.job?.evaluation || '—'}
                     </TableCell>
                   </TableRow>
-                  <TableRow className={`border-b ${getEvaluationColorByScore(review.crew)}`}>
+                  <TableRow className={`border-b ${getEvaluationColorByScore(evaluationSummary?.crew?.score ?? null)}`}>
                     <TableCell className="px-3 py-2 font-medium text-gray-700 text-sm">Crew</TableCell>
                     <TableCell className="px-3 py-2 text-center text-gray-700 text-sm">
-                      {review.crew !== null && review.crew !== undefined ? review.crew.toFixed(2) : '—'}
+                      {evaluationSummary?.crew?.score !== null && evaluationSummary?.crew?.score !== undefined ? evaluationSummary.crew.score.toFixed(2) : '—'}
                     </TableCell>
                     <TableCell className="px-3 py-2 text-gray-600 text-sm">
-                      {review.crew_evaluation || '—'}
+                      {evaluationSummary?.crew?.evaluation || '—'}
                     </TableCell>
                   </TableRow>
-                  <TableRow className={`border-b ${getEvaluationColorByScore(review.service)}`}>
+                  <TableRow className={`border-b ${getEvaluationColorByScore(evaluationSummary?.service?.score ?? null)}`}>
                     <TableCell className="px-3 py-2 font-medium text-gray-700 text-sm">Service</TableCell>
                     <TableCell className="px-3 py-2 text-center text-gray-700 text-sm">
-                      {review.service !== null && review.service !== undefined ? review.service.toFixed(2) : '—'}
+                      {evaluationSummary?.service?.score !== null && evaluationSummary?.service?.score !== undefined ? evaluationSummary.service.score.toFixed(2) : '—'}
                     </TableCell>
                     <TableCell className="px-3 py-2 text-gray-600 text-sm">
-                      {review.service_evaluation || '—'}
+                      {evaluationSummary?.service?.evaluation || '—'}
                     </TableCell>
                   </TableRow>
-                  <TableRow className={getJournalColor(review.journaling !== null && review.journaling !== undefined ? review.journaling * 100 : null)}>
+                  <TableRow className={getJournalColor(evaluationSummary?.journaling?.score !== null && evaluationSummary?.journaling?.score !== undefined ? evaluationSummary.journaling.score * 100 : null)}>
                     <TableCell className="px-3 py-2 font-medium text-gray-700 text-sm">Journaling</TableCell>
                     <TableCell className="px-3 py-2 text-center text-gray-700 text-sm">
-                      {review.journaling !== null && review.journaling !== undefined ? `${Math.round(review.journaling * 100)}%` : '—'}
+                      {evaluationSummary?.journaling?.score !== null && evaluationSummary?.journaling?.score !== undefined ? `${Math.round(evaluationSummary.journaling.score * 100)}%` : '—'}
                     </TableCell>
                     <TableCell className="px-3 py-2 text-gray-600 text-sm">
-                      {review.journaling_evaluation || '—'}
+                      {evaluationSummary?.journaling?.evaluation || '—'}
                     </TableCell>
                   </TableRow>
                 </TableBody>
               </Table>
             </div>
+            )}
           </div>
           
           {/* Daily Scores Table */}

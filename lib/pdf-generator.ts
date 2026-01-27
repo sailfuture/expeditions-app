@@ -119,9 +119,13 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
     }
   }
   
-  // Separate bonuses and penalties
-  const bonuses = transactions.filter((t: any) => t.type === 'bonus' || t.amount > 0)
-  const penalties = transactions.filter((t: any) => t.type === 'penalty' || t.amount < 0)
+  // Separate bonuses and penalties (excluding Purchases)
+  const bonuses = transactions.filter((t: any) => 
+    t.transaction === 'Bonus' || (t.transaction !== 'Purchase' && t.transaction !== 'Penalty' && t.amount > 0)
+  )
+  const penalties = transactions.filter((t: any) => 
+    t.transaction === 'Penalty' || (t.transaction !== 'Purchase' && t.transaction !== 'Bonus' && t.amount < 0)
+  )
   
   const doc = new jsPDF()
   const pageWidth = doc.internal.pageSize.getWidth()

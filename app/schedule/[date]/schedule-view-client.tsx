@@ -70,7 +70,10 @@ import {
 } from "@/lib/hooks/use-expeditions"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { addExpeditionScheduleTemplate, deleteExpeditionScheduleItem } from "@/lib/xano"
+import { addExpeditionScheduleTemplate, deleteExpeditionScheduleItem, createExpeditionScheduleTemplate } from "@/lib/xano"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Save } from "lucide-react"
 import { useCurrentUser } from "@/lib/contexts/user-context"
 import { useExpeditionContext } from "@/lib/contexts/expedition-context"
 import useSWR, { mutate } from "swr"
@@ -200,6 +203,9 @@ export function ScheduleViewClient({ date, expeditionId }: ScheduleViewClientPro
   const [localItemUpdates, setLocalItemUpdates] = useState<Record<number, { time_in: number; time_out: number }>>({})
   const [deleteAllDialogOpen, setDeleteAllDialogOpen] = useState(false)
   const [deletingAll, setDeletingAll] = useState(false)
+  const [saveTemplateDialogOpen, setSaveTemplateDialogOpen] = useState(false)
+  const [templateName, setTemplateName] = useState("")
+  const [savingTemplate, setSavingTemplate] = useState(false)
   
   // Meal Plan Sheet state
   const [mealPlanSheetOpen, setMealPlanSheetOpen] = useState(false)
@@ -437,6 +443,32 @@ export function ScheduleViewClient({ date, expeditionId }: ScheduleViewClientPro
       toast.error("Failed to delete all activities")
     } finally {
       setDeletingAll(false)
+    }
+  }
+
+  const handleSaveAsTemplate = async () => {
+    if (!templateName.trim()) {
+      toast.error("Please enter a template name")
+      return
+    }
+    if (!scheduleItems || scheduleItems.length === 0) {
+      toast.error("No activities to save as template")
+      return
+    }
+    
+    setSavingTemplate(true)
+    try {
+      const itemIds = scheduleItems.map((item: any) => item.id)
+      await createExpeditionScheduleTemplate(templateName.trim(), itemIds)
+      await mutate("expedition_schedule_templates")
+      toast.success(`Template "${templateName}" created with ${scheduleItems.length} activities`)
+      setSaveTemplateDialogOpen(false)
+      setTemplateName("")
+    } catch (error) {
+      console.error("Failed to save template:", error)
+      toast.error("Failed to save template")
+    } finally {
+      setSavingTemplate(false)
     }
   }
 
@@ -830,14 +862,24 @@ export function ScheduleViewClient({ date, expeditionId }: ScheduleViewClientPro
                     <Settings className="h-4 w-4" />
                   </Button>
                   {Array.isArray(scheduleItems) && scheduleItems.length > 0 && (
-                    <Button
-                      variant="outline"
-                      onClick={() => setDeleteAllDialogOpen(true)}
-                      className="cursor-pointer h-10 w-10 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                      title="Delete all activities"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <>
+                      <Button
+                        variant="outline"
+                        onClick={() => setSaveTemplateDialogOpen(true)}
+                        className="cursor-pointer h-10 w-10 p-0"
+                        title="Save as template"
+                      >
+                        <Save className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => setDeleteAllDialogOpen(true)}
+                        className="cursor-pointer h-10 w-10 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                        title="Delete all activities"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </>
                   )}
                 </>
               )}
@@ -1260,6 +1302,53 @@ export function ScheduleViewClient({ date, expeditionId }: ScheduleViewClientPro
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Save as Template Dialog */}
+      <Dialog open={saveTemplateDialogOpen} onOpenChange={(open) => {
+        setSaveTemplateDialogOpen(open)
+        if (!open) setTemplateName("")
+      }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Save as Template</DialogTitle>
+            <DialogDescription>
+              Save all {scheduleItems?.length || 0} activities from this day as a reusable template.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="templateName">Template Name</Label>
+              <Input
+                id="templateName"
+                placeholder="e.g., Shore Day, Offshore Day, Port Day"
+                value={templateName}
+                onChange={(e) => setTemplateName(e.target.value)}
+                disabled={savingTemplate}
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSaveTemplateDialogOpen(false)
+                setTemplateName("")
+              }}
+              disabled={savingTemplate}
+              className="cursor-pointer"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveAsTemplate}
+              disabled={savingTemplate || !templateName.trim()}
+              className="cursor-pointer"
+            >
+              {savingTemplate ? "Saving..." : "Save Template"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Mobile Bottom Navigation */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 md:hidden z-50 shadow-lg">

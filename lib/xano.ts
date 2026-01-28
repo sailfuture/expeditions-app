@@ -316,6 +316,16 @@ export async function addExpeditionScheduleTemplate(date: string, templateId: nu
   })
 }
 
+export async function createExpeditionScheduleTemplate(templateName: string, itemIds: number[]) {
+  return xanoFetch<any>("/expeditions_schedule_templates", {
+    method: "POST",
+    body: JSON.stringify({
+      template_name: templateName,
+      expedition_schedule_items_id: itemIds,
+    }),
+  })
+}
+
 // ============ School Management ============
 export async function getSchoolTerms() {
   return xanoFetch<any[]>("/schoolterms")

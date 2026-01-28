@@ -198,6 +198,8 @@ export function ScheduleViewClient({ date, expeditionId }: ScheduleViewClientPro
   const [deletingFromModal, setDeletingFromModal] = useState(false)
   const [resizingItemId, setResizingItemId] = useState<number | null>(null)
   const [localItemUpdates, setLocalItemUpdates] = useState<Record<number, { time_in: number; time_out: number }>>({})
+  const [deleteAllDialogOpen, setDeleteAllDialogOpen] = useState(false)
+  const [deletingAll, setDeletingAll] = useState(false)
   
   // Meal Plan Sheet state
   const [mealPlanSheetOpen, setMealPlanSheetOpen] = useState(false)
@@ -414,6 +416,27 @@ export function ScheduleViewClient({ date, expeditionId }: ScheduleViewClientPro
       toast.error("Failed to add template activities")
     } finally {
       setAddingTemplate(false)
+    }
+  }
+
+  const handleDeleteAllActivities = async () => {
+    if (!scheduleItems || scheduleItems.length === 0) return
+    
+    setDeletingAll(true)
+    try {
+      // Delete all items in parallel
+      await Promise.all(
+        scheduleItems.map((item: any) => deleteExpeditionScheduleItem(item.id))
+      )
+      await mutate(`expedition_schedule_items_date_${date}_${effectiveExpeditionId || 'all'}`)
+      toast.success(`Deleted ${scheduleItems.length} activities`)
+      setDeleteAllDialogOpen(false)
+      setEditMode(false)
+    } catch (error) {
+      console.error("Failed to delete all activities:", error)
+      toast.error("Failed to delete all activities")
+    } finally {
+      setDeletingAll(false)
     }
   }
 
@@ -806,6 +829,16 @@ export function ScheduleViewClient({ date, expeditionId }: ScheduleViewClientPro
                   >
                     <Settings className="h-4 w-4" />
                   </Button>
+                  {Array.isArray(scheduleItems) && scheduleItems.length > 0 && (
+                    <Button
+                      variant="outline"
+                      onClick={() => setDeleteAllDialogOpen(true)}
+                      className="cursor-pointer h-10 w-10 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                      title="Delete all activities"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
                 </>
               )}
             </div>
@@ -1201,6 +1234,28 @@ export function ScheduleViewClient({ date, expeditionId }: ScheduleViewClientPro
               className="bg-red-600 hover:bg-red-700 cursor-pointer"
             >
               Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete All Activities Confirmation */}
+      <AlertDialog open={deleteAllDialogOpen} onOpenChange={setDeleteAllDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete All Activities</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete all {scheduleItems?.length || 0} activities for this day? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="cursor-pointer" disabled={deletingAll}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteAllActivities}
+              className="bg-red-600 hover:bg-red-700 cursor-pointer"
+              disabled={deletingAll}
+            >
+              {deletingAll ? "Deleting..." : "Delete All"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

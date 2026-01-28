@@ -1495,13 +1495,23 @@ export function ScheduleViewClient({ date, expeditionId }: ScheduleViewClientPro
                 {/* Ingredients */}
                 {selectedRecipe.ingredients && selectedRecipe.ingredients.length > 0 && (
                   <div>
-                    <h3 className="text-sm font-semibold text-gray-900 mb-3">Ingredients</h3>
+                    <h3 className="text-sm font-semibold text-gray-900 mb-3">
+                      Ingredients
+                      {schedule?.crew_members && (
+                        <span className="text-xs font-normal text-gray-500 ml-2">
+                          ({schedule.crew_members} crew members)
+                        </span>
+                      )}
+                    </h3>
                     <div className="border rounded-lg overflow-hidden">
                       <Table>
                         <TableHeader>
                           <TableRow className="bg-gray-50/80">
                             <TableHead className="h-9 px-3 text-xs font-semibold text-gray-600">Ingredient</TableHead>
-                            <TableHead className="h-9 px-3 text-xs font-semibold text-gray-600 w-20">Oz/Meal</TableHead>
+                            <TableHead className="h-9 px-3 text-xs font-semibold text-gray-600 w-20">Oz/Person</TableHead>
+                            {schedule?.crew_members && (
+                              <TableHead className="h-9 px-3 text-xs font-semibold text-gray-600 w-20">Total Oz</TableHead>
+                            )}
                             <TableHead className="h-9 px-3 text-xs font-semibold text-gray-600">Prep</TableHead>
                           </TableRow>
                         </TableHeader>
@@ -1514,6 +1524,13 @@ export function ScheduleViewClient({ date, expeditionId }: ScheduleViewClientPro
                               <TableCell className="h-10 px-3">
                                 <span className="text-sm text-gray-600">{ingredient.oz_per_meal}</span>
                               </TableCell>
+                              {schedule?.crew_members && (
+                                <TableCell className="h-10 px-3">
+                                  <span className="text-sm font-medium text-gray-900">
+                                    {(ingredient.oz_per_meal * schedule.crew_members).toFixed(1)}
+                                  </span>
+                                </TableCell>
+                              )}
                               <TableCell className="h-10 px-3">
                                 <span className="text-sm text-gray-500">{ingredient.prep_notes || "—"}</span>
                               </TableCell>

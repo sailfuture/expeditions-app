@@ -18,7 +18,14 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
-import { Calendar, Plus, Check, X, ChevronDown, ChevronRight, ExternalLink } from "lucide-react"
+import { Calendar, Plus, Check, X, ChevronDown, ChevronRight, ExternalLink, MapPin, Users, Anchor, Ship, Heart } from "lucide-react"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Textarea } from "@/components/ui/textarea"
 import { useExpeditionSchedules, useExpeditionLocations, useTeachers } from "@/lib/hooks/use-expeditions"
 import { useExpeditionContext } from "@/lib/contexts/expedition-context"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -187,6 +194,10 @@ export default function DashboardPage() {
   const [editingNotesId, setEditingNotesId] = useState<number | null>(null)
   const [notesValues, setNotesValues] = useState<Record<number, string>>({})
   const [collapsedLocations, setCollapsedLocations] = useState<Set<string>>(new Set())
+  const [detailModalOpen, setDetailModalOpen] = useState(false)
+  const [selectedSchedule, setSelectedSchedule] = useState<any>(null)
+  const [detailNotes, setDetailNotes] = useState("")
+  const [savingDetailNotes, setSavingDetailNotes] = useState(false)
   
   // Scroll tracking for gradient indicators
   const [scrollState, setScrollState] = useState<Record<string, { left: boolean; right: boolean }>>({})
@@ -367,8 +378,55 @@ export default function DashboardPage() {
   }
 
   const handleRowClick = (schedule: any) => {
-    // Use the date string directly - it's already in YYYY-MM-DD format
-    router.push(`/evaluate/${schedule.date}`)
+    setSelectedSchedule(schedule)
+    setDetailNotes(schedule.notes || "")
+    setDetailModalOpen(true)
+  }
+
+  const handleDetailNotesUpdate = async () => {
+    if (!selectedSchedule) return
+    
+    setSavingDetailNotes(true)
+    try {
+      await updateExpeditionSchedule(selectedSchedule.id, {
+        expedition_schedule_id: selectedSchedule.id,
+        name: selectedSchedule.name,
+        date: selectedSchedule.date,
+        isOffshore: selectedSchedule.isOffshore,
+        isService: selectedSchedule.isService,
+        current_location: selectedSchedule.current_location,
+        destination: selectedSchedule.destination,
+        expeditions_id: selectedSchedule.expeditions_id,
+        notes: detailNotes || "",
+      })
+      mutate(`expedition_schedules_${selectedSchedule.expeditions_id}`)
+      toast.success("Notes updated")
+      // Update the selected schedule with new notes
+      setSelectedSchedule({ ...selectedSchedule, notes: detailNotes })
+    } catch (error) {
+      console.error("Failed to update notes:", error)
+      toast.error("Failed to update notes")
+    } finally {
+      setSavingDetailNotes(false)
+    }
+  }
+
+  const getScheduleTypeName = (schedule: any) => {
+    if (schedule.isOffshore || schedule.is_offshore) return "Offshore"
+    if (schedule.isService || schedule.is_service) return "Service"
+    return "Anchored"
+  }
+
+  const getScheduleTypeColor = (schedule: any) => {
+    if (schedule.isOffshore || schedule.is_offshore) return "bg-blue-100 text-blue-800"
+    if (schedule.isService || schedule.is_service) return "bg-red-100 text-red-800"
+    return "bg-green-100 text-green-800"
+  }
+
+  const getScheduleTypeIcon = (schedule: any) => {
+    if (schedule.isOffshore || schedule.is_offshore) return Ship
+    if (schedule.isService || schedule.is_service) return Heart
+    return Anchor
   }
 
   const handleGenerateAllDates = async () => {
@@ -672,7 +730,8 @@ export default function DashboardPage() {
                           return (
                             <TableRow 
                               key={schedule.id}
-                              className="border-b last:border-0 transition-colors hover:bg-gray-50/50"
+                              className="border-b last:border-0 transition-colors hover:bg-gray-50/50 cursor-pointer"
+                              onClick={() => handleRowClick(schedule)}
                             >
                               {/* Row content - reuse the same cells */}
                               <TableCell className="h-14 px-4" style={{ width: "100px" }}>
@@ -922,7 +981,8 @@ export default function DashboardPage() {
                           return (
                             <TableRow 
                               key={schedule.id}
-                              className="border-b last:border-0 transition-colors hover:bg-gray-50/50"
+                              className="border-b last:border-0 transition-colors hover:bg-gray-50/50 cursor-pointer"
+                              onClick={() => handleRowClick(schedule)}
                             >
                               <TableCell className="h-14 px-4" style={{ width: "100px" }}>
                                 <span className="font-semibold text-sm text-gray-900">
@@ -1144,6 +1204,145 @@ export default function DashboardPage() {
           )}
         </div>
       </main>
+
+      {/* Schedule Detail Modal */}
+      <Dialog open={detailModalOpen} onOpenChange={setDetailModalOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-xl">
+              {selectedSchedule && formatDate(selectedSchedule.date)}
+            </DialogTitle>
+          </DialogHeader>
+          
+          {selectedSchedule && (
+            <div className="space-y-6 mt-4">
+              {/* Type Badge */}
+              <div className="flex items-center gap-3">
+                {(() => {
+                  const TypeIcon = getScheduleTypeIcon(selectedSchedule)
+                  return (
+                    <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${getScheduleTypeColor(selectedSchedule)}`}>
+                      <TypeIcon className="h-4 w-4" />
+                      {getScheduleTypeName(selectedSchedule)}
+                    </div>
+                  )
+                })()}
+              </div>
+
+              {/* Location */}
+              <div>
+                <div className="text-xs uppercase tracking-wide text-muted-foreground mb-1.5">
+                  Current Location
+                </div>
+                <div className="flex items-center gap-2 text-gray-900">
+                  <MapPin className="h-4 w-4 text-gray-400" />
+                  <span className="font-medium">
+                    {selectedSchedule._expedition_current_location 
+                      ? formatLocation(selectedSchedule._expedition_current_location)
+                      : "No location set"}
+                  </span>
+                </div>
+              </div>
+
+              {/* Destination - only show for offshore */}
+              {(selectedSchedule.isOffshore || selectedSchedule.is_offshore) && (
+                <div>
+                  <div className="text-xs uppercase tracking-wide text-muted-foreground mb-1.5">
+                    Destination
+                  </div>
+                  <div className="flex items-center gap-2 text-gray-900">
+                    <Ship className="h-4 w-4 text-gray-400" />
+                    <span className="font-medium">
+                      {selectedSchedule._expedition_destination_location 
+                        ? formatLocation(selectedSchedule._expedition_destination_location)
+                        : locations?.find((l: any) => l.id === selectedSchedule.destination)
+                          ? formatLocation(locations.find((l: any) => l.id === selectedSchedule.destination))
+                          : "No destination set"}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Staff Off */}
+              <div>
+                <div className="text-xs uppercase tracking-wide text-muted-foreground mb-1.5">
+                  Staff Off
+                </div>
+                {selectedSchedule.staff_off && selectedSchedule.staff_off.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {selectedSchedule.staff_off.map((staffId: number) => {
+                      const staffMember = staff?.find((s: any) => s.id === staffId)
+                      return (
+                        <div key={staffId} className="flex items-center gap-2 bg-gray-100 rounded-full px-3 py-1">
+                          <Avatar className="h-5 w-5">
+                            <AvatarFallback className="text-[8px] bg-gray-200 text-gray-600">
+                              {staffMember?.name?.split(" ").map((n: string) => n[0]).join("")}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="text-sm text-gray-700">{staffMember?.name || "Unknown"}</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <span className="text-gray-400">No staff off</span>
+                )}
+              </div>
+
+              {/* Notes */}
+              <div>
+                <div className="text-xs uppercase tracking-wide text-muted-foreground mb-1.5">
+                  Notes
+                </div>
+                <Textarea
+                  value={detailNotes}
+                  onChange={(e) => setDetailNotes(e.target.value)}
+                  placeholder="Add notes for this day..."
+                  className="min-h-[100px] resize-none"
+                />
+                {detailNotes !== (selectedSchedule.notes || "") && (
+                  <div className="flex justify-end mt-2">
+                    <Button
+                      size="sm"
+                      onClick={handleDetailNotesUpdate}
+                      disabled={savingDetailNotes}
+                      className="cursor-pointer"
+                    >
+                      {savingDetailNotes ? "Saving..." : "Save Notes"}
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-2 pt-2 border-t">
+                <Button
+                  variant="outline"
+                  className="flex-1 cursor-pointer"
+                  onClick={() => {
+                    setDetailModalOpen(false)
+                    router.push(`/schedule/${selectedSchedule.date}`)
+                  }}
+                >
+                  <Calendar className="h-4 w-4 mr-2" />
+                  View Daily Schedule
+                </Button>
+                <Button
+                  variant="outline"
+                  className="flex-1 cursor-pointer"
+                  onClick={() => {
+                    setDetailModalOpen(false)
+                    router.push(`/evaluate/${selectedSchedule.date}`)
+                  }}
+                >
+                  <Users className="h-4 w-4 mr-2" />
+                  Evaluate Students
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

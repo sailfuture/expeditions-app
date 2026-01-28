@@ -18,7 +18,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
-import { Calendar, Plus, Check, X, ChevronDown, ChevronRight, ExternalLink, MapPin, Users, Anchor, Ship, Heart } from "lucide-react"
+import { Calendar, Plus, Check, X, ChevronDown, ChevronRight, ExternalLink, MapPin, Users, Ship } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -421,12 +421,6 @@ export default function DashboardPage() {
     if (schedule.isOffshore || schedule.is_offshore) return "bg-blue-100 text-blue-800"
     if (schedule.isService || schedule.is_service) return "bg-red-100 text-red-800"
     return "bg-green-100 text-green-800"
-  }
-
-  const getScheduleTypeIcon = (schedule: any) => {
-    if (schedule.isOffshore || schedule.is_offshore) return Ship
-    if (schedule.isService || schedule.is_service) return Heart
-    return Anchor
   }
 
   const handleGenerateAllDates = async () => {
@@ -1218,15 +1212,9 @@ export default function DashboardPage() {
             <div className="space-y-6 mt-4">
               {/* Type Badge */}
               <div className="flex items-center gap-3">
-                {(() => {
-                  const TypeIcon = getScheduleTypeIcon(selectedSchedule)
-                  return (
-                    <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${getScheduleTypeColor(selectedSchedule)}`}>
-                      <TypeIcon className="h-4 w-4" />
-                      {getScheduleTypeName(selectedSchedule)}
-                    </div>
-                  )
-                })()}
+                <div className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium ${getScheduleTypeColor(selectedSchedule)}`}>
+                  {getScheduleTypeName(selectedSchedule)}
+                </div>
               </div>
 
               {/* Location */}

@@ -1209,7 +1209,7 @@ export default function DashboardPage() {
           </DialogHeader>
           
           {selectedSchedule && (
-            <div className="space-y-6 mt-4">
+            <div className="space-y-5">
               {/* Type Badge */}
               <div className="flex items-center gap-3">
                 <div className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium ${getScheduleTypeColor(selectedSchedule)}`}>

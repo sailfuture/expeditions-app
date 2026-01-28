@@ -862,13 +862,14 @@ export default function DashboardPage() {
                                   </div>
                                 ) : (
                                   <div
-                                    className="text-sm text-gray-700 cursor-text hover:bg-gray-50 px-2 py-1 rounded min-h-[32px] flex items-center"
+                                    className="text-sm text-gray-700 cursor-text hover:bg-gray-50 px-2 py-1 rounded min-h-[32px] flex items-center max-w-[280px]"
                                     onClick={() => {
                                       setEditingNotesId(schedule.id)
                                       setNotesValues((prev) => ({ ...prev, [schedule.id]: schedule.notes ?? "" }))
                                     }}
+                                    title={schedule.notes || undefined}
                                   >
-                                    {schedule.notes || <span className="text-gray-300">Click to add notes...</span>}
+                                    <span className="truncate">{schedule.notes || <span className="text-gray-300">Click to add notes...</span>}</span>
                                   </div>
                                 )}
                               </TableCell>
@@ -1110,13 +1111,14 @@ export default function DashboardPage() {
                                   </div>
                                 ) : (
                                   <div
-                                    className="text-sm text-gray-700 cursor-text hover:bg-gray-50 px-2 py-1 rounded min-h-[32px] flex items-center"
+                                    className="text-sm text-gray-700 cursor-text hover:bg-gray-50 px-2 py-1 rounded min-h-[32px] flex items-center max-w-[280px]"
                                     onClick={() => {
                                       setEditingNotesId(schedule.id)
                                       setNotesValues((prev) => ({ ...prev, [schedule.id]: schedule.notes ?? "" }))
                                     }}
+                                    title={schedule.notes || undefined}
                                   >
-                                    {schedule.notes || <span className="text-gray-300">Click to add notes...</span>}
+                                    <span className="truncate">{schedule.notes || <span className="text-gray-300">Click to add notes...</span>}</span>
                                   </div>
                                 )}
                               </TableCell>

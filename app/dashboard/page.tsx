@@ -586,42 +586,45 @@ export default function DashboardPage() {
       {/* Action Bar */}
       {displayExpedition && (
         <div className="border-b bg-muted/30">
-          <div className="container mx-auto px-4 py-4">
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
+          <div className="container mx-auto px-4 py-3 sm:py-4">
+            <div className="flex items-center justify-between gap-2 sm:gap-4">
+              <div className="flex items-center gap-2 sm:gap-4">
                 {/* Only show this toggle for active expeditions */}
                 {displayExpedition?.isActive && (
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 sm:gap-2">
                     <Switch
                       id="show-old"
                       checked={showOldDates}
                       onCheckedChange={handleShowOldDatesChange}
                     />
-                    <Label htmlFor="show-old" className="text-sm cursor-pointer">
-                      Show past dates
+                    <Label htmlFor="show-old" className="text-xs sm:text-sm cursor-pointer whitespace-nowrap">
+                      <span className="hidden sm:inline">Show past dates</span>
+                      <span className="sm:hidden">Past</span>
                     </Label>
                   </div>
                 )}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 sm:gap-2">
                   <Switch
                     id="group-location"
                     checked={groupByLocation}
                     onCheckedChange={handleGroupByLocationChange}
                   />
-                  <Label htmlFor="group-location" className="text-sm cursor-pointer">
-                    Group by location
+                  <Label htmlFor="group-location" className="text-xs sm:text-sm cursor-pointer whitespace-nowrap">
+                    <span className="hidden sm:inline">Group by location</span>
+                    <span className="sm:hidden">Group</span>
                   </Label>
                 </div>
               </div>
               <Button 
                 onClick={handleGenerateAllDates} 
                 variant="outline"
+                size="sm"
                 disabled={generatingDates || !activeExpeditionId}
-                className="cursor-pointer"
+                className="cursor-pointer h-8 sm:h-9 px-2 sm:px-3"
                 title={!activeExpeditionId ? "No active expedition selected" : "Generate all dates for the expedition"}
               >
-                <Plus className="h-4 w-4 mr-2" />
-                {generatingDates ? "Generating..." : "Generate All Dates"}
+                <Plus className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">{generatingDates ? "Generating..." : "Generate All Dates"}</span>
               </Button>
             </div>
           </div>

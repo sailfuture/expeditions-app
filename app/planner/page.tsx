@@ -46,7 +46,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
-import { ChevronLeft, ChevronRight, ExternalLink, Calendar, Plus, X, Pencil, Trash2, Clock, Wrench } from "lucide-react"
+import { ChevronLeft, ChevronRight, ExternalLink, Calendar, Plus, X, Pencil, Trash2, Clock, Wrench, ClipboardList } from "lucide-react"
 import { useExpeditionScheduleItemsByDate, useExpeditionSchedules, useTeachers, useExpeditionScheduleTemplates, useStudentsByExpedition } from "@/lib/hooks/use-expeditions"
 import { useExpeditionContext } from "@/lib/contexts/expedition-context"
 import { cn, isDateWithinExpeditionRange, getExpeditionFirstDate } from "@/lib/utils"
@@ -481,9 +481,22 @@ function PlannerPageContent() {
 
   return (
     <div className="flex flex-col bg-gray-50 overflow-hidden" style={{ height: 'calc(100vh - 64px)' }}>
-      {/* Expedition Header with Navigation */}
+      {/* Expedition Header with Navigation - Always visible */}
       <ExpeditionHeader expedition={displayExpedition} isLoading={!displayExpedition} currentPage="weekly-planner" />
-      
+
+      {/* Mobile blocking message */}
+      <div className="sm:hidden flex flex-col items-center justify-center flex-1 bg-gray-50 p-6 text-center">
+        <div className="bg-white rounded-xl border border-gray-200 p-8 max-w-sm shadow-sm">
+          <ClipboardList className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <h2 className="text-lg font-semibold text-gray-900 mb-2">Desktop Required</h2>
+          <p className="text-sm text-gray-500">
+            The Weekly Planner requires a larger screen. Please use a tablet or desktop device to access this page.
+          </p>
+        </div>
+      </div>
+
+      {/* Desktop content */}
+      <div className="hidden sm:flex flex-col flex-1 overflow-hidden">
       {/* Date Navigation Controls */}
       <div className="bg-gray-50 border-b flex-shrink-0">
         <div className="container mx-auto px-4 py-4">
@@ -1408,6 +1421,7 @@ function PlannerPageContent() {
           </div>
         </SheetContent>
       </Sheet>
+      </div>
     </div>
   )
 }

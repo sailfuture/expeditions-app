@@ -690,7 +690,7 @@ export function ScheduleViewClient({ date, expeditionId }: ScheduleViewClientPro
             <div className="flex items-center gap-2 flex-nowrap flex-shrink-0">
               {schedule && (
                 <>
-                  <div className="hidden sm:flex items-center gap-1.5 text-muted-foreground text-sm max-w-[100px]">
+                  <div className="hidden lg:flex items-center gap-1.5 text-muted-foreground text-sm max-w-[100px]">
                     <MapPin className="h-4 w-4 flex-shrink-0" />
                     <span className="truncate" title={(schedule._expedition_locations || schedule._expedition_current_location) ? formatLocation(schedule._expedition_locations || schedule._expedition_current_location) : "No Location"}>
                       {(schedule._expedition_locations || schedule._expedition_current_location) ? formatLocation(schedule._expedition_locations || schedule._expedition_current_location) : "No Location"}
@@ -711,8 +711,8 @@ export function ScheduleViewClient({ date, expeditionId }: ScheduleViewClientPro
                     </div>
                   )}
                   {(schedule.galley_team || schedule._expeditions_galley_team) && (
-                    <div className="hidden sm:flex items-center gap-2">
-                      <div className="h-6 w-px bg-border" />
+                    <div className="flex items-center gap-2">
+                      <div className="hidden sm:block h-6 w-px bg-border" />
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -746,8 +746,8 @@ export function ScheduleViewClient({ date, expeditionId }: ScheduleViewClientPro
                     </div>
                   )}
                   {(schedule.dishday || schedule._expedition_dish_days) && (
-                    <div className="hidden sm:flex items-center gap-2">
-                      <div className="h-6 w-px bg-border" />
+                    <div className="flex items-center gap-2">
+                      <div className="hidden sm:block h-6 w-px bg-border" />
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -841,16 +841,16 @@ export function ScheduleViewClient({ date, expeditionId }: ScheduleViewClientPro
               <Button 
                 variant="outline"
                 onClick={() => router.push(`/evaluate/${date}${effectiveExpeditionId ? `?expedition=${effectiveExpeditionId}` : ''}`)} 
-                className="hidden sm:flex cursor-pointer h-10 w-10 p-0"
+                className="hidden lg:flex cursor-pointer h-10 w-10 p-0"
                 disabled={!isWithinExpeditionRange}
                 title={!isWithinExpeditionRange ? "Outside expedition date range" : "Add scores for this day"}
               >
                 <ClipboardList className="h-4 w-4" />
               </Button>
               
-              {/* Edit Mode Toggle - Admin only, disabled if no activities, hidden on mobile */}
+              {/* Edit Mode Toggle - Admin only, disabled if no activities, hidden on mobile/medium */}
               {isAdmin && (
-                <div className="hidden sm:flex items-center gap-2">
+                <div className="hidden lg:flex items-center gap-2">
                   <div className="h-6 w-px bg-border" />
                   <Button
                     variant={editMode ? "default" : "outline"}
@@ -866,7 +866,7 @@ export function ScheduleViewClient({ date, expeditionId }: ScheduleViewClientPro
                       <Button
                         variant="outline"
                         onClick={() => setSaveTemplateDialogOpen(true)}
-                        className="cursor-pointer h-10 w-10 p-0"
+                        className="hidden lg:flex cursor-pointer h-10 w-10 p-0"
                         title="Save as template"
                       >
                         <Save className="h-4 w-4" />

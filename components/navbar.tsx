@@ -20,7 +20,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { ChevronDown, LogOut } from "lucide-react"
+import { ChevronDown, LogOut, Menu, Ship, Users, UserCog, ClipboardList, FileText, Tv, Calendar, BookOpen, ExternalLink, UtensilsCrossed } from "lucide-react"
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
+import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { useExpeditionContext } from "@/lib/contexts/expedition-context"
 import { useCurrentUser } from "@/lib/contexts/user-context"
@@ -104,9 +106,9 @@ export function Navbar() {
     <header className="sticky top-0 z-50 w-full bg-background">
       {/* Main Navigation */}
       <div className="border-b">
-        <div className="container mx-auto flex h-14 items-center px-4 gap-6">
+        <div className="container mx-auto flex h-14 items-center px-4 gap-4 sm:gap-6">
           {/* Logo */}
-          <Link href={hasMounted && currentUser?.role === "Admin" ? "/expeditions" : "/my-expeditions"} className="flex items-center gap-2 cursor-pointer">
+          <Link href={hasMounted && currentUser?.role === "Admin" ? "/expeditions" : "/my-expeditions"} className="flex items-center gap-2 cursor-pointer flex-shrink-0">
             <div className="h-9 w-9 rounded-full overflow-hidden">
               <Image
                 src="/sailfuture-square (8).webp"
@@ -118,7 +120,8 @@ export function Navbar() {
             </div>
           </Link>
 
-          <NavigationMenu>
+          {/* Desktop Navigation */}
+          <NavigationMenu className="hidden md:flex">
             <NavigationMenuList className="gap-2">
               {hasMounted && currentUser?.role === "Admin" ? (
                 <NavigationMenuItem>
@@ -256,21 +259,22 @@ export function Navbar() {
           {/* Spacer */}
           <div className="flex-1" />
 
-          <div className="flex items-center gap-4 min-w-0">
+          <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+            {/* Expedition name - hidden on mobile */}
             {expeditionIdFromUrl && displayedExpedition && (
-              <>
+              <div className="hidden sm:flex items-center gap-4">
                 <span className="text-sm font-medium text-gray-700 truncate max-w-[200px]">
                   {isLoading ? "Loading..." : activeExpeditionName}
                 </span>
                 <div className="h-4 w-px bg-border shrink-0" />
-              </>
+              </div>
             )}
             
             {/* User Menu */}
             {hasMounted && (
               <DropdownMenu>
                 <DropdownMenuTrigger className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity min-w-0">
-                  <span className="text-sm font-medium truncate max-w-[150px]">{currentUser?.name || "User"}</span>
+                  <span className="hidden sm:block text-sm font-medium truncate max-w-[150px]">{currentUser?.name || "User"}</span>
                   <Avatar className="h-8 w-8">
                     <AvatarImage src={currentUser?.photo_url || "/diverse-user-avatars.png"} />
                     <AvatarFallback>
@@ -299,6 +303,114 @@ export function Navbar() {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+            )}
+
+            {/* Mobile Menu Button */}
+            {hasMounted && currentUser?.role === "Admin" && (
+              <Sheet>
+                <SheetTrigger asChild>
+                  <Button variant="ghost" size="icon" className="md:hidden h-9 w-9 cursor-pointer">
+                    <Menu className="h-5 w-5" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="right" className="w-72 p-0">
+                  <SheetHeader className="px-4 py-4 border-b">
+                    <SheetTitle className="text-left">Navigation</SheetTitle>
+                  </SheetHeader>
+                  <nav className="flex flex-col py-2">
+                    <Link
+                      href="/expeditions"
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium hover:bg-accent transition-colors"
+                    >
+                      <Ship className="h-4 w-4 text-muted-foreground" />
+                      All Expeditions
+                    </Link>
+                    
+                    <div className="px-4 py-2 mt-2">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Records</p>
+                    </div>
+                    <Link
+                      href="/students"
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors"
+                    >
+                      <Users className="h-4 w-4 text-muted-foreground" />
+                      Student Records
+                    </Link>
+                    <Link
+                      href="/staff"
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors"
+                    >
+                      <UserCog className="h-4 w-4 text-muted-foreground" />
+                      Staff Records
+                    </Link>
+                    <Link
+                      href="/intake-records"
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors"
+                    >
+                      <ClipboardList className="h-4 w-4 text-muted-foreground" />
+                      Intake Records
+                    </Link>
+                    <Link
+                      href="/intake"
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors"
+                    >
+                      <FileText className="h-4 w-4 text-muted-foreground" />
+                      Intake Form
+                    </Link>
+                    
+                    <div className="px-4 py-2 mt-2">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Public Pages</p>
+                    </div>
+                    <Link
+                      href="/tv"
+                      target="_blank"
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors"
+                    >
+                      <Tv className="h-4 w-4 text-muted-foreground" />
+                      TV Display
+                      <ExternalLink className="h-3 w-3 text-muted-foreground ml-auto" />
+                    </Link>
+                    <Link
+                      href="/public/schedule"
+                      target="_blank"
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors"
+                    >
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      Public Schedule
+                      <ExternalLink className="h-3 w-3 text-muted-foreground ml-auto" />
+                    </Link>
+                    
+                    <div className="px-4 py-2 mt-2">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Logs</p>
+                    </div>
+                    <Link
+                      href="/public/passage-logs"
+                      target="_blank"
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors"
+                    >
+                      <BookOpen className="h-4 w-4 text-muted-foreground" />
+                      Passage Log Form
+                      <ExternalLink className="h-3 w-3 text-muted-foreground ml-auto" />
+                    </Link>
+                    <Link
+                      href="/passage-logs"
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors"
+                    >
+                      <ClipboardList className="h-4 w-4 text-muted-foreground" />
+                      Log Dashboard
+                    </Link>
+                    
+                    <div className="h-px bg-border my-2 mx-4" />
+                    <Link
+                      href="/meal-planning"
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium hover:bg-accent transition-colors"
+                    >
+                      <UtensilsCrossed className="h-4 w-4 text-muted-foreground" />
+                      Meal Planning
+                    </Link>
+                  </nav>
+                </SheetContent>
+              </Sheet>
             )}
           </div>
         </div>

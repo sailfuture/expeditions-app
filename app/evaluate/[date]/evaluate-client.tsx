@@ -463,9 +463,9 @@ export function EvaluateClient({ date, expeditionId }: EvaluateClientProps) {
 
             {/* Stats & Actions */}
             <div className="flex items-center gap-3 flex-nowrap">
-              {/* Location */}
+              {/* Location - hidden on mobile */}
               {schedule && schedule._expedition_current_location && (
-                <>
+                <div className="hidden sm:flex items-center gap-3">
                   <div className="flex items-center gap-2 text-muted-foreground text-sm max-w-[150px]">
                     <MapPin className="h-4 w-4 flex-shrink-0" />
                     <span className="truncate" title={formatLocation(schedule._expedition_current_location)}>
@@ -473,11 +473,11 @@ export function EvaluateClient({ date, expeditionId }: EvaluateClientProps) {
                     </span>
                   </div>
                   <div className="h-6 w-px bg-border" />
-                </>
+                </div>
               )}
 
-              {/* Number Squares */}
-              <div className="flex items-center gap-2">
+              {/* Number Squares - hidden on mobile */}
+              <div className="hidden sm:flex items-center gap-2">
                 <div className="h-10 w-10 rounded border bg-gray-100 border-gray-300 flex items-center justify-center">
                   <span className="text-sm font-semibold text-gray-600">
                     {loadingProfessionalism || isNavigating ? "–" : records.filter((r) => !r.isLocked).length}
@@ -490,13 +490,14 @@ export function EvaluateClient({ date, expeditionId }: EvaluateClientProps) {
                 </div>
               </div>
 
-              <div className="h-6 w-px bg-border" />
+              <div className="hidden sm:block h-6 w-px bg-border" />
 
+              {/* View Schedule button - hidden on mobile */}
               <Button
                 variant="outline"
                 size="icon"
                 onClick={() => router.push(`/schedule/${date}`)}
-                className="cursor-pointer h-10 w-10"
+                className="hidden sm:flex cursor-pointer h-10 w-10"
                 disabled={!isWithinExpeditionRange}
                 title={!isWithinExpeditionRange ? "Outside expedition date range" : "View schedule"}
               >

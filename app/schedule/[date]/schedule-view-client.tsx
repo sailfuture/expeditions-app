@@ -690,14 +690,14 @@ export function ScheduleViewClient({ date, expeditionId }: ScheduleViewClientPro
             <div className="flex items-center gap-2 flex-nowrap flex-shrink-0">
               {schedule && (
                 <>
-                  <div className="flex items-center gap-1.5 text-muted-foreground text-sm max-w-[100px]">
+                  <div className="hidden sm:flex items-center gap-1.5 text-muted-foreground text-sm max-w-[100px]">
                     <MapPin className="h-4 w-4 flex-shrink-0" />
                     <span className="truncate" title={(schedule._expedition_locations || schedule._expedition_current_location) ? formatLocation(schedule._expedition_locations || schedule._expedition_current_location) : "No Location"}>
                       {(schedule._expedition_locations || schedule._expedition_current_location) ? formatLocation(schedule._expedition_locations || schedule._expedition_current_location) : "No Location"}
                     </span>
                   </div>
                   {schedule.staff_off && schedule.staff_off.length > 0 && staff && (
-                    <>
+                    <div className="hidden sm:flex items-center gap-2">
                       <div className="h-6 w-px bg-border" />
                       <span 
                         className="inline-flex items-center h-8 text-sm font-medium px-3 rounded bg-orange-50 border border-orange-200 text-orange-700 truncate max-w-[180px]" 
@@ -708,10 +708,10 @@ export function ScheduleViewClient({ date, expeditionId }: ScheduleViewClientPro
                           return staffMember?.name?.split(' ')[0] || 'Unknown'
                         }).join(', ')}
                       </span>
-                    </>
+                    </div>
                   )}
                   {(schedule.galley_team || schedule._expeditions_galley_team) && (
-                    <>
+                    <div className="hidden sm:flex items-center gap-2">
                       <div className="h-6 w-px bg-border" />
                       <TooltipProvider>
                         <Tooltip>
@@ -743,10 +743,10 @@ export function ScheduleViewClient({ date, expeditionId }: ScheduleViewClientPro
                           )}
                         </Tooltip>
                       </TooltipProvider>
-                    </>
+                    </div>
                   )}
                   {(schedule.dishday || schedule._expedition_dish_days) && (
-                    <>
+                    <div className="hidden sm:flex items-center gap-2">
                       <div className="h-6 w-px bg-border" />
                       <TooltipProvider>
                         <Tooltip>
@@ -790,13 +790,13 @@ export function ScheduleViewClient({ date, expeditionId }: ScheduleViewClientPro
                           )}
                         </Tooltip>
                       </TooltipProvider>
-                    </>
+                    </div>
                   )}
-                  <div className="h-6 w-px bg-border" />
+                  <div className="hidden sm:block h-6 w-px bg-border" />
                 </>
               )}
               {Array.isArray(scheduleItems) && scheduleItems.length === 0 && schedule && isWithinExpeditionRange && (
-                <>
+                <div className="hidden sm:flex items-center gap-2">
                   <Select 
                     value={selectedTemplate} 
                     onValueChange={setSelectedTemplate}
@@ -828,11 +828,11 @@ export function ScheduleViewClient({ date, expeditionId }: ScheduleViewClientPro
                     )}
                   </Button>
                   <div className="h-6 w-px bg-border" />
-                </>
+                </div>
               )}
               <Button 
                 onClick={() => setAddSheetOpen(true)} 
-                className="cursor-pointer h-10 w-10 p-0"
+                className="hidden sm:flex cursor-pointer h-10 w-10 p-0"
                 disabled={!isWithinExpeditionRange}
                 title={!isWithinExpeditionRange ? "Outside expedition date range" : "Add activity"}
               >
@@ -841,16 +841,16 @@ export function ScheduleViewClient({ date, expeditionId }: ScheduleViewClientPro
               <Button 
                 variant="outline"
                 onClick={() => router.push(`/evaluate/${date}${effectiveExpeditionId ? `?expedition=${effectiveExpeditionId}` : ''}`)} 
-                className="cursor-pointer h-10 w-10 p-0"
+                className="hidden sm:flex cursor-pointer h-10 w-10 p-0"
                 disabled={!isWithinExpeditionRange}
                 title={!isWithinExpeditionRange ? "Outside expedition date range" : "Add scores for this day"}
               >
                 <ClipboardList className="h-4 w-4" />
               </Button>
               
-              {/* Edit Mode Toggle - Admin only, disabled if no activities */}
+              {/* Edit Mode Toggle - Admin only, disabled if no activities, hidden on mobile */}
               {isAdmin && (
-                <>
+                <div className="hidden sm:flex items-center gap-2">
                   <div className="h-6 w-px bg-border" />
                   <Button
                     variant={editMode ? "default" : "outline"}
@@ -881,7 +881,7 @@ export function ScheduleViewClient({ date, expeditionId }: ScheduleViewClientPro
                       </Button>
                     </>
                   )}
-                </>
+                </div>
               )}
             </div>
           </div>

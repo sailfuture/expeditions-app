@@ -101,7 +101,7 @@ export function DateNavigation({
         variant="outline"
         size="icon"
         onClick={goToPrevDay}
-        className={`${buttonHeight} w-10 cursor-pointer flex-shrink-0`}
+        className={`hidden sm:flex ${buttonHeight} w-10 cursor-pointer flex-shrink-0`}
       >
         <ChevronLeft className="h-4 w-4" />
       </Button>
@@ -144,14 +144,14 @@ export function DateNavigation({
         variant="outline"
         size="icon"
         onClick={goToNextDay}
-        className={`${buttonHeight} w-10 cursor-pointer flex-shrink-0`}
+        className={`hidden sm:flex ${buttonHeight} w-10 cursor-pointer flex-shrink-0`}
       >
         <ChevronRight className="h-4 w-4" />
       </Button>
 
       {!isLoading && (
         <>
-          <div className="h-6 w-px bg-border flex-shrink-0" />
+          <div className="hidden sm:block h-6 w-px bg-border flex-shrink-0" />
           <div className={`${buttonHeight} px-3 rounded border ${statusInfo.bgColor} ${statusInfo.borderColor} flex items-center justify-center flex-shrink-0`}>
             <span className={`text-sm font-medium ${statusInfo.textColor} whitespace-nowrap`}>
               {statusInfo.text}

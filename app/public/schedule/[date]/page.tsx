@@ -260,9 +260,6 @@ export default function PublicSchedulePage() {
                             <div className="flex -space-x-1.5">
                               {schedule._expedition_dish_days.wash.filter((s: any) => s).map((s: any, idx: number) => (
                                 <Avatar key={idx} className="h-7 w-7 border-2 border-white">
-                                  {s.profileImage ? (
-                                    <AvatarImage src={s.profileImage} alt={`${s.firstName} ${s.lastName}`} />
-                                  ) : null}
                                   <AvatarFallback className="text-[10px] bg-gray-200 text-gray-700">
                                     {s.firstName?.[0]}{s.lastName?.[0]}
                                   </AvatarFallback>
@@ -287,9 +284,6 @@ export default function PublicSchedulePage() {
                             <div className="flex -space-x-1.5">
                               {schedule._expedition_dish_days.dry.filter((s: any) => s).map((s: any, idx: number) => (
                                 <Avatar key={idx} className="h-7 w-7 border-2 border-white">
-                                  {s.profileImage ? (
-                                    <AvatarImage src={s.profileImage} alt={`${s.firstName} ${s.lastName}`} />
-                                  ) : null}
                                   <AvatarFallback className="text-[10px] bg-gray-200 text-gray-700">
                                     {s.firstName?.[0]}{s.lastName?.[0]}
                                   </AvatarFallback>
@@ -367,9 +361,6 @@ export default function PublicSchedulePage() {
                           <div className="flex -space-x-1.5">
                             {schedule._expeditions_galley_team.students_id.filter((s: any) => s).map((s: any, idx: number) => (
                               <Avatar key={idx} className="h-7 w-7 border-2 border-white">
-                                {s.profileImage ? (
-                                  <AvatarImage src={s.profileImage} alt={`${s.firstName} ${s.lastName}`} />
-                                ) : null}
                                 <AvatarFallback className="text-[10px] bg-gray-200 text-gray-700">
                                   {s.firstName?.[0]}{s.lastName?.[0]}
                                 </AvatarFallback>
@@ -493,9 +484,6 @@ export default function PublicSchedulePage() {
                             <div className="flex -space-x-1.5">
                               {item.students_id.filter((s: any) => s != null).slice(0, 4).map((s: any, idx: number) => (
                                 <Avatar key={s.id || `student-${idx}`} className="h-6 w-6 border-2 border-white">
-                                  {s.profileImage ? (
-                                    <AvatarImage src={s.profileImage} alt={`${s.firstName} ${s.lastName}`} />
-                                  ) : null}
                                   <AvatarFallback className="text-[10px] font-medium bg-gray-200 text-gray-600">
                                     {s.firstName?.[0]}{s.lastName?.[0]}
                                   </AvatarFallback>
@@ -658,9 +646,6 @@ export default function PublicSchedulePage() {
                             className="flex items-center gap-1.5 px-2 py-1 bg-gray-100 rounded-lg"
                           >
                             <Avatar className="h-6 w-6">
-                              {student.profileImage ? (
-                                <AvatarImage src={student.profileImage} alt={`${student.firstName} ${student.lastName}`} />
-                              ) : null}
                               <AvatarFallback className="text-[10px] font-medium bg-gray-200 text-gray-600">
                                 {student.firstName?.[0]}{student.lastName?.[0]}
                               </AvatarFallback>

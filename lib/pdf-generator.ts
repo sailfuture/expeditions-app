@@ -1,6 +1,6 @@
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import { getPerformanceReviewById, getProfessionalismByStudentAndDate, getExpeditionTransactionsByDateByStudent } from './xano'
+import { getPerformanceReviewById, getProfessionalismByStudentAndDate, getExpeditionTransactionsByDateByStudent, getEvaluationByStudent } from './xano'
 
 // School header information
 const SCHOOL_INFO = {
@@ -124,6 +124,32 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
   const bonuses = nonPurchases.filter((t: any) => t.amount > 0)
   const penalties = nonPurchases.filter((t: any) => t.amount < 0)
   
+  // Fetch student evaluation (same as Student Evaluations table on expedition page)
+  let studentEvaluation: any = null
+  if (review.students_id && review.expeditions_id) {
+    try {
+      studentEvaluation = await getEvaluationByStudent(review.students_id, review.expeditions_id)
+    } catch (error) {
+      console.error('Error fetching student evaluation:', error)
+    }
+  }
+  
+  // Use student evaluation if available, otherwise fall back to stored review values
+  const evaluationData = {
+    academics: studentEvaluation?.academics ?? review.academics,
+    academics_evaluation: studentEvaluation?.academics_evaluation ?? review.academics_evaluation,
+    citizenship: studentEvaluation?.citizenship ?? review.citizenship,
+    citizenship_evaluation: studentEvaluation?.citizenship_evaluation ?? review.citizenship_evaluation,
+    job: studentEvaluation?.job ?? review.job,
+    job_evaluation: studentEvaluation?.job_evaluation ?? review.job_evaluation,
+    crew: studentEvaluation?.crew ?? review.crew,
+    crew_evaluation: studentEvaluation?.crew_evaluation ?? review.crew_evaluation,
+    service: studentEvaluation?.service ?? review.service,
+    service_evaluation: studentEvaluation?.service_evaluation ?? review.service_evaluation,
+    journaling: studentEvaluation?.journal ?? review.journaling,
+    journaling_evaluation: studentEvaluation?.journal_evaluation ?? review.journaling_evaluation,
+  }
+  
   const doc = new jsPDF()
   const pageWidth = doc.internal.pageSize.getWidth()
   const leftMargin = 14
@@ -184,14 +210,14 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
   doc.text('Performance Scores', 14, yPosition)
   yPosition += 8
   
-  // Create table data
+  // Create table data using evaluationData (from getEvaluationByStudent API)
   const tableData = [
-    ['Academics', formatScore(review.academics), review.academics_evaluation || '—'],
-    ['Citizenship', formatScore(review.citizenship), review.citizenship_evaluation || '—'],
-    ['Job Duties', formatScore(review.job), review.job_evaluation || '—'],
-    ['Crew Responsibilities', formatScore(review.crew), review.crew_evaluation || '—'],
-    ['Service Learning', formatScore(review.service), review.service_evaluation || '—'],
-    ['Journaling', formatJournaling(review.journaling), review.journaling_evaluation || '—'],
+    ['Academics', formatScore(evaluationData.academics), evaluationData.academics_evaluation || getEvaluationText(evaluationData.academics)],
+    ['Citizenship', formatScore(evaluationData.citizenship), evaluationData.citizenship_evaluation || getEvaluationText(evaluationData.citizenship)],
+    ['Job Duties', formatScore(evaluationData.job), evaluationData.job_evaluation || getEvaluationText(evaluationData.job)],
+    ['Crew Responsibilities', formatScore(evaluationData.crew), evaluationData.crew_evaluation || getEvaluationText(evaluationData.crew)],
+    ['Service Learning', formatScore(evaluationData.service), evaluationData.service_evaluation || getEvaluationText(evaluationData.service)],
+    ['Journaling', formatJournaling(evaluationData.journaling), evaluationData.journaling_evaluation || getJournalingEvaluationText(evaluationData.journaling)],
   ]
   
   // Helper function to get color based on score
@@ -243,15 +269,15 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
         const rowIndex = data.row.index
         let score: number | null = null
         
-        // Get the actual score from the review data
+        // Get the actual score from the evaluation data
         switch (rowIndex) {
-          case 0: score = review.academics; break
-          case 1: score = review.citizenship; break
-          case 2: score = review.job; break
-          case 3: score = review.crew; break
-          case 4: score = review.service; break
+          case 0: score = evaluationData.academics; break
+          case 1: score = evaluationData.citizenship; break
+          case 2: score = evaluationData.job; break
+          case 3: score = evaluationData.crew; break
+          case 4: score = evaluationData.service; break
           case 5: // Journaling - use percentage-based color
-            const jrnlColor = getJournalingColor(review.journaling)
+            const jrnlColor = getJournalingColor(evaluationData.journaling)
             if (jrnlColor) {
               data.cell.styles.fillColor = jrnlColor
             }
@@ -542,6 +568,25 @@ function formatDailyScore(score: number | null | undefined): string {
 
 function formatJournaling(decimal: number | null | undefined): string {
   if (decimal === null || decimal === undefined) return '—'
-  return `${Math.round(decimal * 100)}%`
+  // Handle both decimal (0.86) and percentage (86) formats
+  const pct = decimal <= 1 ? decimal * 100 : decimal
+  return `${pct.toFixed(2)}%`
+}
+
+function getEvaluationText(score: number | null | undefined): string {
+  if (score === null || score === undefined) return '—'
+  if (score >= 3.21) return 'Exceptional'
+  if (score >= 2.751) return 'Proficient'
+  if (score >= 2.251) return 'Developing'
+  if (score >= 1.1) return 'Needs Improvement'
+  return 'Unsatisfactory'
+}
+
+function getJournalingEvaluationText(pct: number | null | undefined): string {
+  if (pct === null || pct === undefined) return '—'
+  const normalizedPct = pct <= 1 ? pct : pct / 100
+  if (normalizedPct < 0.7) return 'Needs Improvement'
+  if (normalizedPct >= 0.9) return 'Exceptional'
+  return 'Proficient'
 }
 

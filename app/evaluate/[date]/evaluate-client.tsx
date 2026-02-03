@@ -365,7 +365,8 @@ export function EvaluateClient({ date, expeditionId }: EvaluateClientProps) {
           expeditions_id: effectiveExpeditionId || 0,
           students_id: record.students_id,
           date: date,
-          citizenship: record.citizenship ?? 3, // Always applicable
+          // If isCitizenshipUsed is true (excluded), keep as null; otherwise default to 3
+          citizenship: record.isCitizenshipUsed ? null : (record.citizenship ?? 3),
           isCitizenshipUsed: record.isCitizenshipUsed ?? false,
           isFlagged: record.isFlagged,
           isLocked: true, // Lock on submit
@@ -376,17 +377,19 @@ export function EvaluateClient({ date, expeditionId }: EvaluateClientProps) {
 
         if (isOffshore) {
           // Offshore days: crew and job are visible
-          data.crew = record.crew ?? 3
+          // If isXUsed is true (excluded), keep as null; otherwise default to 3
+          data.crew = record.isCrewUsed ? null : (record.crew ?? 3)
           data.isCrewUsed = record.isCrewUsed ?? false
-          data.job = record.job ?? 3
+          data.job = record.isJobUsed ? null : (record.job ?? 3)
           data.isJobUsed = record.isJobUsed ?? false
           // Don't submit school on offshore days
           data.academics = null
           data.isAcademicsUsed = false
         } else {
           // Anchored days: school and job are visible
-          data.academics = record.school ?? 3
-          data.job = record.job ?? 3
+          // If isXUsed is true (excluded), keep as null; otherwise default to 3
+          data.academics = record.isAcademicsUsed ? null : (record.school ?? 3)
+          data.job = record.isJobUsed ? null : (record.job ?? 3)
           data.isAcademicsUsed = record.isAcademicsUsed ?? false
           data.isJobUsed = record.isJobUsed ?? false
           // Don't submit crew on anchored days
@@ -396,7 +399,8 @@ export function EvaluateClient({ date, expeditionId }: EvaluateClientProps) {
 
         if (isService) {
           // Service learning days: service is visible
-          data.service = record.service_learning ?? 3
+          // If isServiceUsed is true (excluded), keep as null; otherwise default to 3
+          data.service = record.isServiceUsed ? null : (record.service_learning ?? 3)
           data.isServiceUsed = record.isServiceUsed ?? false
         } else {
           // Non-service days: don't submit service score

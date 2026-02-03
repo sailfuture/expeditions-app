@@ -23,7 +23,25 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 import { ExpeditionHeader } from "@/components/expedition-header"
-import { ExternalLink, Check, ChevronsUpDown, X } from "lucide-react"
+import { ExternalLink, Check, ChevronsUpDown, X, Plus, Trash2 } from "lucide-react"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import {
   Popover,
   PopoverContent,
@@ -37,7 +55,7 @@ import {
   CommandItem,
 } from "@/components/ui/command"
 import { cn } from "@/lib/utils"
-import { getExpeditionAssignmentsByExpedition, updateExpeditionAssignment, getExpeditionLaptops, getExpeditionsRooms, getExpeditionDishDays, updateExpeditionDishDay, getExpeditionsGalleyTeam, updateExpeditionsGalleyTeam, getExpeditionDepartments } from "@/lib/xano"
+import { getExpeditionAssignmentsByExpedition, updateExpeditionAssignment, getExpeditionLaptops, getExpeditionsRooms, getExpeditionDishDays, updateExpeditionDishDay, getExpeditionsGalleyTeam, updateExpeditionsGalleyTeam, createExpeditionsGalleyTeam, deleteExpeditionsGalleyTeam, getExpeditionDepartments } from "@/lib/xano"
 import { useExpeditions } from "@/lib/hooks/use-expeditions"
 import { useCurrentUser } from "@/lib/contexts/user-context"
 import { mutate } from "swr"
@@ -54,6 +72,12 @@ export default function AssignmentsPage({ params }: PageProps) {
   const expeditionId = parseInt(id)
 
   const [updatingId, setUpdatingId] = useState<string | null>(null)
+  const [addGalleyTeamOpen, setAddGalleyTeamOpen] = useState(false)
+  const [newGalleyTeamName, setNewGalleyTeamName] = useState("")
+  const [creatingGalleyTeam, setCreatingGalleyTeam] = useState(false)
+  const [deleteGalleyTeamOpen, setDeleteGalleyTeamOpen] = useState(false)
+  const [galleyTeamToDelete, setGalleyTeamToDelete] = useState<any>(null)
+  const [deletingGalleyTeam, setDeletingGalleyTeam] = useState(false)
   const { currentUser } = useCurrentUser()
   const isAdmin = currentUser?.role === "Admin"
 
@@ -217,6 +241,49 @@ export default function AssignmentsPage({ params }: PageProps) {
       toast.error(`Failed to update galley team ${field}`)
     } finally {
       setUpdatingId(null)
+    }
+  }
+
+  const handleCreateGalleyTeam = async () => {
+    if (!newGalleyTeamName.trim()) {
+      toast.error("Please enter a team name")
+      return
+    }
+
+    setCreatingGalleyTeam(true)
+    try {
+      await createExpeditionsGalleyTeam({
+        name: newGalleyTeamName.trim(),
+        expeditions_id: expeditionId,
+        students_id: [],
+      })
+      mutate(`expeditions_galley_team_${expeditionId}`)
+      toast.success(`Galley team "${newGalleyTeamName}" created`)
+      setNewGalleyTeamName("")
+      setAddGalleyTeamOpen(false)
+    } catch (error) {
+      console.error("Failed to create galley team:", error)
+      toast.error("Failed to create galley team")
+    } finally {
+      setCreatingGalleyTeam(false)
+    }
+  }
+
+  const handleDeleteGalleyTeam = async () => {
+    if (!galleyTeamToDelete) return
+
+    setDeletingGalleyTeam(true)
+    try {
+      await deleteExpeditionsGalleyTeam(galleyTeamToDelete.id)
+      mutate(`expeditions_galley_team_${expeditionId}`)
+      toast.success(`Galley team "${galleyTeamToDelete.name}" deleted`)
+      setDeleteGalleyTeamOpen(false)
+      setGalleyTeamToDelete(null)
+    } catch (error) {
+      console.error("Failed to delete galley team:", error)
+      toast.error("Failed to delete galley team")
+    } finally {
+      setDeletingGalleyTeam(false)
     }
   }
 
@@ -791,9 +858,19 @@ export default function AssignmentsPage({ params }: PageProps) {
 
         {/* Galley Teams Section */}
         <div className="mt-6 rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-            <h2 className="text-lg font-semibold text-gray-900">Galley Team Assignments</h2>
-            <p className="text-sm text-gray-600 mt-1">Assign students and staff to galley teams</p>
+          <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">Galley Team Assignments</h2>
+              <p className="text-sm text-gray-600 mt-1">Assign students and staff to galley teams</p>
+            </div>
+            <Button
+              onClick={() => setAddGalleyTeamOpen(true)}
+              size="sm"
+              className="cursor-pointer"
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              Add Team
+            </Button>
           </div>
           
           {galleyTeamsLoading ? (
@@ -804,15 +881,16 @@ export default function AssignmentsPage({ params }: PageProps) {
           ) : !galleyTeams || galleyTeams.length === 0 ? (
             <div className="p-12 text-center text-muted-foreground">
               <p className="text-lg font-medium text-gray-600">No galley teams found</p>
-              <p className="text-sm text-gray-500 mt-1">Galley teams will appear here for this expedition.</p>
+              <p className="text-sm text-gray-500 mt-1">Click "Add Team" to create your first galley team.</p>
             </div>
           ) : (
             <Table className="table-fixed w-full">
               <TableHeader>
                 <TableRow className="border-b bg-gray-50/30 hover:bg-gray-50/30">
                   <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600" style={{ width: '15%' }}>Team Name</TableHead>
-                  <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600" style={{ width: '60%' }}>Students</TableHead>
+                  <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600" style={{ width: '50%' }}>Students</TableHead>
                   <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600" style={{ width: '25%' }}>Staff Supervisor</TableHead>
+                  <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600 text-right" style={{ width: '10%' }}></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -956,6 +1034,21 @@ export default function AssignmentsPage({ params }: PageProps) {
                           {updatingId === staffUpdateKey && <Spinner className="h-4 w-4 shrink-0" />}
                         </div>
                       </TableCell>
+                      
+                      {/* Delete Button */}
+                      <TableCell className="h-16 px-6 text-right">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-gray-400 hover:text-red-600 hover:bg-red-50 cursor-pointer"
+                          onClick={() => {
+                            setGalleyTeamToDelete(team)
+                            setDeleteGalleyTeamOpen(true)
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   )
                 })}
@@ -964,6 +1057,75 @@ export default function AssignmentsPage({ params }: PageProps) {
           )}
         </div>
       </main>
+
+      {/* Add Galley Team Dialog */}
+      <Dialog open={addGalleyTeamOpen} onOpenChange={setAddGalleyTeamOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add Galley Team</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            <div>
+              <Label htmlFor="team-name">Team Name</Label>
+              <Input
+                id="team-name"
+                placeholder="e.g., Galley Team C"
+                value={newGalleyTeamName}
+                onChange={(e) => setNewGalleyTeamName(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setAddGalleyTeamOpen(false)
+                  setNewGalleyTeamName("")
+                }}
+                className="cursor-pointer"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleCreateGalleyTeam}
+                disabled={creatingGalleyTeam || !newGalleyTeamName.trim()}
+                className="cursor-pointer"
+              >
+                {creatingGalleyTeam ? (
+                  <>
+                    <Spinner className="h-4 w-4 mr-2" />
+                    Creating...
+                  </>
+                ) : (
+                  "Create Team"
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Galley Team Confirmation */}
+      <AlertDialog open={deleteGalleyTeamOpen} onOpenChange={setDeleteGalleyTeamOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Galley Team</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{galleyTeamToDelete?.name}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="cursor-pointer">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteGalleyTeam}
+              disabled={deletingGalleyTeam}
+              className="bg-red-600 hover:bg-red-700 cursor-pointer"
+            >
+              {deletingGalleyTeam ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

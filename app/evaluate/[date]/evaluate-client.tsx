@@ -185,7 +185,7 @@ export function EvaluateClient({ date, expeditionId }: EvaluateClientProps) {
             isLocked: existing.isLocked ?? existing.is_locked ?? false,
             bonuses: Array.isArray(existing.bonus) ? existing.bonus : (Array.isArray(existing.bonuses) ? existing.bonuses : []),
             penalties: Array.isArray(existing.penalty) ? existing.penalty : (Array.isArray(existing.penalties) ? existing.penalties : []),
-            note: existing.note ?? existing.journaling ?? null,
+            note: existing.note ?? null, // Note is separate from journaling status
             journal_status_id: matchedJournalStatus?.id ?? null,
             // Boolean flags for disabling categories (true = disabled)
             isAcademicsUsed: existing.isAcademicsUsed ?? false,
@@ -417,7 +417,9 @@ export function EvaluateClient({ date, expeditionId }: EvaluateClientProps) {
             await createExpeditionsProfessionalism(data)
           }
         } catch (error) {
-          console.error("Failed to save record:", error)
+          console.error("Failed to save record:", error, "Data:", data)
+          toast.error(`Failed to save score for ${record._students?.firstName || 'student'}`)
+          throw error // Re-throw to trigger the outer catch
         }
       }
 

@@ -417,6 +417,24 @@ export async function updateExpeditionsGalleyTeam(id: number, data: {
   })
 }
 
+export async function createExpeditionsGalleyTeam(data: {
+  name: string
+  expeditions_id: number
+  students_id?: number[]
+  expedition_staff_id?: number
+}) {
+  return xanoFetch<any>("/expeditions_galley_team", {
+    method: "POST",
+    body: JSON.stringify(data),
+  })
+}
+
+export async function deleteExpeditionsGalleyTeam(id: number) {
+  return xanoFetch<any>(`/expeditions_galley_team/${id}`, {
+    method: "DELETE",
+  })
+}
+
 // ============ Intake Form Management ============
 export async function getExpeditionsStudentInformation() {
   return xanoFetch<any[]>("/expeditions_student_information")

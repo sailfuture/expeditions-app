@@ -18,7 +18,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
-import { Calendar, Plus, Check, X, ChevronDown, ChevronRight, ExternalLink, MapPin, Users, Ship } from "lucide-react"
+import { Calendar, Plus, Check, X, ChevronDown, ChevronRight, ExternalLink, MapPin, Users, Ship, RefreshCw } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -29,8 +29,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { useExpeditionSchedules, useExpeditionLocations, useTeachers } from "@/lib/hooks/use-expeditions"
 import { useExpeditionContext } from "@/lib/contexts/expedition-context"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { addAllDatesForExpedition, updateExpeditionSchedule } from "@/lib/xano"
-import { mutate } from "swr"
+import { addAllDatesForExpedition, updateExpeditionSchedule, getExpeditionsGalleyTeam, getExpeditionDishDays } from "@/lib/xano"
+import useSWR, { mutate } from "swr"
 import { toast } from "sonner"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { ExpeditionHeader } from "@/components/expedition-header"
@@ -173,6 +173,14 @@ export default function DashboardPage() {
   const { data: schedules, isLoading: loadingSchedules } = useExpeditionSchedules(activeExpeditionId || undefined)
   const { data: locations } = useExpeditionLocations(activeExpeditionId || undefined)
   const { data: staff } = useTeachers()
+  const { data: galleyTeams } = useSWR(
+    activeExpeditionId ? `galley_teams_${activeExpeditionId}` : null,
+    () => getExpeditionsGalleyTeam(activeExpeditionId!)
+  )
+  const { data: dishDays } = useSWR(
+    activeExpeditionId ? `dish_days_${activeExpeditionId}` : null,
+    () => getExpeditionDishDays(activeExpeditionId!)
+  )
   const [showOldDates, setShowOldDates] = useState(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('showOldDates')
@@ -188,6 +196,8 @@ export default function DashboardPage() {
     return false
   })
   const [generatingDates, setGeneratingDates] = useState(false)
+  const [rotatingGalleyTeams, setRotatingGalleyTeams] = useState(false)
+  const [rotatingDishTeams, setRotatingDishTeams] = useState(false)
   const [updatingTypeId, setUpdatingTypeId] = useState<number | null>(null)
   const [updatingLocationId, setUpdatingLocationId] = useState<string | null>(null) // "scheduleId-location" or "scheduleId-destination"
   const [updatingStaffOffId, setUpdatingStaffOffId] = useState<number | null>(null)
@@ -442,6 +452,114 @@ export default function DashboardPage() {
     }
   }
 
+  // Handler to rotate galley teams across all expedition days
+  const handleRotateGalleyTeams = async () => {
+    if (!galleyTeams || galleyTeams.length === 0) {
+      toast.error("No galley teams found for this expedition")
+      return
+    }
+
+    if (!schedules || schedules.length === 0) {
+      toast.error("No schedule days found for this expedition")
+      return
+    }
+
+    setRotatingGalleyTeams(true)
+    
+    try {
+      // Sort galley teams alphabetically
+      const sortedGalleyTeams = [...galleyTeams].sort((a: any, b: any) => 
+        (a.name || "").localeCompare(b.name || "")
+      )
+      
+      // Sort schedules by date
+      const sortedSchedules = [...schedules].sort((a: any, b: any) => 
+        a.date.localeCompare(b.date)
+      )
+      
+      // Update each schedule with rotating galley team
+      let successCount = 0
+      for (let i = 0; i < sortedSchedules.length; i++) {
+        const schedule = sortedSchedules[i]
+        const galleyTeamIndex = i % sortedGalleyTeams.length
+        const galleyTeam = sortedGalleyTeams[galleyTeamIndex]
+        
+        try {
+          await updateExpeditionSchedule(schedule.id, {
+            expeditions_galley_team_id: galleyTeam.id
+          })
+          successCount++
+        } catch (error) {
+          console.error(`Failed to update schedule ${schedule.id}:`, error)
+        }
+      }
+      
+      // Refresh schedule data
+      await mutate(`expedition_schedules_${activeExpeditionId}`)
+      
+      toast.success(`Galley teams rotated for ${successCount} days`)
+    } catch (error) {
+      console.error("Failed to rotate galley teams:", error)
+      toast.error("Failed to rotate galley teams")
+    } finally {
+      setRotatingGalleyTeams(false)
+    }
+  }
+
+  // Handler to rotate dish teams across all expedition days
+  const handleRotateDishTeams = async () => {
+    if (!dishDays || dishDays.length === 0) {
+      toast.error("No dish teams found for this expedition")
+      return
+    }
+
+    if (!schedules || schedules.length === 0) {
+      toast.error("No schedule days found for this expedition")
+      return
+    }
+
+    setRotatingDishTeams(true)
+    
+    try {
+      // Sort dish days by dishteam name (Dish Team A, Dish Team B, etc.)
+      const sortedDishDays = [...dishDays].sort((a: any, b: any) => 
+        (a.dishteam || "").localeCompare(b.dishteam || "")
+      )
+      
+      // Sort schedules by date
+      const sortedSchedules = [...schedules].sort((a: any, b: any) => 
+        a.date.localeCompare(b.date)
+      )
+      
+      // Update each schedule with rotating dish team
+      let successCount = 0
+      for (let i = 0; i < sortedSchedules.length; i++) {
+        const schedule = sortedSchedules[i]
+        const dishDayIndex = i % sortedDishDays.length
+        const dishDay = sortedDishDays[dishDayIndex]
+        
+        try {
+          await updateExpeditionSchedule(schedule.id, {
+            expedition_dish_days_id: dishDay.id
+          })
+          successCount++
+        } catch (error) {
+          console.error(`Failed to update schedule ${schedule.id}:`, error)
+        }
+      }
+      
+      // Refresh schedule data
+      await mutate(`expedition_schedules_${activeExpeditionId}`)
+      
+      toast.success(`Dish teams updated for ${successCount} days`)
+    } catch (error) {
+      console.error("Failed to rotate dish teams:", error)
+      toast.error("Failed to rotate dish teams")
+    } finally {
+      setRotatingDishTeams(false)
+    }
+  }
+
   const handleLocationChange = async (schedule: any, locationId: number, isDestination: boolean) => {
     const updateKey = `${schedule.id}-${isDestination ? 'destination' : 'location'}`
     setUpdatingLocationId(updateKey)
@@ -615,17 +733,49 @@ export default function DashboardPage() {
                   </Label>
                 </div>
               </div>
-              <Button 
-                onClick={handleGenerateAllDates} 
-                variant="outline"
-                size="sm"
-                disabled={generatingDates || !activeExpeditionId}
-                className="cursor-pointer h-8 sm:h-9 px-2 sm:px-3"
-                title={!activeExpeditionId ? "No active expedition selected" : "Generate all dates for the expedition"}
-              >
-                <Plus className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">{generatingDates ? "Generating..." : "Generate All Dates"}</span>
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button 
+                  onClick={handleGenerateAllDates} 
+                  variant="outline"
+                  size="sm"
+                  disabled={generatingDates || !activeExpeditionId}
+                  className="cursor-pointer h-8 sm:h-9 px-2 sm:px-3"
+                  title={!activeExpeditionId ? "No active expedition selected" : "Generate all dates for the expedition"}
+                >
+                  <Plus className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">{generatingDates ? "Generating..." : "Generate Dates"}</span>
+                </Button>
+                <Button 
+                  onClick={handleRotateDishTeams} 
+                  variant="outline"
+                  size="sm"
+                  disabled={rotatingDishTeams || !activeExpeditionId || !dishDays || dishDays.length === 0 || !schedules || schedules.length === 0}
+                  className="cursor-pointer h-8 sm:h-9 px-2 sm:px-3"
+                  title={!schedules || schedules.length === 0 ? "Generate dates first" : "Assign dish teams in rotation starting from first date"}
+                >
+                  {rotatingDishTeams ? (
+                    <Spinner className="h-4 w-4 sm:mr-2" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4 sm:mr-2" />
+                  )}
+                  <span className="hidden sm:inline">{rotatingDishTeams ? "Updating..." : "Update Dish"}</span>
+                </Button>
+                <Button 
+                  onClick={handleRotateGalleyTeams} 
+                  variant="outline"
+                  size="sm"
+                  disabled={rotatingGalleyTeams || !activeExpeditionId || !galleyTeams || galleyTeams.length === 0 || !schedules || schedules.length === 0}
+                  className="cursor-pointer h-8 sm:h-9 px-2 sm:px-3"
+                  title={!schedules || schedules.length === 0 ? "Generate dates first" : "Assign galley teams in rotation starting from first date"}
+                >
+                  {rotatingGalleyTeams ? (
+                    <Spinner className="h-4 w-4 sm:mr-2" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4 sm:mr-2" />
+                  )}
+                  <span className="hidden sm:inline">{rotatingGalleyTeams ? "Updating..." : "Update Galley"}</span>
+                </Button>
+              </div>
             </div>
           </div>
         </div>

@@ -107,7 +107,8 @@ export function StudentCard({
   const isExcluded = record.isFlagged
 
   const handleScoreChange = (key: string, value: number | null) => {
-    onUpdate({ ...record, [key]: value })
+    // Also unlock the record when changing a score so it can be re-submitted
+    onUpdate({ ...record, [key]: value, isLocked: false })
   }
 
   const handleExcludeToggle = () => {
@@ -133,22 +134,49 @@ export function StudentCard({
   }
 
   // Toggle the isXUsed flag for a category
+  // When blocking (setting isXUsed to true), also clear the score value to null
+  // Also unlock the record so it can be re-submitted
   const handleBlockToggle = (key: string) => {
     switch (key) {
       case "school":
-        onUpdate({ ...record, isAcademicsUsed: !record.isAcademicsUsed })
+        onUpdate({ 
+          ...record, 
+          isAcademicsUsed: !record.isAcademicsUsed,
+          school: !record.isAcademicsUsed ? null : record.school, // Clear to null when blocking
+          isLocked: false // Unlock so changes can be submitted
+        })
         break
       case "job":
-        onUpdate({ ...record, isJobUsed: !record.isJobUsed })
+        onUpdate({ 
+          ...record, 
+          isJobUsed: !record.isJobUsed,
+          job: !record.isJobUsed ? null : record.job,
+          isLocked: false
+        })
         break
       case "citizenship":
-        onUpdate({ ...record, isCitizenshipUsed: !record.isCitizenshipUsed })
+        onUpdate({ 
+          ...record, 
+          isCitizenshipUsed: !record.isCitizenshipUsed,
+          citizenship: !record.isCitizenshipUsed ? null : record.citizenship,
+          isLocked: false
+        })
         break
       case "crew":
-        onUpdate({ ...record, isCrewUsed: !record.isCrewUsed })
+        onUpdate({ 
+          ...record, 
+          isCrewUsed: !record.isCrewUsed,
+          crew: !record.isCrewUsed ? null : record.crew,
+          isLocked: false
+        })
         break
       case "service_learning":
-        onUpdate({ ...record, isServiceUsed: !record.isServiceUsed })
+        onUpdate({ 
+          ...record, 
+          isServiceUsed: !record.isServiceUsed,
+          service_learning: !record.isServiceUsed ? null : record.service_learning,
+          isLocked: false
+        })
         break
     }
   }

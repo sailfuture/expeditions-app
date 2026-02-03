@@ -22,7 +22,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { generatePerformanceReviewPDF } from "@/lib/pdf-generator"
 import { toast } from "sonner"
-import { getProfessionalismByStudentAndDate, createPerformanceReview, updatePerformanceReviewNotes, getPerformanceReviewById, deletePerformanceReview, getExpeditionTransactionsByDateByStudent } from "@/lib/xano"
+import { getProfessionalismByStudentAndDate, createPerformanceReview, updatePerformanceReviewNotes, getPerformanceReviewById, deletePerformanceReview, getExpeditionTransactionsByDateByStudent, getEvaluationByStudent } from "@/lib/xano"
 import { Spinner } from "@/components/ui/spinner"
 import { mutate } from "swr"
 import {
@@ -118,7 +118,8 @@ function PreviewModal({
   onStaffChange,
   staff,
   onSave,
-  saving
+  saving,
+  expeditionStartDate
 }: { 
   reviewId: number | null
   open: boolean
@@ -130,6 +131,7 @@ function PreviewModal({
   staff: any[] | undefined
   onSave: () => void
   saving: boolean
+  expeditionStartDate?: string
 }) {
   // Fetch full review data by ID
   const { data: review, isLoading: loadingReview } = useSWR(
@@ -163,7 +165,38 @@ function PreviewModal({
       : null
   )
   
-  // Use the stored snapshot evaluation from the review (not live data)
+  // Fetch student evaluation summary (same as Student Evaluations table on expedition page)
+  const { data: studentEvaluation, isLoading: loadingStudentEvaluation } = useSWR(
+    open && review?.students_id && review?.expeditions_id
+      ? `evaluation_by_student_${review.students_id}_${review.expeditions_id}`
+      : null,
+    open && review?.students_id && review?.expeditions_id
+      ? () => getEvaluationByStudent(review.students_id, review.expeditions_id)
+      : null
+  )
+  
+  // Use the student evaluation data (same as expedition overview table)
+  const displayAverages = useMemo(() => {
+    if (studentEvaluation) {
+      return {
+        academics: studentEvaluation.academics,
+        citizenship: studentEvaluation.citizenship,
+        job: studentEvaluation.job,
+        crew: studentEvaluation.crew,
+        service: studentEvaluation.service,
+        journaling: studentEvaluation.journal
+      }
+    }
+    // Fallback to stored review values
+    return {
+      academics: review?.academics,
+      citizenship: review?.citizenship,
+      job: review?.job,
+      crew: review?.crew,
+      service: review?.service,
+      journaling: review?.journaling
+    }
+  }, [studentEvaluation, review])
   
   // Helper to get evaluation text based on score
   const getEvaluationText = (score: number | null | undefined) => {
@@ -254,10 +287,10 @@ function PreviewModal({
           <>
             
             <div className="flex-1 overflow-y-auto space-y-6">
-          {/* Evaluation Summary Table - Using stored snapshot from review */}
+          {/* Evaluation Summary Table - Same as Student Evaluations table */}
           <div>
-            <h3 className="text-sm font-semibold text-gray-700 mb-3">Evaluation Summary <span className="text-xs font-normal text-gray-500">(Snapshot from {review?.startDate ? formatDateShort(review.startDate) : ''} - {review?.endDate ? formatDateShort(review.endDate) : ''})</span></h3>
-            {loadingReview ? (
+            <h3 className="text-sm font-semibold text-gray-700 mb-3">Evaluation Summary <span className="text-xs font-normal text-gray-500">(All Days)</span></h3>
+            {loadingReview || loadingStudentEvaluation ? (
               <div className="flex justify-center py-4">
                 <Spinner size="sm" />
               </div>
@@ -272,60 +305,60 @@ function PreviewModal({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  <TableRow className={`border-b ${getEvaluationColorByScore(review?.academics ?? null)}`}>
+                  <TableRow className={`border-b ${getEvaluationColorByScore(displayAverages.academics ?? null)}`}>
                     <TableCell className="px-3 py-2 font-medium text-gray-700 text-sm">Academics</TableCell>
                     <TableCell className="px-3 py-2 text-center text-gray-700 text-sm">
-                      {review?.academics !== null && review?.academics !== undefined ? review.academics.toFixed(2) : '—'}
+                      {displayAverages.academics !== null && displayAverages.academics !== undefined ? displayAverages.academics.toFixed(2) : '—'}
                     </TableCell>
                     <TableCell className="px-3 py-2 text-gray-600 text-sm">
-                      {review?.academics_evaluation || getEvaluationText(review?.academics)}
+                      {getEvaluationText(displayAverages.academics)}
                     </TableCell>
                   </TableRow>
-                  <TableRow className={`border-b ${getEvaluationColorByScore(review?.citizenship ?? null)}`}>
+                  <TableRow className={`border-b ${getEvaluationColorByScore(displayAverages.citizenship ?? null)}`}>
                     <TableCell className="px-3 py-2 font-medium text-gray-700 text-sm">Citizenship</TableCell>
                     <TableCell className="px-3 py-2 text-center text-gray-700 text-sm">
-                      {review?.citizenship !== null && review?.citizenship !== undefined ? review.citizenship.toFixed(2) : '—'}
+                      {displayAverages.citizenship !== null && displayAverages.citizenship !== undefined ? displayAverages.citizenship.toFixed(2) : '—'}
                     </TableCell>
                     <TableCell className="px-3 py-2 text-gray-600 text-sm">
-                      {review?.citizenship_evaluation || getEvaluationText(review?.citizenship)}
+                      {getEvaluationText(displayAverages.citizenship)}
                     </TableCell>
                   </TableRow>
-                  <TableRow className={`border-b ${getEvaluationColorByScore(review?.job ?? null)}`}>
+                  <TableRow className={`border-b ${getEvaluationColorByScore(displayAverages.job ?? null)}`}>
                     <TableCell className="px-3 py-2 font-medium text-gray-700 text-sm">Job Duties</TableCell>
                     <TableCell className="px-3 py-2 text-center text-gray-700 text-sm">
-                      {review?.job !== null && review?.job !== undefined ? review.job.toFixed(2) : '—'}
+                      {displayAverages.job !== null && displayAverages.job !== undefined ? displayAverages.job.toFixed(2) : '—'}
                     </TableCell>
                     <TableCell className="px-3 py-2 text-gray-600 text-sm">
-                      {review?.job_evaluation || getEvaluationText(review?.job)}
+                      {getEvaluationText(displayAverages.job)}
                     </TableCell>
                   </TableRow>
-                  <TableRow className={`border-b ${getEvaluationColorByScore(review?.crew ?? null)}`}>
+                  <TableRow className={`border-b ${getEvaluationColorByScore(displayAverages.crew ?? null)}`}>
                     <TableCell className="px-3 py-2 font-medium text-gray-700 text-sm">Crew</TableCell>
                     <TableCell className="px-3 py-2 text-center text-gray-700 text-sm">
-                      {review?.crew !== null && review?.crew !== undefined ? review.crew.toFixed(2) : '—'}
+                      {displayAverages.crew !== null && displayAverages.crew !== undefined ? displayAverages.crew.toFixed(2) : '—'}
                     </TableCell>
                     <TableCell className="px-3 py-2 text-gray-600 text-sm">
-                      {review?.crew_evaluation || getEvaluationText(review?.crew)}
+                      {getEvaluationText(displayAverages.crew)}
                     </TableCell>
                   </TableRow>
-                  <TableRow className={`border-b ${getEvaluationColorByScore(review?.service ?? null)}`}>
+                  <TableRow className={`border-b ${getEvaluationColorByScore(displayAverages.service ?? null)}`}>
                     <TableCell className="px-3 py-2 font-medium text-gray-700 text-sm">Service</TableCell>
                     <TableCell className="px-3 py-2 text-center text-gray-700 text-sm">
-                      {review?.service !== null && review?.service !== undefined ? review.service.toFixed(2) : '—'}
+                      {displayAverages.service !== null && displayAverages.service !== undefined ? displayAverages.service.toFixed(2) : '—'}
                     </TableCell>
                     <TableCell className="px-3 py-2 text-gray-600 text-sm">
-                      {review?.service_evaluation || getEvaluationText(review?.service)}
+                      {getEvaluationText(displayAverages.service)}
                     </TableCell>
                   </TableRow>
-                  <TableRow className={getJournalColor(review?.journaling !== null && review?.journaling !== undefined ? (review.journaling <= 1 ? review.journaling * 100 : review.journaling) : null)}>
+                  <TableRow className={getJournalColor(displayAverages.journaling !== null && displayAverages.journaling !== undefined ? (displayAverages.journaling <= 1 ? displayAverages.journaling * 100 : displayAverages.journaling) : null)}>
                     <TableCell className="px-3 py-2 font-medium text-gray-700 text-sm">Journaling</TableCell>
                     <TableCell className="px-3 py-2 text-center text-gray-700 text-sm">
-                      {review?.journaling !== null && review?.journaling !== undefined 
-                        ? `${(review.journaling <= 1 ? review.journaling * 100 : review.journaling).toFixed(2)}%` 
+                      {displayAverages.journaling !== null && displayAverages.journaling !== undefined 
+                        ? `${(displayAverages.journaling <= 1 ? displayAverages.journaling * 100 : displayAverages.journaling).toFixed(2)}%` 
                         : '—'}
                     </TableCell>
                     <TableCell className="px-3 py-2 text-gray-600 text-sm">
-                      {review?.journaling_evaluation || getJournalingEvaluation(review?.journaling)}
+                      {getJournalingEvaluation(displayAverages.journaling)}
                     </TableCell>
                   </TableRow>
                 </TableBody>
@@ -873,6 +906,7 @@ function PerformanceReviewsContent() {
           staff={staff}
           onSave={handleSaveNotes}
           saving={savingNotes}
+          expeditionStartDate={displayExpedition?.startDate || displayExpedition?.start_date}
         />
       )}
       

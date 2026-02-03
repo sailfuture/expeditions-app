@@ -425,7 +425,7 @@ export function NewOrderDialog({ open, onOpenChange, expeditionId }: NewOrderDia
                   <p className="text-sm">No items available for purchase</p>
                 </div>
               ) : (
-                <Table>
+                <Table className="table-fixed w-full">
                   <TableBody>
                     {availableItems.map((item: StoreItem) => {
                       const cartQty = getCartQuantity(item.id)
@@ -438,8 +438,8 @@ export function NewOrderDialog({ open, onOpenChange, expeditionId }: NewOrderDia
                           key={item.id}
                           className={isDisabled ? 'opacity-50 bg-gray-50' : ''}
                         >
-                          <TableCell className="h-14 px-4 sm:px-6 w-[50%]">
-                            <div className="flex items-center gap-2 sm:gap-3">
+                          <TableCell className="h-14 px-3 sm:px-6">
+                            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                               <div className="h-10 w-10 flex-shrink-0 bg-gray-100 rounded-full overflow-hidden">
                                 {item.product_image ? (
                                   <img
@@ -453,14 +453,14 @@ export function NewOrderDialog({ open, onOpenChange, expeditionId }: NewOrderDia
                                   </div>
                                 )}
                               </div>
-                              <div className="min-w-0">
-                                <p className="font-medium text-gray-900 truncate text-sm">
+                              <div className="min-w-0 flex-1">
+                                <p className="font-medium text-gray-900 truncate text-sm" title={item.product_name}>
                                   {item.product_name}
                                 </p>
                                 {isDisabled ? (
                                   <p className="text-xs text-red-500 flex items-center gap-1">
-                                    <AlertCircle className="h-3 w-3" />
-                                    Insufficient balance
+                                    <AlertCircle className="h-3 w-3 flex-shrink-0" />
+                                    <span className="truncate">Insufficient balance</span>
                                   </p>
                                 ) : (
                                   <p className={`text-xs ${remainingStock <= 0 ? 'text-red-500' : 'text-gray-500'}`}>
@@ -470,29 +470,29 @@ export function NewOrderDialog({ open, onOpenChange, expeditionId }: NewOrderDia
                               </div>
                             </div>
                           </TableCell>
-                          <TableCell className="h-14 px-4 sm:px-6 text-right w-[20%]">
-                            <span className="font-bold text-gray-900 text-sm">
+                          <TableCell className="h-14 px-2 sm:px-4 text-right w-20 sm:w-24">
+                            <span className="font-bold text-gray-900 text-sm whitespace-nowrap">
                               {formatPrice(item.price)}
                             </span>
                           </TableCell>
-                          <TableCell className="h-14 px-4 sm:px-6 w-[30%]">
-                            <div className="flex items-center justify-center gap-1">
+                          <TableCell className="h-14 px-2 sm:px-4 w-24 sm:w-28">
+                            <div className="flex items-center justify-end gap-1">
                               <Button
                                 variant="outline"
                                 size="icon"
-                                className="h-7 w-7 cursor-pointer"
+                                className="h-7 w-7 cursor-pointer flex-shrink-0"
                                 onClick={() => removeFromCart(item.id)}
                                 disabled={cartQty === 0}
                               >
                                 <Minus className="h-3 w-3" />
                               </Button>
-                              <span className="w-8 text-center font-medium text-sm">
+                              <span className="w-6 text-center font-medium text-sm flex-shrink-0">
                                 {cartQty}
                               </span>
                               <Button
                                 variant="outline"
                                 size="icon"
-                                className="h-7 w-7 cursor-pointer"
+                                className="h-7 w-7 cursor-pointer flex-shrink-0"
                                 onClick={() => addToCart(item)}
                                 disabled={!canAfford || remainingStock <= 0}
                               >

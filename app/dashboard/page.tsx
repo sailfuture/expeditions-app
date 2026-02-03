@@ -464,6 +464,10 @@ export default function DashboardPage() {
       return
     }
 
+    // Get expedition date range
+    const expeditionStartDate = displayExpedition?.startDate || displayExpedition?.start_date
+    const expeditionEndDate = displayExpedition?.endDate || displayExpedition?.end_date
+
     setRotatingGalleyTeams(true)
     
     try {
@@ -472,10 +476,19 @@ export default function DashboardPage() {
         (a.name || "").localeCompare(b.name || "")
       )
       
-      // Sort schedules by date
-      const sortedSchedules = [...schedules].sort((a: any, b: any) => 
-        a.date.localeCompare(b.date)
-      )
+      // Filter and sort schedules by date, only within expedition date range
+      const sortedSchedules = [...schedules]
+        .filter((s: any) => {
+          if (!expeditionStartDate || !expeditionEndDate) return true
+          return s.date >= expeditionStartDate && s.date <= expeditionEndDate
+        })
+        .sort((a: any, b: any) => a.date.localeCompare(b.date))
+      
+      if (sortedSchedules.length === 0) {
+        toast.error("No schedule days found within expedition date range")
+        setRotatingGalleyTeams(false)
+        return
+      }
       
       // Update each schedule with rotating galley team
       let successCount = 0
@@ -497,7 +510,7 @@ export default function DashboardPage() {
       // Refresh schedule data
       await mutate(`expedition_schedules_${activeExpeditionId}`)
       
-      toast.success(`Galley teams rotated for ${successCount} days`)
+      toast.success(`Galley teams updated for ${successCount} days`)
     } catch (error) {
       console.error("Failed to rotate galley teams:", error)
       toast.error("Failed to rotate galley teams")
@@ -518,6 +531,10 @@ export default function DashboardPage() {
       return
     }
 
+    // Get expedition date range
+    const expeditionStartDate = displayExpedition?.startDate || displayExpedition?.start_date
+    const expeditionEndDate = displayExpedition?.endDate || displayExpedition?.end_date
+
     setRotatingDishTeams(true)
     
     try {
@@ -526,10 +543,19 @@ export default function DashboardPage() {
         (a.dishteam || "").localeCompare(b.dishteam || "")
       )
       
-      // Sort schedules by date
-      const sortedSchedules = [...schedules].sort((a: any, b: any) => 
-        a.date.localeCompare(b.date)
-      )
+      // Filter and sort schedules by date, only within expedition date range
+      const sortedSchedules = [...schedules]
+        .filter((s: any) => {
+          if (!expeditionStartDate || !expeditionEndDate) return true
+          return s.date >= expeditionStartDate && s.date <= expeditionEndDate
+        })
+        .sort((a: any, b: any) => a.date.localeCompare(b.date))
+      
+      if (sortedSchedules.length === 0) {
+        toast.error("No schedule days found within expedition date range")
+        setRotatingDishTeams(false)
+        return
+      }
       
       // Update each schedule with rotating dish team
       let successCount = 0

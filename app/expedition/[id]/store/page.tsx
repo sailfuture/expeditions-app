@@ -201,8 +201,11 @@ export default function StorePage({ params }: PageProps) {
   const isLoading = expeditionsLoading || storeLoading
 
   // Filter out archived items for display (unless you want to show them)
-  const activeItems = (storeItems || []).filter((item: StoreItem) => !item.isArchived)
-  const archivedItems = (storeItems || []).filter((item: StoreItem) => item.isArchived)
+  const sortByPrice = (a: StoreItem, b: StoreItem) => (a.price || 0) - (b.price || 0)
+  const inStockItems = (storeItems || []).filter((item: StoreItem) => !item.isArchived && item.quantity > 0).sort(sortByPrice)
+  const outOfStockItems = (storeItems || []).filter((item: StoreItem) => !item.isArchived && item.quantity === 0).sort(sortByPrice)
+  const activeItems = [...inStockItems, ...outOfStockItems]
+  const archivedItems = (storeItems || []).filter((item: StoreItem) => item.isArchived).sort(sortByPrice)
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -316,8 +319,17 @@ export default function StorePage({ params }: PageProps) {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {/* Active Items */}
-                  {activeItems.map((item: StoreItem) => (
+                  {/* In Stock Items */}
+                  {inStockItems.length > 0 && (
+                    <TableRow className="bg-gray-100/50 hover:bg-gray-100/50">
+                      <TableCell colSpan={isAdmin ? 5 : 4} className="h-9 px-4 sm:px-6">
+                        <span className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                          In Stock ({inStockItems.length})
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {inStockItems.map((item: StoreItem) => (
                     <TableRow key={item.id} className="border-b last:border-0 hover:bg-gray-50/50">
                       <TableCell className="h-16 px-4 sm:px-6">
                         <div className="flex items-center gap-3">
@@ -373,6 +385,63 @@ export default function StorePage({ params }: PageProps) {
                       )}
                     </TableRow>
                   ))}
+
+                  {/* Out of Stock Items */}
+                  {outOfStockItems.length > 0 && (
+                    <>
+                      <TableRow className="bg-gray-100/50 hover:bg-gray-100/50">
+                        <TableCell colSpan={isAdmin ? 5 : 4} className="h-9 px-4 sm:px-6">
+                          <span className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                            Out of Stock ({outOfStockItems.length})
+                          </span>
+                        </TableCell>
+                      </TableRow>
+                      {outOfStockItems.map((item: StoreItem) => (
+                        <TableRow key={item.id} className="border-b last:border-0 hover:bg-gray-50/50 opacity-50">
+                          <TableCell className="h-16 px-4 sm:px-6">
+                            <div className="flex items-center gap-3">
+                              {item.product_image ? (
+                                <img 
+                                  src={item.product_image} 
+                                  alt={item.product_name}
+                                  className="h-10 w-10 rounded-lg object-cover border border-gray-200 flex-shrink-0"
+                                />
+                              ) : (
+                                <div className="h-10 w-10 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
+                                  <ImageIcon className="h-5 w-5 text-gray-400" />
+                                </div>
+                              )}
+                              <div className="min-w-0 flex-1">
+                                <span className="font-medium text-gray-900 block truncate">{item.product_name}</span>
+                                <span className="text-xs text-gray-500 block sm:hidden truncate">{item.description || ""}</span>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="h-16 px-4 sm:px-6 hidden sm:table-cell">
+                            <span className="text-sm text-gray-600 block truncate">{item.description || "—"}</span>
+                          </TableCell>
+                          <TableCell className="h-16 px-4 sm:px-6 text-right">
+                            <span className="font-medium text-gray-900">{formatPrice(item.price)}</span>
+                          </TableCell>
+                          <TableCell className="h-16 px-4 sm:px-6 text-center">
+                            <Badge variant="outline" className="bg-white text-gray-500">0</Badge>
+                          </TableCell>
+                          {isAdmin && (
+                            <TableCell className="h-16 px-4 sm:px-6 text-right">
+                              <div className="flex items-center justify-end gap-1 sm:gap-2">
+                                <Button variant="ghost" size="icon" className="h-8 w-8 cursor-pointer" onClick={() => handleEditItem(item)}>
+                                  <Pencil className="h-4 w-4 text-gray-500" />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 cursor-pointer" onClick={() => handleDeleteClick(item)}>
+                                  <Trash2 className="h-4 w-4 text-red-500" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          )}
+                        </TableRow>
+                      ))}
+                    </>
+                  )}
 
                   {/* Archived Items Section */}
                   {archivedItems.length > 0 && (

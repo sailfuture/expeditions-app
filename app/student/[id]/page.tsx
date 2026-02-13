@@ -55,7 +55,7 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart"
-import { getStudentById, updateStudent, calculateStudentEvaluation, getPerformanceReviewById, updatePerformanceReviewNotes, getProfessionalismByStudentAndDate, getEvaluationByStudentAll, createExpeditionAssignment, getExpeditionAssignments } from "@/lib/xano"
+import { getStudentById, updateStudent, calculateStudentEvaluation, getPerformanceReviewById, updatePerformanceReviewNotes, getProfessionalismByStudentAndDate, getEvaluationByStudentAll, createExpeditionAssignment, getExpeditionAssignments, updateExpeditionAssignment } from "@/lib/xano"
 import { toast } from "sonner"
 import { mutate } from "swr"
 import { Spinner } from "@/components/ui/spinner"
@@ -161,14 +161,16 @@ export default function StudentDetailPage() {
     return allEvaluationRecords
       .sort((a: any, b: any) => (a.created_at || 0) - (b.created_at || 0))
       .map((record: any) => {
+        // Treat 0 as "not scored" since scores are on a 1-5 scale
+        const scored = (val: any) => val != null && val > 0 ? Number(val.toFixed(2)) : undefined
         return {
           dateLabel: formatRelativeTimeForChart(record.created_at),
-          academics: record.academics !== null ? Number(record.academics.toFixed(2)) : null,
-          citizenship: record.citizenship !== null ? Number(record.citizenship.toFixed(2)) : null,
-          job: record.job !== null ? Number(record.job.toFixed(2)) : null,
-          crew: record.crew !== null ? Number(record.crew.toFixed(2)) : null,
-          service: record.service !== null ? Number(record.service.toFixed(2)) : null,
-          total: record.total !== null ? Number(record.total.toFixed(2)) : null,
+          academics: scored(record.academics),
+          citizenship: scored(record.citizenship),
+          job: scored(record.job),
+          crew: scored(record.crew),
+          service: scored(record.service),
+          total: scored(record.total),
         }
       })
   }, [allEvaluationRecords])
@@ -396,6 +398,17 @@ export default function StudentDetailPage() {
     } finally {
       setIsSubmitting(false)
       setRemovePhotoConfirmOpen(false)
+    }
+  }
+
+  const handleAssignmentArchiveToggle = async (assignmentId: number, isArchived: boolean) => {
+    try {
+      await updateExpeditionAssignment(assignmentId, { isArchived })
+      mutate("expedition_student_assignments")
+      toast.success(isArchived ? "Marked as archived" : "Marked as active")
+    } catch (error) {
+      console.error("Failed to update assignment status:", error)
+      toast.error("Failed to update status")
     }
   }
 
@@ -1117,8 +1130,7 @@ export default function StudentDetailPage() {
                     tickMargin={8}
                   />
                   <YAxis
-                    domain={[0, 5]}
-                    ticks={[0, 1, 2, 3, 4, 5]}
+                    domain={[(dataMin: number) => Math.floor(dataMin * 2) / 2 - 0.25, (dataMax: number) => Math.ceil(dataMax * 2) / 2 + 0.25]}
                     tickLine={false}
                     axisLine={false}
                     tickMargin={8}
@@ -1157,6 +1169,7 @@ export default function StudentDetailPage() {
                     stroke="var(--color-total)"
                     strokeWidth={3}
                     dot={{ r: 4 }}
+                    connectNulls={false}
                   />
                   <Line
                     dataKey="academics"
@@ -1164,6 +1177,7 @@ export default function StudentDetailPage() {
                     stroke="var(--color-academics)"
                     strokeWidth={2}
                     dot={false}
+                    connectNulls={false}
                   />
                   <Line
                     dataKey="citizenship"
@@ -1171,6 +1185,7 @@ export default function StudentDetailPage() {
                     stroke="var(--color-citizenship)"
                     strokeWidth={2}
                     dot={false}
+                    connectNulls={false}
                   />
                   <Line
                     dataKey="job"
@@ -1178,6 +1193,7 @@ export default function StudentDetailPage() {
                     stroke="var(--color-job)"
                     strokeWidth={2}
                     dot={false}
+                    connectNulls={false}
                   />
                   <Line
                     dataKey="crew"
@@ -1185,6 +1201,7 @@ export default function StudentDetailPage() {
                     stroke="var(--color-crew)"
                     strokeWidth={2}
                     dot={false}
+                    connectNulls={false}
                   />
                   <Line
                     dataKey="service"
@@ -1192,6 +1209,7 @@ export default function StudentDetailPage() {
                     stroke="var(--color-service)"
                     strokeWidth={2}
                     dot={false}
+                    connectNulls={false}
                   />
                 </LineChart>
               </ChartContainer>
@@ -1230,98 +1248,7 @@ export default function StudentDetailPage() {
           </Card>
         )}
 
-        {/* Performance Reviews - Only show when expedition ID is present */}
-        {expeditionId && (
-          <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b bg-gray-50/30">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-lg font-semibold">Performance Reviews</h2>
-                  <p className="text-sm text-gray-500 mt-1">
-                    {studentPerformanceReviews.length} {studentPerformanceReviews.length === 1 ? 'review' : 'reviews'} for this student
-                  </p>
-                </div>
-              </div>
-            </div>
-            {loadingPerformanceReviews ? (
-              <div className="p-8 flex justify-center">
-                <Spinner size="md" />
-              </div>
-            ) : studentPerformanceReviews.length === 0 ? (
-              <div className="p-8 text-center text-gray-500">
-                <FileText className="h-10 w-10 mx-auto text-gray-300 mb-2" />
-                <p className="text-sm">No performance reviews yet</p>
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-b bg-gray-50/30 hover:bg-gray-50/30">
-                    <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 w-16">Created</TableHead>
-                    <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600">Report Name</TableHead>
-                    <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600">Start Date</TableHead>
-                    <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600">End Date</TableHead>
-                    <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600 text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {studentPerformanceReviews.map((review: any) => (
-                    <TableRow 
-                      key={review.id}
-                      className="border-b last:border-0 hover:bg-gray-50/50"
-                    >
-                      <TableCell className="h-14 px-4">
-                        <span className="text-xs text-gray-500">{formatRelativeTime(review.created_at)}</span>
-                      </TableCell>
-                      <TableCell className="h-14 px-6">
-                        {review.report_name ? (
-                          <span className="text-sm font-medium text-gray-700">{review.report_name}</span>
-                        ) : (
-                          <span className="text-sm text-gray-400 italic">Untitled</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="h-14 px-6">
-                        <span className="text-sm text-gray-600">{formatDate(review.startDate)}</span>
-                      </TableCell>
-                      <TableCell className="h-14 px-6">
-                        <span className="text-sm text-gray-600">{formatDate(review.endDate)}</span>
-                      </TableCell>
-                      <TableCell className="h-14 px-6 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="cursor-pointer h-9 w-9"
-                            onClick={() => handlePreviewReview(review.id, review.notes)}
-                            title="View Details"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="cursor-pointer h-9 w-9"
-                            onClick={async () => {
-                              try {
-                                await generatePerformanceReviewPDF(review.id)
-                                toast.success("PDF downloaded successfully")
-                              } catch (error) {
-                                console.error("Error generating PDF:", error)
-                                toast.error("Failed to generate PDF")
-                              }
-                            }}
-                            title="Download PDF"
-                          >
-                            <Download className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </div>
-        )}
+        {/* Performance Reviews removed from individual student page */}
 
         {/* Intake Information - Only show when expedition ID is present and data exists */}
         {expeditionId && intakeInfo && (
@@ -1557,12 +1484,15 @@ export default function StudentDetailPage() {
                   <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600">Expedition Name</TableHead>
                   <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600">Dates</TableHead>
                   <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600">Term</TableHead>
-                  <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600">Status</TableHead>
+                  <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600 w-[80px]">Active</TableHead>
                   <TableHead className="h-10 px-6 text-right text-xs font-semibold text-gray-600">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {assignedExpeditions.map((expedition: any) => {
+                  const assignment = (allAssignments || []).find(
+                    (a: any) => a.students_id === studentId && a.expeditions_id === expedition.id
+                  )
                   return (
                     <TableRow 
                       key={expedition.id} 
@@ -1583,16 +1513,15 @@ export default function StudentDetailPage() {
                           {expedition._schoolterms?.short_name || "—"}
                         </Badge>
                       </TableCell>
-                      <TableCell className="h-14 px-6">
-                        <Badge 
-                          variant="outline" 
-                          className={
-                            expedition.isActive ? "bg-green-50 border-green-200 text-green-700" :
-                            "bg-gray-50 border-gray-200 text-gray-600"
-                          }
-                        >
-                          {expedition.isActive ? "Active" : "Inactive"}
-                        </Badge>
+                      <TableCell className="h-14 px-6" onClick={(e) => e.stopPropagation()}>
+                        {assignment ? (
+                          <Switch
+                            checked={!assignment.isArchived}
+                            onCheckedChange={(checked) => handleAssignmentArchiveToggle(assignment.id, !checked)}
+                          />
+                        ) : (
+                          <span className="text-sm text-gray-400">—</span>
+                        )}
                       </TableCell>
                       <TableCell className="h-14 px-6 text-right">
                         <Button

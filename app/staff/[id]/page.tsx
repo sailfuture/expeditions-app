@@ -57,9 +57,9 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Pencil, ArrowLeft, Check, ChevronsUpDown, X, Upload, ExternalLink, Trash2 } from "lucide-react"
 import { useTeachers, useExpeditions } from "@/lib/hooks/use-expeditions"
-import { updateTeacher, createExpeditionAssignment } from "@/lib/xano"
+import { updateTeacher, createExpeditionAssignment, getExpeditionAssignments, updateExpeditionAssignment } from "@/lib/xano"
 import { toast } from "sonner"
-import { mutate } from "swr"
+import useSWR, { mutate } from "swr"
 import { Spinner } from "@/components/ui/spinner"
 import { Switch } from "@/components/ui/switch"
 import { cn } from "@/lib/utils"
@@ -73,6 +73,7 @@ export default function StaffDetailPage() {
   
   const { data: staff, isLoading } = useTeachers()
   const { data: allExpeditions } = useExpeditions()
+  const { data: allAssignments } = useSWR("expedition_assignments", getExpeditionAssignments)
   const staffMember = staff?.find((s: any) => s.id === staffId)
   
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -233,6 +234,17 @@ export default function StaffDetailPage() {
     } finally {
       setIsSubmitting(false)
       setRemovePhotoConfirmOpen(false)
+    }
+  }
+
+  const handleAssignmentArchiveToggle = async (assignmentId: number, isArchived: boolean) => {
+    try {
+      await updateExpeditionAssignment(assignmentId, { isArchived })
+      mutate("expedition_assignments")
+      toast.success(isArchived ? "Marked as archived" : "Marked as active")
+    } catch (error) {
+      console.error("Failed to update assignment status:", error)
+      toast.error("Failed to update status")
     }
   }
   
@@ -441,6 +453,11 @@ export default function StaffDetailPage() {
               .map((id: number) => allExpeditions?.find((e: any) => e.id === id))
               .filter(Boolean)
 
+            // Find assignments for this staff member
+            const staffAssignments = (allAssignments || []).filter(
+              (a: any) => a.expedition_staff_id === staffId
+            )
+
             return assignedExpeditions.length > 0 ? (
               <Table>
                 <TableHeader>
@@ -448,38 +465,42 @@ export default function StaffDetailPage() {
                     <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600">Expedition Name</TableHead>
                     <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600">Term</TableHead>
                     <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600">Dates</TableHead>
-                    <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600">Status</TableHead>
+                    <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600 w-[80px]">Active</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {assignedExpeditions.map((expedition: any) => (
-                    <TableRow key={expedition.id} className="hover:bg-gray-50/50">
-                      <TableCell className="h-16 px-6">
-                        <span className="font-medium text-gray-900">{expedition.name}</span>
-                      </TableCell>
-                      <TableCell className="h-16 px-6">
-                        <span className="text-sm text-gray-600">
-                          {expedition._schoolterms?.full_name || "—"}
-                        </span>
-                      </TableCell>
-                      <TableCell className="h-16 px-6">
-                        <span className="text-sm text-gray-600">
-                          {expedition.startDate} - {expedition.endDate}
-                        </span>
-                      </TableCell>
-                      <TableCell className="h-16 px-6">
-                        <Badge 
-                          variant={expedition.isActive ? "default" : "secondary"}
-                          className={expedition.isActive 
-                            ? "bg-green-100 text-green-700 border-green-200" 
-                            : "bg-gray-100 text-gray-600 border-gray-200"
-                          }
-                        >
-                          {expedition.isActive ? "Active" : "Archived"}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {assignedExpeditions.map((expedition: any) => {
+                    const assignment = staffAssignments.find(
+                      (a: any) => a.expeditions_id === expedition.id
+                    )
+                    return (
+                      <TableRow key={expedition.id} className="hover:bg-gray-50/50">
+                        <TableCell className="h-16 px-6">
+                          <span className="font-medium text-gray-900">{expedition.name}</span>
+                        </TableCell>
+                        <TableCell className="h-16 px-6">
+                          <span className="text-sm text-gray-600">
+                            {expedition._schoolterms?.full_name || "—"}
+                          </span>
+                        </TableCell>
+                        <TableCell className="h-16 px-6">
+                          <span className="text-sm text-gray-600">
+                            {expedition.startDate} - {expedition.endDate}
+                          </span>
+                        </TableCell>
+                        <TableCell className="h-16 px-6">
+                          {assignment ? (
+                            <Switch
+                              checked={!assignment.isArchived}
+                              onCheckedChange={(checked) => handleAssignmentArchiveToggle(assignment.id, !checked)}
+                            />
+                          ) : (
+                            <span className="text-sm text-gray-400">—</span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
                 </TableBody>
               </Table>
             ) : (

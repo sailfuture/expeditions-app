@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Switch } from "@/components/ui/switch"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
@@ -204,6 +205,34 @@ export default function AssignmentsPage({ params }: PageProps) {
     }
   }
 
+  const handleArchiveToggle = async (assignmentId: number, isArchived: boolean) => {
+    const updateKey = `${assignmentId}-isArchived`
+    setUpdatingId(updateKey)
+
+    // Optimistic update
+    mutate(
+      `expedition_assignments_${expeditionId}`,
+      (currentData: any[] | undefined) => {
+        if (!currentData) return currentData
+        return currentData.map((item: any) =>
+          item.id === assignmentId ? { ...item, isArchived } : item
+        )
+      },
+      false
+    )
+
+    try {
+      await updateExpeditionAssignment(assignmentId, { isArchived })
+      toast.success(isArchived ? "Marked as archived" : "Marked as active")
+    } catch (error) {
+      console.error("Failed to update archive status:", error)
+      toast.error("Failed to update status")
+      mutate(`expedition_assignments_${expeditionId}`)
+    } finally {
+      setUpdatingId(null)
+    }
+  }
+
   const handleDishTeamFieldChange = async (dishTeamId: number, field: string, value: any) => {
     const updateKey = `dishteam-${dishTeamId}-${field}`
     setUpdatingId(updateKey)
@@ -316,6 +345,13 @@ export default function AssignmentsPage({ params }: PageProps) {
             </Avatar>
             <span className="font-medium text-gray-900">{assignment.name || "—"}</span>
           </div>
+        </TableCell>
+        <TableCell className="h-16 px-6" onClick={(e) => e.stopPropagation()}>
+          <Switch
+            checked={!assignment.isArchived}
+            onCheckedChange={(checked) => handleArchiveToggle(assignment.id, !checked)}
+            disabled={updatingId === `${assignment.id}-isArchived`}
+          />
         </TableCell>
         <TableCell className="h-16 px-6 w-[300px] min-w-[300px] max-w-[300px]" onClick={(e) => e.stopPropagation()}>
           <div className="flex items-center gap-2 w-full">
@@ -543,6 +579,7 @@ export default function AssignmentsPage({ params }: PageProps) {
               <TableHeader>
                 <TableRow className="border-b bg-gray-50/30 hover:bg-gray-50/30">
                   <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600">Name</TableHead>
+                  <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600 w-[80px] min-w-[80px]">Active</TableHead>
                   <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600 w-[300px] min-w-[300px]">Department</TableHead>
                   <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600">Bunk</TableHead>
                   <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600">Laptop</TableHead>
@@ -553,7 +590,7 @@ export default function AssignmentsPage({ params }: PageProps) {
                 {studentAssignments.length > 0 && (
                   <>
                     <TableRow className="bg-gray-100/50">
-                      <TableCell colSpan={4} className="h-10 px-6">
+                      <TableCell colSpan={5} className="h-10 px-6">
                         <span className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
                           Students ({studentAssignments.length})
                         </span>
@@ -567,7 +604,7 @@ export default function AssignmentsPage({ params }: PageProps) {
                 {staffAssignments.length > 0 && (
                   <>
                     <TableRow className="bg-gray-100/50">
-                      <TableCell colSpan={4} className="h-10 px-6">
+                      <TableCell colSpan={5} className="h-10 px-6">
                         <span className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
                           Staff ({staffAssignments.length})
                         </span>

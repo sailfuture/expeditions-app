@@ -35,9 +35,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Download, FileText, ExternalLink, Pencil, FileDown, Upload, Trash2 } from "lucide-react"
 import { ExpeditionHeader } from "@/components/expedition-header"
-import { getStudentsByExpedition, getTeachersByExpedition, updateStudent, updateTeacher } from "@/lib/xano"
+import { Switch } from "@/components/ui/switch"
+import { getStudentsByExpedition, getTeachersByExpedition, getExpeditionAssignmentsByExpedition, updateExpeditionAssignment, updateStudent, updateTeacher } from "@/lib/xano"
 import { useExpeditions } from "@/lib/hooks/use-expeditions"
 import { toast } from "sonner"
 import { Spinner } from "@/components/ui/spinner"
@@ -66,7 +74,15 @@ export default function PassportManifestPage({ params }: PageProps) {
     () => getTeachersByExpedition(expeditionId)
   )
 
-  const isLoading = expeditionsLoading || studentsLoading || staffLoading
+  const { data: assignments, isLoading: assignmentsLoading } = useSWR(
+    expeditionId ? `assignments_expedition_${expeditionId}` : null,
+    () => getExpeditionAssignmentsByExpedition(expeditionId)
+  )
+
+  const isLoading = expeditionsLoading || studentsLoading || staffLoading || assignmentsLoading
+
+  // Filter state: "active" | "inactive" | "all"
+  const [statusFilter, setStatusFilter] = useState<string>("active")
 
   // Edit dialog state
   const [editDialogOpen, setEditDialogOpen] = useState(false)
@@ -309,13 +325,32 @@ export default function PassportManifestPage({ params }: PageProps) {
     toast.success("PDF exported successfully")
   }
 
-  // Combine staff and students into one manifest, filtering out archived
+  // Build a lookup of expedition assignment isArchived status
+  const assignmentArchivedMap = new Map<string, boolean>()
+  ;(assignments || []).forEach((a: any) => {
+    if (a.expedition_staff_id) {
+      assignmentArchivedMap.set(`staff-${a.expedition_staff_id}`, a.isArchived === true)
+    }
+    if (a.students_id) {
+      assignmentArchivedMap.set(`student-${a.students_id}`, a.isArchived === true)
+    }
+  })
+
+  // Determine if a person is considered "active" on this expedition
+  const isPersonActive = (type: "Staff" | "Student", id: number, profileActive: boolean) => {
+    const key = type === "Staff" ? `staff-${id}` : `student-${id}`
+    const isArchived = assignmentArchivedMap.get(key)
+    // If there's an assignment record, use its isArchived; otherwise fall back to profile status
+    if (isArchived !== undefined) return !isArchived
+    return profileActive
+  }
+
+  // Combine staff and students into one manifest
   const manifestData = [
     ...(staff || [])
-      .filter((person: any) => person.isActive !== false)
       .map((person: any) => ({
         ...person,
-        type: "Staff",
+        type: "Staff" as const,
         name: person.name,
         crew_role: person.crew_role,
         crew_status: person.crew_status,
@@ -326,12 +361,12 @@ export default function PassportManifestPage({ params }: PageProps) {
         gender: person.gender,
         nationality: person.nationality,
         passport_photo: person.passport_photo,
+        _isActiveOnExpedition: isPersonActive("Staff", person.id, person.isActive !== false),
       })),
     ...(students || [])
-      .filter((person: any) => !person.isArchived)
       .map((person: any) => ({
         ...person,
-        type: "Student",
+        type: "Student" as const,
         name: `${person.firstName || ""} ${person.lastName || ""}`.trim(),
         crew_role: person.crew_position,
         crew_status: person.crew_status,
@@ -342,12 +377,18 @@ export default function PassportManifestPage({ params }: PageProps) {
         gender: person.gender,
         nationality: person.nationality,
         passport_photo: person.passport_photo,
+        _isActiveOnExpedition: isPersonActive("Student", person.id, !person.isArchived),
       })),
-  ].sort((a, b) => {
-    // Sort by type (Staff first) then by name
-    if (a.type !== b.type) return a.type === "Staff" ? -1 : 1
-    return (a.name || "").localeCompare(b.name || "")
-  })
+  ]
+    .filter((person) => {
+      if (statusFilter === "active") return person._isActiveOnExpedition
+      if (statusFilter === "inactive") return !person._isActiveOnExpedition
+      return true // "all"
+    })
+    .sort((a, b) => {
+      if (a.type !== b.type) return a.type === "Staff" ? -1 : 1
+      return (a.name || "").localeCompare(b.name || "")
+    })
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -379,19 +420,33 @@ export default function PassportManifestPage({ params }: PageProps) {
         )}
 
         <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-          {/* Table header bar with export */}
-          {!isLoading && manifestData.length > 0 && (
+          {/* Table header bar with filter and export */}
+          {!isLoading && (
             <div className="px-6 py-3 border-b bg-gray-50/30 flex items-center justify-between">
               <h2 className="text-sm font-semibold text-gray-700">Manifest Records</h2>
-              <Button
-                onClick={exportPDF}
-                variant="outline"
-                size="sm"
-                className="cursor-pointer h-8 text-xs"
-              >
-                <FileDown className="h-3.5 w-3.5 mr-1.5" />
-                Export PDF
-              </Button>
+              <div className="flex items-center gap-3">
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="h-8 w-[130px] text-xs cursor-pointer">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active" className="text-xs cursor-pointer">Active</SelectItem>
+                    <SelectItem value="inactive" className="text-xs cursor-pointer">Inactive</SelectItem>
+                    <SelectItem value="all" className="text-xs cursor-pointer">All</SelectItem>
+                  </SelectContent>
+                </Select>
+                {manifestData.length > 0 && (
+                  <Button
+                    onClick={exportPDF}
+                    variant="outline"
+                    size="sm"
+                    className="cursor-pointer h-8 text-xs"
+                  >
+                    <FileDown className="h-3.5 w-3.5 mr-1.5" />
+                    Export PDF
+                  </Button>
+                )}
+              </div>
             </div>
           )}
           {isLoading ? (
@@ -614,6 +669,38 @@ export default function PassportManifestPage({ params }: PageProps) {
           </DialogHeader>
 
           <div className="space-y-6 py-4 max-h-[65vh] overflow-y-auto pr-1">
+            {/* Expedition Status */}
+            {(() => {
+              const assignment = editingPerson && (assignments || []).find((a: any) =>
+                editingPerson.type === "Staff"
+                  ? a.expedition_staff_id === editingPerson.id
+                  : a.students_id === editingPerson.id
+              )
+              return assignment ? (
+                <div className="flex items-center justify-between pb-4 border-b">
+                  <div className="space-y-0.5">
+                    <Label>Active on this expedition</Label>
+                    <div className="text-xs text-gray-500">Archive to remove from active manifest</div>
+                  </div>
+                  <Switch
+                    checked={!assignment.isArchived}
+                    onCheckedChange={async (checked) => {
+                      try {
+                        await updateExpeditionAssignment(assignment.id, { isArchived: !checked })
+                        mutate(`assignments_expedition_${expeditionId}`)
+                        mutate(`students_expedition_${expeditionId}`)
+                        mutate(`staff_expedition_${expeditionId}`)
+                        toast.success(checked ? "Marked as active" : "Marked as archived")
+                      } catch (error) {
+                        console.error("Failed to update status:", error)
+                        toast.error("Failed to update status")
+                      }
+                    }}
+                  />
+                </div>
+              ) : null
+            })()}
+
             {/* Crew Details */}
             <div>
               <h3 className="text-sm font-semibold text-gray-900 mb-3 pb-2 border-b">Crew Details</h3>

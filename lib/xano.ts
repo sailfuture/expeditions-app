@@ -529,6 +529,7 @@ export async function updateExpeditionAssignment(id: number, data: {
   dish_day?: string | null
   laptop?: string | null
   bunk?: string | null
+  isArchived?: boolean
 }) {
   return xanoFetch<any>(`/expedition_student_assignments/${id}`, {
     method: "PATCH",

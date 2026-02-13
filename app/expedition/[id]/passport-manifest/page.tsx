@@ -309,36 +309,40 @@ export default function PassportManifestPage({ params }: PageProps) {
     toast.success("PDF exported successfully")
   }
 
-  // Combine staff and students into one manifest
+  // Combine staff and students into one manifest, filtering out archived
   const manifestData = [
-    ...(staff || []).map((person: any) => ({
-      ...person,
-      type: "Staff",
-      name: person.name,
-      crew_role: person.crew_role,
-      crew_status: person.crew_status,
-      dob: person.dob,
-      passport_number: person.passport_number,
-      issue_date: person.issue_date,
-      expiration_date: person.expiration_date,
-      gender: person.gender,
-      nationality: person.nationality,
-      passport_photo: person.passport_photo,
-    })),
-    ...(students || []).map((person: any) => ({
-      ...person,
-      type: "Student",
-      name: `${person.firstName || ""} ${person.lastName || ""}`.trim(),
-      crew_role: person.crew_position, // Students use crew_position instead of crew_role
-      crew_status: person.crew_status,
-      dob: person.dob,
-      passport_number: person.passport_number,
-      issue_date: person.issue_date,
-      expiration_date: person.expiration_date,
-      gender: person.gender,
-      nationality: person.nationality,
-      passport_photo: person.passport_photo,
-    })),
+    ...(staff || [])
+      .filter((person: any) => person.isActive !== false)
+      .map((person: any) => ({
+        ...person,
+        type: "Staff",
+        name: person.name,
+        crew_role: person.crew_role,
+        crew_status: person.crew_status,
+        dob: person.dob,
+        passport_number: person.passport_number,
+        issue_date: person.issue_date,
+        expiration_date: person.expiration_date,
+        gender: person.gender,
+        nationality: person.nationality,
+        passport_photo: person.passport_photo,
+      })),
+    ...(students || [])
+      .filter((person: any) => !person.isArchived)
+      .map((person: any) => ({
+        ...person,
+        type: "Student",
+        name: `${person.firstName || ""} ${person.lastName || ""}`.trim(),
+        crew_role: person.crew_position,
+        crew_status: person.crew_status,
+        dob: person.dob,
+        passport_number: person.passport_number,
+        issue_date: person.issue_date,
+        expiration_date: person.expiration_date,
+        gender: person.gender,
+        nationality: person.nationality,
+        passport_photo: person.passport_photo,
+      })),
   ].sort((a, b) => {
     // Sort by type (Staff first) then by name
     if (a.type !== b.type) return a.type === "Staff" ? -1 : 1

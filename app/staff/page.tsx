@@ -304,7 +304,7 @@ export default function StaffPage() {
         setDialogOpen(open)
         if (!open) resetForm()
       }}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[700px]">
           <DialogHeader>
             <DialogTitle>Add Staff Member</DialogTitle>
             <DialogDescription>
@@ -312,147 +312,145 @@ export default function StaffPage() {
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="col-span-2">
-                <Label htmlFor="staff_name">Staff Name *</Label>
-                <Input
-                  id="staff_name"
-                  value={formData.name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="Enter staff member name"
-                  className="mt-1.5"
-                />
-              </div>
-
-              <div className="col-span-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                  placeholder="email@example.com"
-                  className="mt-1.5"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="role">Role *</Label>
-                <Select
-                  value={formData.role}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, role: value }))}
-                >
-                  <SelectTrigger className="mt-1.5 cursor-pointer">
-                    <SelectValue placeholder="Select a role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Staff" className="cursor-pointer">Staff</SelectItem>
-                    <SelectItem value="Admin" className="cursor-pointer">Admin</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="crew_role">Crew Role</Label>
-                <Input
-                  id="crew_role"
-                  value={formData.crew_role}
-                  onChange={(e) => setFormData(prev => ({ ...prev, crew_role: e.target.value }))}
-                  placeholder="e.g. Captain, Mate"
-                  className="mt-1.5"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="crew_status">Crew Status</Label>
-                <Input
-                  id="crew_status"
-                  value={formData.crew_status}
-                  onChange={(e) => setFormData(prev => ({ ...prev, crew_status: e.target.value }))}
-                  placeholder="e.g. Active, On Leave"
-                  className="mt-1.5"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="gender">Gender</Label>
-                <Input
-                  id="gender"
-                  value={formData.gender}
-                  onChange={(e) => setFormData(prev => ({ ...prev, gender: e.target.value }))}
-                  placeholder="Gender"
-                  className="mt-1.5"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="dob">Date of Birth</Label>
-                <Input
-                  id="dob"
-                  type="date"
-                  value={formData.dob || ""}
-                  onChange={(e) => setFormData(prev => ({ ...prev, dob: e.target.value || null }))}
-                  className="mt-1.5"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="nationality">Nationality</Label>
-                <Input
-                  id="nationality"
-                  value={formData.nationality}
-                  onChange={(e) => setFormData(prev => ({ ...prev, nationality: e.target.value }))}
-                  placeholder="Nationality"
-                  className="mt-1.5"
-                />
-              </div>
-
-              <div className="col-span-2">
-                <Label htmlFor="passport_number">Passport Number</Label>
-                <Input
-                  id="passport_number"
-                  value={formData.passport_number}
-                  onChange={(e) => setFormData(prev => ({ ...prev, passport_number: e.target.value }))}
-                  placeholder="Passport number"
-                  className="mt-1.5"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="passport_issue_date">Passport Issue Date</Label>
-                <Input
-                  id="passport_issue_date"
-                  type="date"
-                  value={formData.passport_issue_date || ""}
-                  onChange={(e) => setFormData(prev => ({ ...prev, passport_issue_date: e.target.value || null }))}
-                  className="mt-1.5"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="passport_expiration_date">Passport Expiration</Label>
-                <Input
-                  id="passport_expiration_date"
-                  type="date"
-                  value={formData.passport_expiration_date || ""}
-                  onChange={(e) => setFormData(prev => ({ ...prev, passport_expiration_date: e.target.value || null }))}
-                  className="mt-1.5"
-                />
-              </div>
-
-              <div className="col-span-2 flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="isActive">Active Status</Label>
-                  <div className="text-sm text-gray-500">
-                    Mark as active or archived
-                  </div>
+          <div className="space-y-6 py-4 max-h-[70vh] overflow-y-auto pr-1">
+            {/* Basic Information */}
+            <div>
+              <h3 className="text-sm font-semibold text-gray-900 mb-3 pb-2 border-b">Basic Information</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="staff_name">Name *</Label>
+                  <Input
+                    id="staff_name"
+                    value={formData.name}
+                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="Enter staff member name"
+                    className="mt-1.5"
+                  />
                 </div>
-                <Switch
-                  id="isActive"
-                  checked={formData.isActive}
-                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isActive: checked }))}
-                />
+                <div>
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                    placeholder="email@example.com"
+                    className="mt-1.5"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="role">Role *</Label>
+                  <Select
+                    value={formData.role}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, role: value }))}
+                  >
+                    <SelectTrigger className="mt-1.5 cursor-pointer">
+                      <SelectValue placeholder="Select a role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Staff" className="cursor-pointer">Staff</SelectItem>
+                      <SelectItem value="Admin" className="cursor-pointer">Admin</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center justify-between pt-5">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="isActive">Active Status</Label>
+                    <div className="text-xs text-gray-500">Active or archived</div>
+                  </div>
+                  <Switch
+                    id="isActive"
+                    checked={formData.isActive}
+                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isActive: checked }))}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Passport & Crew Information */}
+            <div>
+              <h3 className="text-sm font-semibold text-gray-900 mb-3 pb-2 border-b">Passport & Crew Information</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="crew_role">Crew Role</Label>
+                  <Input
+                    id="crew_role"
+                    value={formData.crew_role}
+                    onChange={(e) => setFormData(prev => ({ ...prev, crew_role: e.target.value }))}
+                    placeholder="e.g. Captain, Mate"
+                    className="mt-1.5"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="crew_status">Crew Status</Label>
+                  <Input
+                    id="crew_status"
+                    value={formData.crew_status}
+                    onChange={(e) => setFormData(prev => ({ ...prev, crew_status: e.target.value }))}
+                    placeholder="e.g. Active, On Leave"
+                    className="mt-1.5"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="dob">Date of Birth</Label>
+                  <Input
+                    id="dob"
+                    type="date"
+                    value={formData.dob || ""}
+                    onChange={(e) => setFormData(prev => ({ ...prev, dob: e.target.value || null }))}
+                    className="mt-1.5"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="gender">Gender</Label>
+                  <Input
+                    id="gender"
+                    value={formData.gender}
+                    onChange={(e) => setFormData(prev => ({ ...prev, gender: e.target.value }))}
+                    placeholder="Gender"
+                    className="mt-1.5"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="nationality">Nationality</Label>
+                  <Input
+                    id="nationality"
+                    value={formData.nationality}
+                    onChange={(e) => setFormData(prev => ({ ...prev, nationality: e.target.value }))}
+                    placeholder="Nationality"
+                    className="mt-1.5"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="passport_number">Passport Number</Label>
+                  <Input
+                    id="passport_number"
+                    value={formData.passport_number}
+                    onChange={(e) => setFormData(prev => ({ ...prev, passport_number: e.target.value }))}
+                    placeholder="Passport number"
+                    className="mt-1.5"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="passport_issue_date">Issue Date</Label>
+                  <Input
+                    id="passport_issue_date"
+                    type="date"
+                    value={formData.passport_issue_date || ""}
+                    onChange={(e) => setFormData(prev => ({ ...prev, passport_issue_date: e.target.value || null }))}
+                    className="mt-1.5"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="passport_expiration_date">Expiration Date</Label>
+                  <Input
+                    id="passport_expiration_date"
+                    type="date"
+                    value={formData.passport_expiration_date || ""}
+                    onChange={(e) => setFormData(prev => ({ ...prev, passport_expiration_date: e.target.value || null }))}
+                    className="mt-1.5"
+                  />
+                </div>
               </div>
             </div>
             

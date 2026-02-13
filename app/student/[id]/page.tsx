@@ -1,7 +1,7 @@
 "use client"
 
 import { useRouter, useParams, useSearchParams } from "next/navigation"
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
 import useSWR from "swr"
 import { format } from "date-fns"
 import { Button } from "@/components/ui/button"
@@ -47,7 +47,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Pencil, ExternalLink, Calendar, FileText, TrendingUp, CheckCircle2, ArrowLeft, Calculator, Download, Check, ChevronsUpDown, X } from "lucide-react"
+import { Pencil, ExternalLink, Calendar, FileText, TrendingUp, CheckCircle2, ArrowLeft, Calculator, Download, Check, ChevronsUpDown, X, Upload, Trash2 } from "lucide-react"
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts"
 import {
   ChartContainer,
@@ -203,7 +203,10 @@ export default function StudentDetailPage() {
   
   const [dialogOpen, setDialogOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
+  const [removePhotoConfirmOpen, setRemovePhotoConfirmOpen] = useState(false)
   const [unlinkConfirmOpen, setUnlinkConfirmOpen] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [unlinking, setUnlinking] = useState(false)
   
   // Performance review preview modal state
@@ -247,6 +250,7 @@ export default function StudentDetailPage() {
     isArchived: false,
     crew_position: "",
     crew_status: "",
+    dob: null as string | null,
     passport_number: "",
     issue_date: null as string | null,
     expiration_date: null as string | null,
@@ -270,6 +274,7 @@ export default function StudentDetailPage() {
         isArchived: student.isArchived || false,
         crew_position: student.crew_position || "",
         crew_status: student.crew_status || "",
+        dob: student.dob || null,
         passport_number: student.passport_number || "",
         issue_date: student.issue_date || null,
         expiration_date: student.expiration_date || null,
@@ -328,6 +333,72 @@ export default function StudentDetailPage() {
     }
   }
   
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (fileInputRef.current) fileInputRef.current.value = ""
+
+    setIsUploading(true)
+    try {
+      const formDataUpload = new FormData()
+      formDataUpload.append("file", file)
+      formDataUpload.append("person_id", studentId.toString())
+      formDataUpload.append("person_type", "student")
+
+      const res = await fetch("/api/upload-passport-photo", {
+        method: "POST",
+        body: formDataUpload,
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || "Upload failed")
+      }
+
+      const data = await res.json()
+      setFormData(prev => ({ ...prev, passport_photo: data.url }))
+      mutate(`student_${studentId}`)
+      mutate("students")
+      toast.success("Passport photo uploaded to Google Drive")
+    } catch (error: any) {
+      console.error("Photo upload failed:", error)
+      toast.error(error.message || "Failed to upload photo")
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
+  const handleRemovePhoto = async () => {
+    setIsSubmitting(true)
+    try {
+      const res = await fetch("/api/upload-passport-photo", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          person_id: studentId,
+          person_type: "student",
+          photo_url: formData.passport_photo,
+        }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || "Failed to remove photo")
+      }
+
+      setFormData(prev => ({ ...prev, passport_photo: "" }))
+      mutate(`student_${studentId}`)
+      mutate("students")
+      toast.success("Passport photo removed")
+    } catch (error: any) {
+      console.error("Failed to remove photo:", error)
+      toast.error(error.message || "Failed to remove photo")
+    } finally {
+      setIsSubmitting(false)
+      setRemovePhotoConfirmOpen(false)
+    }
+  }
+
   const handleUnlinkIntake = async () => {
     setUnlinking(true)
     try {
@@ -1559,14 +1630,6 @@ export default function StudentDetailPage() {
                     <dt className="text-sm font-medium text-gray-500">Grade</dt>
                     <dd className="mt-1 text-sm text-gray-900">{student.grade || "—"}</dd>
                   </div>
-                  <div>
-                    <dt className="text-sm font-medium text-gray-500">Gender</dt>
-                    <dd className="mt-1 text-sm text-gray-900">{student.gender || "—"}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-sm font-medium text-gray-500">Nationality</dt>
-                    <dd className="mt-1 text-sm text-gray-900">{student.nationality || "—"}</dd>
-                  </div>
                 </dl>
               </div>
             </div>
@@ -1586,7 +1649,19 @@ export default function StudentDetailPage() {
                     <dt className="text-sm font-medium text-gray-500">Crew Status</dt>
                     <dd className="mt-1 text-sm text-gray-900">{student.crew_status || "—"}</dd>
                   </div>
-                  <div className="col-span-2">
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">Date of Birth</dt>
+                    <dd className="mt-1 text-sm text-gray-900">{student.dob || "—"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">Gender</dt>
+                    <dd className="mt-1 text-sm text-gray-900">{student.gender || "—"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">Nationality</dt>
+                    <dd className="mt-1 text-sm text-gray-900">{student.nationality || "—"}</dd>
+                  </div>
+                  <div>
                     <dt className="text-sm font-medium text-gray-500">Passport Number</dt>
                     <dd className="mt-1 text-sm text-gray-900">{student.passport_number || "—"}</dd>
                   </div>
@@ -1597,6 +1672,24 @@ export default function StudentDetailPage() {
                   <div>
                     <dt className="text-sm font-medium text-gray-500">Passport Expiration Date</dt>
                     <dd className="mt-1 text-sm text-gray-900">{student.expiration_date || "—"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">Passport Photo</dt>
+                    <dd className="mt-1 text-sm">
+                      {student.passport_photo ? (
+                        <a
+                          href={student.passport_photo}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                        >
+                          <ExternalLink className="h-3.5 w-3.5" />
+                          View in Google Drive
+                        </a>
+                      ) : (
+                        <span className="text-gray-900">—</span>
+                      )}
+                    </dd>
                   </div>
                 </dl>
               </div>
@@ -1858,9 +1951,30 @@ export default function StudentDetailPage() {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Remove Photo Confirmation */}
+      <AlertDialog open={removePhotoConfirmOpen} onOpenChange={setRemovePhotoConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove Passport Photo</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to remove the passport photo? This will remove the link from the record but will not delete the file from Google Drive.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="cursor-pointer">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleRemovePhoto}
+              className="bg-red-600 hover:bg-red-700 cursor-pointer"
+            >
+              Remove Photo
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[700px]">
           <DialogHeader>
             <DialogTitle>Edit Student</DialogTitle>
             <DialogDescription>
@@ -1868,141 +1982,207 @@ export default function StudentDetailPage() {
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="first_name">First Name *</Label>
-                <Input
-                  id="first_name"
-                  value={formData.firstName}
-                  onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
-                  placeholder="First name"
-                  className="mt-1.5"
-                />
-              </div>
-              <div>
-                <Label htmlFor="last_name">Last Name *</Label>
-                <Input
-                  id="last_name"
-                  value={formData.lastName}
-                  onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
-                  placeholder="Last name"
-                  className="mt-1.5"
-                />
-              </div>
-            </div>
-            
+          <div className="space-y-6 py-4 max-h-[70vh] overflow-y-auto pr-1">
+            {/* Basic Information */}
             <div>
-              <Label htmlFor="grade">Grade</Label>
-              <Input
-                id="grade"
-                value={formData.grade}
-                onChange={(e) => setFormData(prev => ({ ...prev, grade: e.target.value }))}
-                placeholder="e.g. 10th"
-                className="mt-1.5"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="gender">Gender</Label>
-                <Input
-                  id="gender"
-                  value={formData.gender}
-                  onChange={(e) => setFormData(prev => ({ ...prev, gender: e.target.value }))}
-                  placeholder="Gender"
-                  className="mt-1.5"
-                />
-              </div>
-              <div>
-                <Label htmlFor="nationality">Nationality</Label>
-                <Input
-                  id="nationality"
-                  value={formData.nationality}
-                  onChange={(e) => setFormData(prev => ({ ...prev, nationality: e.target.value }))}
-                  placeholder="Nationality"
-                  className="mt-1.5"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="crew_position">Crew Position</Label>
-                <Input
-                  id="crew_position"
-                  value={formData.crew_position}
-                  onChange={(e) => setFormData(prev => ({ ...prev, crew_position: e.target.value }))}
-                  placeholder="e.g. Deck Hand"
-                  className="mt-1.5"
-                />
-              </div>
-              <div>
-                <Label htmlFor="crew_status">Crew Status</Label>
-                <Input
-                  id="crew_status"
-                  value={formData.crew_status}
-                  onChange={(e) => setFormData(prev => ({ ...prev, crew_status: e.target.value }))}
-                  placeholder="e.g. Active, Training"
-                  className="mt-1.5"
-                />
+              <h3 className="text-sm font-semibold text-gray-900 mb-3 pb-2 border-b">Basic Information</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="first_name">First Name *</Label>
+                  <Input
+                    id="first_name"
+                    value={formData.firstName}
+                    onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
+                    placeholder="First name"
+                    className="mt-1.5"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="last_name">Last Name *</Label>
+                  <Input
+                    id="last_name"
+                    value={formData.lastName}
+                    onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
+                    placeholder="Last name"
+                    className="mt-1.5"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="grade">Grade</Label>
+                  <Input
+                    id="grade"
+                    value={formData.grade}
+                    onChange={(e) => setFormData(prev => ({ ...prev, grade: e.target.value }))}
+                    placeholder="e.g. 10th"
+                    className="mt-1.5"
+                  />
+                </div>
+                <div className="flex items-center justify-between pt-5">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="archived">Archive Student</Label>
+                    <div className="text-xs text-gray-500">Active or archived</div>
+                  </div>
+                  <Switch
+                    id="archived"
+                    checked={formData.isArchived}
+                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isArchived: checked }))}
+                  />
+                </div>
               </div>
             </div>
 
+            {/* Passport & Crew Information */}
             <div>
-              <Label htmlFor="passport_number">Passport Number</Label>
-              <Input
-                id="passport_number"
-                value={formData.passport_number}
-                onChange={(e) => setFormData(prev => ({ ...prev, passport_number: e.target.value }))}
-                placeholder="Passport number"
-                className="mt-1.5"
-              />
+              <h3 className="text-sm font-semibold text-gray-900 mb-3 pb-2 border-b">Passport & Crew Information</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="crew_position">Crew Position</Label>
+                  <Input
+                    id="crew_position"
+                    value={formData.crew_position}
+                    onChange={(e) => setFormData(prev => ({ ...prev, crew_position: e.target.value }))}
+                    placeholder="e.g. Deck Hand"
+                    className="mt-1.5"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="crew_status">Crew Status</Label>
+                  <Input
+                    id="crew_status"
+                    value={formData.crew_status}
+                    onChange={(e) => setFormData(prev => ({ ...prev, crew_status: e.target.value }))}
+                    placeholder="e.g. Active, Training"
+                    className="mt-1.5"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="dob">Date of Birth</Label>
+                  <Input
+                    id="dob"
+                    type="date"
+                    value={formData.dob || ""}
+                    onChange={(e) => setFormData(prev => ({ ...prev, dob: e.target.value || null }))}
+                    className="mt-1.5"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="gender">Gender</Label>
+                  <Input
+                    id="gender"
+                    value={formData.gender}
+                    onChange={(e) => setFormData(prev => ({ ...prev, gender: e.target.value }))}
+                    placeholder="Gender"
+                    className="mt-1.5"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="nationality">Nationality</Label>
+                  <Input
+                    id="nationality"
+                    value={formData.nationality}
+                    onChange={(e) => setFormData(prev => ({ ...prev, nationality: e.target.value }))}
+                    placeholder="Nationality"
+                    className="mt-1.5"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="passport_number">Passport Number</Label>
+                  <Input
+                    id="passport_number"
+                    value={formData.passport_number}
+                    onChange={(e) => setFormData(prev => ({ ...prev, passport_number: e.target.value }))}
+                    placeholder="Passport number"
+                    className="mt-1.5"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="issue_date">Issue Date</Label>
+                  <Input
+                    id="issue_date"
+                    type="date"
+                    value={formData.issue_date || ""}
+                    onChange={(e) => setFormData(prev => ({ ...prev, issue_date: e.target.value || null }))}
+                    className="mt-1.5"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="expiration_date">Expiration Date</Label>
+                  <Input
+                    id="expiration_date"
+                    type="date"
+                    value={formData.expiration_date || ""}
+                    onChange={(e) => setFormData(prev => ({ ...prev, expiration_date: e.target.value || null }))}
+                    className="mt-1.5"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <Label>Passport Photo</Label>
+                  <div className="mt-1.5">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handlePhotoUpload}
+                    />
+                    {formData.passport_photo ? (
+                      <div className="flex items-center gap-3">
+                        <a
+                          href={formData.passport_photo}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                        >
+                          <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+                          View in Google Drive
+                        </a>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="cursor-pointer h-8 w-8 text-gray-400 hover:text-gray-900"
+                          onClick={() => setRemovePhotoConfirmOpen(true)}
+                          title="Remove photo"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="cursor-pointer"
+                        disabled={isUploading}
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        {isUploading ? (
+                          <>
+                            <Spinner size="sm" className="mr-2" />
+                            Uploading...
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="h-4 w-4 mr-2" />
+                            Upload to Google Drive
+                          </>
+                        )}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="issue_date">Passport Issue Date</Label>
-                <Input
-                  id="issue_date"
-                  type="date"
-                  value={formData.issue_date || ""}
-                  onChange={(e) => setFormData(prev => ({ ...prev, issue_date: e.target.value || null }))}
-                  className="mt-1.5"
-                />
-              </div>
-              <div>
-                <Label htmlFor="expiration_date">Passport Expiration</Label>
-                <Input
-                  id="expiration_date"
-                  type="date"
-                  value={formData.expiration_date || ""}
-                  onChange={(e) => setFormData(prev => ({ ...prev, expiration_date: e.target.value || null }))}
-                  className="mt-1.5"
-                />
-              </div>
-            </div>
-            
-            <div className="flex items-center justify-between py-2">
-              <div className="space-y-0.5">
-                <Label htmlFor="archived">Archive Student</Label>
-                <p className="text-xs text-gray-500">Archived students won't appear in active lists</p>
-              </div>
-              <Switch
-                id="archived"
-                checked={formData.isArchived}
-                onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isArchived: checked }))}
-              />
-            </div>
-            
+            {/* Expedition Assignments */}
             <div>
-              <Label htmlFor="expeditions">Expedition Assignments</Label>
+              <h3 className="text-sm font-semibold text-gray-900 mb-3 pb-2 border-b">Expedition Assignments</h3>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
                     role="combobox"
-                    className="w-full justify-between mt-1.5 cursor-pointer"
+                    className="w-full justify-between cursor-pointer font-normal"
                   >
                     <span className="text-sm">
                       {formData.expeditions_id.length === 0
@@ -2012,7 +2192,7 @@ export default function StudentDetailPage() {
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[400px] p-0" align="start">
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
                   <Command>
                     <CommandInput placeholder="Search expeditions..." />
                     <CommandList>
@@ -2084,7 +2264,7 @@ export default function StudentDetailPage() {
                       <Badge
                         key={expId}
                         variant="secondary"
-                        className="gap-1 pr-1"
+                        className="flex items-center gap-1 pr-1"
                       >
                         <span className="text-xs">{expedition.name}</span>
                         <button
@@ -2095,7 +2275,7 @@ export default function StudentDetailPage() {
                               expeditions_id: prev.expeditions_id.filter(id => id !== expId)
                             }))
                           }}
-                          className="ml-1 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 cursor-pointer"
+                          className="ml-1 rounded-full p-0.5 hover:bg-gray-300 cursor-pointer"
                         >
                           <X className="h-3 w-3" />
                         </button>

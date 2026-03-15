@@ -364,21 +364,25 @@ export default function PassportManifestPage({ params }: PageProps) {
         _isActiveOnExpedition: isPersonActive("Staff", person.id, person.isActive !== false),
       })),
     ...(students || [])
-      .map((person: any) => ({
-        ...person,
-        type: "Student" as const,
-        name: `${person.firstName || ""} ${person.lastName || ""}`.trim(),
-        crew_role: person.crew_position,
-        crew_status: person.crew_status,
-        dob: person.dob,
-        passport_number: person.passport_number,
-        issue_date: person.issue_date,
-        expiration_date: person.expiration_date,
-        gender: person.gender,
-        nationality: person.nationality,
-        passport_photo: person.passport_photo,
-        _isActiveOnExpedition: isPersonActive("Student", person.id, !person.isArchived),
-      })),
+      .map((person: any) => {
+        // Passport data for students may be in _expeditions_student_information
+        const info = person._expeditions_student_information
+        return {
+          ...person,
+          type: "Student" as const,
+          name: `${person.firstName || ""} ${person.lastName || ""}`.trim(),
+          crew_role: person.crew_position,
+          crew_status: person.crew_status,
+          dob: person.dob || info?.date_of_birth || null,
+          passport_number: person.passport_number || info?.passport_number || "",
+          issue_date: person.issue_date || info?.passport_issued_date || null,
+          expiration_date: person.expiration_date || info?.passport_expiration_date || null,
+          gender: person.gender || "",
+          nationality: person.nationality || "",
+          passport_photo: person.passport_photo || info?.passport_photo || "",
+          _isActiveOnExpedition: isPersonActive("Student", person.id, !person.isArchived),
+        }
+      }),
   ]
     .filter((person) => {
       if (statusFilter === "active") return person._isActiveOnExpedition

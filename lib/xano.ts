@@ -655,6 +655,16 @@ export async function getIndividualRecipe(cookbookId: number) {
   return xanoFetch<any[]>(`/individual_recipe?expedition_cookbook_id=${cookbookId}`)
 }
 
+// ============ Expedition Ingredient Types ============
+export async function getExpeditionsIngredientTypes() {
+  return xanoFetch<any[]>("/expeditions_ingredient_types")
+}
+
+// ============ Expedition Inventory Locations ============
+export async function getExpeditionInventoryLocations() {
+  return xanoFetch<any[]>("/expedition_inventory_locations")
+}
+
 // ============ Expedition Departments ============
 export async function getExpeditionDepartments() {
   return xanoFetch<any[]>("/expedition_departments")
@@ -791,6 +801,47 @@ export async function getStudentsWithBalance(expeditionsId?: number) {
 }
 
 // ============ Expedition Transactions (for store purchases) ============
+// ============ Expeditions Inventory ============
+export async function getExpeditionsInventory(expeditionsId?: number) {
+  const allItems = await xanoFetch<any[]>("/expeditions_inventory")
+  if (expeditionsId) {
+    return allItems.filter((item: any) => item.expeditions_id === expeditionsId)
+  }
+  return allItems
+}
+
+export async function getExpeditionsInventoryItem(id: number) {
+  return xanoFetch<any>(`/expeditions_inventory/${id}`)
+}
+
+export async function createExpeditionsInventoryItem(data: {
+  name: string
+  type: string
+  location: string
+  packages: number
+  oz_per_package: number
+  notes?: string
+  expeditions_id: number
+}) {
+  return xanoFetch<any>("/expeditions_inventory", {
+    method: "POST",
+    body: JSON.stringify(data),
+  })
+}
+
+export async function updateExpeditionsInventoryItem(id: number, data: Record<string, any>) {
+  return xanoFetch<any>(`/expeditions_inventory/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  })
+}
+
+export async function deleteExpeditionsInventoryItem(id: number) {
+  return xanoFetch<any>(`/expeditions_inventory/${id}`, {
+    method: "DELETE",
+  })
+}
+
 export async function createExpeditionTransaction(data: {
   date: string | null
   transaction: string

@@ -35,13 +35,16 @@ import {
   Plus,
   Pencil,
   FileText,
+  PlusCircle,
 } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { Spinner } from "@/components/ui/spinner"
 import {
   useActiveExpedition,
   useExpeditionSchedules,
@@ -49,9 +52,11 @@ import {
 } from "@/lib/hooks/use-expeditions"
 import {
   getExpeditionsInventory,
+  createExpeditionsInventoryItem,
   updateExpeditionsInventoryItem,
   getExpeditionCookbook,
   getExpeditionsIngredientTypes,
+  getExpeditionInventoryLocations,
 } from "@/lib/xano"
 
 const INVENTORY_SWR_KEY = "expeditions_inventory"
@@ -77,12 +82,10 @@ interface IngredientType {
   color: string
 }
 
-// Only show actual meal types (not prep, dishes, etc.)
-const ALLOWED_MEAL_NAMES = new Set(["Breakfast", "Lunch", "Dinner", "Snack"])
+// Only show actual meal types (isMeal boolean on the schedule item type)
 const isMealType = (item: any) => {
   if (!item) return false
-  const typeName = item?._expedition_schedule_item_types?.name
-  return typeName ? ALLOWED_MEAL_NAMES.has(typeName) : false
+  return !!item?._expedition_schedule_item_types?.isMeal
 }
 
 // Bullet color mapping for ingredient types
@@ -243,6 +246,16 @@ function PublicGalleyPage() {
   const [viewItem, setViewItem] = useState<InventoryItem | null>(null)
   const [editingViewItem, setEditingViewItem] = useState(false)
   const [editFormData, setEditFormData] = useState({ packages: 0, notes: "" })
+  const [addDialogOpen, setAddDialogOpen] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [addFormData, setAddFormData] = useState({
+    name: "",
+    type: "",
+    location: "",
+    packages: "" as string | number,
+    oz_per_package: "" as string | number,
+    notes: "",
+  })
 
   // Active expedition for meal schedule
   const { data: activeExpedition } = useActiveExpedition()
@@ -284,6 +297,19 @@ function PublicGalleyPage() {
   )
 
   const { data: ingredientTypes } = useSWR("ingredient_types", getExpeditionsIngredientTypes)
+  const { data: inventoryLocations } = useSWR("inventory_locations", getExpeditionInventoryLocations)
+
+  const activeLocations = useMemo(() => {
+    return (inventoryLocations || []).filter((loc: any) => !loc.notInUse)
+  }, [inventoryLocations])
+
+  const typeNames = useMemo(() => {
+    return (ingredientTypes || []).map((t: IngredientType) => t.type_name)
+  }, [ingredientTypes])
+
+  const locationNames = useMemo(() => {
+    return activeLocations.map((loc: any) => loc.name)
+  }, [activeLocations])
 
   // Group cookbook by type (matching meal-planning page exactly)
   const groupedRecipes = useMemo(() => {
@@ -438,6 +464,43 @@ function PublicGalleyPage() {
     const d = String(newDate.getDate()).padStart(2, "0")
     setSelectedDateStr(`${y}-${m}-${d}`)
     setCalendarOpen(false)
+  }
+
+  const handleOpenAddDialog = () => {
+    setAddFormData({
+      name: "",
+      type: "",
+      location: "",
+      packages: "",
+      oz_per_package: "",
+      notes: "",
+    })
+    setAddDialogOpen(true)
+  }
+
+  const handleAddSubmit = async () => {
+    if (!addFormData.name.trim()) {
+      toast.error("Item name is required")
+      return
+    }
+    setIsSubmitting(true)
+    try {
+      await createExpeditionsInventoryItem({
+        name: addFormData.name,
+        type: addFormData.type,
+        location: addFormData.location,
+        packages: addFormData.packages === "" ? 0 : Number(addFormData.packages),
+        oz_per_package: addFormData.oz_per_package === "" ? 0 : Number(addFormData.oz_per_package),
+        notes: addFormData.notes,
+      })
+      mutate(INVENTORY_SWR_KEY)
+      toast.success("Item added successfully")
+      setAddDialogOpen(false)
+    } catch {
+      toast.error("Failed to add item")
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const tabs: { id: TabId; label: string; icon: React.ReactNode }[] = [
@@ -904,11 +967,17 @@ function PublicGalleyPage() {
             {/* In Stock Table */}
             <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
               {/* Header */}
-              <div className="px-4 sm:px-6 py-4 border-b bg-gray-50/50">
-                <h2 className="text-lg font-semibold">Inventory</h2>
-                <p className="text-sm text-gray-600 mt-1">
-                  Food and supply inventory on the boat
-                </p>
+              <div className="px-4 sm:px-6 py-4 border-b bg-gray-50/50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                  <h2 className="text-lg font-semibold">Inventory</h2>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Food and supply inventory on the boat
+                  </p>
+                </div>
+                <Button size="sm" onClick={handleOpenAddDialog} className="cursor-pointer">
+                  <PlusCircle className="h-4 w-4 mr-2" />
+                  Add Item
+                </Button>
               </div>
 
               {/* Table */}
@@ -1269,6 +1338,118 @@ function PublicGalleyPage() {
               </DialogFooter>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Item Dialog */}
+      <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+        <DialogContent className="sm:max-w-[500px] [&>button]:cursor-pointer">
+          <DialogHeader>
+            <DialogTitle>Add Inventory Item</DialogTitle>
+            <DialogDescription>Add a new item to the inventory</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="add-name">Name *</Label>
+              <Input
+                id="add-name"
+                placeholder="e.g., Rice, Pasta, Chicken"
+                value={addFormData.name}
+                onChange={(e) => setAddFormData({ ...addFormData, name: e.target.value })}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Type</Label>
+                <select
+                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  value={addFormData.type}
+                  onChange={(e) => setAddFormData({ ...addFormData, type: e.target.value })}
+                >
+                  <option value="">Select type...</option>
+                  {typeNames.map((name: string) => (
+                    <option key={name} value={name}>{name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Location</Label>
+                <select
+                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  value={addFormData.location}
+                  onChange={(e) => setAddFormData({ ...addFormData, location: e.target.value })}
+                >
+                  <option value="">Select location...</option>
+                  {locationNames.map((name: string) => (
+                    <option key={name} value={name}>{name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="add-packages">Packages</Label>
+                <Input
+                  id="add-packages"
+                  type="number"
+                  min="0"
+                  placeholder="0"
+                  value={addFormData.packages}
+                  onChange={(e) => setAddFormData({ ...addFormData, packages: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="add-oz">Oz / Package</Label>
+                <Input
+                  id="add-oz"
+                  type="number"
+                  min="0"
+                  placeholder="0"
+                  value={addFormData.oz_per_package}
+                  onChange={(e) => setAddFormData({ ...addFormData, oz_per_package: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="add-notes">Notes</Label>
+              <Input
+                id="add-notes"
+                placeholder="Optional notes..."
+                value={addFormData.notes}
+                onChange={(e) => setAddFormData({ ...addFormData, notes: e.target.value })}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setAddDialogOpen(false)}
+              disabled={isSubmitting}
+              className="cursor-pointer"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleAddSubmit}
+              disabled={isSubmitting}
+              className="cursor-pointer"
+            >
+              {isSubmitting ? (
+                <>
+                  <Spinner className="h-4 w-4 mr-2" />
+                  Adding...
+                </>
+              ) : (
+                "Add Item"
+              )}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

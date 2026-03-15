@@ -90,8 +90,8 @@ export function NewOrderDialog({ open, onOpenChange, expeditionId }: NewOrderDia
 
   // Fetch store items - only when dialog is open
   const { data: storeItems, isLoading: storeLoading } = useSWR(
-    open && expeditionId ? `expeditions_store_${expeditionId}` : null,
-    () => getExpeditionsStore(expeditionId),
+    open ? "expeditions_store" : null,
+    () => getExpeditionsStore(),
     { revalidateOnFocus: false }
   )
 
@@ -212,18 +212,15 @@ export function NewOrderDialog({ open, onOpenChange, expeditionId }: NewOrderDia
 
       // Create a transaction for each cart item
       for (const cartItem of cart) {
-        // Create one transaction per quantity
-        for (let i = 0; i < cartItem.quantity; i++) {
-          await createExpeditionTransaction({
-            date: today,
-            transaction: "Purchase",
-            amount: -Math.abs(cartItem.storeItem.price), // Negative value
-            students_id: selectedStudent.id,
-            expeditions_id: expeditionId,
-            expeditions_store_id: cartItem.storeItem.id,
-            quantity: 1
-          })
-        }
+        await createExpeditionTransaction({
+          date: today,
+          transaction: "Purchase",
+          amount: -Math.abs(cartItem.storeItem.price * cartItem.quantity), // Negative total
+          students_id: selectedStudent.id,
+          expeditions_id: expeditionId,
+          expeditions_store_id: cartItem.storeItem.id,
+          quantity: cartItem.quantity
+        })
 
         // Update the store item quantity
         const newQuantity = Math.max(0, cartItem.storeItem.quantity - cartItem.quantity)
@@ -235,7 +232,7 @@ export function NewOrderDialog({ open, onOpenChange, expeditionId }: NewOrderDia
       // Refresh data
       mutate(`students_with_balance_${expeditionId}`)
       mutate(`expedition_transactions_${expeditionId}`)
-      mutate(`expeditions_store_${expeditionId}`)
+      mutate("expeditions_store")
 
       setStep("complete")
       toast.success("Order submitted successfully!")

@@ -1,6 +1,6 @@
 "use client"
 
-import React, { use, useState, useMemo } from "react"
+import React, { useState, useMemo } from "react"
 import useSWR, { mutate } from "swr"
 import { toast } from "sonner"
 import {
@@ -32,7 +32,6 @@ import {
   ComboboxItem,
   ComboboxList,
 } from "@/components/ui/combobox"
-import { ExpeditionHeader } from "@/components/expedition-header"
 import { PlusCircle, Pencil, Trash2, Boxes, Eye, Minus, Plus } from "lucide-react"
 import {
   getExpeditionsInventory,
@@ -42,12 +41,9 @@ import {
   getExpeditionsIngredientTypes,
   getExpeditionInventoryLocations,
 } from "@/lib/xano"
-import { useExpeditions } from "@/lib/hooks/use-expeditions"
 import { useCurrentUser } from "@/lib/contexts/user-context"
 
-interface PageProps {
-  params: Promise<{ id: string }>
-}
+const SWR_KEY = "expeditions_inventory"
 
 interface InventoryItem {
   id: number
@@ -58,7 +54,6 @@ interface InventoryItem {
   packages: number
   oz_per_package: number
   notes: string
-  expeditions_id: number
 }
 
 interface IngredientType {
@@ -92,12 +87,10 @@ function StepperNumberCell({
   value,
   itemId,
   field,
-  expeditionId,
 }: {
   value: number
   itemId: number
   field: string
-  expeditionId: number
 }) {
   const [isEditing, setIsEditing] = useState(false)
   const [editValue, setEditValue] = useState("")
@@ -112,7 +105,7 @@ function StepperNumberCell({
     setIsEditing(false)
     // Optimistic update
     mutate(
-      `expeditions_inventory_${expeditionId}`,
+      SWR_KEY,
       (current: InventoryItem[] | undefined) =>
         current?.map((item) =>
           item.id === itemId ? { ...item, [field]: newValue } : item
@@ -121,10 +114,10 @@ function StepperNumberCell({
     )
     try {
       await updateExpeditionsInventoryItem(itemId, { [field]: newValue })
-      mutate(`expeditions_inventory_${expeditionId}`)
+      mutate(SWR_KEY)
     } catch {
       toast.error("Failed to update")
-      mutate(`expeditions_inventory_${expeditionId}`)
+      mutate(SWR_KEY)
     }
   }
 
@@ -193,19 +186,13 @@ function StepperNumberCell({
   )
 }
 
-export default function InventoryPage({ params }: PageProps) {
-  const { id } = use(params)
-  const expeditionId = parseInt(id)
-
+export default function InventoryPage() {
   const { currentUser } = useCurrentUser()
   const isAdmin = currentUser?.role === "Admin"
 
-  const { data: allExpeditions, isLoading: expeditionsLoading } = useExpeditions()
-  const expedition = allExpeditions?.find((e: any) => e.id === expeditionId)
-
   const { data: inventoryItems, isLoading: inventoryLoading } = useSWR(
-    expeditionId ? `expeditions_inventory_${expeditionId}` : null,
-    () => getExpeditionsInventory(expeditionId)
+    SWR_KEY,
+    () => getExpeditionsInventory()
   )
 
   const { data: ingredientTypes } = useSWR("ingredient_types", getExpeditionsIngredientTypes)
@@ -218,7 +205,6 @@ export default function InventoryPage({ params }: PageProps) {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [itemToDelete, setItemToDelete] = useState<InventoryItem | null>(null)
   const [viewItem, setViewItem] = useState<InventoryItem | null>(null)
-
   // Form state
   const [formData, setFormData] = useState({
     name: "",
@@ -266,7 +252,7 @@ export default function InventoryPage({ params }: PageProps) {
     if (!itemToDelete) return
     try {
       await deleteExpeditionsInventoryItem(itemToDelete.id)
-      mutate(`expeditions_inventory_${expeditionId}`)
+      mutate(SWR_KEY)
       toast.success("Item deleted successfully")
       setDeleteConfirmOpen(false)
       setItemToDelete(null)
@@ -297,13 +283,10 @@ export default function InventoryPage({ params }: PageProps) {
         await updateExpeditionsInventoryItem(editingItem.id, submitData)
         toast.success("Item updated successfully")
       } else {
-        await createExpeditionsInventoryItem({
-          ...submitData,
-          expeditions_id: expeditionId,
-        })
+        await createExpeditionsInventoryItem(submitData)
         toast.success("Item added successfully")
       }
-      mutate(`expeditions_inventory_${expeditionId}`)
+      mutate(SWR_KEY)
       setDialogOpen(false)
     } catch (error) {
       console.error("Error saving item:", error)
@@ -372,7 +355,25 @@ export default function InventoryPage({ params }: PageProps) {
     return groups
   }, [inventoryItems, ingredientTypes, typeColorLookup])
 
-  const isLoading = expeditionsLoading || inventoryLoading
+  // Split into in-stock and out-of-stock groups
+  const { inStockGroups, outOfStockGroups } = useMemo(() => {
+    const inStock: typeof groupedItems = []
+    const outOfStock: typeof groupedItems = []
+
+    groupedItems.forEach((group) => {
+      const inStockItems = group.items.filter((item) => (item.packages ?? 0) > 0)
+      const outOfStockItems = group.items.filter((item) => (item.packages ?? 0) === 0)
+      if (inStockItems.length > 0) {
+        inStock.push({ ...group, items: inStockItems })
+      }
+      if (outOfStockItems.length > 0) {
+        outOfStock.push({ ...group, items: outOfStockItems })
+      }
+    })
+
+    return { inStockGroups: inStock, outOfStockGroups: outOfStock }
+  }, [groupedItems])
+
   const items = (inventoryItems || []) as InventoryItem[]
 
   // Get bullet class for view dialog
@@ -382,12 +383,6 @@ export default function InventoryPage({ params }: PageProps) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <ExpeditionHeader
-        expedition={expedition}
-        isLoading={expeditionsLoading}
-        currentPage="inventory"
-      />
-
       <main className="container mx-auto px-4 py-6">
         <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
           {/* Header */}
@@ -395,7 +390,7 @@ export default function InventoryPage({ params }: PageProps) {
             <div>
               <h2 className="text-lg font-semibold">Inventory</h2>
               <p className="text-sm text-gray-600 mt-1">
-                Manage food and supply inventory for this expedition
+                Manage food and supply inventory on the boat
               </p>
             </div>
             {isAdmin && (
@@ -407,7 +402,7 @@ export default function InventoryPage({ params }: PageProps) {
           </div>
 
           {/* Table */}
-          {isLoading ? (
+          {inventoryLoading ? (
             <Table className="w-full table-fixed">
               <TableHeader>
                 <TableRow className="border-b bg-gray-50/30 hover:bg-gray-50/30">
@@ -447,8 +442,13 @@ export default function InventoryPage({ params }: PageProps) {
               <Boxes className="h-12 w-12 mx-auto mb-3 text-gray-300" />
               <p className="text-lg font-medium text-gray-600">No inventory items yet</p>
               <p className="text-sm text-gray-500 mt-1">
-                Add items to track food and supply inventory for this expedition
+                Add items to track food and supply inventory on the boat
               </p>
+            </div>
+          ) : inStockGroups.length === 0 ? (
+            <div className="p-12 text-center text-muted-foreground">
+              <Boxes className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+              <p className="text-lg font-medium text-gray-600">All items out of stock</p>
             </div>
           ) : (
             <Table className="w-full table-fixed">
@@ -465,7 +465,7 @@ export default function InventoryPage({ params }: PageProps) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {groupedItems.map((group) => {
+                {inStockGroups.map((group) => {
                   const bulletClass = typeBulletColorMap[group.color] || "bg-gray-400"
                   return (
                     <React.Fragment key={group.type || "__uncategorized"}>
@@ -487,7 +487,7 @@ export default function InventoryPage({ params }: PageProps) {
                       {group.items.map((item) => (
                         <TableRow
                           key={item.id}
-                          className="border-b last:border-0 hover:bg-gray-50/50"
+                          className="border-b last:border-0 hover:bg-gray-50/50 transition-all duration-300"
                         >
                           <TableCell className="h-12 px-4 sm:px-6 overflow-hidden">
                             <span className="font-medium text-gray-900 truncate block">{item.name}</span>
@@ -500,7 +500,6 @@ export default function InventoryPage({ params }: PageProps) {
                               value={item.packages ?? 0}
                               itemId={item.id}
                               field="packages"
-                              expeditionId={expeditionId}
                             />
                           </TableCell>
                           <TableCell className="h-12 px-4 sm:px-6 text-center">
@@ -559,6 +558,120 @@ export default function InventoryPage({ params }: PageProps) {
             </Table>
           )}
         </div>
+
+        {/* Out of Stock Table */}
+        {!inventoryLoading && outOfStockGroups.length > 0 && (
+          <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden opacity-75 transition-all duration-300">
+            <div className="px-4 sm:px-6 py-3 border-b bg-gray-50/50 flex items-center justify-between">
+              <h2 className="text-base font-semibold text-gray-500">Out of Stock</h2>
+              <span className="text-xs text-gray-400">{outOfStockGroups.reduce((sum, g) => sum + g.items.length, 0)} items</span>
+            </div>
+
+            <Table className="w-full table-fixed">
+              <TableHeader>
+                <TableRow className="border-b bg-gray-50/30 hover:bg-gray-50/30">
+                  <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[20%]">Name</TableHead>
+                  <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden md:table-cell w-[15%]">Location</TableHead>
+                  <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 text-center w-[10%]">Packages</TableHead>
+                  <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 text-center w-[10%]">Oz/Pkg</TableHead>
+                  <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 text-center w-[12%]">Total Oz</TableHead>
+                  <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 text-center w-[12%]">Total Lbs</TableHead>
+                  <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden lg:table-cell w-[21%]">Notes</TableHead>
+                  <TableHead className="h-10 w-[100px]" />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {outOfStockGroups.map((group) => {
+                  const bulletClass = typeBulletColorMap[group.color] || "bg-gray-400"
+                  return (
+                    <React.Fragment key={`oos_${group.type || "__uncategorized"}`}>
+                      <TableRow className="bg-gray-50/80 hover:bg-gray-50/80 border-b">
+                        <TableCell colSpan={8} className="h-9 px-4 sm:px-6 py-0">
+                          <div className="flex items-center gap-2">
+                            <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${bulletClass}`} />
+                            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                              {group.type || "Uncategorized"}
+                            </span>
+                            <span className="text-xs text-gray-400">
+                              ({group.items.length})
+                            </span>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                      {group.items.map((item) => (
+                        <TableRow
+                          key={item.id}
+                          className="border-b last:border-0 hover:bg-gray-50/50 transition-all duration-300"
+                        >
+                          <TableCell className="h-12 px-4 sm:px-6 overflow-hidden">
+                            <span className="font-medium text-gray-400 truncate block">{item.name}</span>
+                          </TableCell>
+                          <TableCell className="h-12 px-4 sm:px-6 hidden md:table-cell overflow-hidden">
+                            <span className="text-sm text-gray-400 truncate block">{item.location || "—"}</span>
+                          </TableCell>
+                          <TableCell className="h-12 px-4 sm:px-6 text-center">
+                            <StepperNumberCell
+                              value={item.packages ?? 0}
+                              itemId={item.id}
+                              field="packages"
+                            />
+                          </TableCell>
+                          <TableCell className="h-12 px-4 sm:px-6 text-center">
+                            <span className="text-sm text-gray-400">{item.oz_per_package ?? 0}</span>
+                          </TableCell>
+                          <TableCell className="h-12 px-4 sm:px-6 text-center">
+                            <span className="text-sm font-semibold text-gray-400">
+                              {(item.packages ?? 0) * (item.oz_per_package ?? 0)}
+                              <span className="text-xs font-semibold text-gray-300 ml-1">oz</span>
+                            </span>
+                          </TableCell>
+                          <TableCell className="h-12 px-4 sm:px-6 text-center">
+                            <span className="text-sm font-semibold text-gray-400">
+                              {(((item.packages ?? 0) * (item.oz_per_package ?? 0)) / 16).toFixed(1)}
+                              <span className="text-xs font-semibold text-gray-300 ml-1">lb</span>
+                            </span>
+                          </TableCell>
+                          <TableCell className="h-12 px-4 sm:px-6 hidden lg:table-cell overflow-hidden">
+                            <span className="text-sm text-gray-400 truncate block">{item.notes || "—"}</span>
+                          </TableCell>
+                          <TableCell className="h-12 px-2 text-right">
+                            <div className="flex items-center justify-end gap-0.5">
+                              <button
+                                onClick={() => setViewItem(item)}
+                                className="h-7 w-7 flex items-center justify-center rounded hover:bg-gray-100 transition-colors cursor-pointer touch-manipulation"
+                                title="View"
+                              >
+                                <Eye className="h-3.5 w-3.5 text-gray-400" />
+                              </button>
+                              {isAdmin && (
+                                <>
+                                  <button
+                                    onClick={() => handleEditItem(item)}
+                                    className="h-7 w-7 flex items-center justify-center rounded hover:bg-gray-100 transition-colors cursor-pointer touch-manipulation"
+                                    title="Edit"
+                                  >
+                                    <Pencil className="h-3.5 w-3.5 text-gray-400" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteClick(item)}
+                                    className="h-7 w-7 flex items-center justify-center rounded hover:bg-gray-100 transition-colors cursor-pointer touch-manipulation"
+                                    title="Delete"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5 text-gray-400" />
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </React.Fragment>
+                  )
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        )}
       </main>
 
       {/* View Item Dialog */}
@@ -636,8 +749,14 @@ export default function InventoryPage({ params }: PageProps) {
         </DialogContent>
       </Dialog>
 
-      {/* Add/Edit Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      {/* Add/Edit Dialog - modal={false} so base-ui Combobox portal can receive clicks */}
+      {dialogOpen && (
+        <div
+          className="fixed inset-0 z-50 bg-black/50 animate-in fade-in-0"
+          onClick={() => setDialogOpen(false)}
+        />
+      )}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen} modal={false}>
         <DialogContent className="sm:max-w-[500px] [&>button]:cursor-pointer">
           <DialogHeader>
             <DialogTitle>
@@ -646,7 +765,7 @@ export default function InventoryPage({ params }: PageProps) {
             <DialogDescription>
               {editingItem
                 ? "Update the details for this inventory item"
-                : "Add a new item to the expedition inventory"}
+                : "Add a new item to the inventory"}
             </DialogDescription>
           </DialogHeader>
 
@@ -672,7 +791,7 @@ export default function InventoryPage({ params }: PageProps) {
                     setFormData({ ...formData, type: val || "" })
                   }}
                 >
-                  <ComboboxInput placeholder="Search types..." />
+                  <ComboboxInput placeholder="Select type..." showClear className="truncate" />
                   <ComboboxContent>
                     <ComboboxEmpty>No type found.</ComboboxEmpty>
                     <ComboboxList>
@@ -682,7 +801,7 @@ export default function InventoryPage({ params }: PageProps) {
                         return (
                           <ComboboxItem key={typeName} value={typeName} className="cursor-pointer">
                             <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${bulletClass}`} />
-                            <span className="text-sm">{typeName}</span>
+                            {typeName}
                           </ComboboxItem>
                         )
                       }}
@@ -701,13 +820,13 @@ export default function InventoryPage({ params }: PageProps) {
                     setFormData({ ...formData, location: val || "" })
                   }}
                 >
-                  <ComboboxInput placeholder="Search locations..." />
+                  <ComboboxInput placeholder="Select location..." showClear className="truncate" />
                   <ComboboxContent>
                     <ComboboxEmpty>No location found.</ComboboxEmpty>
                     <ComboboxList>
                       {(locName: string) => (
                         <ComboboxItem key={locName} value={locName} className="cursor-pointer">
-                          <span className="text-sm">{locName}</span>
+                          {locName}
                         </ComboboxItem>
                       )}
                     </ComboboxList>

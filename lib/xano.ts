@@ -583,11 +583,8 @@ export async function deleteExpeditionLocation(id: number) {
 }
 
 // ============ Discipline Management ============
-export async function getExpeditionDiscipline(expeditionsId?: number) {
-  const url = expeditionsId 
-    ? `/expedition_discipline?expeditions_id=${expeditionsId}`
-    : "/expedition_discipline"
-  return xanoFetch<any[]>(url)
+export async function getExpeditionDiscipline(expeditionsId: number) {
+  return xanoFetch<any[]>(`/expedition_discipline?expeditions_id=${expeditionsId}`)
 }
 
 export async function getExpeditionDisciplineById(id: number) {
@@ -720,11 +717,8 @@ export async function getExpeditionTransactionsByDateByStudent(
 }
 
 // ============ Expeditions Store ============
-export async function getExpeditionsStore(expeditionsId?: number) {
-  const url = expeditionsId 
-    ? `/expeditions_store?expeditions_id=${expeditionsId}`
-    : "/expeditions_store"
-  return xanoFetch<any[]>(url)
+export async function getExpeditionsStore() {
+  return xanoFetch<any[]>("/expeditions_store")
 }
 
 export async function getExpeditionsStoreItem(id: number) {
@@ -738,7 +732,6 @@ export async function createExpeditionsStoreItem(data: {
   isArchived: boolean
   product_image: string
   price: number
-  expeditions_id: number
 }) {
   return xanoFetch<any>("/expeditions_store", {
     method: "POST",
@@ -760,11 +753,8 @@ export async function deleteExpeditionsStoreItem(id: number) {
 }
 
 // ============ Expedition Transactions (All types including purchases) ============
-export async function getExpeditionTransactions(expeditionsId?: number) {
-  const url = expeditionsId 
-    ? `/expedition_transactions?expeditions_id=${expeditionsId}`
-    : "/expedition_transactions"
-  return xanoFetch<any[]>(url)
+export async function getExpeditionTransactions(expeditionsId: number) {
+  return xanoFetch<any[]>(`/expedition_transactions?expeditions_id=${expeditionsId}`)
 }
 
 export async function getExpeditionTransactionById(id: number) {
@@ -802,12 +792,8 @@ export async function getStudentsWithBalance(expeditionsId?: number) {
 
 // ============ Expedition Transactions (for store purchases) ============
 // ============ Expeditions Inventory ============
-export async function getExpeditionsInventory(expeditionsId?: number) {
-  const allItems = await xanoFetch<any[]>("/expeditions_inventory")
-  if (expeditionsId) {
-    return allItems.filter((item: any) => item.expeditions_id === expeditionsId)
-  }
-  return allItems
+export async function getExpeditionsInventory() {
+  return xanoFetch<any[]>("/expeditions_inventory")
 }
 
 export async function getExpeditionsInventoryItem(id: number) {
@@ -821,7 +807,6 @@ export async function createExpeditionsInventoryItem(data: {
   packages: number
   oz_per_package: number
   notes?: string
-  expeditions_id: number
 }) {
   return xanoFetch<any>("/expeditions_inventory", {
     method: "POST",

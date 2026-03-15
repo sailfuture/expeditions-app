@@ -1,7 +1,6 @@
 "use client"
 
-import { use, useState } from "react"
-import { useRouter } from "next/navigation"
+import { useState } from "react"
 import useSWR, { mutate } from "swr"
 import { toast } from "sonner"
 import {
@@ -28,38 +27,30 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
-import { ExpeditionHeader } from "@/components/expedition-header"
-import { 
-  PlusCircle, 
-  Pencil, 
+import {
+  PlusCircle,
+  Pencil,
   Trash2,
   Package,
   DollarSign,
   ImageIcon,
-  Receipt,
   ExternalLink,
-  ShoppingCart,
   Copy,
   QrCode
 } from "lucide-react"
-import { 
-  getExpeditionsStore, 
-  createExpeditionsStoreItem, 
-  updateExpeditionsStoreItem, 
-  deleteExpeditionsStoreItem 
+import {
+  getExpeditionsStore,
+  createExpeditionsStoreItem,
+  updateExpeditionsStoreItem,
+  deleteExpeditionsStoreItem
 } from "@/lib/xano"
-import { useExpeditions } from "@/lib/hooks/use-expeditions"
 import { useCurrentUser } from "@/lib/contexts/user-context"
-import { NewOrderDialog } from "@/components/new-order-dialog"
 
-interface PageProps {
-  params: Promise<{ id: string }>
-}
+const SWR_KEY = "expeditions_store"
 
 interface StoreItem {
   id: number
   created_at: number
-  expeditions_id: number
   product_name: string
   quantity: number
   description: string
@@ -68,20 +59,13 @@ interface StoreItem {
   price: number
 }
 
-export default function StorePage({ params }: PageProps) {
-  const router = useRouter()
-  const { id } = use(params)
-  const expeditionId = parseInt(id)
-
+export default function StorePage() {
   const { currentUser } = useCurrentUser()
   const isAdmin = currentUser?.role === "Admin"
 
-  const { data: allExpeditions, isLoading: expeditionsLoading } = useExpeditions()
-  const expedition = allExpeditions?.find((e: any) => e.id === expeditionId)
-
-  const { data: storeItems, isLoading: storeLoading } = useSWR(
-    expeditionId ? `expeditions_store_${expeditionId}` : null,
-    () => getExpeditionsStore(expeditionId)
+  const { data: storeItems, isLoading } = useSWR(
+    SWR_KEY,
+    () => getExpeditionsStore()
   )
 
   // Dialog state
@@ -90,19 +74,18 @@ export default function StorePage({ params }: PageProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [itemToDelete, setItemToDelete] = useState<StoreItem | null>(null)
-  const [newOrderDialogOpen, setNewOrderDialogOpen] = useState(false)
   const [qrDialogOpen, setQrDialogOpen] = useState(false)
 
   // Get the public store URL
-  const publicStoreUrl = typeof window !== 'undefined' 
-    ? `${window.location.origin}/public/store/${expeditionId}`
-    : `/public/store/${expeditionId}`
+  const publicStoreUrl = typeof window !== 'undefined'
+    ? `${window.location.origin}/public/store`
+    : `/public/store`
 
   const handleCopyUrl = async () => {
     try {
       await navigator.clipboard.writeText(publicStoreUrl)
       toast.success("Store URL copied to clipboard")
-    } catch (error) {
+    } catch {
       toast.error("Failed to copy URL")
     }
   }
@@ -153,7 +136,7 @@ export default function StorePage({ params }: PageProps) {
 
     try {
       await deleteExpeditionsStoreItem(itemToDelete.id)
-      mutate(`expeditions_store_${expeditionId}`)
+      mutate(SWR_KEY)
       toast.success("Item deleted successfully")
       setDeleteConfirmOpen(false)
       setItemToDelete(null)
@@ -171,7 +154,6 @@ export default function StorePage({ params }: PageProps) {
 
     setIsSubmitting(true)
     try {
-      // Convert empty strings to 0 for numeric fields
       const submitData = {
         ...formData,
         price: formData.price === "" ? 0 : Number(formData.price),
@@ -182,13 +164,10 @@ export default function StorePage({ params }: PageProps) {
         await updateExpeditionsStoreItem(editingItem.id, submitData)
         toast.success("Item updated successfully")
       } else {
-        await createExpeditionsStoreItem({
-          ...submitData,
-          expeditions_id: expeditionId
-        })
+        await createExpeditionsStoreItem(submitData)
         toast.success("Item created successfully")
       }
-      mutate(`expeditions_store_${expeditionId}`)
+      mutate(SWR_KEY)
       setDialogOpen(false)
     } catch (error) {
       console.error("Error saving item:", error)
@@ -198,9 +177,7 @@ export default function StorePage({ params }: PageProps) {
     }
   }
 
-  const isLoading = expeditionsLoading || storeLoading
-
-  // Filter out archived items for display (unless you want to show them)
+  // Filter out archived items for display
   const sortByPrice = (a: StoreItem, b: StoreItem) => (a.price || 0) - (b.price || 0)
   const inStockItems = (storeItems || []).filter((item: StoreItem) => !item.isArchived && item.quantity > 0).sort(sortByPrice)
   const outOfStockItems = (storeItems || []).filter((item: StoreItem) => !item.isArchived && item.quantity === 0).sort(sortByPrice)
@@ -216,23 +193,19 @@ export default function StorePage({ params }: PageProps) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Expedition Header with Navigation */}
-      <ExpeditionHeader expedition={expedition} isLoading={expeditionsLoading} currentPage="store" />
-
-      {/* Content */}
       <main className="container mx-auto px-4 py-6">
         <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
           <div className="px-4 sm:px-6 py-4 border-b bg-gray-50/50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h2 className="text-lg font-semibold">Store Items</h2>
-              <p className="text-sm text-gray-600 mt-1">Manage items available for purchase on this expedition</p>
+              <h2 className="text-lg font-semibold">Store</h2>
+              <p className="text-sm text-gray-600 mt-1">Manage items available for purchase on the boat</p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <Button
                 variant="outline"
                 size="icon"
                 className="h-9 w-9 cursor-pointer"
-                onClick={() => window.open(`/public/store/${expeditionId}`, '_blank')}
+                onClick={() => window.open(`/public/store`, '_blank')}
               >
                 <ExternalLink className="h-4 w-4" />
               </Button>
@@ -253,24 +226,14 @@ export default function StorePage({ params }: PageProps) {
                 <QrCode className="h-4 w-4" />
               </Button>
               {isAdmin && (
-                <>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-9 w-9 cursor-pointer"
-                    onClick={() => router.push(`/expedition/${expeditionId}/store/transactions`)}
-                  >
-                    <Receipt className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={handleAddItem}
-                    className="cursor-pointer"
-                  >
-                    <PlusCircle className="h-4 w-4 mr-2" />
-                    Add Item
-                  </Button>
-                </>
+                <Button
+                  size="sm"
+                  onClick={handleAddItem}
+                  className="cursor-pointer"
+                >
+                  <PlusCircle className="h-4 w-4 mr-2" />
+                  Add Item
+                </Button>
               )}
             </div>
           </div>
@@ -304,7 +267,7 @@ export default function StorePage({ params }: PageProps) {
             <div className="p-12 text-center text-muted-foreground">
               <Package className="h-12 w-12 mx-auto mb-3 text-gray-300" />
               <p className="text-lg font-medium text-gray-600">No store items yet</p>
-              <p className="text-sm text-gray-500 mt-1">Add items that can be purchased during this expedition</p>
+              <p className="text-sm text-gray-500 mt-1">Add items that can be purchased on the boat</p>
             </div>
           ) : (
             <div>
@@ -334,8 +297,8 @@ export default function StorePage({ params }: PageProps) {
                       <TableCell className="h-16 px-4 sm:px-6">
                         <div className="flex items-center gap-3">
                           {item.product_image ? (
-                            <img 
-                              src={item.product_image} 
+                            <img
+                              src={item.product_image}
                               alt={item.product_name}
                               className="h-10 w-10 rounded-lg object-cover border border-gray-200 flex-shrink-0"
                             />
@@ -401,8 +364,8 @@ export default function StorePage({ params }: PageProps) {
                           <TableCell className="h-16 px-4 sm:px-6">
                             <div className="flex items-center gap-3">
                               {item.product_image ? (
-                                <img 
-                                  src={item.product_image} 
+                                <img
+                                  src={item.product_image}
                                   alt={item.product_name}
                                   className="h-10 w-10 rounded-lg object-cover border border-gray-200 flex-shrink-0"
                                 />
@@ -458,8 +421,8 @@ export default function StorePage({ params }: PageProps) {
                           <TableCell className="h-16 px-4 sm:px-6">
                             <div className="flex items-center gap-3">
                               {item.product_image ? (
-                                <img 
-                                  src={item.product_image} 
+                                <img
+                                  src={item.product_image}
                                   alt={item.product_name}
                                   className="h-10 w-10 rounded-lg object-cover border border-gray-200 grayscale flex-shrink-0"
                                 />
@@ -526,7 +489,7 @@ export default function StorePage({ params }: PageProps) {
               {editingItem ? "Edit Store Item" : "Add Store Item"}
             </DialogTitle>
             <DialogDescription>
-              {editingItem ? "Update the details for this store item" : "Add a new item to the expedition store"}
+              {editingItem ? "Update the details for this store item" : "Add a new item to the store"}
             </DialogDescription>
           </DialogHeader>
 
@@ -593,8 +556,8 @@ export default function StorePage({ params }: PageProps) {
               />
               {formData.product_image && (
                 <div className="mt-2">
-                  <img 
-                    src={formData.product_image} 
+                  <img
+                    src={formData.product_image}
                     alt="Preview"
                     className="h-20 w-20 rounded-lg object-cover border border-gray-200"
                     onError={(e) => {
@@ -673,13 +636,6 @@ export default function StorePage({ params }: PageProps) {
         </DialogContent>
       </Dialog>
 
-      {/* New Order Dialog */}
-      <NewOrderDialog
-        open={newOrderDialogOpen}
-        onOpenChange={setNewOrderDialogOpen}
-        expeditionId={expeditionId}
-      />
-
       {/* QR Code Dialog */}
       <Dialog open={qrDialogOpen} onOpenChange={setQrDialogOpen}>
         <DialogContent className="sm:max-w-[320px] [&>button]:cursor-pointer">
@@ -688,7 +644,7 @@ export default function StorePage({ params }: PageProps) {
           </DialogHeader>
           <div className="flex flex-col items-center py-4">
             <div className="bg-white p-4 rounded-lg border">
-              <img 
+              <img
                 src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(publicStoreUrl)}`}
                 alt="Store QR Code"
                 className="w-48 h-48"

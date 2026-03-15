@@ -20,7 +20,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { ChevronDown, LogOut, Menu, Ship, Users, UserCog, ClipboardList, FileText, Tv, Calendar, BookOpen, ExternalLink, UtensilsCrossed } from "lucide-react"
+import { ChevronDown, LogOut, Menu, Ship, Users, UserCog, ClipboardList, FileText, Tv, Calendar, BookOpen, ExternalLink, UtensilsCrossed, Boxes, ShoppingBag, ChefHat } from "lucide-react"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -210,6 +210,11 @@ export function Navbar() {
                             Public Schedule
                           </DropdownMenuItem>
                         </Link>
+                        <Link href="/public/galley" target="_blank">
+                          <DropdownMenuItem className="cursor-pointer whitespace-nowrap">
+                            Galley
+                          </DropdownMenuItem>
+                        </Link>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </NavigationMenuItem>
@@ -240,16 +245,33 @@ export function Navbar() {
                   </NavigationMenuItem>
 
                   <NavigationMenuItem>
-                    <Link
-                      href="/meal-planning"
-                      className={cn(
+                    <DropdownMenu>
+                      <DropdownMenuTrigger className={cn(
                         navigationMenuTriggerStyle(),
-                        "cursor-pointer",
-                        pathname.startsWith("/meal-planning") && "text-foreground",
-                      )}
-                    >
-                      Meal Planning
-                    </Link>
+                        "cursor-pointer flex items-center gap-1",
+                        (pathname.startsWith("/meal-planning") || pathname === "/inventory" || pathname === "/store") && "text-foreground",
+                      )}>
+                        Meal Planning
+                        <ChevronDown className="h-3 w-3" />
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start">
+                        <Link href="/meal-planning">
+                          <DropdownMenuItem className="cursor-pointer whitespace-nowrap">
+                            Cookbook
+                          </DropdownMenuItem>
+                        </Link>
+                        <Link href="/store">
+                          <DropdownMenuItem className="cursor-pointer whitespace-nowrap">
+                            Store
+                          </DropdownMenuItem>
+                        </Link>
+                        <Link href="/inventory">
+                          <DropdownMenuItem className="cursor-pointer whitespace-nowrap">
+                            Inventory
+                          </DropdownMenuItem>
+                        </Link>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </NavigationMenuItem>
                 </>
               )}
@@ -379,7 +401,16 @@ export function Navbar() {
                       Public Schedule
                       <ExternalLink className="h-3 w-3 text-muted-foreground ml-auto" />
                     </Link>
-                    
+                    <Link
+                      href="/public/galley"
+                      target="_blank"
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors"
+                    >
+                      <ChefHat className="h-4 w-4 text-muted-foreground" />
+                      Galley
+                      <ExternalLink className="h-3 w-3 text-muted-foreground ml-auto" />
+                    </Link>
+
                     <div className="px-4 py-2 mt-2">
                       <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Logs</p>
                     </div>
@@ -400,13 +431,29 @@ export function Navbar() {
                       Log Dashboard
                     </Link>
                     
-                    <div className="h-px bg-border my-2 mx-4" />
+                    <div className="px-4 py-2 mt-2">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Meal Planning</p>
+                    </div>
                     <Link
                       href="/meal-planning"
-                      className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium hover:bg-accent transition-colors"
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors"
                     >
                       <UtensilsCrossed className="h-4 w-4 text-muted-foreground" />
-                      Meal Planning
+                      Cookbook
+                    </Link>
+                    <Link
+                      href="/store"
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors"
+                    >
+                      <ShoppingBag className="h-4 w-4 text-muted-foreground" />
+                      Store
+                    </Link>
+                    <Link
+                      href="/inventory"
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors"
+                    >
+                      <Boxes className="h-4 w-4 text-muted-foreground" />
+                      Inventory
                     </Link>
                   </nav>
                 </SheetContent>

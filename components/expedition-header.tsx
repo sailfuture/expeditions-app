@@ -13,14 +13,14 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
-import { Calendar, Home, Map, ClipboardList, Users, Eye, PlusCircle, FileText, AlertTriangle, ClipboardCheck, IdCard, ShoppingBag, Receipt, Boxes } from "lucide-react"
+import { Calendar, Home, Map, ClipboardList, Users, Eye, PlusCircle, FileText, AlertTriangle, ClipboardCheck, IdCard, Receipt } from "lucide-react"
 import { format } from "date-fns"
 import { useCurrentUser } from "@/lib/contexts/user-context"
 
 interface ExpeditionHeaderProps {
   expedition: any
   isLoading?: boolean
-  currentPage?: "overview" | "trip-planner" | "weekly-planner" | "students" | "daily-view" | "add-scores" | "performance-reviews" | "discipline" | "applications" | "passport-manifest" | "store" | "transactions" | "inventory"
+  currentPage?: "overview" | "trip-planner" | "weekly-planner" | "students" | "daily-view" | "add-scores" | "performance-reviews" | "discipline" | "applications" | "passport-manifest" | "transactions"
 }
 
 const PAGE_TITLES: Record<string, string> = {
@@ -34,9 +34,7 @@ const PAGE_TITLES: Record<string, string> = {
   "discipline": "Discipline",
   "applications": "Applications",
   "passport-manifest": "Manifest",
-  "store": "Store",
   "transactions": "Transactions",
-  "inventory": "Inventory",
 }
 
 export function ExpeditionHeader({ expedition, isLoading = false, currentPage = "overview" }: ExpeditionHeaderProps) {
@@ -274,19 +272,7 @@ export function ExpeditionHeader({ expedition, isLoading = false, currentPage = 
                 <span className="hidden lg:inline truncate">Manifest</span>
               </Button>
               
-              {/* 11. Store */}
-              <Button 
-                variant={currentPage === "store" ? "default" : "ghost"}
-                size="sm"
-                className={`cursor-pointer h-7 px-2 rounded-md text-xs min-w-0 ${currentPage !== "store" ? "bg-white border border-gray-200 hover:bg-gray-50" : ""}`}
-                onClick={() => expedition && router.push(`/expedition/${expedition.id}/store`)}
-                disabled={!expedition}
-              >
-                <ShoppingBag className="h-3.5 w-3.5 flex-shrink-0 lg:mr-1" />
-                <span className="hidden lg:inline truncate">Store</span>
-              </Button>
-              
-              {/* 12. Transactions */}
+              {/* 11. Transactions */}
               <Button
                 variant={currentPage === "transactions" ? "default" : "ghost"}
                 size="sm"
@@ -296,18 +282,6 @@ export function ExpeditionHeader({ expedition, isLoading = false, currentPage = 
               >
                 <Receipt className="h-3.5 w-3.5 flex-shrink-0 lg:mr-1" />
                 <span className="hidden lg:inline truncate">Orders</span>
-              </Button>
-
-              {/* 13. Inventory */}
-              <Button
-                variant={currentPage === "inventory" ? "default" : "ghost"}
-                size="sm"
-                className={`cursor-pointer h-7 px-2 rounded-md text-xs min-w-0 ${currentPage !== "inventory" ? "bg-white border border-gray-200 hover:bg-gray-50" : ""}`}
-                onClick={() => expedition && router.push(`/expedition/${expedition.id}/inventory`)}
-                disabled={!expedition}
-              >
-                <Boxes className="h-3.5 w-3.5 flex-shrink-0 lg:mr-1" />
-                <span className="hidden lg:inline truncate">Inventory</span>
               </Button>
             </div>
           </div>

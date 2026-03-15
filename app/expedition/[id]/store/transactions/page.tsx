@@ -142,8 +142,8 @@ export default function StoreTransactionsPage({ params }: PageProps) {
 
   // Get store items to look up product names
   const { data: storeItems } = useSWR(
-    expeditionId ? `expeditions_store_${expeditionId}` : null,
-    () => getExpeditionsStore(expeditionId)
+    "expeditions_store",
+    () => getExpeditionsStore()
   )
 
   // Get students to look up names
@@ -337,7 +337,7 @@ export default function StoreTransactionsPage({ params }: PageProps) {
       
       mutate(`expedition_transactions_${expeditionId}`)
       mutate(`students_with_balance_${expeditionId}`)
-      mutate(`expeditions_store_${expeditionId}`)
+      mutate("expeditions_store")
       setDeleteDialogOpen(false)
       toast.success("Transaction deleted successfully")
     } catch (error) {
@@ -389,7 +389,7 @@ export default function StoreTransactionsPage({ params }: PageProps) {
       
       mutate(`expedition_transactions_${expeditionId}`)
       mutate(`students_with_balance_${expeditionId}`)
-      mutate(`expeditions_store_${expeditionId}`)
+      mutate("expeditions_store")
       setDeleteOrderDialogOpen(false)
       toast.success(`Order with ${selectedOrder.transactions.length} item(s) deleted successfully`)
     } catch (error) {

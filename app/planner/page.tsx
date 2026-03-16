@@ -49,7 +49,7 @@ import {
 import { ChevronLeft, ChevronRight, ExternalLink, Calendar, Plus, X, Pencil, Trash2, Clock, Wrench, ClipboardList } from "lucide-react"
 import { useExpeditionScheduleItemsByDate, useExpeditionSchedules, useTeachers, useExpeditionScheduleTemplates, useStudentsByExpedition } from "@/lib/hooks/use-expeditions"
 import { useExpeditionContext } from "@/lib/contexts/expedition-context"
-import { cn, isDateWithinExpeditionRange, getExpeditionFirstDate } from "@/lib/utils"
+import { cn, isDateWithinExpeditionRange, getExpeditionFirstDate, getPhotoUrl } from "@/lib/utils"
 import { AddScheduleItemSheet } from "@/components/add-schedule-item-sheet"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { deleteExpeditionScheduleItem, addExpeditionScheduleTemplate, getExpeditionDishDays, getExpeditionsGalleyTeam, updateExpeditionSchedule } from "@/lib/xano"
@@ -272,21 +272,10 @@ function PlannerPageContent() {
     return `${displayHours}:${minutes.toString().padStart(2, "0")} ${period}`
   }
   
-  // Check if item is a meal type (Breakfast=1, Lunch=2, Dinner=3)
-  // Check if an item is an actual meal type (Breakfast, Lunch, Dinner) - not prep or dishes
-  const EXACT_MEAL_NAMES = ['breakfast', 'lunch', 'dinner']
+  // Check if item is a meal type using the isMeal boolean from the item type record
   const isMealType = (item: any) => {
     if (!item) return false
-    const typeId = item?.expedition_schedule_item_types_id || item?._expedition_schedule_item_types?.id
-    const typeName = (item?._expedition_schedule_item_types?.name || '').toLowerCase().trim()
-    // Only match exact meal names, not prep/dishes variants
-    if ([1, 2, 3, 5, 6, 7].includes(typeId)) {
-      if (typeName && !EXACT_MEAL_NAMES.includes(typeName)) {
-        return false
-      }
-      return EXACT_MEAL_NAMES.includes(typeName) || !typeName
-    }
-    return EXACT_MEAL_NAMES.includes(typeName)
+    return !!item?._expedition_schedule_item_types?.isMeal
   }
 
   const getColorForType = (item: any) => {
@@ -969,9 +958,9 @@ function PlannerPageContent() {
                             {/* Meal Plan - for meal type items */}
                             {isMealType(item) && (
                               <div className="flex items-center gap-1 mt-0.5">
-                                {item._expedition_cookbook?.recipe_photo && (
+                                {getPhotoUrl(item._expedition_cookbook?.recipe_photo) && (
                                   <Avatar className="h-3.5 w-3.5">
-                                    <AvatarImage src={item._expedition_cookbook.recipe_photo} alt={item._expedition_cookbook.recipe_name} />
+                                    <AvatarImage src={getPhotoUrl(item._expedition_cookbook.recipe_photo)!} alt={item._expedition_cookbook.recipe_name} />
                                     <AvatarFallback className="text-[6px] bg-orange-100 text-orange-600">🍽</AvatarFallback>
                                   </Avatar>
                                 )}
@@ -1142,9 +1131,9 @@ function PlannerPageContent() {
                     onClick={() => handleMealPlanClick(selectedItem._expedition_cookbook?.id || selectedItem.expedition_cookbook_id)}
                     className="flex items-center gap-2 w-full text-left p-2 -m-2 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
                   >
-                    {selectedItem._expedition_cookbook?.recipe_photo && (
+                    {getPhotoUrl(selectedItem._expedition_cookbook?.recipe_photo) && (
                       <Avatar className="h-8 w-8">
-                        <AvatarImage src={selectedItem._expedition_cookbook.recipe_photo} alt={selectedItem._expedition_cookbook.recipe_name} />
+                        <AvatarImage src={getPhotoUrl(selectedItem._expedition_cookbook.recipe_photo)!} alt={selectedItem._expedition_cookbook.recipe_name} />
                         <AvatarFallback className="text-xs bg-orange-100 text-orange-600">🍽</AvatarFallback>
                       </Avatar>
                     )}
@@ -1303,10 +1292,10 @@ function PlannerPageContent() {
               <div className="space-y-6">
                 {/* Recipe Header */}
                 <div className="flex flex-col sm:flex-row gap-4">
-                  {selectedRecipe.recipe_photo && (
+                  {getPhotoUrl(selectedRecipe.recipe_photo) && (
                     <div className="w-full sm:w-40 h-40 rounded-xl overflow-hidden bg-gray-100 shrink-0">
                       <img
-                        src={selectedRecipe.recipe_photo}
+                        src={getPhotoUrl(selectedRecipe.recipe_photo)!}
                         alt={selectedRecipe.recipe_name}
                         className="object-cover w-full h-full"
                       />

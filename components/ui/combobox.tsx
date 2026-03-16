@@ -44,7 +44,7 @@ function ComboboxClear({ className, ...props }: ComboboxPrimitive.Clear.Props) {
     <ComboboxPrimitive.Clear
       data-slot="combobox-clear"
       render={<InputGroupButton variant="ghost" size="icon-xs" />}
-      className={cn(className)}
+      className={cn("cursor-pointer", className)}
       {...props}
     >
       <XIcon className="pointer-events-none" />
@@ -110,7 +110,7 @@ function ComboboxContent({
         align={align}
         alignOffset={alignOffset}
         anchor={anchor}
-        className="isolate z-50"
+        className="isolate z-[200]"
       >
         <ComboboxPrimitive.Popup
           data-slot="combobox-content"

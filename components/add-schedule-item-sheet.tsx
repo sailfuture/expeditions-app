@@ -30,7 +30,7 @@ import { createExpeditionScheduleItem, updateExpeditionScheduleItem, deleteExped
 import { useExpeditionScheduleItemTypes } from "@/lib/hooks/use-expeditions"
 import useSWR, { mutate } from "swr"
 import { toast } from "sonner"
-import { cn } from "@/lib/utils"
+import { cn, getPhotoUrl } from "@/lib/utils"
 
 interface AddScheduleItemSheetProps {
   open: boolean
@@ -141,7 +141,7 @@ const ACTIVITY_TYPE_COLORS: Record<string, string> = {
   cyan: "#06b6d4",
 }
 
-// Activity Type selector with search
+// Activity Type selector using CustomSelect with search and grouped items
 function ActivityTypeSelector({
   value,
   onChange,
@@ -160,47 +160,45 @@ function ActivityTypeSelector({
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsOpen(false)
+        setSearchQuery("")
       }
     }
     document.addEventListener("mousedown", handleClickOutside)
     return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [])
 
-  // Focus input when dropdown opens
-  useEffect(() => {
-    if (isOpen && inputRef.current) {
-      inputRef.current.focus()
-    }
-  }, [isOpen])
-
-  // Filter options based on search
-  const filteredOptions = options.filter((option) => {
-    if (!searchQuery) return true
-    return option.label.toLowerCase().includes(searchQuery.toLowerCase())
-  })
-
   const selectedOption = options.find(o => o.value === value) || null
+
+  // Group and filter options
+  const filteredOptions = options.filter(o =>
+    o.value !== 0 && o.label.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+  const mealOptions = filteredOptions.filter(o => o.data?.isMeal)
+  const activityOptions = filteredOptions.filter(o => !o.data?.isMeal)
 
   return (
     <div className="relative" ref={dropdownRef}>
       <button
         type="button"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => {
+          setIsOpen(!isOpen)
+          if (!isOpen) setTimeout(() => inputRef.current?.focus(), 50)
+        }}
         className={cn(
           "w-full h-12 rounded-lg border border-gray-200 bg-white px-4 flex items-center justify-between gap-2 text-left cursor-pointer",
           "hover:bg-gray-50 transition-colors",
           isOpen && "ring-2 ring-gray-400 ring-offset-2"
         )}
       >
-        <div className="flex items-center gap-2 flex-1 min-w-0">
+        <div className="flex-1 min-w-0 flex items-center gap-2">
           {selectedOption?.data?.color && (
-            <div 
-              className="w-3 h-3 rounded-full shrink-0" 
+            <div
+              className="w-3 h-3 rounded-full shrink-0"
               style={{ backgroundColor: ACTIVITY_TYPE_COLORS[selectedOption.data.color] || selectedOption.data.color }}
             />
           )}
-          <span className={selectedOption ? "text-gray-900 text-base truncate" : "text-gray-500 text-base"}>
-            {selectedOption?.label || "Select type..."}
+          <span className={cn("truncate", selectedOption ? "text-gray-900" : "text-gray-500")}>
+            {selectedOption?.label || "Select activity type..."}
           </span>
         </div>
         <ChevronDown className={cn("h-4 w-4 text-gray-400 transition-transform shrink-0", isOpen && "rotate-180")} />
@@ -208,51 +206,83 @@ function ActivityTypeSelector({
 
       {isOpen && (
         <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
-          {/* Search input */}
           <div className="p-2 border-b border-gray-100">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <input
                 ref={inputRef}
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search activity types..."
-                className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-400"
+                placeholder="Search types..."
+                className="w-full h-8 pl-8 pr-3 text-sm rounded-md border border-gray-200 outline-none focus:ring-2 focus:ring-gray-300"
               />
             </div>
           </div>
-
           <div className="max-h-64 overflow-y-auto py-1">
-            {filteredOptions.length === 0 ? (
-              <div className="px-4 py-3 text-gray-500 text-sm">
-                {searchQuery ? "No types match your search" : "No types available"}
-              </div>
-            ) : (
-              filteredOptions.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => {
-                    onChange(option.value, option)
-                    setIsOpen(false)
-                    setSearchQuery("")
-                  }}
-                  className={cn(
-                    "w-full px-4 py-2.5 flex items-center gap-3 hover:bg-gray-100 transition-colors text-left cursor-pointer",
-                    option.value === value && "bg-gray-50"
-                  )}
-                >
-                  {option.data?.color && (
-                    <div 
-                      className="w-3 h-3 rounded-full shrink-0" 
-                      style={{ backgroundColor: ACTIVITY_TYPE_COLORS[option.data.color] || option.data.color }}
-                    />
-                  )}
-                  <span className="text-sm font-medium flex-1">{option.label}</span>
-                  {option.value === value && <Check className="h-4 w-4 text-gray-700 shrink-0" />}
-                </button>
-              ))
+            {filteredOptions.length === 0 && (
+              <div className="px-4 py-3 text-sm text-gray-500 text-center">No types found</div>
+            )}
+            {mealOptions.length > 0 && (
+              <>
+                <div className="px-3 py-1.5 text-xs font-medium text-gray-500 uppercase tracking-wider">Meals</div>
+                {mealOptions.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => {
+                      onChange(option.value, option)
+                      setIsOpen(false)
+                      setSearchQuery("")
+                    }}
+                    className={cn(
+                      "w-full px-4 py-2.5 flex items-center gap-3 hover:bg-gray-100 transition-colors text-left cursor-pointer",
+                      option.value === value && "bg-gray-50"
+                    )}
+                  >
+                    {option.data?.color && (
+                      <div
+                        className="w-3 h-3 rounded-full shrink-0"
+                        style={{ backgroundColor: ACTIVITY_TYPE_COLORS[option.data.color] || option.data.color }}
+                      />
+                    )}
+                    <span className="text-sm truncate">{option.label}</span>
+                    {option.value === value && <Check className="h-4 w-4 text-gray-600 ml-auto shrink-0" />}
+                  </button>
+                ))}
+              </>
+            )}
+            {mealOptions.length > 0 && activityOptions.length > 0 && (
+              <div className="my-1 h-px bg-gray-200 mx-2" />
+            )}
+            {activityOptions.length > 0 && (
+              <>
+                <div className="px-3 py-1.5 text-xs font-medium text-gray-500 uppercase tracking-wider">Activities</div>
+                {activityOptions.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => {
+                      onChange(option.value, option)
+                      setIsOpen(false)
+                      setSearchQuery("")
+                    }}
+                    className={cn(
+                      "w-full px-4 py-2.5 flex items-center gap-3 hover:bg-gray-100 transition-colors text-left cursor-pointer",
+                      option.value === value && "bg-gray-50"
+                    )}
+                  >
+                    {option.data?.color && (
+                      <div
+                        className="w-3 h-3 rounded-full shrink-0"
+                        style={{ backgroundColor: ACTIVITY_TYPE_COLORS[option.data.color] || option.data.color }}
+                      />
+                    )}
+                    <span className="text-sm truncate">{option.label}</span>
+                    {option.value === value && <Check className="h-4 w-4 text-gray-600 ml-auto shrink-0" />}
+                  </button>
+                ))}
+              </>
             )}
           </div>
         </div>
@@ -637,9 +667,9 @@ function CookbookSelector({
         )}
       >
         <div className="flex items-center gap-2 flex-1 min-w-0">
-          {selectedRecipe?.recipe_photo && (
+          {getPhotoUrl(selectedRecipe?.recipe_photo) && (
             <Avatar className="h-7 w-7 shrink-0">
-              <AvatarImage src={selectedRecipe.recipe_photo} alt={selectedRecipe.recipe_name} />
+              <AvatarImage src={getPhotoUrl(selectedRecipe.recipe_photo)!} alt={selectedRecipe.recipe_name} />
               <AvatarFallback className="text-[10px] bg-orange-100 text-orange-600">🍽</AvatarFallback>
             </Avatar>
           )}
@@ -706,8 +736,8 @@ function CookbookSelector({
                   )}
                 >
                   <Avatar className="h-8 w-8 shrink-0">
-                    {recipe.recipe_photo ? (
-                      <AvatarImage src={recipe.recipe_photo} alt={recipe.recipe_name} />
+                    {getPhotoUrl(recipe.recipe_photo) ? (
+                      <AvatarImage src={getPhotoUrl(recipe.recipe_photo)!} alt={recipe.recipe_name} />
                     ) : null}
                     <AvatarFallback className="text-xs bg-orange-100 text-orange-600">🍽</AvatarFallback>
                   </Avatar>
@@ -763,13 +793,11 @@ export function AddScheduleItemSheet({
   
   const isEditMode = !!editItem
   
-  // Check if an activity type is a meal (Breakfast=1, Lunch=2, Dinner=3)
-  // Check if type is an actual meal (Breakfast, Lunch, Dinner) - not prep or dishes
-  const EXACT_MEAL_NAMES = ['breakfast', 'lunch', 'dinner']
+  // Check if an activity type is a meal using the isMeal boolean from the type record
   const isMealType = (typeId: number) => {
-    if (![1, 2, 3, 5, 6, 7].includes(typeId)) return false
-    const typeName = itemTypes.find((t: any) => t.id === typeId)?.name?.toLowerCase().trim() || ''
-    return EXACT_MEAL_NAMES.includes(typeName)
+    if (!typeId) return false
+    const type = itemTypes.find((t: any) => t.id === typeId)
+    return !!type?.isMeal
   }
 
   const getInitialFormData = () => {
@@ -953,10 +981,7 @@ export function AddScheduleItemSheet({
   }
 
   // Prepare options for dropdowns
-  const typeOptions = [
-    { value: 0, label: "None" },
-    ...itemTypes.map((t: any) => ({ value: t.id, label: t.name, data: t }))
-  ]
+  const typeOptions = itemTypes.map((t: any) => ({ value: t.id, label: t.name, data: t }))
 
   const staffOptions = [
     { value: 0, label: "None" },

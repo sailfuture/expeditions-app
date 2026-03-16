@@ -78,7 +78,7 @@ import { useCurrentUser } from "@/lib/contexts/user-context"
 import { useExpeditionContext } from "@/lib/contexts/expedition-context"
 import useSWR, { mutate } from "swr"
 import { toast } from "sonner"
-import { isDateWithinExpeditionRange } from "@/lib/utils"
+import { isDateWithinExpeditionRange, getPhotoUrl } from "@/lib/utils"
 
 interface ScheduleViewClientProps {
   date: string
@@ -95,21 +95,10 @@ const formatTime = (hour: number) => {
   return `${hour - 12} PM`
 }
 
-// Check if item is a meal type (Breakfast=1, Lunch=2, Dinner=3)
-// Check if an item is an actual meal type (Breakfast, Lunch, Dinner) - not prep or dishes
-const EXACT_MEAL_NAMES = ['breakfast', 'lunch', 'dinner']
+// Check if item is a meal type using the isMeal boolean from the item type record
 const isMealType = (item: any) => {
   if (!item) return false
-  const typeId = item?.expedition_schedule_item_types_id || item?._expedition_schedule_item_types?.id
-  const typeName = (item?._expedition_schedule_item_types?.name || '').toLowerCase().trim()
-  // Only match exact meal names, not prep/dishes variants
-  if ([1, 2, 3, 5, 6, 7].includes(typeId)) {
-    if (typeName && !EXACT_MEAL_NAMES.includes(typeName)) {
-      return false
-    }
-    return EXACT_MEAL_NAMES.includes(typeName) || !typeName
-  }
-  return EXACT_MEAL_NAMES.includes(typeName)
+  return !!item?._expedition_schedule_item_types?.isMeal
 }
 
 const formatMilitaryTime = (militaryTime: number) => {
@@ -211,6 +200,18 @@ export function ScheduleViewClient({ date, expeditionId }: ScheduleViewClientPro
   const [mealPlanSheetOpen, setMealPlanSheetOpen] = useState(false)
   const [selectedRecipeId, setSelectedRecipeId] = useState<number | null>(null)
   
+  // Safety cleanup: reset body pointer-events when all modals/sheets are closed
+  // This prevents the page from becoming unclickable due to Radix overlay cleanup race conditions
+  useEffect(() => {
+    if (!dialogOpen && !addSheetOpen && !mealPlanSheetOpen && !showModalDeleteConfirm && !deleteAllDialogOpen && !saveTemplateDialogOpen) {
+      // Small delay to let Radix finish its cleanup
+      const timer = setTimeout(() => {
+        document.body.style.pointerEvents = ''
+      }, 100)
+      return () => clearTimeout(timer)
+    }
+  }, [dialogOpen, addSheetOpen, mealPlanSheetOpen, showModalDeleteConfirm, deleteAllDialogOpen, saveTemplateDialogOpen])
+
   // Meal Plan data fetching (must be after state declaration)
   const XANO_COOKBOOK_URL = "https://xsc3-mvx7-r86m.n7e.xano.io/api:bXFdqx8y"
   const recipeFetcher = (url: string) => fetch(url).then((res) => res.json())
@@ -282,8 +283,13 @@ export function ScheduleViewClient({ date, expeditionId }: ScheduleViewClientPro
 
   const handleModalEdit = () => {
     if (selectedItem) {
+      const item = selectedItem
       setDialogOpen(false)
-      handleEditItem(selectedItem)
+      // Defer opening the sheet until after the Dialog has fully unmounted
+      // to prevent Radix pointer-events: none from getting stuck on the body
+      setTimeout(() => {
+        handleEditItem(item)
+      }, 150)
     }
   }
 
@@ -1218,9 +1224,9 @@ export function ScheduleViewClient({ date, expeditionId }: ScheduleViewClientPro
                       onClick={() => handleMealPlanClick(selectedItem._expedition_cookbook?.id || selectedItem.expedition_cookbook_id)}
                       className="flex items-center gap-3 w-full text-left p-2 -m-2 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
                     >
-                      {selectedItem._expedition_cookbook?.recipe_photo && (
+                      {getPhotoUrl(selectedItem._expedition_cookbook?.recipe_photo) && (
                         <Avatar className="h-10 w-10">
-                          <AvatarImage src={selectedItem._expedition_cookbook.recipe_photo} alt={selectedItem._expedition_cookbook.recipe_name} />
+                          <AvatarImage src={getPhotoUrl(selectedItem._expedition_cookbook.recipe_photo)!} alt={selectedItem._expedition_cookbook.recipe_name} />
                           <AvatarFallback className="text-sm bg-orange-100 text-orange-600">🍽</AvatarFallback>
                         </Avatar>
                       )}
@@ -1423,10 +1429,10 @@ export function ScheduleViewClient({ date, expeditionId }: ScheduleViewClientPro
               <div className="space-y-6">
                 {/* Recipe Header */}
                 <div className="flex flex-col sm:flex-row gap-4">
-                  {selectedRecipe.recipe_photo && (
+                  {getPhotoUrl(selectedRecipe.recipe_photo) && (
                     <div className="w-full sm:w-40 h-40 rounded-xl overflow-hidden bg-gray-100 shrink-0">
                       <img
-                        src={selectedRecipe.recipe_photo}
+                        src={getPhotoUrl(selectedRecipe.recipe_photo)!}
                         alt={selectedRecipe.recipe_name}
                         className="object-cover w-full h-full"
                       />

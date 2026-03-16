@@ -4,25 +4,12 @@ import React, { useRef, useEffect } from "react"
 import { useDraggable } from "@dnd-kit/core"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { MessageSquare, GripVertical, Pencil } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { cn, getPhotoUrl } from "@/lib/utils"
 
-// Check if an item is an actual meal type (Breakfast, Lunch, Dinner) - not prep or dishes
-const MEAL_TYPE_IDS = [5, 6, 7] // Breakfast, Lunch, Dinner type IDs
-const EXACT_MEAL_NAMES = ['breakfast', 'lunch', 'dinner']
-
+// Check if item is a meal type using the isMeal boolean from the item type record
 function isMealType(item: any): boolean {
   if (!item) return false
-  const typeId = item.expedition_schedule_item_types_id || item._expedition_schedule_item_types?.id
-  const typeName = (item._expedition_schedule_item_types?.name || '').toLowerCase().trim()
-  // Only match exact meal names, not prep/dishes variants
-  if (MEAL_TYPE_IDS.includes(typeId)) {
-    // If we have a type name, make sure it's an exact match
-    if (typeName && !EXACT_MEAL_NAMES.includes(typeName)) {
-      return false
-    }
-    return true
-  }
-  return EXACT_MEAL_NAMES.includes(typeName)
+  return !!item?._expedition_schedule_item_types?.isMeal
 }
 
 interface DraggableScheduleItemProps {
@@ -137,7 +124,7 @@ export function DraggableScheduleItem({
         {/* Edit button - visible for admins (always), not just in edit mode */}
         {isAdmin && (
           <button
-            className="bg-white rounded-full h-5 w-5 border border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-colors cursor-pointer flex items-center justify-center z-50 relative opacity-0 group-hover:opacity-100"
+            className="bg-white rounded-full h-5 w-5 border border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-colors cursor-pointer flex items-center justify-center z-10 relative opacity-0 group-hover:opacity-100"
             onClick={(e) => {
               e.stopPropagation()
               onEdit()
@@ -155,7 +142,7 @@ export function DraggableScheduleItem({
       {/* Top resize handle (only in edit mode) - height scales with item size */}
       {editMode && (
         <div 
-          className="absolute top-0 left-0 right-0 cursor-ns-resize z-50 hover:bg-gray-300/30 transition-colors"
+          className="absolute top-0 left-0 right-0 cursor-ns-resize z-10 hover:bg-gray-300/30 transition-colors"
           style={{ cursor: 'ns-resize', height: resizeHandleHeight }}
           onMouseDown={(e) => {
             e.stopPropagation()
@@ -174,7 +161,7 @@ export function DraggableScheduleItem({
       {/* Bottom resize handle (only in edit mode) - height scales with item size */}
       {editMode && (
         <div 
-          className="absolute bottom-0 left-0 right-0 cursor-ns-resize z-50 hover:bg-gray-300/30 transition-colors"
+          className="absolute bottom-0 left-0 right-0 cursor-ns-resize z-10 hover:bg-gray-300/30 transition-colors"
           style={{ cursor: 'ns-resize', height: resizeHandleHeight }}
           onMouseDown={(e) => {
             e.stopPropagation()
@@ -256,9 +243,9 @@ export function DraggableScheduleItem({
           {/* Meal Plan - for meal type items */}
           {isMealType(item) && (
             <div className="flex items-center gap-1 mt-0.5">
-              {item._expedition_cookbook?.recipe_photo && (
+              {getPhotoUrl(item._expedition_cookbook?.recipe_photo) && (
                 <Avatar className="h-3.5 w-3.5">
-                  <AvatarImage src={item._expedition_cookbook.recipe_photo} alt={item._expedition_cookbook.recipe_name} />
+                  <AvatarImage src={getPhotoUrl(item._expedition_cookbook.recipe_photo)!} alt={item._expedition_cookbook.recipe_name} />
                   <AvatarFallback className="text-[6px] bg-orange-100 text-orange-600">🍽</AvatarFallback>
                 </Avatar>
               )}

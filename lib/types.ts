@@ -44,6 +44,8 @@ export interface ExpeditionScheduleItemType {
   id: number
   created_at: number
   name: string
+  color?: string
+  isMeal?: boolean
 }
 
 export interface ExpeditionScheduleItem {

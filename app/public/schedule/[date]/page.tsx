@@ -37,6 +37,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { getPhotoUrl } from "@/lib/utils"
 
 const formatMilitaryTime = (militaryTime: number) => {
   const hours = Math.floor(militaryTime / 100)
@@ -46,21 +47,10 @@ const formatMilitaryTime = (militaryTime: number) => {
   return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`
 }
 
-// Check if item is a meal type (Breakfast=1, Lunch=2, Dinner=3)
-// Check if an item is an actual meal type (Breakfast, Lunch, Dinner) - not prep or dishes
-const EXACT_MEAL_NAMES = ['breakfast', 'lunch', 'dinner']
+// Check if item is a meal type using the isMeal boolean from the item type record
 const isMealType = (item: any) => {
   if (!item) return false
-  const typeId = item?.expedition_schedule_item_types_id || item?._expedition_schedule_item_types?.id
-  const typeName = (item?._expedition_schedule_item_types?.name || '').toLowerCase().trim()
-  // Only match exact meal names, not prep/dishes variants
-  if ([1, 2, 3, 5, 6, 7].includes(typeId)) {
-    if (typeName && !EXACT_MEAL_NAMES.includes(typeName)) {
-      return false
-    }
-    return EXACT_MEAL_NAMES.includes(typeName) || !typeName
-  }
-  return EXACT_MEAL_NAMES.includes(typeName)
+  return !!item?._expedition_schedule_item_types?.isMeal
 }
 
 const getColorForType = (item: any) => {
@@ -533,9 +523,9 @@ export default function PublicSchedulePage() {
                     {/* Meal Plan (for meal types) */}
                     {isMealType(item) && (
                       <div className={`flex items-center gap-1.5 mt-2 ${!item._expedition_cookbook?.recipe_name && !item.expedition_cookbook_id ? 'text-gray-400 italic' : 'text-gray-600'}`}>
-                        {item._expedition_cookbook?.recipe_photo && (
+                        {getPhotoUrl(item._expedition_cookbook?.recipe_photo) && (
                           <Avatar className="h-5 w-5">
-                            <AvatarImage src={item._expedition_cookbook.recipe_photo} alt={item._expedition_cookbook.recipe_name} />
+                            <AvatarImage src={getPhotoUrl(item._expedition_cookbook.recipe_photo)!} alt={item._expedition_cookbook.recipe_name} />
                             <AvatarFallback className="text-[8px] bg-orange-100 text-orange-600">MP</AvatarFallback>
                           </Avatar>
                         )}
@@ -705,9 +695,9 @@ export default function PublicSchedulePage() {
                         onClick={() => handleMealPlanClick(selectedItem._expedition_cookbook?.id || selectedItem.expedition_cookbook_id)}
                         className="flex items-center gap-2 w-full text-left p-2 -m-2 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
                       >
-                        {selectedItem._expedition_cookbook?.recipe_photo && (
+                        {getPhotoUrl(selectedItem._expedition_cookbook?.recipe_photo) && (
                           <Avatar className="h-8 w-8">
-                            <AvatarImage src={selectedItem._expedition_cookbook.recipe_photo} alt={selectedItem._expedition_cookbook.recipe_name} />
+                            <AvatarImage src={getPhotoUrl(selectedItem._expedition_cookbook.recipe_photo)!} alt={selectedItem._expedition_cookbook.recipe_name} />
                             <AvatarFallback className="text-xs bg-orange-100 text-orange-600">MP</AvatarFallback>
                           </Avatar>
                         )}
@@ -765,10 +755,10 @@ export default function PublicSchedulePage() {
               <div className="space-y-6">
                 {/* Recipe Header */}
                 <div className="flex flex-col sm:flex-row gap-4">
-                  {selectedRecipe.recipe_photo && (
+                  {getPhotoUrl(selectedRecipe.recipe_photo) && (
                     <div className="w-full sm:w-40 h-40 rounded-xl overflow-hidden bg-gray-100 shrink-0">
                       <img
-                        src={selectedRecipe.recipe_photo}
+                        src={getPhotoUrl(selectedRecipe.recipe_photo)!}
                         alt={selectedRecipe.recipe_name}
                         className="object-cover w-full h-full"
                       />

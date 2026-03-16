@@ -58,3 +58,19 @@ export function getExpeditionFirstDate(startDate: Date | string | null | undefin
   }
   return startDate
 }
+
+const XANO_FILE_BASE = "https://xsc3-mvx7-r86m.n7e.xano.io"
+
+/**
+ * Extract the URL from a Xano file/image JSON field.
+ * Handles the JSON format ({ path, mime, ... }) and legacy plain string URLs.
+ */
+export function getPhotoUrl(photo: any): string | null {
+  if (!photo) return null
+  if (typeof photo === 'string') return photo
+  if (typeof photo === 'object') {
+    if (photo.url) return photo.url
+    if (photo.path) return `${XANO_FILE_BASE}${photo.path}`
+  }
+  return null
+}

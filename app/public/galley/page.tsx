@@ -36,6 +36,7 @@ import {
   Pencil,
   FileText,
   PlusCircle,
+  ArrowRight,
 } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -50,6 +51,7 @@ import {
   useExpeditionSchedules,
   useExpeditionScheduleItemsByDate,
 } from "@/lib/hooks/use-expeditions"
+import { getPhotoUrl } from "@/lib/utils"
 import {
   getExpeditionsInventory,
   createExpeditionsInventoryItem,
@@ -503,11 +505,98 @@ function PublicGalleyPage() {
     }
   }
 
-  const tabs: { id: TabId; label: string; icon: React.ReactNode }[] = [
-    { id: "meals", label: "Meals", icon: <UtensilsCrossed className="h-4 w-4" /> },
-    { id: "cookbook", label: "Cookbook", icon: <ChefHat className="h-4 w-4" /> },
-    { id: "inventory", label: "Inventory", icon: <Boxes className="h-4 w-4" /> },
+  // Tab switching skeleton state
+  const [tabSwitching, setTabSwitching] = useState(false)
+  const tabSwitchTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const handleTabSwitch = (tabId: TabId) => {
+    if (tabId === activeTab) return
+    setTabSwitching(true)
+    setActiveTab(tabId)
+    if (tabSwitchTimer.current) clearTimeout(tabSwitchTimer.current)
+    tabSwitchTimer.current = setTimeout(() => setTabSwitching(false), 300)
+  }
+
+  const tabs: { id: TabId; label: string }[] = [
+    { id: "meals", label: "Meals" },
+    { id: "cookbook", label: "Cookbook" },
+    { id: "inventory", label: "Inventory" },
   ]
+
+  // Skeleton loaders for each tab
+  const renderMealsTabSkeleton = () => (
+    <div>
+      <div className="mb-6 sm:mb-8">
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-10 w-10 rounded-lg shrink-0" />
+          <Skeleton className="h-10 flex-1 rounded-lg" />
+          <Skeleton className="h-10 w-10 rounded-lg shrink-0" />
+          <Skeleton className="h-10 w-[72px] rounded-lg shrink-0" />
+        </div>
+      </div>
+      <div className="space-y-4">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="bg-white rounded-xl border border-gray-200 p-5">
+            <div className="flex items-start gap-4">
+              <Skeleton className="w-20 h-20 rounded-lg shrink-0" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-6 w-48" />
+                <Skeleton className="h-4 w-32" />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+
+  const renderCookbookTabSkeleton = () => (
+    <div>
+      <div className="mb-6 sm:mb-8">
+        <Skeleton className="h-8 w-32 mb-2" />
+        <Skeleton className="h-5 w-48" />
+      </div>
+      {renderSkeletonTable()}
+      {renderSkeletonTable()}
+      {renderSkeletonTable()}
+    </div>
+  )
+
+  const renderInventoryTabSkeleton = () => (
+    <div className="space-y-6">
+      <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+        <div className="px-4 sm:px-6 py-4 border-b bg-gray-50/50">
+          <Skeleton className="h-6 w-32 mb-2" />
+          <Skeleton className="h-4 w-64" />
+        </div>
+        <div className="overflow-hidden">
+          <Table className="w-full table-fixed">
+            <TableHeader>
+              <TableRow className="border-b bg-gray-50/30 hover:bg-gray-50/30">
+                <TableHead className="h-9 px-3 sm:px-4 w-[35%]"><Skeleton className="h-4 w-12" /></TableHead>
+                <TableHead className="h-9 px-3 sm:px-4 hidden md:table-cell w-[20%]"><Skeleton className="h-4 w-16" /></TableHead>
+                <TableHead className="h-9 px-3 sm:px-4 w-[20%]"><Skeleton className="h-4 w-16 mx-auto" /></TableHead>
+                <TableHead className="h-9 px-3 sm:px-4 w-[12%]"><Skeleton className="h-4 w-10 mx-auto" /></TableHead>
+                <TableHead className="h-9 px-3 sm:px-4 w-[13%]"><Skeleton className="h-4 w-12 mx-auto" /></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {Array.from({ length: 5 }).map((_, i) => (
+                <TableRow key={i}>
+                  <TableCell className="h-16 px-3 sm:px-4"><Skeleton className="h-4 w-24" /></TableCell>
+                  <TableCell className="h-16 px-3 sm:px-4 hidden md:table-cell"><Skeleton className="h-4 w-24" /></TableCell>
+                  <TableCell className="h-16 px-3 sm:px-4"><Skeleton className="h-4 w-10 mx-auto" /></TableCell>
+                  <TableCell className="h-16 px-3 sm:px-4"><Skeleton className="h-4 w-10 mx-auto" /></TableCell>
+                  <TableCell className="h-16 px-3 sm:px-4"><Skeleton className="h-4 w-10 mx-auto" /></TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+    </div>
+  )
 
   // Cookbook section renderer (matches meal-planning page exactly, minus Assign column)
   const renderMealSection = (title: string, meals: any[]) => (
@@ -517,11 +606,11 @@ function PublicGalleyPage() {
       </CardHeader>
       <CardContent className="p-0">
         <div className="overflow-hidden">
-          <Table>
+          <Table className="table-fixed w-full">
             <TableHeader>
               <TableRow className="bg-gray-50/80">
                 <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[60px] sm:w-[80px]">Photo</TableHead>
-                <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600">Recipe Name</TableHead>
+                <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[35%]">Recipe Name</TableHead>
                 <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[100px] sm:w-[120px]">Duration</TableHead>
                 <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden lg:table-cell">Summary</TableHead>
               </TableRow>
@@ -542,9 +631,9 @@ function PublicGalleyPage() {
                   >
                     <TableCell className="h-16 px-4 sm:px-6">
                       <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg overflow-hidden bg-gray-100">
-                        {meal.recipe_photo ? (
+                        {getPhotoUrl(meal.recipe_photo) ? (
                           <img
-                            src={meal.recipe_photo}
+                            src={getPhotoUrl(meal.recipe_photo)!}
                             alt={meal.recipe_name}
                             className="object-cover w-full h-full"
                           />
@@ -555,14 +644,14 @@ function PublicGalleyPage() {
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className="h-16 px-4 sm:px-6">
-                      <span className="font-medium text-gray-900 text-sm">{meal.recipe_name}</span>
+                    <TableCell className="h-16 px-4 sm:px-6 overflow-hidden">
+                      <span className="font-medium text-gray-900 text-sm truncate block">{meal.recipe_name}</span>
                     </TableCell>
                     <TableCell className="h-16 px-4 sm:px-6">
                       <span className="text-sm text-gray-600">{meal.duration_minutes || "—"}</span>
                     </TableCell>
                     <TableCell className="h-16 px-4 sm:px-6 hidden lg:table-cell overflow-hidden">
-                      <span className="text-sm text-gray-500 line-clamp-2">
+                      <span className="text-sm text-gray-500 truncate block">
                         {meal.summary || "—"}
                       </span>
                     </TableCell>
@@ -627,20 +716,19 @@ function PublicGalleyPage() {
           </div>
 
           {/* Tabs */}
-          <div className="px-4 sm:px-6 pb-0">
-            <div className="flex gap-1 border-b border-gray-200">
+          <div className="border-b border-gray-200">
+            <div className="flex">
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors cursor-pointer ${
+                  onClick={() => handleTabSwitch(tab.id)}
+                  className={`flex-1 py-3 text-sm font-medium border-b-2 transition-colors cursor-pointer text-center ${
                     activeTab === tab.id
                       ? "border-gray-900 text-gray-900"
                       : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                   }`}
                 >
-                  {tab.icon}
-                  <span className="hidden sm:inline">{tab.label}</span>
+                  {tab.label}
                 </button>
               ))}
             </div>
@@ -650,15 +738,20 @@ function PublicGalleyPage() {
 
       {/* Content */}
       <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        {/* Tab switching skeleton */}
+        {tabSwitching && activeTab === "meals" && renderMealsTabSkeleton()}
+        {tabSwitching && activeTab === "cookbook" && renderCookbookTabSkeleton()}
+        {tabSwitching && activeTab === "inventory" && renderInventoryTabSkeleton()}
+
         {/* ===== MEALS TAB ===== */}
-        {activeTab === "meals" && (
+        {!tabSwitching && activeTab === "meals" && (
           <div>
             {/* Date Navigation */}
             <div className="mb-6 sm:mb-8">
-              <div className="flex items-center justify-center gap-2">
+              <div className="flex items-center gap-2">
                 <button
                   onClick={goToPrevDay}
-                  className="h-9 w-9 rounded-lg flex items-center justify-center border border-gray-200 bg-white hover:bg-gray-50 active:bg-gray-100 cursor-pointer transition-colors shrink-0"
+                  className="h-10 w-10 rounded-lg flex items-center justify-center border border-gray-200 bg-white hover:bg-gray-50 active:bg-gray-100 cursor-pointer transition-colors shrink-0"
                 >
                   <ChevronLeft className="h-5 w-5 text-gray-600" />
                 </button>
@@ -667,7 +760,7 @@ function PublicGalleyPage() {
                   <PopoverTrigger asChild>
                     <Button
                       variant="ghost"
-                      className="h-9 w-56 text-sm font-semibold text-gray-900 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 cursor-pointer"
+                      className="h-10 flex-1 text-base font-semibold text-gray-900 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 cursor-pointer"
                     >
                       {formattedDate}
                     </Button>
@@ -688,15 +781,14 @@ function PublicGalleyPage() {
 
                 <button
                   onClick={goToNextDay}
-                  className="h-9 w-9 rounded-lg flex items-center justify-center border border-gray-200 bg-white hover:bg-gray-50 active:bg-gray-100 cursor-pointer transition-colors shrink-0"
+                  className="h-10 w-10 rounded-lg flex items-center justify-center border border-gray-200 bg-white hover:bg-gray-50 active:bg-gray-100 cursor-pointer transition-colors shrink-0"
                 >
                   <ChevronRight className="h-5 w-5 text-gray-600" />
                 </button>
 
                 <Button
                   variant="outline"
-                  size="sm"
-                  className="text-xs rounded-lg shrink-0"
+                  className="h-10 text-base rounded-lg shrink-0 px-4"
                   disabled={isToday}
                   onClick={() => setSelectedDateStr(getTodayDateString())}
                 >
@@ -856,7 +948,7 @@ function PublicGalleyPage() {
                 {mealItems.map((item: any) => {
                   const hasRecipe = item._expedition_cookbook?.id || item.expedition_cookbook_id > 0
                   const recipeId = item._expedition_cookbook?.id || item.expedition_cookbook_id
-                  const recipePhoto = item._expedition_cookbook?.recipe_photo
+                  const recipePhoto = getPhotoUrl(item._expedition_cookbook?.recipe_photo)
                   const recipeName = item._expedition_cookbook?.recipe_name
 
                   return (
@@ -886,24 +978,29 @@ function PublicGalleyPage() {
 
                           {/* Content */}
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <Badge variant="outline" className="text-xs shrink-0">
+                            <div className="flex items-center gap-1.5 mb-1">
+                              <span className="text-xs font-medium text-gray-500">
                                 {item._expedition_schedule_item_types?.name || "Meal"}
-                              </Badge>
+                              </span>
                               {item.time_in !== 0 && (
-                                <span className="text-xs text-gray-500">
-                                  {formatMilitaryTime(item.time_in)}
-                                  {item.time_out !== 0 && ` – ${formatMilitaryTime(item.time_out)}`}
-                                </span>
+                                <>
+                                  <span className="text-xs text-gray-300">•</span>
+                                  <span className="text-xs text-gray-500">
+                                    {formatMilitaryTime(item.time_in)}
+                                    {item.time_out !== 0 && ` – ${formatMilitaryTime(item.time_out)}`}
+                                  </span>
+                                </>
                               )}
                             </div>
 
                             <h3 className="font-semibold text-gray-900 text-lg leading-tight">
-                              {recipeName || item.name}
+                              {hasRecipe ? (recipeName || item.name) : "Not Assigned"}
                             </h3>
 
-                            {recipeName && recipeName !== item.name && (
-                              <p className="text-sm text-gray-500 mt-0.5">{item.name}</p>
+                            {(item._expedition_cookbook?.summary || item._expedition_cookbook?.type) && (
+                              <p className="text-sm text-gray-500 mt-0.5 line-clamp-2">
+                                {item._expedition_cookbook.summary || item._expedition_cookbook.type}
+                              </p>
                             )}
 
                             {/* Led By */}
@@ -923,7 +1020,9 @@ function PublicGalleyPage() {
 
                           {/* Arrow indicator for clickable cards */}
                           {hasRecipe && (
-                            <ChevronRight className="h-5 w-5 text-gray-400 shrink-0 mt-7 sm:mt-8" />
+                            <div className="h-8 w-8 rounded-full border border-gray-300 flex items-center justify-center shrink-0 mt-6 sm:mt-7">
+                              <ArrowRight className="h-4 w-4 text-gray-400" />
+                            </div>
                           )}
                         </div>
                       </div>
@@ -936,7 +1035,7 @@ function PublicGalleyPage() {
         )}
 
         {/* ===== COOKBOOK TAB ===== */}
-        {activeTab === "cookbook" && (
+        {!tabSwitching && activeTab === "cookbook" && (
           <div>
             <div className="mb-6 sm:mb-8">
               <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Cookbook</h2>
@@ -962,7 +1061,7 @@ function PublicGalleyPage() {
         )}
 
         {/* ===== INVENTORY TAB ===== */}
-        {activeTab === "inventory" && (
+        {!tabSwitching && activeTab === "inventory" && (
           <div className="space-y-6">
             {/* In Stock Table */}
             <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">

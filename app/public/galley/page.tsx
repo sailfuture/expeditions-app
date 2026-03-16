@@ -716,7 +716,9 @@ function PublicGalleyPage() {
                   {activeExpedition?.name || "Expedition"} · Galley Department
                 </h1>
               </div>
-              <span className="text-sm font-medium text-gray-500">SailFuture Academy</span>
+              <span className="text-sm font-medium text-gray-500">
+                {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
+              </span>
             </div>
           </div>
 
@@ -793,7 +795,7 @@ function PublicGalleyPage() {
 
                 <Button
                   variant="outline"
-                  className="h-10 text-base rounded-lg shrink-0 px-4"
+                  className="h-10 text-base rounded-lg shrink-0 px-4 cursor-pointer"
                   disabled={isToday}
                   onClick={() => setSelectedDateStr(getTodayDateString())}
                 >

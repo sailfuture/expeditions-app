@@ -51,6 +51,15 @@ const isMealType = (item: any) => {
   return !!item?._expedition_schedule_item_types?.isMeal
 }
 
+const formatMilitaryTime = (militaryTime: number) => {
+  if (militaryTime === 2400) return "12:00 AM"
+  const hours = Math.floor(militaryTime / 100)
+  const minutes = militaryTime % 100
+  const displayHours = hours % 12 || 12
+  const period = hours >= 12 ? "PM" : "AM"
+  return `${displayHours}:${String(minutes).padStart(2, "0")} ${period}`
+}
+
 interface Instruction {
   id: number
   created_at: number
@@ -221,6 +230,12 @@ function PublicRecipeDetailPage() {
   const hasPrevMeal = currentMealIndex > 0
   const hasNextMeal = currentMealIndex >= 0 && currentMealIndex < mealCookbookIds.length - 1
 
+  // Find the current schedule item to get the serving time
+  const currentMealItem = useMemo(() => {
+    if (currentMealIndex < 0 || !mealItems.length) return null
+    return mealItems[currentMealIndex] || null
+  }, [currentMealIndex, mealItems])
+
   const goToPrevMeal = () => {
     if (!hasPrevMeal) return
     const prevId = mealCookbookIds[currentMealIndex - 1]
@@ -298,7 +313,9 @@ function PublicRecipeDetailPage() {
                   {(activeExpedition as any)?.name || "Expedition"} · Galley Department
                 </h1>
               </div>
-              <span className="text-sm font-medium text-gray-500">SailFuture Academy</span>
+              <span className="text-sm font-medium text-gray-500">
+                {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
+              </span>
             </div>
           </div>
 
@@ -368,7 +385,7 @@ function PublicRecipeDetailPage() {
 
               <Button
                 variant="outline"
-                className="h-10 text-base rounded-lg shrink-0 px-4"
+                className="h-10 text-base rounded-lg shrink-0 px-4 cursor-pointer"
                 disabled={isToday}
                 onClick={() => {
                   const todayStr = getTodayDateString()
@@ -469,6 +486,17 @@ function PublicRecipeDetailPage() {
                   <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{recipe.recipe_name}</h1>
                   <span className="text-xs sm:text-sm text-muted-foreground bg-gray-100 px-2 py-0.5 rounded">{recipe.type}</span>
                 </div>
+
+                {/* Serving Time */}
+                {fromTab === "meals" && currentMealItem && currentMealItem.time_in !== 0 && (
+                  <div className="flex items-center gap-2 text-sm text-gray-500 mt-1">
+                    <Clock className="h-4 w-4 text-gray-400" />
+                    <span>
+                      {formatMilitaryTime(currentMealItem.time_in)}
+                      {currentMealItem.time_out !== 0 && ` – ${formatMilitaryTime(currentMealItem.time_out)}`}
+                    </span>
+                  </div>
+                )}
 
                 {recipe.summary && (
                   <p className="text-sm sm:text-base text-gray-600 mt-3 max-w-2xl">{recipe.summary}</p>

@@ -62,6 +62,7 @@ export default function ExpeditionsPage() {
     endDate: "",
     schoolterms_id: 0,
     schoolyears_id: 0,
+    number_participants: "",
   })
 
   // Sort expeditions by start date descending (most recent first) - MUST be before any conditional returns
@@ -104,10 +105,11 @@ export default function ExpeditionsPage() {
       endDate: "",
       schoolterms_id: 0,
       schoolyears_id: 0,
+      number_participants: "",
     })
     setDialogOpen(true)
   }
-  
+
   const openEditDialog = (expedition: any) => {
     setEditingExpedition(expedition)
     setFormData({
@@ -116,6 +118,7 @@ export default function ExpeditionsPage() {
       endDate: expedition.endDate,
       schoolterms_id: expedition.schoolterms_id,
       schoolyears_id: expedition.schoolyears_id,
+      number_participants: expedition.number_participants ? String(expedition.number_participants) : "",
     })
     setDialogOpen(true)
   }
@@ -135,10 +138,14 @@ export default function ExpeditionsPage() {
           endDate: formData.endDate,
           schoolterms_id: formData.schoolterms_id,
           schoolyears_id: formData.schoolyears_id,
+          number_participants: parseInt(formData.number_participants) || 0,
         })
         toast.success("Expedition updated successfully")
       } else {
-        await createExpedition(formData)
+        await createExpedition({
+          ...formData,
+          number_participants: parseInt(formData.number_participants) || 0,
+        })
         toast.success("Expedition created successfully")
       }
       mutate("expeditions")
@@ -523,6 +530,19 @@ export default function ExpeditionsPage() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="number_participants">Number of Participants</Label>
+              <Input
+                id="number_participants"
+                type="number"
+                min={0}
+                value={formData.number_participants}
+                onChange={(e) => setFormData(prev => ({ ...prev, number_participants: e.target.value }))}
+                placeholder="e.g. 25"
+                className="mt-1.5"
+              />
             </div>
           </div>
           

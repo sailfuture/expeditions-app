@@ -328,14 +328,14 @@ export default function MealPlanningPage() {
       </CardHeader>
       <CardContent className="p-0">
         <div className="overflow-hidden">
-          <Table>
+          <Table className="table-fixed w-full">
             <TableHeader>
               <TableRow className="bg-gray-50/80">
-                <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[60px] sm:w-[80px]">Photo</TableHead>
-                <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600">Recipe Name</TableHead>
-                <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[100px] sm:w-[120px]">Duration</TableHead>
-                <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden lg:table-cell">Summary</TableHead>
-                <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[70px]">Edit</TableHead>
+                <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[7%]">Photo</TableHead>
+                <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[30%]">Recipe Name</TableHead>
+                <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[10%]">Total Time</TableHead>
+                <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden lg:table-cell w-[46%]">Summary</TableHead>
+                <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[7%]">Edit</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -369,13 +369,22 @@ export default function MealPlanningPage() {
                       </div>
                     </TableCell>
                     <TableCell className="h-16 px-4 sm:px-6 cursor-pointer" onClick={() => handleRowClick(meal.id)}>
-                      <span className="font-medium text-gray-900 text-sm">{meal.recipe_name}</span>
+                      <span className="font-medium text-gray-900 text-sm truncate block">{meal.recipe_name}</span>
                     </TableCell>
                     <TableCell className="h-16 px-4 sm:px-6 cursor-pointer" onClick={() => handleRowClick(meal.id)}>
-                      <span className="text-sm text-gray-600">{meal.duration_minutes || "—"}</span>
+                      <span className="text-sm text-gray-600">
+                        {meal.duration_minutes && parseInt(meal.duration_minutes) > 0
+                          ? (() => {
+                              const total = parseInt(meal.duration_minutes)
+                              const h = Math.floor(total / 60)
+                              const m = total % 60
+                              return h > 0 ? (m > 0 ? `${h}h ${m}m` : `${h}h`) : `${m}m`
+                            })()
+                          : "—"}
+                      </span>
                     </TableCell>
                     <TableCell className="h-16 px-4 sm:px-6 hidden lg:table-cell cursor-pointer" onClick={() => handleRowClick(meal.id)}>
-                      <span className="text-sm text-gray-500">
+                      <span className="text-sm text-gray-500 truncate block">
                         {meal.summary ? truncateText(meal.summary, 80) : "—"}
                       </span>
                     </TableCell>
@@ -405,15 +414,14 @@ export default function MealPlanningPage() {
       </CardHeader>
       <CardContent className="p-0">
         <div className="overflow-hidden">
-          <Table>
+          <Table className="table-fixed w-full">
             <TableHeader>
               <TableRow className="bg-gray-50/80">
-                <TableHead className="h-10 px-4 sm:px-6 w-[60px] sm:w-[80px]"><Skeleton className="h-4 w-12" /></TableHead>
-                <TableHead className="h-10 px-4 sm:px-6"><Skeleton className="h-4 w-24" /></TableHead>
-                <TableHead className="h-10 px-4 sm:px-6 w-[100px] sm:w-[120px]"><Skeleton className="h-4 w-16" /></TableHead>
-                <TableHead className="h-10 px-4 sm:px-6 hidden lg:table-cell"><Skeleton className="h-4 w-32" /></TableHead>
-                <TableHead className="h-10 px-4 sm:px-6 w-[70px]"><Skeleton className="h-4 w-8" /></TableHead>
-                <TableHead className="h-10 px-4 sm:px-6 w-[100px]"><Skeleton className="h-4 w-16" /></TableHead>
+                <TableHead className="h-10 px-4 sm:px-6 w-[7%]"><Skeleton className="h-4 w-12" /></TableHead>
+                <TableHead className="h-10 px-4 sm:px-6 w-[30%]"><Skeleton className="h-4 w-24" /></TableHead>
+                <TableHead className="h-10 px-4 sm:px-6 w-[10%]"><Skeleton className="h-4 w-16" /></TableHead>
+                <TableHead className="h-10 px-4 sm:px-6 hidden lg:table-cell w-[46%]"><Skeleton className="h-4 w-32" /></TableHead>
+                <TableHead className="h-10 px-4 sm:px-6 w-[7%]"><Skeleton className="h-4 w-8" /></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -556,14 +564,43 @@ export default function MealPlanningPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="add-duration" className="text-sm font-medium">Duration</Label>
-              <Input
-                id="add-duration"
-                value={addForm.duration_minutes}
-                onChange={(e) => setAddForm({ ...addForm, duration_minutes: e.target.value })}
-                placeholder="e.g., 30 minutes"
-                className="h-11"
-              />
+              <Label className="text-sm font-medium">Total Cooking and Prep Time</Label>
+              <div className="flex items-center gap-2">
+                <Select
+                  value={String(Math.floor(parseInt(addForm.duration_minutes) / 60) || 0)}
+                  onValueChange={(val) => {
+                    const hours = parseInt(val)
+                    const currentMins = (parseInt(addForm.duration_minutes) || 0) % 60
+                    setAddForm({ ...addForm, duration_minutes: String(hours * 60 + currentMins) })
+                  }}
+                >
+                  <SelectTrigger className="h-11 flex-1 cursor-pointer">
+                    <SelectValue placeholder="Hours" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 7 }, (_, i) => (
+                      <SelectItem key={i} value={String(i)}>{i} {i === 1 ? "hour" : "hours"}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={String((parseInt(addForm.duration_minutes) || 0) % 60)}
+                  onValueChange={(val) => {
+                    const mins = parseInt(val)
+                    const currentHours = Math.floor((parseInt(addForm.duration_minutes) || 0) / 60)
+                    setAddForm({ ...addForm, duration_minutes: String(currentHours * 60 + mins) })
+                  }}
+                >
+                  <SelectTrigger className="h-11 flex-1 cursor-pointer">
+                    <SelectValue placeholder="Minutes" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map((m) => (
+                      <SelectItem key={m} value={String(m)}>{m} minutes</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -741,16 +778,45 @@ export default function MealPlanningPage() {
               />
             </div>
 
-            {/* Duration */}
+            {/* Total Cooking and Prep Time */}
             <div className="space-y-2">
-              <Label htmlFor="edit-duration" className="text-sm font-medium">Duration</Label>
-              <Input
-                id="edit-duration"
-                value={editForm.duration_minutes}
-                onChange={(e) => setEditForm({ ...editForm, duration_minutes: e.target.value })}
-                placeholder="e.g., 30 minutes"
-                className="h-11"
-              />
+              <Label className="text-sm font-medium">Total Cooking and Prep Time</Label>
+              <div className="flex items-center gap-2">
+                <Select
+                  value={String(Math.floor(parseInt(editForm.duration_minutes) / 60) || 0)}
+                  onValueChange={(val) => {
+                    const hours = parseInt(val)
+                    const currentMins = (parseInt(editForm.duration_minutes) || 0) % 60
+                    setEditForm({ ...editForm, duration_minutes: String(hours * 60 + currentMins) })
+                  }}
+                >
+                  <SelectTrigger className="h-11 flex-1 cursor-pointer">
+                    <SelectValue placeholder="Hours" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 7 }, (_, i) => (
+                      <SelectItem key={i} value={String(i)}>{i} {i === 1 ? "hour" : "hours"}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={String((parseInt(editForm.duration_minutes) || 0) % 60)}
+                  onValueChange={(val) => {
+                    const mins = parseInt(val)
+                    const currentHours = Math.floor((parseInt(editForm.duration_minutes) || 0) / 60)
+                    setEditForm({ ...editForm, duration_minutes: String(currentHours * 60 + mins) })
+                  }}
+                >
+                  <SelectTrigger className="h-11 flex-1 cursor-pointer">
+                    <SelectValue placeholder="Minutes" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map((m) => (
+                      <SelectItem key={m} value={String(m)}>{m} minutes</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             {/* Equipment Required */}

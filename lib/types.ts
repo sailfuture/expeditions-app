@@ -15,6 +15,7 @@ export interface Expedition {
   endDate?: string
   start_date?: string
   end_date?: string
+  number_participants?: number
 }
 
 export interface ExpeditionLocation {

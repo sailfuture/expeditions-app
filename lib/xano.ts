@@ -342,6 +342,7 @@ export async function createExpedition(data: {
   endDate: string
   schoolterms_id: number
   schoolyears_id: number
+  number_participants?: number
 }) {
   return xanoFetch<any>("/expeditions", {
     method: "POST",
@@ -358,6 +359,7 @@ export async function updateExpedition(id: number, data: {
   schoolterms_id?: number
   schoolyears_id?: number
   isActive?: boolean
+  number_participants?: number
 }) {
   return xanoFetch<any>(`/expeditions/${id}`, {
     method: "PATCH",

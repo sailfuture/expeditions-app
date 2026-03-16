@@ -194,6 +194,7 @@ function PublicRecipeDetailPage() {
   // Active expedition + schedule items for prev/next meal nav
   const { data: activeExpedition } = useActiveExpedition()
   const expeditionId = activeExpedition?.id
+  const numberOfParticipants = (activeExpedition as any)?.number_participants || 0
 
   const { data: scheduleItemsData } = useExpeditionScheduleItemsByDate(
     selectedDateStr,
@@ -284,15 +285,20 @@ function PublicRecipeDetailPage() {
       <header className="sticky top-0 z-40 bg-white border-b border-gray-200">
         <div className="max-w-5xl mx-auto">
           <div className="px-4 py-4 sm:px-6">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full overflow-hidden">
-                <img
-                  src="/sailfuture-square (8).webp"
-                  alt="SailFuture Academy"
-                  className="h-full w-full object-cover"
-                />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full overflow-hidden">
+                  <img
+                    src="/sailfuture-square (8).webp"
+                    alt="SailFuture Academy"
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+                <h1 className="text-lg sm:text-xl font-bold text-gray-900">
+                  {(activeExpedition as any)?.name || "Expedition"} · Galley Department
+                </h1>
               </div>
-              <h1 className="text-lg sm:text-xl font-bold text-gray-900">Galley Department</h1>
+              <span className="text-sm font-medium text-gray-500">SailFuture Academy</span>
             </div>
           </div>
 
@@ -469,10 +475,17 @@ function PublicRecipeDetailPage() {
                 )}
 
                 <div className="flex flex-wrap gap-3 sm:gap-4 mt-4">
-                  {recipe.duration_minutes && (
+                  {recipe.duration_minutes && parseInt(recipe.duration_minutes) > 0 && (
                     <div className="flex items-center gap-2 text-sm text-gray-600">
                       <Clock className="h-4 w-4 text-gray-400" />
-                      <span>{recipe.duration_minutes}</span>
+                      <span>
+                        {(() => {
+                          const total = parseInt(recipe.duration_minutes)
+                          const h = Math.floor(total / 60)
+                          const m = total % 60
+                          return h > 0 ? (m > 0 ? `${h}h ${m}m` : `${h}h`) : `${m}m`
+                        })()}
+                      </span>
                     </div>
                   )}
                   {recipe.equipment_required && (
@@ -485,8 +498,8 @@ function PublicRecipeDetailPage() {
               </div>
             </div>
 
-            {/* Navigation Buttons — Previous Meal / See All / Next Meal */}
-            {fromTab === "meals" && (
+            {/* Navigation Buttons */}
+            {fromTab === "meals" ? (
               <div className="flex gap-3">
                 <Button
                   variant="outline"
@@ -514,6 +527,17 @@ function PublicRecipeDetailPage() {
                   <ChevronRight className="h-4 w-4 ml-1" />
                 </Button>
               </div>
+            ) : (
+              <div className="flex">
+                <Button
+                  variant="outline"
+                  onClick={() => router.push(`/public/galley?tab=cookbook`)}
+                  className="h-10 text-base rounded-lg bg-white cursor-pointer"
+                >
+                  <ChevronLeft className="h-4 w-4 mr-1" />
+                  Back to Cookbook
+                </Button>
+              </div>
             )}
 
             {/* Ingredients Table */}
@@ -521,21 +545,24 @@ function PublicRecipeDetailPage() {
               <div>
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">Ingredients</h2>
                 <div className="border rounded-lg overflow-hidden bg-white">
-                  <div className="overflow-x-auto">
-                    <Table>
+                  <div>
+                    <Table className="table-fixed w-full">
                     <TableHeader>
                       <TableRow className="bg-gray-50/80">
-                        <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600">Ingredient</TableHead>
-                        <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[100px] sm:w-[120px]">Oz/Meal</TableHead>
-                        <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden sm:table-cell w-[120px]">Type</TableHead>
-                        <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600">Prep Notes</TableHead>
+                        <TableHead className="h-10 px-3 sm:px-4 text-xs font-semibold text-gray-600 w-[22%]">Ingredient</TableHead>
+                        <TableHead className="h-10 px-3 sm:px-4 text-xs font-semibold text-gray-600 w-[11%]">Oz/Person</TableHead>
+                        <TableHead className="h-10 px-3 sm:px-4 text-xs font-semibold text-gray-600 w-[11%]">Oz/Meal</TableHead>
+                        <TableHead className="h-10 px-3 sm:px-4 text-xs font-semibold text-gray-600 w-[11%]">Lb/Meal</TableHead>
+                        <TableHead className="h-10 px-3 sm:px-4 text-xs font-semibold text-gray-600 hidden sm:table-cell w-[10%]">Type</TableHead>
+                        <TableHead className="h-10 px-3 sm:px-4 text-xs font-semibold text-gray-600 w-[22%]">Prep Notes</TableHead>
+                        <TableHead className="h-10 px-3 sm:px-4 text-xs font-semibold text-gray-600 w-[13%]">Participants</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {sortedTypes.map((type) => (
                         <React.Fragment key={type}>
                           <TableRow className="bg-gray-50/50">
-                            <TableCell colSpan={4} className="py-2 px-4 sm:px-6">
+                            <TableCell colSpan={7} className="py-2 px-3 sm:px-4">
                               <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
                                 {type}
                               </span>
@@ -543,22 +570,39 @@ function PublicRecipeDetailPage() {
                           </TableRow>
                           {groupedIngredients[type].map((ingredient) => (
                             <TableRow key={ingredient.id}>
-                              <TableCell className="h-12 px-4 sm:px-6">
-                                <div className="flex items-center gap-2">
+                              <TableCell className="h-12 px-3 sm:px-4">
+                                <div className="flex items-center gap-2 min-w-0">
                                   <div className={`w-2 h-2 rounded-full ${getIngredientTypeColor(ingredient.type)} shrink-0`} />
-                                  <span className="font-medium text-gray-900 text-sm">{ingredient.ingredient}</span>
+                                  <span className="font-medium text-gray-900 text-sm truncate">{ingredient.ingredient}</span>
                                 </div>
                               </TableCell>
-                              <TableCell className="h-12 px-4 sm:px-6">
-                                <span className="text-sm text-gray-600">{ingredient.oz_per_meal}</span>
+                              <TableCell className="h-12 px-3 sm:px-4">
+                                <span className="text-sm text-gray-600">{ingredient.oz_per_meal} <span className="text-xs text-gray-400">oz</span></span>
                               </TableCell>
-                              <TableCell className="h-12 px-4 sm:px-6 hidden sm:table-cell">
+                              <TableCell className="h-12 px-3 sm:px-4">
+                                <span className="text-sm text-gray-600">
+                                  {numberOfParticipants > 0
+                                    ? <>{(ingredient.oz_per_meal * numberOfParticipants).toFixed(1)} <span className="text-xs text-gray-400">oz</span></>
+                                    : "—"}
+                                </span>
+                              </TableCell>
+                              <TableCell className="h-12 px-3 sm:px-4">
+                                <span className="text-sm text-gray-600">
+                                  {numberOfParticipants > 0
+                                    ? <>{((ingredient.oz_per_meal * numberOfParticipants) / 16).toFixed(2)} <span className="text-xs text-gray-400">lb</span></>
+                                    : "—"}
+                                </span>
+                              </TableCell>
+                              <TableCell className="h-12 px-3 sm:px-4 hidden sm:table-cell">
                                 <span className="text-sm text-gray-600">{ingredient.type}</span>
                               </TableCell>
-                              <TableCell className="h-12 px-4 sm:px-6">
-                                <span className="text-sm text-gray-500">
+                              <TableCell className="h-12 px-3 sm:px-4">
+                                <span className="text-sm text-gray-500 truncate block">
                                   {ingredient.prep_notes || "—"}
                                 </span>
+                              </TableCell>
+                              <TableCell className="h-12 px-3 sm:px-4">
+                                <span className="text-sm text-gray-600">{numberOfParticipants || "—"}</span>
                               </TableCell>
                             </TableRow>
                           ))}
@@ -630,7 +674,7 @@ function PublicRecipeDetailPage() {
 
       {/* Footer */}
       <footer className="mt-auto py-6 px-4 text-center">
-        <p className="text-sm text-gray-400">Galley Department</p>
+        <p className="text-sm text-gray-400">SailFuture Academy · Galley Department · {(activeExpedition as any)?.name || "—"}</p>
       </footer>
     </div>
   )

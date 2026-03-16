@@ -54,6 +54,7 @@ import {
 import { Clock, Wrench, Plus, Pencil, Trash2, X } from "lucide-react"
 import { toast } from "sonner"
 import { getPhotoUrl } from "@/lib/utils"
+import { useExpeditionContext } from "@/lib/contexts/expedition-context"
 
 const XANO_BASE_URL = "https://xsc3-mvx7-r86m.n7e.xano.io/api:bXFdqx8y"
 
@@ -109,6 +110,8 @@ const fetcher = (url: string) => fetch(url).then((res) => res.json())
 export default function RecipeDetailPage() {
   const params = useParams()
   const recipeId = params.id as string
+  const { activeExpedition } = useExpeditionContext()
+  const numberOfParticipants = (activeExpedition as any)?.number_participants || 0
 
   const { data: recipe, isLoading } = useSWR<Recipe>(
     recipeId ? `${XANO_BASE_URL}/expedition_cookbook/${recipeId}` : null,
@@ -133,7 +136,7 @@ export default function RecipeDetailPage() {
   const [editingIngredient, setEditingIngredient] = useState<Ingredient | null>(null)
   const [ingredientForm, setIngredientForm] = useState({
     ingredient: "",
-    oz_per_meal: 0,
+    oz_per_meal: "",
     expeditions_ingredient_types_id: 0,
     type: "",
     prep_notes: "",
@@ -286,7 +289,7 @@ export default function RecipeDetailPage() {
     setEditingIngredient(null)
     setIngredientForm({
       ingredient: "",
-      oz_per_meal: 0,
+      oz_per_meal: "",
       expeditions_ingredient_types_id: 0,
       type: "",
       prep_notes: "",
@@ -298,7 +301,7 @@ export default function RecipeDetailPage() {
     setEditingIngredient(ingredient)
     setIngredientForm({
       ingredient: ingredient.ingredient,
-      oz_per_meal: ingredient.oz_per_meal,
+      oz_per_meal: ingredient.oz_per_meal ? String(ingredient.oz_per_meal) : "",
       expeditions_ingredient_types_id: ingredient.expeditions_ingredient_types_id || 0,
       type: ingredient.type || "",
       prep_notes: ingredient.prep_notes || "",
@@ -322,7 +325,7 @@ export default function RecipeDetailPage() {
           body: JSON.stringify({
             expedition_cookbook_id: Number(recipeId),
             ingredient: ingredientForm.ingredient,
-            oz_per_meal: ingredientForm.oz_per_meal,
+            oz_per_meal: parseFloat(ingredientForm.oz_per_meal) || 0,
             expeditions_ingredient_types_id: ingredientForm.expeditions_ingredient_types_id,
             type: ingredientForm.type,
             prep_notes: ingredientForm.prep_notes,
@@ -338,7 +341,7 @@ export default function RecipeDetailPage() {
           body: JSON.stringify({
             expedition_cookbook_id: Number(recipeId),
             ingredient: ingredientForm.ingredient,
-            oz_per_meal: ingredientForm.oz_per_meal,
+            oz_per_meal: parseFloat(ingredientForm.oz_per_meal) || 0,
             expeditions_ingredient_types_id: ingredientForm.expeditions_ingredient_types_id,
             type: ingredientForm.type,
             prep_notes: ingredientForm.prep_notes,
@@ -484,10 +487,17 @@ export default function RecipeDetailPage() {
               )}
 
               <div className="flex flex-wrap gap-3 sm:gap-4 mt-4">
-                {recipe.duration_minutes && (
+                {recipe.duration_minutes && parseInt(recipe.duration_minutes) > 0 && (
                   <div className="flex items-center gap-2 text-sm text-gray-600">
                     <Clock className="h-4 w-4 text-gray-400" />
-                    <span>{recipe.duration_minutes}</span>
+                    <span>
+                      {(() => {
+                        const total = parseInt(recipe.duration_minutes)
+                        const h = Math.floor(total / 60)
+                        const m = total % 60
+                        return h > 0 ? (m > 0 ? `${h}h ${m}m` : `${h}h`) : `${m}m`
+                      })()}
+                    </span>
                   </div>
                 )}
                 {recipe.equipment_required && (
@@ -517,15 +527,18 @@ export default function RecipeDetailPage() {
 
             {recipe.ingredients && recipe.ingredients.length > 0 ? (
               <div className="border rounded-lg overflow-hidden bg-white">
-                <div className="overflow-x-auto">
-                  <Table>
+                <div>
+                  <Table className="table-fixed w-full">
                     <TableHeader>
                       <TableRow className="bg-gray-50/80">
-                        <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600">Ingredient</TableHead>
-                        <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[100px] sm:w-[120px]">Oz/Meal</TableHead>
-                        <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden sm:table-cell w-[120px]">Type</TableHead>
-                        <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600">Prep Notes</TableHead>
-                        <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[80px]">Edit</TableHead>
+                        <TableHead className="h-10 px-3 sm:px-4 text-xs font-semibold text-gray-600 w-[25%]">Ingredient</TableHead>
+                        <TableHead className="h-10 px-3 sm:px-4 text-xs font-semibold text-gray-600 w-[10%]">Oz/Person</TableHead>
+                        <TableHead className="h-10 px-3 sm:px-4 text-xs font-semibold text-gray-600 w-[10%]">Oz/Meal</TableHead>
+                        <TableHead className="h-10 px-3 sm:px-4 text-xs font-semibold text-gray-600 w-[10%]">Lb/Meal</TableHead>
+                        <TableHead className="h-10 px-3 sm:px-4 text-xs font-semibold text-gray-600 hidden sm:table-cell w-[10%]">Type</TableHead>
+                        <TableHead className="h-10 px-3 sm:px-4 text-xs font-semibold text-gray-600 w-[20%]">Prep Notes</TableHead>
+                        <TableHead className="h-10 px-3 sm:px-4 text-xs font-semibold text-gray-600 w-[10%]">Participants</TableHead>
+                        <TableHead className="h-10 px-3 sm:px-4 text-xs font-semibold text-gray-600 w-[5%]">Edit</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -533,7 +546,7 @@ export default function RecipeDetailPage() {
                         <React.Fragment key={type}>
                           {/* Type header row */}
                           <TableRow className="bg-gray-50/50">
-                            <TableCell colSpan={5} className="py-2 px-4 sm:px-6">
+                            <TableCell colSpan={8} className="py-2 px-3 sm:px-4">
                               <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
                                 {type}
                               </span>
@@ -542,24 +555,41 @@ export default function RecipeDetailPage() {
                           {/* Ingredient rows for this type */}
                           {groupedIngredients[type].map((ingredient) => (
                             <TableRow key={ingredient.id} className="hover:bg-gray-50 transition-colors">
-                              <TableCell className="h-12 px-4 sm:px-6">
-                                <div className="flex items-center gap-2">
+                              <TableCell className="h-12 px-3 sm:px-4">
+                                <div className="flex items-center gap-2 min-w-0">
                                   <div className={`w-2 h-2 rounded-full ${getIngredientTypeColor(ingredient.type)} shrink-0`} />
-                                  <span className="font-medium text-gray-900 text-sm">{ingredient.ingredient}</span>
+                                  <span className="font-medium text-gray-900 text-sm truncate">{ingredient.ingredient}</span>
                                 </div>
                               </TableCell>
-                              <TableCell className="h-12 px-4 sm:px-6">
-                                <span className="text-sm text-gray-600">{ingredient.oz_per_meal}</span>
+                              <TableCell className="h-12 px-3 sm:px-4">
+                                <span className="text-sm text-gray-600">{ingredient.oz_per_meal} <span className="text-xs text-gray-400">oz</span></span>
                               </TableCell>
-                              <TableCell className="h-12 px-4 sm:px-6 hidden sm:table-cell">
+                              <TableCell className="h-12 px-3 sm:px-4">
+                                <span className="text-sm text-gray-600">
+                                  {numberOfParticipants > 0
+                                    ? <>{(ingredient.oz_per_meal * numberOfParticipants).toFixed(1)} <span className="text-xs text-gray-400">oz</span></>
+                                    : "—"}
+                                </span>
+                              </TableCell>
+                              <TableCell className="h-12 px-3 sm:px-4">
+                                <span className="text-sm text-gray-600">
+                                  {numberOfParticipants > 0
+                                    ? <>{((ingredient.oz_per_meal * numberOfParticipants) / 16).toFixed(2)} <span className="text-xs text-gray-400">lb</span></>
+                                    : "—"}
+                                </span>
+                              </TableCell>
+                              <TableCell className="h-12 px-3 sm:px-4 hidden sm:table-cell">
                                 <span className="text-sm text-gray-600">{ingredient.type}</span>
                               </TableCell>
-                              <TableCell className="h-12 px-4 sm:px-6">
-                                <span className="text-sm text-gray-500">
+                              <TableCell className="h-12 px-3 sm:px-4">
+                                <span className="text-sm text-gray-500 truncate block">
                                   {ingredient.prep_notes || "—"}
                                 </span>
                               </TableCell>
-                              <TableCell className="h-12 px-4 sm:px-6">
+                              <TableCell className="h-12 px-3 sm:px-4">
+                                <span className="text-sm text-gray-600">{numberOfParticipants || "—"}</span>
+                              </TableCell>
+                              <TableCell className="h-12 px-3 sm:px-4">
                                 <button
                                   type="button"
                                   onClick={() => handleEditIngredient(ingredient)}
@@ -807,14 +837,14 @@ export default function RecipeDetailPage() {
 
             {/* Oz per Meal */}
             <div className="space-y-2">
-              <Label htmlFor="ingredient-oz" className="text-sm font-medium">Oz per Meal</Label>
+              <Label htmlFor="ingredient-oz" className="text-sm font-medium">Oz per Person</Label>
               <Input
                 id="ingredient-oz"
                 type="number"
                 min={0}
                 step={0.1}
                 value={ingredientForm.oz_per_meal}
-                onChange={(e) => setIngredientForm({ ...ingredientForm, oz_per_meal: parseFloat(e.target.value) || 0 })}
+                onChange={(e) => setIngredientForm({ ...ingredientForm, oz_per_meal: e.target.value })}
                 className="h-11"
               />
             </div>

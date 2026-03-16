@@ -328,8 +328,8 @@ export default function ExpeditionDetailPage({ params }: PageProps) {
   const [locationFormData, setLocationFormData] = useState({
     port: "",
     country: "",
-    lat: 0,
-    long: 0,
+    lat: "",
+    long: "",
     timezone: ""
   })
   
@@ -522,20 +522,20 @@ export default function ExpeditionDetailPage({ params }: PageProps) {
     setLocationFormData({
       port: "",
       country: "",
-      lat: 0,
-      long: 0,
+      lat: "",
+      long: "",
       timezone: ""
     })
     setLocationDialogOpen(true)
   }
-  
+
   const handleEditLocation = (location: any) => {
     setEditingLocation(location)
     setLocationFormData({
       port: location.port || "",
       country: location.country || "",
-      lat: location.lat || 0,
-      long: location.long || 0,
+      lat: location.lat != null ? String(location.lat) : "",
+      long: location.long != null ? String(location.long) : "",
       timezone: location.timezone || ""
     })
     setLocationDialogOpen(true)
@@ -562,12 +562,19 @@ export default function ExpeditionDetailPage({ params }: PageProps) {
     
     setIsSubmittingLocation(true)
     try {
+      const submitData = {
+        port: locationFormData.port,
+        country: locationFormData.country,
+        lat: parseFloat(locationFormData.lat) || 0,
+        long: parseFloat(locationFormData.long) || 0,
+        timezone: locationFormData.timezone,
+      }
       if (editingLocation) {
-        await updateExpeditionLocation(editingLocation.id, locationFormData)
+        await updateExpeditionLocation(editingLocation.id, submitData)
         toast.success("Destination updated successfully")
       } else {
         await createExpeditionLocation({
-          ...locationFormData,
+          ...submitData,
           expeditions_id: expeditionId
         })
         toast.success("Destination created successfully")
@@ -1153,7 +1160,7 @@ export default function ExpeditionDetailPage({ params }: PageProps) {
                   step="0.0001"
                   placeholder="e.g., 9.3547"
                   value={locationFormData.lat}
-                  onChange={(e) => setLocationFormData({ ...locationFormData, lat: parseFloat(e.target.value) || 0 })}
+                  onChange={(e) => setLocationFormData({ ...locationFormData, lat: e.target.value })}
                 />
               </div>
               
@@ -1178,7 +1185,7 @@ export default function ExpeditionDetailPage({ params }: PageProps) {
                   step="0.0001"
                   placeholder="e.g., -79.9539"
                   value={locationFormData.long}
-                  onChange={(e) => setLocationFormData({ ...locationFormData, long: parseFloat(e.target.value) || 0 })}
+                  onChange={(e) => setLocationFormData({ ...locationFormData, long: e.target.value })}
                 />
               </div>
             </div>

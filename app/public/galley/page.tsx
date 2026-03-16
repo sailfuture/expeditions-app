@@ -703,15 +703,20 @@ function PublicGalleyPage() {
       <header className="sticky top-0 z-40 bg-white border-b border-gray-200">
         <div className="max-w-5xl mx-auto">
           <div className="px-4 py-4 sm:px-6">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full overflow-hidden">
-                <img
-                  src="/sailfuture-square (8).webp"
-                  alt="SailFuture Academy"
-                  className="h-full w-full object-cover"
-                />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full overflow-hidden">
+                  <img
+                    src="/sailfuture-square (8).webp"
+                    alt="SailFuture Academy"
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+                <h1 className="text-lg sm:text-xl font-bold text-gray-900">
+                  {activeExpedition?.name || "Expedition"} · Galley Department
+                </h1>
               </div>
-              <h1 className="text-lg sm:text-xl font-bold text-gray-900">Galley Department</h1>
+              <span className="text-sm font-medium text-gray-500">SailFuture Academy</span>
             </div>
           </div>
 
@@ -1554,7 +1559,7 @@ function PublicGalleyPage() {
 
       {/* Footer */}
       <footer className="mt-auto py-6 px-4 text-center">
-        <p className="text-sm text-gray-400">Galley Department</p>
+        <p className="text-sm text-gray-400">SailFuture Academy · Galley Department · {activeExpedition?.name || "—"}</p>
       </footer>
     </div>
   )

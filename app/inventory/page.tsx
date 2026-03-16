@@ -150,7 +150,7 @@ function StepperNumberCell({
     <div className="inline-flex items-center gap-1">
       <button
         onClick={() => handleStep(-1)}
-        className="h-6 w-6 flex items-center justify-center rounded hover:bg-gray-100 transition-colors cursor-pointer touch-manipulation"
+        className="h-6 w-6 flex items-center justify-center rounded border border-gray-300 hover:bg-gray-100 transition-colors cursor-pointer touch-manipulation"
       >
         <Minus className="h-3 w-3 text-gray-500" />
       </button>
@@ -178,7 +178,7 @@ function StepperNumberCell({
       </div>
       <button
         onClick={() => handleStep(1)}
-        className="h-6 w-6 flex items-center justify-center rounded hover:bg-gray-100 transition-colors cursor-pointer touch-manipulation"
+        className="h-6 w-6 flex items-center justify-center rounded border border-gray-300 hover:bg-gray-100 transition-colors cursor-pointer touch-manipulation"
       >
         <Plus className="h-3 w-3 text-gray-500" />
       </button>

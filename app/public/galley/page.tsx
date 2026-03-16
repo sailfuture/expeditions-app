@@ -188,14 +188,14 @@ function StepperNumberCell({
   }
 
   return (
-    <div className="inline-flex items-center gap-1">
+    <div className="inline-flex items-center gap-1.5">
       <button
         onClick={() => handleStep(-1)}
-        className="h-6 w-6 flex items-center justify-center rounded hover:bg-gray-100 transition-colors cursor-pointer touch-manipulation"
+        className="h-8 w-8 flex items-center justify-center rounded border border-gray-300 hover:bg-gray-100 transition-colors cursor-pointer touch-manipulation"
       >
-        <Minus className="h-3 w-3 text-gray-500" />
+        <Minus className="h-4 w-4 text-gray-500" />
       </button>
-      <div className="w-8 h-6 flex items-center justify-center">
+      <div className="w-9 h-8 flex items-center justify-center">
         {isEditing ? (
           <input
             ref={inputRef}
@@ -205,13 +205,13 @@ function StepperNumberCell({
             onChange={(e) => setEditValue(e.target.value)}
             onBlur={handleInputBlur}
             onKeyDown={handleInputKeyDown}
-            className="w-8 h-6 text-center text-sm font-medium text-gray-900 tabular-nums border border-gray-300 rounded px-0 py-0 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            className="w-9 h-8 text-center text-sm font-medium text-gray-900 tabular-nums border border-gray-300 rounded px-0 py-0 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             autoFocus
           />
         ) : (
           <button
             onClick={handleNumberClick}
-            className="w-8 h-6 text-center text-sm font-medium text-gray-900 tabular-nums cursor-pointer hover:bg-gray-100 rounded touch-manipulation"
+            className="w-9 h-8 text-center text-sm font-medium text-gray-900 tabular-nums cursor-pointer hover:bg-gray-100 rounded touch-manipulation"
           >
             {value}
           </button>
@@ -219,9 +219,9 @@ function StepperNumberCell({
       </div>
       <button
         onClick={() => handleStep(1)}
-        className="h-6 w-6 flex items-center justify-center rounded hover:bg-gray-100 transition-colors cursor-pointer touch-manipulation"
+        className="h-8 w-8 flex items-center justify-center rounded border border-gray-300 hover:bg-gray-100 transition-colors cursor-pointer touch-manipulation"
       >
-        <Plus className="h-3 w-3 text-gray-500" />
+        <Plus className="h-4 w-4 text-gray-500" />
       </button>
     </div>
   )

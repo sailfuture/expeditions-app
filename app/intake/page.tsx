@@ -31,10 +31,6 @@ export default function IntakeFormPage() {
   const [formData, setFormData] = useState({
     student_name: "",
     date_of_birth: "",
-    passport_number: "",
-    passport_issued_date: "",
-    passport_expiration_date: "",
-    passport_photo: "",
     student_shirt_size: "",
     swimming_level: "",
     health_conditions: "",
@@ -85,7 +81,6 @@ export default function IntakeFormPage() {
       // Format data for API
       const submitData = {
         ...formData,
-        passport_number: parseInt(formData.passport_number as string) || 0,
         takes_morning_medication: formData.takes_morning_medication === true,
         takes_evening_medication: formData.takes_evening_medication === true,
         takes_additional_medications: formData.takes_additional_medications === true,
@@ -106,7 +101,6 @@ export default function IntakeFormPage() {
 
   const sections = [
     { title: "Student Information", description: "Basic information about the student" },
-    { title: "Travel Documents", description: "Passport and travel details" },
     { title: "Health & Medical", description: "Medical history and health conditions" },
     { title: "Medications", description: "Current medications and schedules" },
     { title: "Behavioral Information", description: "Behavioral and emotional considerations" },
@@ -122,33 +116,31 @@ export default function IntakeFormPage() {
         if (!formData.date_of_birth) errors.add("date_of_birth")
         if (!formData.student_shirt_size) errors.add("student_shirt_size")
         if (!formData.swimming_level) errors.add("swimming_level")
-        
+
         if (errors.size > 0) {
           setFieldErrors(errors)
           toast.error("Please complete all required fields")
           return false
         }
         break
-      case 1: // Travel Documents - all optional
-        break
-      case 2: // Health & Medical
+      case 1: // Health & Medical
         // All optional but recommended
         break
-      case 3: // Medications
+      case 2: // Medications
         if (formData.takes_morning_medication === null) errors.add("takes_morning_medication")
         if (formData.takes_evening_medication === null) errors.add("takes_evening_medication")
         if (formData.takes_additional_medications === null) errors.add("takes_additional_medications")
-        
+
         if (errors.size > 0) {
           setFieldErrors(errors)
           toast.error("Please answer all medication questions")
           return false
         }
         break
-      case 4: // Behavioral Information
+      case 3: // Behavioral Information
         // All optional but recommended
         break
-      case 5: // Emergency Contacts
+      case 4: // Emergency Contacts
         if (!formData.primary_contact_name) errors.add("primary_contact_name")
         if (!formData.primary_contact_phone) errors.add("primary_contact_phone")
         if (!formData.primary_contact_email) errors.add("primary_contact_email")
@@ -393,103 +385,8 @@ export default function IntakeFormPage() {
               </div>
             )}
 
-            {/* Section 1: Travel Documents */}
+            {/* Section 1: Health & Medical */}
             {currentSection === 1 && (
-              <div className="space-y-6">
-                <div>
-                  <Label htmlFor="passport_number">Passport Number</Label>
-                  <Input
-                    id="passport_number"
-                    className="mt-1.5 bg-white"
-                    value={formData.passport_number}
-                    onChange={(e) => updateField("passport_number", e.target.value)}
-                    placeholder="Enter passport number"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="passport_issued_date">Issue Date</Label>
-                    <div className="flex gap-2 mt-1.5">
-                      <Input
-                        id="passport_issued_date"
-                        type="date"
-                        value={formData.passport_issued_date}
-                        onChange={(e) => updateField("passport_issued_date", e.target.value)}
-                        className="flex-1 bg-white"
-                      />
-                      <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          type="button"
-                          size="icon"
-                          className="cursor-pointer flex-shrink-0 bg-white h-8"
-                        >
-                          <ChevronDown className="h-4 w-4" />
-                        </Button>
-                      </PopoverTrigger>
-                        <PopoverContent className="w-auto overflow-hidden p-0" align="end">
-                          <CalendarComponent
-                            mode="single"
-                            selected={parseLocalDate(formData.passport_issued_date)}
-                            captionLayout="dropdown-buttons"
-                            onSelect={(date) => {
-                              if (date) {
-                                updateField("passport_issued_date", format(date, "yyyy-MM-dd"))
-                              }
-                            }}
-                            fromYear={2000}
-                            toYear={new Date().getFullYear()}
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-                  </div>
-                  <div>
-                    <Label htmlFor="passport_expiration_date">Expiration Date</Label>
-                    <div className="flex gap-2 mt-1.5">
-                      <Input
-                        id="passport_expiration_date"
-                        type="date"
-                        value={formData.passport_expiration_date}
-                        onChange={(e) => updateField("passport_expiration_date", e.target.value)}
-                        className="flex-1 bg-white"
-                      />
-                      <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          type="button"
-                          size="icon"
-                          className="cursor-pointer flex-shrink-0 bg-white h-8"
-                        >
-                          <ChevronDown className="h-4 w-4" />
-                        </Button>
-                      </PopoverTrigger>
-                        <PopoverContent className="w-auto overflow-hidden p-0" align="end">
-                          <CalendarComponent
-                            mode="single"
-                            selected={parseLocalDate(formData.passport_expiration_date)}
-                            captionLayout="dropdown-buttons"
-                            onSelect={(date) => {
-                              if (date) {
-                                updateField("passport_expiration_date", format(date, "yyyy-MM-dd"))
-                              }
-                            }}
-                            fromYear={new Date().getFullYear()}
-                            toYear={new Date().getFullYear() + 20}
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Section 2: Health & Medical */}
-            {currentSection === 2 && (
               <div className="space-y-6">
                 <div>
                   <Label htmlFor="health_conditions">Current Health Conditions</Label>
@@ -580,8 +477,8 @@ export default function IntakeFormPage() {
               </div>
             )}
 
-            {/* Section 3: Medications */}
-            {currentSection === 3 && (
+            {/* Section 2: Medications */}
+            {currentSection === 2 && (
               <div className="space-y-6">
                 <div>
                   <Label htmlFor="takes_morning_medication">Does the student take morning medication? *</Label>
@@ -700,8 +597,8 @@ export default function IntakeFormPage() {
               </div>
             )}
 
-            {/* Section 4: Behavioral Information */}
-            {currentSection === 4 && (
+            {/* Section 3: Behavioral Information */}
+            {currentSection === 3 && (
               <div className="space-y-6">
                 <div>
                   <Label htmlFor="behavioral_emotional_conditions">Behavioral or Emotional Conditions</Label>
@@ -759,8 +656,8 @@ export default function IntakeFormPage() {
               </div>
             )}
 
-            {/* Section 5: Emergency Contacts */}
-            {currentSection === 5 && (
+            {/* Section 4: Emergency Contacts */}
+            {currentSection === 4 && (
               <div className="space-y-6">
                 <div>
                   <h3 className="font-medium text-gray-900 mb-4">Primary Contact</h3>

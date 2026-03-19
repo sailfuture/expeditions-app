@@ -2106,7 +2106,7 @@ export default function StudentDetailPage() {
             {/* Expedition Assignments */}
             <div>
               <h3 className="text-sm font-semibold text-gray-900 mb-3 pb-2 border-b">Expedition Assignments</h3>
-              <Popover>
+              <Popover modal={false}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"

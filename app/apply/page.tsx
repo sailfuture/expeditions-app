@@ -17,7 +17,6 @@ import { toast } from "sonner"
 const STORAGE_KEY = "expedition_application_draft"
 
 const departments = [
-  { value: "Bridge", label: "Bridge" },
   { value: "Deck", label: "Deck" },
   { value: "Galley", label: "Galley" },
   { value: "Interior", label: "Interior" },
@@ -25,17 +24,6 @@ const departments = [
 ]
 
 const departmentDetails = [
-  {
-    name: "Bridge Department",
-    role: "Navigational Officer/Watch Keeper",
-    responsibilities: [
-      "Assist with navigation and piloting of the vessel",
-      "Monitor and operate navigation and communication equipment",
-      "Ensure safe passage by adhering to maritime regulations and weather conditions",
-      "Keep accurate logs and reports of navigational activities",
-      "Coordinate with other departments to ensure smooth vessel operations",
-    ],
-  },
   {
     name: "Deck Department",
     role: "Deckhand",
@@ -82,37 +70,6 @@ const departmentDetails = [
   },
 ]
 
-const qualifications = [
-  "Relevant experience or certifications in each department",
-  "Strong teamwork and communication skills",
-  "Ability to work in a dynamic and often challenging environment",
-  "Commitment to safety and adherence to maritime regulations",
-]
-
-const workingConditions = [
-  "Extended periods at sea",
-  "Variable weather conditions and physically demanding tasks",
-  "Flexibility to work various shifts and hours",
-]
-
-const whyExpedition = [
-  {
-    title: "Adventure and Exploration",
-    description: "Experience the thrill of navigating the open seas and uncovering hidden gems across diverse locations. Engage in exciting shore excursions, from pristine beaches to vibrant coastal towns.",
-  },
-  {
-    title: "Skill Development",
-    description: "Gain hands-on experience in sailing and maritime operations, learning from seasoned professionals. Participate in workshops on navigation, seamanship, and marine safety.",
-  },
-  {
-    title: "Personal Growth",
-    description: "Challenge yourself with physical and mental tasks that foster resilience and teamwork. Enjoy opportunities for personal reflection and growth amidst the serene beauty of the ocean.",
-  },
-  {
-    title: "Community and Connection",
-    description: "Build lasting friendships with fellow expedition members who share your passion for adventure and exploration. Participate in group activities that foster a sense of community.",
-  },
-]
 
 interface FormData {
   firstChoiceDepartment: string
@@ -330,43 +287,6 @@ export default function ApplyPage() {
                     </li>
                   ))}
                 </ul>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* Qualifications */}
-        <section className="mb-10">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Qualifications</h2>
-          <ul className="space-y-1">
-            {qualifications.map((q, i) => (
-              <li key={i} className="text-sm text-gray-600 pl-4 relative before:content-['•'] before:absolute before:left-0 before:text-gray-400">
-                {q}
-              </li>
-            ))}
-          </ul>
-        </section>
-
-        {/* Working Conditions */}
-        <section className="mb-10">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Working Conditions</h2>
-          <ul className="space-y-1">
-            {workingConditions.map((w, i) => (
-              <li key={i} className="text-sm text-gray-600 pl-4 relative before:content-['•'] before:absolute before:left-0 before:text-gray-400">
-                {w}
-              </li>
-            ))}
-          </ul>
-        </section>
-
-        {/* Why Expedition */}
-        <section className="mb-10">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Why Expedition?</h2>
-          <div className="space-y-4">
-            {whyExpedition.map((item, i) => (
-              <div key={i}>
-                <h4 className="font-medium text-gray-900 text-sm">{item.title}</h4>
-                <p className="text-sm text-gray-600">{item.description}</p>
               </div>
             ))}
           </div>

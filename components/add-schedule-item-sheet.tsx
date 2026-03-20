@@ -126,6 +126,137 @@ function CustomSelect({
   )
 }
 
+// Staff Combobox - searchable dropdown for selecting a staff member
+function StaffCombobox({
+  value,
+  onChange,
+  staff,
+}: {
+  value: number
+  onChange: (value: number) => void
+  staff: any[]
+}) {
+  const [isOpen, setIsOpen] = useState(false)
+  const [search, setSearch] = useState("")
+  const dropdownRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false)
+        setSearch("")
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
+
+  useEffect(() => {
+    if (isOpen && inputRef.current) {
+      inputRef.current.focus()
+    }
+  }, [isOpen])
+
+  const getInitials = (name: string) => {
+    if (!name) return "?"
+    return name.split(" ").map((n) => n[0]).filter(Boolean).join("").toUpperCase().slice(0, 2)
+  }
+
+  const selectedStaff = staff.find(s => s.id === value) || null
+
+  const filteredStaff = staff.filter(s =>
+    s.name.toLowerCase().includes(search.toLowerCase())
+  )
+
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className={cn(
+          "w-full rounded-lg border border-gray-200 bg-white px-4 h-14 flex items-center justify-between gap-2 text-left cursor-pointer",
+          "hover:bg-gray-50 transition-colors",
+          isOpen && "ring-2 ring-gray-400 ring-offset-2"
+        )}
+      >
+        <div className="flex-1 min-w-0">
+          {selectedStaff ? (
+            <div className="flex items-center gap-3">
+              <Avatar className="h-8 w-8">
+                {selectedStaff.photo_url && <AvatarImage src={selectedStaff.photo_url} alt={selectedStaff.name} />}
+                <AvatarFallback className="text-xs bg-gray-100 text-gray-800">{getInitials(selectedStaff.name)}</AvatarFallback>
+              </Avatar>
+              <span className="text-base">{selectedStaff.name}</span>
+            </div>
+          ) : (
+            <span className="text-gray-500 text-base">Select staff member</span>
+          )}
+        </div>
+        <ChevronDown className={cn("h-4 w-4 text-gray-400 transition-transform shrink-0", isOpen && "rotate-180")} />
+      </button>
+
+      {isOpen && (
+        <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
+          <div className="p-2 border-b border-gray-100">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                ref={inputRef}
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search staff..."
+                className="w-full pl-8 pr-3 py-2 text-sm border border-gray-200 rounded-md outline-none focus:ring-2 focus:ring-gray-400"
+              />
+            </div>
+          </div>
+          <div className="max-h-64 overflow-y-auto py-1">
+            <button
+              type="button"
+              onClick={() => {
+                onChange(0)
+                setIsOpen(false)
+                setSearch("")
+              }}
+              className={cn(
+                "w-full px-4 py-2.5 flex items-center gap-3 hover:bg-gray-100 transition-colors text-left cursor-pointer",
+                value === 0 && "bg-gray-50"
+              )}
+            >
+              <span className="text-gray-500 text-sm">None</span>
+            </button>
+            {filteredStaff.map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                onClick={() => {
+                  onChange(s.id)
+                  setIsOpen(false)
+                  setSearch("")
+                }}
+                className={cn(
+                  "w-full px-4 py-2.5 flex items-center gap-3 hover:bg-gray-100 transition-colors text-left cursor-pointer",
+                  s.id === value && "bg-gray-50"
+                )}
+              >
+                <Avatar className="h-8 w-8">
+                  {s.photo_url && <AvatarImage src={s.photo_url} alt={s.name} />}
+                  <AvatarFallback className="text-xs bg-gray-100 text-gray-800">{getInitials(s.name)}</AvatarFallback>
+                </Avatar>
+                <span className="text-sm font-medium">{s.name}</span>
+              </button>
+            ))}
+            {filteredStaff.length === 0 && (
+              <div className="px-4 py-3 text-sm text-gray-500 text-center">No staff found</div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // Color mapping for activity types
 const ACTIVITY_TYPE_COLORS: Record<string, string> = {
   orange: "#f97316",
@@ -1057,43 +1188,13 @@ export function AddScheduleItemSheet({
               />
             </div>
 
-            {/* Led By - Staff Selector with Avatar (grayscale) */}
+            {/* Led By - Staff Selector Combobox with search */}
             <div className="space-y-2">
               <Label className="text-sm font-medium">Led By</Label>
-              <CustomSelect
+              <StaffCombobox
                 value={formData.led_by}
-                onChange={(value) => setFormData({ ...formData, led_by: Number(value) })}
-                options={staffOptions}
-                placeholder="Select staff member"
-                className="h-14 text-base"
-                renderValue={(option) => {
-                  if (!option || option.value === 0) {
-                    return <span className="text-gray-500 text-base">Select staff member</span>
-                  }
-                  return (
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-8 w-8">
-                        {option.data?.photo_url && <AvatarImage src={option.data.photo_url} alt={option.label} />}
-                        <AvatarFallback className="text-xs bg-gray-100 text-gray-800">{getInitials(option.label)}</AvatarFallback>
-                      </Avatar>
-                      <span className="text-base">{option.label}</span>
-                    </div>
-                  )
-                }}
-                renderOption={(option) => {
-                  if (option.value === 0) {
-                    return <span className="text-gray-500 text-sm">None</span>
-                  }
-                  return (
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-8 w-8">
-                        {option.data?.photo_url && <AvatarImage src={option.data.photo_url} alt={option.label} />}
-                        <AvatarFallback className="text-xs bg-gray-100 text-gray-800">{getInitials(option.label)}</AvatarFallback>
-                      </Avatar>
-                      <span className="text-sm font-medium">{option.label}</span>
-                    </div>
-                  )
-                }}
+                onChange={(value) => setFormData({ ...formData, led_by: value })}
+                staff={staff}
               />
             </div>
 

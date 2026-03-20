@@ -456,7 +456,7 @@ export default function StaffPage() {
             
             <div>
               <Label>Expedition Assignments</Label>
-              <Popover open={expeditionPopoverOpen} onOpenChange={setExpeditionPopoverOpen}>
+              <Popover modal={true} open={expeditionPopoverOpen} onOpenChange={setExpeditionPopoverOpen}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
@@ -470,7 +470,12 @@ export default function StaffPage() {
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                <PopoverContent
+                  className="w-[--radix-popover-trigger-width] p-0 z-[100]"
+                  align="start"
+                  onPointerDownOutside={(e) => e.stopPropagation()}
+                  onInteractOutside={(e) => e.stopPropagation()}
+                >
                   <Command>
                     <CommandInput placeholder="Search expeditions..." />
                     <CommandList>

@@ -85,15 +85,21 @@ export default function IntakeFormPage() {
         takes_evening_medication: formData.takes_evening_medication === true,
         takes_additional_medications: formData.takes_additional_medications === true,
         expeditions_id: formData.expeditions_id || 0,
+        // Send empty defaults for removed passport fields (Xano may still expect them)
+        passport_number: 0,
+        passport_issued_date: "",
+        passport_expiration_date: "",
+        passport_photo: "",
       }
       
       console.log("Submitting data:", submitData)
       await createExpeditionStudentInformation(submitData)
       setIsSubmitted(true)
       toast.success("Intake form submitted successfully!")
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to submit form:", error)
-      toast.error("Failed to submit form. Please try again.")
+      const message = error?.message || "Unknown error"
+      toast.error(`Failed to submit form: ${message}`)
     } finally {
       setIsSubmitting(false)
     }
@@ -107,9 +113,26 @@ export default function IntakeFormPage() {
     { title: "Emergency Contacts", description: "Primary and emergency contact information" },
   ]
 
+  const fieldLabels: Record<string, string> = {
+    student_name: "Student Full Name",
+    date_of_birth: "Date of Birth",
+    student_shirt_size: "Shirt Size",
+    swimming_level: "Swimming Level",
+    takes_morning_medication: "Morning Medication",
+    takes_evening_medication: "Evening Medication",
+    takes_additional_medications: "Other Medications",
+    primary_contact_name: "Primary Contact Name",
+    primary_contact_phone: "Primary Contact Phone",
+    primary_contact_email: "Primary Contact Email",
+    emergency_contact_name: "Emergency Contact Name",
+    emergency_contact_relationship: "Emergency Contact Relationship",
+    emergency_contact_phone: "Emergency Contact Phone",
+    emergency_contact_email: "Emergency Contact Email",
+  }
+
   const validateSection = (sectionIndex: number): boolean => {
     const errors = new Set<string>()
-    
+
     switch (sectionIndex) {
       case 0: // Student Information
         if (!formData.student_name) errors.add("student_name")
@@ -119,7 +142,8 @@ export default function IntakeFormPage() {
 
         if (errors.size > 0) {
           setFieldErrors(errors)
-          toast.error("Please complete all required fields")
+          const missing = Array.from(errors).map(f => fieldLabels[f] || f).join(", ")
+          toast.error(`Missing required fields: ${missing}`)
           return false
         }
         break
@@ -133,7 +157,8 @@ export default function IntakeFormPage() {
 
         if (errors.size > 0) {
           setFieldErrors(errors)
-          toast.error("Please answer all medication questions")
+          const missing = Array.from(errors).map(f => fieldLabels[f] || f).join(", ")
+          toast.error(`Please answer: ${missing}`)
           return false
         }
         break
@@ -148,15 +173,16 @@ export default function IntakeFormPage() {
         if (!formData.emergency_contact_relationship) errors.add("emergency_contact_relationship")
         if (!formData.emergency_contact_phone) errors.add("emergency_contact_phone")
         if (!formData.emergency_contact_email) errors.add("emergency_contact_email")
-        
+
         if (errors.size > 0) {
           setFieldErrors(errors)
-          toast.error("Please complete all required contact fields")
+          const missing = Array.from(errors).map(f => fieldLabels[f] || f).join(", ")
+          toast.error(`Missing required fields: ${missing}`)
           return false
         }
         break
     }
-    
+
     setFieldErrors(new Set())
     return true
   }

@@ -20,7 +20,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { ChevronDown, LogOut, Menu, Ship, Users, UserCog, ClipboardList, FileText, Tv, Calendar, BookOpen, ExternalLink, UtensilsCrossed, Boxes, ShoppingBag, ChefHat } from "lucide-react"
+import { ChevronDown, LogOut, Menu, Ship, Users, UserCog, ClipboardList, FileText, Tv, Calendar, BookOpen, ExternalLink, UtensilsCrossed, Boxes, ShoppingBag, ChefHat, MapPin } from "lucide-react"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -194,6 +194,66 @@ export function Navbar() {
                       <DropdownMenuTrigger className={cn(
                         navigationMenuTriggerStyle(),
                         "cursor-pointer flex items-center gap-1",
+                        (pathname.startsWith("/public/passage-logs") || pathname === "/passage-logs") && "text-foreground",
+                      )}>
+                        Passage Planning
+                        <ChevronDown className="h-3 w-3" />
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start" className="min-w-[180px]">
+                        <Link href="/public/passage-logs" target="_blank">
+                          <DropdownMenuItem className="cursor-pointer">
+                            Passage Log Form
+                          </DropdownMenuItem>
+                        </Link>
+                        <Link href="/passage-logs">
+                          <DropdownMenuItem className="cursor-pointer">
+                            Log Dashboard
+                          </DropdownMenuItem>
+                        </Link>
+                        <Link href="/passage-logs/map">
+                          <DropdownMenuItem className="cursor-pointer">
+                            Map View
+                          </DropdownMenuItem>
+                        </Link>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </NavigationMenuItem>
+
+                  <NavigationMenuItem>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger className={cn(
+                        navigationMenuTriggerStyle(),
+                        "cursor-pointer flex items-center gap-1",
+                        (pathname.startsWith("/meal-planning") || pathname === "/inventory" || pathname === "/store") && "text-foreground",
+                      )}>
+                        Ship Inventory
+                        <ChevronDown className="h-3 w-3" />
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start">
+                        <Link href="/meal-planning">
+                          <DropdownMenuItem className="cursor-pointer whitespace-nowrap">
+                            Cookbook
+                          </DropdownMenuItem>
+                        </Link>
+                        <Link href="/store">
+                          <DropdownMenuItem className="cursor-pointer whitespace-nowrap">
+                            Store
+                          </DropdownMenuItem>
+                        </Link>
+                        <Link href="/inventory">
+                          <DropdownMenuItem className="cursor-pointer whitespace-nowrap">
+                            Inventory
+                          </DropdownMenuItem>
+                        </Link>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </NavigationMenuItem>
+
+                  <NavigationMenuItem>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger className={cn(
+                        navigationMenuTriggerStyle(),
+                        "cursor-pointer flex items-center gap-1",
                         (pathname.startsWith("/tv") || pathname === "/public/schedule") && "text-foreground",
                       )}>
                         Public Pages
@@ -213,61 +273,6 @@ export function Navbar() {
                         <Link href="/public/galley" target="_blank">
                           <DropdownMenuItem className="cursor-pointer whitespace-nowrap">
                             Galley
-                          </DropdownMenuItem>
-                        </Link>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </NavigationMenuItem>
-
-                  <NavigationMenuItem>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger className={cn(
-                        navigationMenuTriggerStyle(),
-                        "cursor-pointer flex items-center gap-1",
-                        (pathname.startsWith("/public/passage-logs") || pathname === "/passage-logs") && "text-foreground",
-                      )}>
-                        Logs
-                        <ChevronDown className="h-3 w-3" />
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="start" className="min-w-[180px]">
-                        <Link href="/public/passage-logs" target="_blank">
-                          <DropdownMenuItem className="cursor-pointer">
-                            Passage Log Form
-                          </DropdownMenuItem>
-                        </Link>
-                        <Link href="/passage-logs">
-                          <DropdownMenuItem className="cursor-pointer">
-                            Log Dashboard
-                          </DropdownMenuItem>
-                        </Link>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </NavigationMenuItem>
-
-                  <NavigationMenuItem>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger className={cn(
-                        navigationMenuTriggerStyle(),
-                        "cursor-pointer flex items-center gap-1",
-                        (pathname.startsWith("/meal-planning") || pathname === "/inventory" || pathname === "/store") && "text-foreground",
-                      )}>
-                        Meal Planning
-                        <ChevronDown className="h-3 w-3" />
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="start">
-                        <Link href="/meal-planning">
-                          <DropdownMenuItem className="cursor-pointer whitespace-nowrap">
-                            Cookbook
-                          </DropdownMenuItem>
-                        </Link>
-                        <Link href="/store">
-                          <DropdownMenuItem className="cursor-pointer whitespace-nowrap">
-                            Store
-                          </DropdownMenuItem>
-                        </Link>
-                        <Link href="/inventory">
-                          <DropdownMenuItem className="cursor-pointer whitespace-nowrap">
-                            Inventory
                           </DropdownMenuItem>
                         </Link>
                       </DropdownMenuContent>
@@ -412,7 +417,7 @@ export function Navbar() {
                     </Link>
 
                     <div className="px-4 py-2 mt-2">
-                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Logs</p>
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Passage Planning</p>
                     </div>
                     <Link
                       href="/public/passage-logs"
@@ -430,9 +435,16 @@ export function Navbar() {
                       <ClipboardList className="h-4 w-4 text-muted-foreground" />
                       Log Dashboard
                     </Link>
-                    
+                    <Link
+                      href="/passage-logs/map"
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors"
+                    >
+                      <MapPin className="h-4 w-4 text-muted-foreground" />
+                      Map View
+                    </Link>
+
                     <div className="px-4 py-2 mt-2">
-                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Meal Planning</p>
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Ship Inventory</p>
                     </div>
                     <Link
                       href="/meal-planning"

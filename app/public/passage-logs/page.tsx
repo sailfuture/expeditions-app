@@ -238,21 +238,21 @@ const initialFormData: PassageFormData = {
 }
 
 const completedOptions = [
-  { value: "completed", label: "✅ Completed" },
-  { value: "not_completed", label: "❌ Not Completed" },
-  { value: "see_notes", label: "✏️ See Notes" },
+  { value: "completed", label: "Completed" },
+  { value: "not_completed", label: "Not Completed" },
+  { value: "see_notes", label: "See Notes" },
 ]
 
 const secureOptions = [
-  { value: "secure", label: "✅ Secure" },
-  { value: "not_secure", label: "❌ Not Secure" },
-  { value: "see_notes", label: "✏️ See Notes" },
+  { value: "secure", label: "Secure" },
+  { value: "not_secure", label: "Not Secure" },
+  { value: "see_notes", label: "See Notes" },
 ]
 
 const yesNoOptions = [
-  { value: "yes", label: "✅ Yes" },
-  { value: "no", label: "❌ No" },
-  { value: "see_notes", label: "✏️ See Notes" },
+  { value: "yes", label: "Yes" },
+  { value: "no", label: "No" },
+  { value: "see_notes", label: "See Notes" },
 ]
 
 const tankLevelOptions = [
@@ -478,6 +478,7 @@ export default function PassageLogsPage() {
 
   // Track which fields are invalid
   const [invalidFields, setInvalidFields] = useState<Set<string>>(new Set())
+  const [coordError, setCoordError] = useState("")
 
   // Validation for each step - returns field keys that are invalid
   const validateStep = (step: number): { valid: boolean; invalidFieldKeys: string[]; missingCount: number } => {
@@ -507,6 +508,25 @@ export default function PassageLogsPage() {
         if (!formData.longitudeMin) invalidFieldKeys.push("longitudeMin")
         if (!formData.longitudeSec) invalidFieldKeys.push("longitudeSec")
         if (!formData.longitudeDir) invalidFieldKeys.push("longitudeDir")
+
+        // Validate coordinates are within the Caribbean region
+        // Latitude: South of Tampa (~28°N), North of Georgetown, Guyana (~6°N)
+        // Longitude: No further west than Cancun (~87°W), no further east than Georgetown (~58°W)
+        if (formData.latitudeDeg && formData.latitudeMin && formData.latitudeSec && formData.latitudeDir &&
+            formData.longitudeDeg && formData.longitudeMin && formData.longitudeSec && formData.longitudeDir) {
+          const latDecimal = (parseFloat(formData.latitudeDeg) + parseFloat(formData.latitudeMin) / 60 + parseFloat(formData.latitudeSec) / 3600) * (formData.latitudeDir === "S" ? -1 : 1)
+          const lonDecimal = (parseFloat(formData.longitudeDeg) + parseFloat(formData.longitudeMin) / 60 + parseFloat(formData.longitudeSec) / 3600) * (formData.longitudeDir === "W" ? -1 : 1)
+
+          if (latDecimal < 6 || latDecimal > 28) {
+            invalidFieldKeys.push("latitudeDeg", "latitudeMin", "latitudeSec")
+            setCoordError("Latitude must be between 6°N and 28°N (Caribbean region)")
+          } else if (lonDecimal < -87 || lonDecimal > -58) {
+            invalidFieldKeys.push("longitudeDeg", "longitudeMin", "longitudeSec")
+            setCoordError("Longitude must be between 58°W and 87°W (Caribbean region)")
+          } else {
+            setCoordError("")
+          }
+        }
         if (!formData.binoculars) invalidFieldKeys.push("binoculars")
         if (!formData.vhfChannel16) invalidFieldKeys.push("vhfChannel16")
         if (!formData.fuelDayTank) invalidFieldKeys.push("fuelDayTank")
@@ -566,8 +586,13 @@ export default function PassageLogsPage() {
   const isFieldInvalid = (fieldKey: string) => invalidFields.has(fieldKey)
 
   // Clear invalid state when a field is updated
+  const coordFields = ["latitudeDeg", "latitudeMin", "latitudeSec", "latitudeDir", "longitudeDeg", "longitudeMin", "longitudeSec", "longitudeDir"]
   const updateFieldAndClearInvalid = <K extends keyof PassageFormData>(key: K, value: PassageFormData[K]) => {
     updateField(key, value)
+    // Clear coordinate error when any coordinate field changes
+    if (coordFields.includes(key as string) && coordError) {
+      setCoordError("")
+    }
     if (invalidFields.has(key)) {
       setInvalidFields(prev => {
         const next = new Set(prev)
@@ -695,6 +720,7 @@ export default function PassageLogsPage() {
         additional_notes: formData.additionalNotes,
         students_id: studentIds,
         expedition_staff_id: staffId,
+        expeditions_id: activeExpedition?.id || 0,
       }
 
       const response = await fetch("https://xsc3-mvx7-r86m.n7e.xano.io/api:bXFdqx8y/expedition_passage_logs", {
@@ -1338,6 +1364,9 @@ export default function PassageLogsPage() {
                     </Field>
                   </div>
                 </FieldGroup>
+                {coordError && (
+                  <p className="text-sm text-destructive mt-2 font-medium">{coordError}</p>
+                )}
               </FieldSet>
             </FormSection>
 

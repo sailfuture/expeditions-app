@@ -24,7 +24,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 import { ExpeditionHeader } from "@/components/expedition-header"
-import { ExternalLink, Check, ChevronsUpDown, X, Plus, Trash2 } from "lucide-react"
+import { ExternalLink, Check, ChevronsUpDown, X, Plus, Trash2, Pencil } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -56,12 +56,247 @@ import {
   CommandItem,
 } from "@/components/ui/command"
 import { cn } from "@/lib/utils"
-import { getExpeditionAssignmentsByExpedition, updateExpeditionAssignment, getExpeditionLaptops, getExpeditionsRooms, getExpeditionDishDays, updateExpeditionDishDay, getExpeditionsGalleyTeam, updateExpeditionsGalleyTeam, createExpeditionsGalleyTeam, deleteExpeditionsGalleyTeam, getExpeditionDepartments } from "@/lib/xano"
+import { getExpeditionAssignmentsByExpedition, updateExpeditionAssignment, getExpeditionLaptops, getExpeditionsRooms, getExpeditionDishDays, updateExpeditionDishDay, createExpeditionDishDay, deleteExpeditionDishDay, getExpeditionsGalleyTeam, updateExpeditionsGalleyTeam, createExpeditionsGalleyTeam, deleteExpeditionsGalleyTeam, getExpeditionDepartments } from "@/lib/xano"
 import { useExpeditions } from "@/lib/hooks/use-expeditions"
 import { useCurrentUser } from "@/lib/contexts/user-context"
 import { mutate } from "swr"
 import { toast } from "sonner"
-import { useState } from "react"
+import { useState, useEffect } from "react"
+
+function AddDishTeamDialog({
+  open,
+  onOpenChange,
+  takenDays,
+  expeditionId,
+  onCreated,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  takenDays: string[]
+  expeditionId: number
+  onCreated: () => void
+}) {
+  const [name, setName] = useState("")
+  const [day, setDay] = useState("")
+  const [creating, setCreating] = useState(false)
+
+  const handleSubmit = async () => {
+    if (!name.trim()) {
+      toast.error("Please enter a team name")
+      return
+    }
+    if (!day) {
+      toast.error("Please select a day of the week")
+      return
+    }
+
+    setCreating(true)
+    try {
+      await createExpeditionDishDay({
+        dishteam: name.trim(),
+        day_of_week: day,
+        expeditions_id: expeditionId,
+        wash: [],
+        dry: [],
+        support: 0,
+        supervisor: 0,
+      })
+      onCreated()
+      toast.success(`Dish team "${name}" created`)
+      setName("")
+      setDay("")
+      onOpenChange(false)
+    } catch (error) {
+      console.error("Failed to create dish team:", error)
+      toast.error("Failed to create dish team")
+    } finally {
+      setCreating(false)
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Add Dish Team</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 mt-4">
+          <div>
+            <Label htmlFor="dish-team-name">Team Name</Label>
+            <Input
+              id="dish-team-name"
+              placeholder="e.g., Dish Team A"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="mt-1"
+            />
+          </div>
+          <div>
+            <Label htmlFor="dish-team-day">Day of Week</Label>
+            <Select value={day} onValueChange={setDay}>
+              <SelectTrigger className="mt-1 cursor-pointer">
+                <SelectValue placeholder="Select a day..." />
+              </SelectTrigger>
+              <SelectContent>
+                {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(d => {
+                  const taken = takenDays.includes(d)
+                  return (
+                    <SelectItem key={d} value={d} className="cursor-pointer hover:bg-gray-100" disabled={taken}>
+                      {d}{taken ? " (assigned)" : ""}
+                    </SelectItem>
+                  )
+                })}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                onOpenChange(false)
+                setName("")
+                setDay("")
+              }}
+              className="cursor-pointer"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSubmit}
+              disabled={creating || !name.trim() || !day}
+              className="cursor-pointer"
+            >
+              {creating ? (
+                <>
+                  <Spinner className="h-4 w-4 mr-2" />
+                  Creating...
+                </>
+              ) : (
+                "Create Team"
+              )}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function EditDishTeamDialog({
+  open,
+  onOpenChange,
+  team,
+  takenDays,
+  onUpdated,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  team: any
+  takenDays: string[]
+  onUpdated: () => void
+}) {
+  const [name, setName] = useState(team?.dishteam || "")
+  const [day, setDay] = useState(team?.day_of_week || "")
+  const [saving, setSaving] = useState(false)
+
+  // Sync state when team changes
+  useEffect(() => {
+    if (team) {
+      setName(team.dishteam || "")
+      setDay(team.day_of_week || "")
+    }
+  }, [team])
+
+  const handleSubmit = async () => {
+    if (!name.trim()) {
+      toast.error("Please enter a team name")
+      return
+    }
+    if (!day) {
+      toast.error("Please select a day of the week")
+      return
+    }
+
+    setSaving(true)
+    try {
+      await updateExpeditionDishDay(team.id, {
+        dishteam: name.trim(),
+        day_of_week: day,
+      })
+      onUpdated()
+      toast.success(`Dish team updated`)
+      onOpenChange(false)
+    } catch (error) {
+      console.error("Failed to update dish team:", error)
+      toast.error("Failed to update dish team")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Edit Dish Team</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 mt-4">
+          <div>
+            <Label htmlFor="edit-dish-team-name">Team Name</Label>
+            <Input
+              id="edit-dish-team-name"
+              placeholder="e.g., Dish Team A"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="mt-1"
+            />
+          </div>
+          <div>
+            <Label htmlFor="edit-dish-team-day">Day of Week</Label>
+            <Select value={day} onValueChange={setDay}>
+              <SelectTrigger className="mt-1 cursor-pointer">
+                <SelectValue placeholder="Select a day..." />
+              </SelectTrigger>
+              <SelectContent>
+                {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(d => {
+                  const taken = takenDays.includes(d) && d !== team?.day_of_week
+                  return (
+                    <SelectItem key={d} value={d} className="cursor-pointer hover:bg-gray-100" disabled={taken}>
+                      {d}{taken ? " (assigned)" : ""}
+                    </SelectItem>
+                  )
+                })}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              className="cursor-pointer"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSubmit}
+              disabled={saving || !name.trim() || !day}
+              className="cursor-pointer"
+            >
+              {saving ? (
+                <>
+                  <Spinner className="h-4 w-4 mr-2" />
+                  Saving...
+                </>
+              ) : (
+                "Save Changes"
+              )}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -73,6 +308,12 @@ export default function AssignmentsPage({ params }: PageProps) {
   const expeditionId = parseInt(id)
 
   const [updatingId, setUpdatingId] = useState<string | null>(null)
+  const [addDishTeamOpen, setAddDishTeamOpen] = useState(false)
+  const [editDishTeamOpen, setEditDishTeamOpen] = useState(false)
+  const [editingDishTeam, setEditingDishTeam] = useState<any>(null)
+  const [deleteDishTeamOpen, setDeleteDishTeamOpen] = useState(false)
+  const [dishTeamToDelete, setDishTeamToDelete] = useState<any>(null)
+  const [deletingDishTeam, setDeletingDishTeam] = useState(false)
   const [addGalleyTeamOpen, setAddGalleyTeamOpen] = useState(false)
   const [newGalleyTeamName, setNewGalleyTeamName] = useState("")
   const [creatingGalleyTeam, setCreatingGalleyTeam] = useState(false)
@@ -273,6 +514,24 @@ export default function AssignmentsPage({ params }: PageProps) {
     }
   }
 
+  const handleDeleteDishTeam = async () => {
+    if (!dishTeamToDelete) return
+
+    setDeletingDishTeam(true)
+    try {
+      await deleteExpeditionDishDay(dishTeamToDelete.id)
+      mutate(`expedition_dish_days_${expeditionId}`)
+      toast.success(`Dish team "${dishTeamToDelete.dishteam}" deleted`)
+      setDeleteDishTeamOpen(false)
+      setDishTeamToDelete(null)
+    } catch (error) {
+      console.error("Failed to delete dish team:", error)
+      toast.error("Failed to delete dish team")
+    } finally {
+      setDeletingDishTeam(false)
+    }
+  }
+
   const handleCreateGalleyTeam = async () => {
     if (!newGalleyTeamName.trim()) {
       toast.error("Please enter a team name")
@@ -365,7 +624,7 @@ export default function AssignmentsPage({ params }: PageProps) {
                   onValueChange={(value) => handleFieldChange(assignment.id, "expedition_departments_id", value === "none" ? [] : [parseInt(value)])}
                   disabled={updatingId === deptUpdateKey}
                 >
-                  <SelectTrigger className="w-[220px] min-w-[220px] max-w-[220px] cursor-pointer [&_[data-placeholder]]:text-gray-400">
+                  <SelectTrigger className="w-[220px] min-w-[220px] max-w-[220px] cursor-pointer [&_[data-placeholder]]:text-gray-600">
                     <SelectValue placeholder="None" />
                   </SelectTrigger>
                   <SelectContent>
@@ -392,17 +651,17 @@ export default function AssignmentsPage({ params }: PageProps) {
                     <Button
                       variant="outline"
                       role="combobox"
-                      className="w-[220px] min-w-[220px] max-w-[220px] justify-between h-9 text-sm cursor-pointer [&_[data-placeholder]]:text-gray-400"
+                      className="w-[220px] min-w-[220px] max-w-[220px] justify-between h-9 text-sm cursor-pointer [&_[data-placeholder]]:text-gray-600"
                       disabled={updatingId === deptUpdateKey}
                     >
                     <span className="truncate text-left flex-1">
                       {Array.isArray(assignment.expedition_departments_id) && assignment.expedition_departments_id.length > 0 ? (
                         assignment.expedition_departments_id.map((d: any) => d.name || d).join(', ')
                       ) : (
-                        <span className="text-gray-400">None</span>
+                        <span className="text-gray-600">None</span>
                       )}
                     </span>
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 text-gray-500" />
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-[200px] p-0">
@@ -471,11 +730,11 @@ export default function AssignmentsPage({ params }: PageProps) {
               onValueChange={(value) => handleFieldChange(assignment.id, "bunk", value)}
               disabled={updatingId === bunkUpdateKey}
             >
-              <SelectTrigger className="w-full cursor-pointer [&_[data-placeholder]]:text-gray-400">
+              <SelectTrigger className="w-full cursor-pointer [&_[data-placeholder]]:text-gray-600">
                 <SelectValue placeholder="None" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none" className="cursor-pointer text-gray-500">
+                <SelectItem value="none" className="cursor-pointer text-gray-600">
                   None
                 </SelectItem>
                 {rooms?.sort((a: any, b: any) => (a.location || "").localeCompare(b.location || "")).map((room: any) => (
@@ -496,11 +755,11 @@ export default function AssignmentsPage({ params }: PageProps) {
                 onValueChange={(value) => handleFieldChange(assignment.id, "laptop", value)}
                 disabled={updatingId === laptopUpdateKey}
               >
-                <SelectTrigger className="w-full cursor-pointer [&>span]:data-[placeholder]:text-gray-400">
+                <SelectTrigger className="w-full cursor-pointer [&>span]:data-[placeholder]:text-gray-600">
                   <SelectValue placeholder="None" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none" className="cursor-pointer text-gray-500">
+                  <SelectItem value="none" className="cursor-pointer text-gray-600">
                     None
                   </SelectItem>
                   {laptops?.sort((a: any, b: any) => a.laptop_number.localeCompare(b.laptop_number)).map((laptop: any) => (
@@ -620,11 +879,21 @@ export default function AssignmentsPage({ params }: PageProps) {
 
         {/* Dish Teams Section */}
         <div className="mt-6 rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-            <h2 className="text-lg font-semibold text-gray-900">Dish Team Assignments</h2>
-            <p className="text-sm text-gray-600 mt-1">Assign students and staff to daily dish teams</p>
+          <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">Dish Team Assignments</h2>
+              <p className="text-sm text-gray-600 mt-1">Assign students and staff to daily dish teams</p>
+            </div>
+            <Button
+              onClick={() => setAddDishTeamOpen(true)}
+              size="sm"
+              className="cursor-pointer"
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              Add Team
+            </Button>
           </div>
-          
+
           {dishTeamsLoading ? (
             <div className="p-12 text-center">
               <Spinner className="h-6 w-6" />
@@ -633,7 +902,7 @@ export default function AssignmentsPage({ params }: PageProps) {
           ) : !dishTeams || dishTeams.length === 0 ? (
             <div className="p-12 text-center text-muted-foreground">
               <p className="text-lg font-medium text-gray-600">No dish teams found</p>
-              <p className="text-sm text-gray-500 mt-1">Dish teams will appear here for this expedition.</p>
+              <p className="text-sm text-gray-500 mt-1">Click &quot;Add Team&quot; to create your first dish team.</p>
             </div>
           ) : (
             <Table>
@@ -645,6 +914,7 @@ export default function AssignmentsPage({ params }: PageProps) {
                   <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600 w-[200px] min-w-[200px] max-w-[200px]">Dry (Students)</TableHead>
                   <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600 w-[180px] min-w-[180px] max-w-[180px]">Support (Staff)</TableHead>
                   <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600 w-[180px] min-w-[180px] max-w-[180px]">Supervisor (Staff)</TableHead>
+                  <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600 text-right w-[80px] min-w-[80px] max-w-[80px]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -682,7 +952,7 @@ export default function AssignmentsPage({ params }: PageProps) {
                               <Button
                                 variant="outline"
                                 role="combobox"
-                                className="w-full justify-between h-9 text-sm cursor-pointer [&_[data-placeholder]]:text-gray-400"
+                                className="w-full justify-between h-9 text-sm cursor-pointer [&_[data-placeholder]]:text-gray-600"
                                 disabled={updatingId === washUpdateKey}
                               >
                                 <span className="truncate text-left flex-1">
@@ -692,10 +962,10 @@ export default function AssignmentsPage({ params }: PageProps) {
                                       return student?.name || ''
                                     }).filter(Boolean).join(', ')
                                   ) : (
-                                    <span className="text-gray-400">None</span>
+                                    <span className="text-gray-600">None</span>
                                   )}
                                 </span>
-                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 text-gray-500" />
                               </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-[250px] p-0">
@@ -758,7 +1028,7 @@ export default function AssignmentsPage({ params }: PageProps) {
                               <Button
                                 variant="outline"
                                 role="combobox"
-                                className="w-full justify-between h-9 text-sm cursor-pointer [&_[data-placeholder]]:text-gray-400"
+                                className="w-full justify-between h-9 text-sm cursor-pointer [&_[data-placeholder]]:text-gray-600"
                                 disabled={updatingId === dryUpdateKey}
                               >
                                 <span className="truncate text-left flex-1">
@@ -768,10 +1038,10 @@ export default function AssignmentsPage({ params }: PageProps) {
                                       return student?.name || ''
                                     }).filter(Boolean).join(', ')
                                   ) : (
-                                    <span className="text-gray-400">None</span>
+                                    <span className="text-gray-600">None</span>
                                   )}
                                 </span>
-                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 text-gray-500" />
                               </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-[250px] p-0">
@@ -838,7 +1108,7 @@ export default function AssignmentsPage({ params }: PageProps) {
                               <SelectValue placeholder="Select staff..." className="truncate" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="0" className="cursor-pointer text-gray-500">
+                              <SelectItem value="0" className="cursor-pointer text-gray-600">
                                 None
                               </SelectItem>
                               {staffAssignments.map((staff: any) => (
@@ -871,7 +1141,7 @@ export default function AssignmentsPage({ params }: PageProps) {
                               <SelectValue placeholder="Select staff..." className="truncate" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="0" className="cursor-pointer text-gray-500">
+                              <SelectItem value="0" className="cursor-pointer text-gray-600">
                                 None
                               </SelectItem>
                               {staffAssignments.map((staff: any) => (
@@ -883,6 +1153,34 @@ export default function AssignmentsPage({ params }: PageProps) {
                           </Select>
                           )}
                           {updatingId === supervisorUpdateKey && <Spinner className="h-4 w-4 shrink-0" />}
+                        </div>
+                      </TableCell>
+
+                      {/* Actions */}
+                      <TableCell className="h-16 px-6 text-right w-[80px] min-w-[80px] max-w-[80px]">
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-gray-400 hover:text-gray-700 cursor-pointer"
+                            onClick={() => {
+                              setEditingDishTeam(team)
+                              setEditDishTeamOpen(true)
+                            }}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-gray-400 hover:text-red-600 cursor-pointer"
+                            onClick={() => {
+                              setDishTeamToDelete(team)
+                              setDeleteDishTeamOpen(true)
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -990,7 +1288,7 @@ export default function AssignmentsPage({ params }: PageProps) {
                                     <span className="text-gray-400 truncate">Select students...</span>
                                   )}
                                 </div>
-                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 text-gray-500" />
                               </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-[250px] p-0">
@@ -1057,7 +1355,7 @@ export default function AssignmentsPage({ params }: PageProps) {
                               <SelectValue placeholder="Select staff..." />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="0" className="cursor-pointer text-gray-500">
+                              <SelectItem value="0" className="cursor-pointer text-gray-600">
                                 None
                               </SelectItem>
                               {staffAssignments.map((staff: any) => (
@@ -1094,6 +1392,51 @@ export default function AssignmentsPage({ params }: PageProps) {
           )}
         </div>
       </main>
+
+      {/* Add Dish Team Dialog */}
+      <AddDishTeamDialog
+        open={addDishTeamOpen}
+        onOpenChange={setAddDishTeamOpen}
+        takenDays={dishTeams?.map((t: any) => t.day_of_week) || []}
+        expeditionId={expeditionId}
+        onCreated={() => mutate(`expedition_dish_days_${expeditionId}`)}
+      />
+
+      {/* Edit Dish Team Dialog */}
+      {editingDishTeam && (
+        <EditDishTeamDialog
+          open={editDishTeamOpen}
+          onOpenChange={(open) => {
+            setEditDishTeamOpen(open)
+            if (!open) setEditingDishTeam(null)
+          }}
+          team={editingDishTeam}
+          takenDays={dishTeams?.map((t: any) => t.day_of_week) || []}
+          onUpdated={() => mutate(`expedition_dish_days_${expeditionId}`)}
+        />
+      )}
+
+      {/* Delete Dish Team Confirmation */}
+      <AlertDialog open={deleteDishTeamOpen} onOpenChange={setDeleteDishTeamOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Dish Team</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete &quot;{dishTeamToDelete?.dishteam}&quot;? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="cursor-pointer" onClick={() => setDishTeamToDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteDishTeam}
+              disabled={deletingDishTeam}
+              className="bg-red-600 hover:bg-red-700 cursor-pointer"
+            >
+              {deletingDishTeam ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Add Galley Team Dialog */}
       <Dialog open={addGalleyTeamOpen} onOpenChange={setAddGalleyTeamOpen}>

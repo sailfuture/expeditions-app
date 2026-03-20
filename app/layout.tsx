@@ -6,6 +6,7 @@ import "./globals.css"
 import { Navbar } from "@/components/navbar"
 import { Providers } from "@/components/providers"
 import { Toaster } from "sonner"
+import { PointerEventsFix } from "@/components/pointer-events-fix"
 
 const fontSans = Inter({ subsets: ["latin"], variable: "--font-sans" })
 
@@ -43,6 +44,7 @@ export default function RootLayout({
           </Suspense>
           {children}
           <Toaster position="bottom-right" />
+          <PointerEventsFix />
         </Providers>
       </body>
     </html>

@@ -200,18 +200,6 @@ export function ScheduleViewClient({ date, expeditionId }: ScheduleViewClientPro
   const [mealPlanSheetOpen, setMealPlanSheetOpen] = useState(false)
   const [selectedRecipeId, setSelectedRecipeId] = useState<number | null>(null)
   
-  // Safety cleanup: reset body pointer-events when all modals/sheets are closed
-  // This prevents the page from becoming unclickable due to Radix overlay cleanup race conditions
-  useEffect(() => {
-    if (!dialogOpen && !addSheetOpen && !mealPlanSheetOpen && !showModalDeleteConfirm && !deleteAllDialogOpen && !saveTemplateDialogOpen) {
-      // Small delay to let Radix finish its cleanup
-      const timer = setTimeout(() => {
-        document.body.style.pointerEvents = ''
-      }, 100)
-      return () => clearTimeout(timer)
-    }
-  }, [dialogOpen, addSheetOpen, mealPlanSheetOpen, showModalDeleteConfirm, deleteAllDialogOpen, saveTemplateDialogOpen])
-
   // Meal Plan data fetching (must be after state declaration)
   const XANO_COOKBOOK_URL = "https://xsc3-mvx7-r86m.n7e.xano.io/api:bXFdqx8y"
   const recipeFetcher = (url: string) => fetch(url).then((res) => res.json())

@@ -16,7 +16,19 @@ async function xanoFetch<T>(endpoint: string, options?: RequestInit): Promise<T>
       console.warn(`No data found for endpoint: ${endpoint}`)
       return [] as T
     }
-    throw new Error(`Xano API error: ${res.status} ${res.statusText}`)
+    // Try to get the actual error message from Xano
+    let errorMessage = `Xano API error: ${res.status} ${res.statusText}`
+    try {
+      const errorBody = await res.json()
+      if (errorBody?.message) {
+        errorMessage = errorBody.message
+      } else if (errorBody?.payload?.message) {
+        errorMessage = errorBody.payload.message
+      }
+    } catch {
+      // Ignore JSON parse errors
+    }
+    throw new Error(errorMessage)
   }
 
   return res.json()
@@ -390,6 +402,8 @@ export async function getExpeditionDishDays(expeditionsId?: number) {
 }
 
 export async function updateExpeditionDishDay(id: number, data: {
+  dishteam?: string
+  day_of_week?: string
   wash?: number[]
   dry?: number[]
   support?: number
@@ -398,6 +412,27 @@ export async function updateExpeditionDishDay(id: number, data: {
   return xanoFetch<any>(`/expedition_dish_days/${id}`, {
     method: "PATCH",
     body: JSON.stringify(data),
+  })
+}
+
+export async function createExpeditionDishDay(data: {
+  dishteam: string
+  day_of_week: string
+  expeditions_id: number
+  wash?: number[]
+  dry?: number[]
+  support?: number
+  supervisor?: number
+}) {
+  return xanoFetch<any>("/expedition_dish_days", {
+    method: "POST",
+    body: JSON.stringify(data),
+  })
+}
+
+export async function deleteExpeditionDishDay(id: number) {
+  return xanoFetch<any>(`/expedition_dish_days/${id}`, {
+    method: "DELETE",
   })
 }
 

@@ -53,6 +53,7 @@
     "input-otp": "1.4.1",
     "jspdf": "^2.5.2",
     "jspdf-autotable": "^3.8.4",
+    "leaflet": "^1.9.4",
     "lucide-react": "^0.454.0",
     "next": "16.0.10",
     "next-auth": "^5.0.0-beta.30",
@@ -62,6 +63,7 @@
     "react-day-picker": "9.8.0",
     "react-dom": "^19.2.0",
     "react-hook-form": "^7.60.0",
+    "react-leaflet": "^5.0.0",
     "react-resizable-panels": "^2.1.7",
     "recharts": "2.15.4",
     "shadcn": "3.6.2",
@@ -74,6 +76,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.9",
+    "@types/leaflet": "^1.9.21",
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",

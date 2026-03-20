@@ -31,8 +31,16 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Spinner } from "@/components/ui/spinner"
-import { ChevronLeft, ChevronRight, Trash2, Eye, Plus } from "lucide-react"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { ChevronLeft, ChevronRight, Trash2, Eye, Plus, MapPin, Check, X } from "lucide-react"
 import { getExpeditionPassageLogs, deleteExpeditionPassageLog, getTeachers } from "@/lib/xano"
+import { useExpeditions } from "@/lib/hooks/use-expeditions"
 import { toast } from "sonner"
 import Link from "next/link"
 
@@ -43,6 +51,7 @@ export default function PassageLogsPage() {
   const [logToDelete, setLogToDelete] = useState<any>(null)
   const [deleting, setDeleting] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
+  const [expeditionFilter, setExpeditionFilter] = useState<string>("all")
   const logsPerPage = 20
 
   const { data: logs, isLoading: logsLoading } = useSWR(
@@ -51,18 +60,23 @@ export default function PassageLogsPage() {
   )
 
   const { data: staff } = useSWR("teachers", getTeachers)
+  const { data: allExpeditions } = useExpeditions()
 
-  // Sort logs by date (newest first) and paginate
+  // Sort logs by date (newest first), filter by expedition, and paginate
   const sortedLogs = useMemo(() => {
     if (!logs) return []
-    return [...logs].sort((a, b) => {
-      // Sort by id descending if no date
+    let filtered = [...logs]
+    if (expeditionFilter !== "all") {
+      const filterExpId = parseInt(expeditionFilter)
+      filtered = filtered.filter((log: any) => log.expeditions_id === filterExpId)
+    }
+    return filtered.sort((a, b) => {
       if (!a.date && !b.date) return b.id - a.id
       if (!a.date) return 1
       if (!b.date) return -1
       return new Date(b.date).getTime() - new Date(a.date).getTime()
     })
-  }, [logs])
+  }, [logs, expeditionFilter])
 
   const totalPages = Math.ceil((sortedLogs?.length || 0) / logsPerPage)
   const paginatedLogs = sortedLogs.slice(
@@ -120,11 +134,11 @@ export default function PassageLogsPage() {
 
   const getStatusBadge = (status: string) => {
     if (!status) return <span className="text-gray-400">—</span>
-    if (status === "completed") {
-      return <span>✅</span>
+    if (status === "completed" || status === "secure" || status === "yes") {
+      return <Check className="h-5 w-5 text-green-500" />
     }
-    if (status === "not_completed") {
-      return <span>❌</span>
+    if (status === "not_completed" || status === "not_secure" || status === "no") {
+      return <X className="h-5 w-5 text-red-500" />
     }
     return <span className="text-sm text-muted-foreground">{status}</span>
   }
@@ -138,15 +152,36 @@ export default function PassageLogsPage() {
             <div>
               <h1 className="text-3xl font-bold">Passage Logs</h1>
               <p className="text-muted-foreground mt-2">
-                {logs?.length || 0} total logs recorded
+                {sortedLogs.length} {expeditionFilter !== "all" ? "filtered" : "total"} logs recorded
               </p>
             </div>
-            <Link href="/public/passage-logs">
-              <Button className="cursor-pointer">
-                <Plus className="h-4 w-4 mr-2" />
-                New Log
-              </Button>
-            </Link>
+            <div className="flex items-center gap-3">
+              <Select value={expeditionFilter} onValueChange={(value) => { setExpeditionFilter(value); setCurrentPage(1) }}>
+                <SelectTrigger className="w-[220px] cursor-pointer">
+                  <SelectValue placeholder="Filter by expedition..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all" className="cursor-pointer">All Expeditions</SelectItem>
+                  {allExpeditions?.map((exp: any) => (
+                    <SelectItem key={exp.id} value={exp.id.toString()} className="cursor-pointer">
+                      {exp.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Link href="/passage-logs/map">
+                <Button variant="outline" className="cursor-pointer">
+                  <MapPin className="h-4 w-4 mr-2" />
+                  Map View
+                </Button>
+              </Link>
+              <Link href="/public/passage-logs">
+                <Button className="cursor-pointer">
+                  <Plus className="h-4 w-4 mr-2" />
+                  New Log
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
       </div>

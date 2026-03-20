@@ -17,16 +17,27 @@ async function xanoFetch<T>(endpoint: string, options?: RequestInit): Promise<T>
       return [] as T
     }
     // Try to get the actual error message from Xano
-    let errorMessage = `Xano API error: ${res.status} ${res.statusText}`
+    let errorMessage = `Xano API error: ${res.status}`
     try {
-      const errorBody = await res.json()
-      if (errorBody?.message) {
-        errorMessage = errorBody.message
-      } else if (errorBody?.payload?.message) {
-        errorMessage = errorBody.payload.message
+      const text = await res.text()
+      console.error("Xano error response body:", text)
+      try {
+        const errorBody = JSON.parse(text)
+        if (errorBody?.message) {
+          errorMessage = errorBody.message
+        } else if (errorBody?.payload?.message) {
+          errorMessage = errorBody.payload.message
+        } else if (typeof errorBody === "string") {
+          errorMessage = errorBody
+        }
+      } catch {
+        // Not JSON — use raw text if it's short enough
+        if (text && text.length < 500) {
+          errorMessage = text
+        }
       }
     } catch {
-      // Ignore JSON parse errors
+      // Couldn't read body at all
     }
     throw new Error(errorMessage)
   }

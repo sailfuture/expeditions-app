@@ -85,11 +85,6 @@ export default function IntakeFormPage() {
         takes_evening_medication: formData.takes_evening_medication === true,
         takes_additional_medications: formData.takes_additional_medications === true,
         expeditions_id: formData.expeditions_id || 0,
-        // Send empty defaults for removed passport fields (Xano may still expect them)
-        passport_number: 0,
-        passport_issued_date: "",
-        passport_expiration_date: "",
-        passport_photo: "",
       }
       
       console.log("Submitting data:", submitData)

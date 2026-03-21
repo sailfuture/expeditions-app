@@ -296,43 +296,8 @@ export function Navbar() {
                 <div className="h-4 w-px bg-border shrink-0" />
               </div>
             )}
-            
-            {/* User Menu */}
-            {hasMounted && (
-              <DropdownMenu>
-                <DropdownMenuTrigger className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity min-w-0">
-                  <span className="hidden sm:block text-sm font-medium truncate max-w-[150px]">{currentUser?.name || "User"}</span>
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src={currentUser?.photo_url || "/diverse-user-avatars.png"} />
-                    <AvatarFallback>
-                      {currentUser?.name
-                        ?.split(" ")
-                        .map((n) => n[0])
-                        .join("") || "U"}
-                    </AvatarFallback>
-                  </Avatar>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
-                  <div className="px-2 py-1.5">
-                    <p className="text-sm font-medium">{currentUser?.name}</p>
-                    <p className="text-xs text-muted-foreground">{currentUser?.email}</p>
-                    {currentUser?.role && (
-                      <p className="text-xs text-muted-foreground mt-0.5">Role: {currentUser.role}</p>
-                    )}
-                  </div>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem 
-                    className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"
-                    onClick={() => signOut({ callbackUrl: "/login" })}
-                  >
-                    <LogOut className="h-4 w-4 mr-2" />
-                    Sign Out
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
 
-            {/* Mobile Menu Button */}
+            {/* Mobile Menu Button - before profile image */}
             {hasMounted && currentUser?.role === "Admin" && (
               <Sheet>
                 <SheetTrigger asChild>
@@ -470,6 +435,41 @@ export function Navbar() {
                   </nav>
                 </SheetContent>
               </Sheet>
+            )}
+
+            {/* User Menu */}
+            {hasMounted && (
+              <DropdownMenu>
+                <DropdownMenuTrigger className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity min-w-0">
+                  <span className="hidden sm:block text-sm font-medium truncate max-w-[150px]">{currentUser?.name || "User"}</span>
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={currentUser?.photo_url || "/diverse-user-avatars.png"} />
+                    <AvatarFallback>
+                      {currentUser?.name
+                        ?.split(" ")
+                        .map((n) => n[0])
+                        .join("") || "U"}
+                    </AvatarFallback>
+                  </Avatar>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <div className="px-2 py-1.5">
+                    <p className="text-sm font-medium">{currentUser?.name}</p>
+                    <p className="text-xs text-muted-foreground">{currentUser?.email}</p>
+                    {currentUser?.role && (
+                      <p className="text-xs text-muted-foreground mt-0.5">Role: {currentUser.role}</p>
+                    )}
+                  </div>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"
+                    onClick={() => signOut({ callbackUrl: "/login" })}
+                  >
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Sign Out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
           </div>
         </div>

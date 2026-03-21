@@ -401,9 +401,10 @@ export default function PassageLogsPage() {
   }, [])
 
   useEffect(() => {
+    if (!activeExpedition?.id) return
     const fetchLocations = async () => {
       try {
-        const response = await fetch("https://xsc3-mvx7-r86m.n7e.xano.io/api:bXFdqx8y/all_expedition_locations")
+        const response = await fetch(`https://xsc3-mvx7-r86m.n7e.xano.io/api:bXFdqx8y/expedition_locations?expeditions_id=${activeExpedition.id}`)
         const data = await response.json()
         if (Array.isArray(data)) {
           setLocations(data)
@@ -413,7 +414,7 @@ export default function PassageLogsPage() {
       }
     }
     fetchLocations()
-  }, [])
+  }, [activeExpedition?.id])
 
   useEffect(() => {
     const fetchPeople = async () => {

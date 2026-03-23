@@ -875,6 +875,69 @@ export async function deleteExpeditionsInventoryItem(id: number) {
   })
 }
 
+// ============ Expedition Uniform Inventory ============
+export async function getExpeditionUniformInventory() {
+  return xanoFetch<any[]>("/expedition_uniform_inventory")
+}
+
+export async function createExpeditionUniformInventoryItem(data: {
+  name: string
+  type: string
+  size: string
+  color: string
+  quantity: number
+}) {
+  return xanoFetch<any>("/expedition_uniform_inventory", {
+    method: "POST",
+    body: JSON.stringify(data),
+  })
+}
+
+export async function updateExpeditionUniformInventoryItem(id: number, data: Record<string, any>) {
+  return xanoFetch<any>(`/expedition_uniform_inventory/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  })
+}
+
+export async function deleteExpeditionUniformInventoryItem(id: number) {
+  return xanoFetch<any>(`/expedition_uniform_inventory/${id}`, {
+    method: "DELETE",
+  })
+}
+
+// ============ Expedition Linen Inventory ============
+export async function getExpeditionLinenInventory() {
+  return xanoFetch<any[]>("/expedition_linen_inventory")
+}
+
+export async function createExpeditionLinenInventoryItem(data: {
+  name: string
+  type: string
+  size: string
+  color: string
+  quantity: number
+  brand: string
+}) {
+  return xanoFetch<any>("/expedition_linen_inventory", {
+    method: "POST",
+    body: JSON.stringify(data),
+  })
+}
+
+export async function updateExpeditionLinenInventoryItem(id: number, data: Record<string, any>) {
+  return xanoFetch<any>(`/expedition_linen_inventory/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  })
+}
+
+export async function deleteExpeditionLinenInventoryItem(id: number) {
+  return xanoFetch<any>(`/expedition_linen_inventory/${id}`, {
+    method: "DELETE",
+  })
+}
+
 export async function createExpeditionTransaction(data: {
   date: string | null
   transaction: string

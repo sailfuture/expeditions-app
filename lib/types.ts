@@ -5,6 +5,7 @@ export interface ExpeditionStaff {
   isActive: boolean
   expeditions_id: number[]
   photo_url?: string
+  role?: "Admin" | "Staff" | "Instructor"
 }
 
 export interface Expedition {
@@ -14,6 +15,7 @@ export interface Expedition {
   endDate?: string
   start_date?: string
   end_date?: string
+  number_participants?: number
 }
 
 export interface ExpeditionLocation {
@@ -43,6 +45,8 @@ export interface ExpeditionScheduleItemType {
   id: number
   created_at: number
   name: string
+  color?: string
+  isMeal?: boolean
 }
 
 export interface ExpeditionScheduleItem {
@@ -64,10 +68,12 @@ export interface ExpeditionScheduleItem {
 
 export interface Student {
   id: number
-  name: string
+  firstName: string
+  lastName: string
   expeditions_id: number[]
   isArchived: boolean
   photo_url?: string
+  profileImage?: string
 }
 
 export interface ExpeditionBonus {

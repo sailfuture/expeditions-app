@@ -13,14 +13,24 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Spinner } from "@/components/ui/spinner"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Check, ChevronDown, X } from "lucide-react"
-import { createExpeditionScheduleItem } from "@/lib/xano"
+import { Check, ChevronDown, X, Trash2, ExternalLink, Search } from "lucide-react"
+import { createExpeditionScheduleItem, updateExpeditionScheduleItem, deleteExpeditionScheduleItem, getExpeditionCookbookByType } from "@/lib/xano"
 import { useExpeditionScheduleItemTypes } from "@/lib/hooks/use-expeditions"
-import { mutate } from "swr"
+import useSWR, { mutate } from "swr"
 import { toast } from "sonner"
-import { cn } from "@/lib/utils"
+import { cn, getPhotoUrl } from "@/lib/utils"
 
 interface AddScheduleItemSheetProps {
   open: boolean
@@ -28,6 +38,9 @@ interface AddScheduleItemSheetProps {
   scheduleId: number
   date: string
   staff?: any[]
+  students?: any[] // Students for this expedition
+  editItem?: any // If provided, sheet is in edit mode
+  expeditionsId?: number // For cache invalidation
 }
 
 // Custom dropdown component
@@ -113,7 +126,303 @@ function CustomSelect({
   )
 }
 
-// Multi-select for staff participants with avatars (grayscale)
+// Staff Combobox - searchable dropdown for selecting a staff member
+function StaffCombobox({
+  value,
+  onChange,
+  staff,
+}: {
+  value: number
+  onChange: (value: number) => void
+  staff: any[]
+}) {
+  const [isOpen, setIsOpen] = useState(false)
+  const [search, setSearch] = useState("")
+  const dropdownRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false)
+        setSearch("")
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
+
+  useEffect(() => {
+    if (isOpen && inputRef.current) {
+      inputRef.current.focus()
+    }
+  }, [isOpen])
+
+  const getInitials = (name: string) => {
+    if (!name) return "?"
+    return name.split(" ").map((n) => n[0]).filter(Boolean).join("").toUpperCase().slice(0, 2)
+  }
+
+  const selectedStaff = staff.find(s => s.id === value) || null
+
+  const filteredStaff = staff.filter(s =>
+    s.name.toLowerCase().includes(search.toLowerCase())
+  )
+
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className={cn(
+          "w-full rounded-lg border border-gray-200 bg-white px-4 h-14 flex items-center justify-between gap-2 text-left cursor-pointer",
+          "hover:bg-gray-50 transition-colors",
+          isOpen && "ring-2 ring-gray-400 ring-offset-2"
+        )}
+      >
+        <div className="flex-1 min-w-0">
+          {selectedStaff ? (
+            <div className="flex items-center gap-3">
+              <Avatar className="h-8 w-8">
+                {selectedStaff.photo_url && <AvatarImage src={selectedStaff.photo_url} alt={selectedStaff.name} />}
+                <AvatarFallback className="text-xs bg-gray-100 text-gray-800">{getInitials(selectedStaff.name)}</AvatarFallback>
+              </Avatar>
+              <span className="text-base">{selectedStaff.name}</span>
+            </div>
+          ) : (
+            <span className="text-gray-500 text-base">Select staff member</span>
+          )}
+        </div>
+        <ChevronDown className={cn("h-4 w-4 text-gray-400 transition-transform shrink-0", isOpen && "rotate-180")} />
+      </button>
+
+      {isOpen && (
+        <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
+          <div className="p-2 border-b border-gray-100">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                ref={inputRef}
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search staff..."
+                className="w-full pl-8 pr-3 py-2 text-sm border border-gray-200 rounded-md outline-none focus:ring-2 focus:ring-gray-400"
+              />
+            </div>
+          </div>
+          <div className="max-h-64 overflow-y-auto py-1">
+            <button
+              type="button"
+              onClick={() => {
+                onChange(0)
+                setIsOpen(false)
+                setSearch("")
+              }}
+              className={cn(
+                "w-full px-4 py-2.5 flex items-center gap-3 hover:bg-gray-100 transition-colors text-left cursor-pointer",
+                value === 0 && "bg-gray-50"
+              )}
+            >
+              <span className="text-gray-500 text-sm">None</span>
+            </button>
+            {filteredStaff.map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                onClick={() => {
+                  onChange(s.id)
+                  setIsOpen(false)
+                  setSearch("")
+                }}
+                className={cn(
+                  "w-full px-4 py-2.5 flex items-center gap-3 hover:bg-gray-100 transition-colors text-left cursor-pointer",
+                  s.id === value && "bg-gray-50"
+                )}
+              >
+                <Avatar className="h-8 w-8">
+                  {s.photo_url && <AvatarImage src={s.photo_url} alt={s.name} />}
+                  <AvatarFallback className="text-xs bg-gray-100 text-gray-800">{getInitials(s.name)}</AvatarFallback>
+                </Avatar>
+                <span className="text-sm font-medium">{s.name}</span>
+              </button>
+            ))}
+            {filteredStaff.length === 0 && (
+              <div className="px-4 py-3 text-sm text-gray-500 text-center">No staff found</div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Color mapping for activity types
+const ACTIVITY_TYPE_COLORS: Record<string, string> = {
+  orange: "#f97316",
+  blue: "#3b82f6",
+  green: "#22c55e",
+  purple: "#a855f7",
+  red: "#ef4444",
+  yellow: "#eab308",
+  gray: "#9ca3af",
+  pink: "#ec4899",
+  indigo: "#6366f1",
+  teal: "#14b8a6",
+  cyan: "#06b6d4",
+}
+
+// Activity Type selector using CustomSelect with search and grouped items
+function ActivityTypeSelector({
+  value,
+  onChange,
+  options,
+}: {
+  value: number
+  onChange: (value: number, option?: any) => void
+  options: { value: number; label: string; data?: any }[]
+}) {
+  const [isOpen, setIsOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("")
+  const dropdownRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false)
+        setSearchQuery("")
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
+
+  const selectedOption = options.find(o => o.value === value) || null
+
+  // Group and filter options
+  const filteredOptions = options.filter(o =>
+    o.value !== 0 && o.label.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+  const mealOptions = filteredOptions.filter(o => o.data?.isMeal)
+  const activityOptions = filteredOptions.filter(o => !o.data?.isMeal)
+
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <button
+        type="button"
+        onClick={() => {
+          setIsOpen(!isOpen)
+          if (!isOpen) setTimeout(() => inputRef.current?.focus(), 50)
+        }}
+        className={cn(
+          "w-full h-12 rounded-lg border border-gray-200 bg-white px-4 flex items-center justify-between gap-2 text-left cursor-pointer",
+          "hover:bg-gray-50 transition-colors",
+          isOpen && "ring-2 ring-gray-400 ring-offset-2"
+        )}
+      >
+        <div className="flex-1 min-w-0 flex items-center gap-2">
+          {selectedOption?.data?.color && (
+            <div
+              className="w-3 h-3 rounded-full shrink-0"
+              style={{ backgroundColor: ACTIVITY_TYPE_COLORS[selectedOption.data.color] || selectedOption.data.color }}
+            />
+          )}
+          <span className={cn("truncate", selectedOption ? "text-gray-900" : "text-gray-500")}>
+            {selectedOption?.label || "Select activity type..."}
+          </span>
+        </div>
+        <ChevronDown className={cn("h-4 w-4 text-gray-400 transition-transform shrink-0", isOpen && "rotate-180")} />
+      </button>
+
+      {isOpen && (
+        <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
+          <div className="p-2 border-b border-gray-100">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                ref={inputRef}
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search types..."
+                className="w-full h-8 pl-8 pr-3 text-sm rounded-md border border-gray-200 outline-none focus:ring-2 focus:ring-gray-300"
+              />
+            </div>
+          </div>
+          <div className="max-h-64 overflow-y-auto py-1">
+            {filteredOptions.length === 0 && (
+              <div className="px-4 py-3 text-sm text-gray-500 text-center">No types found</div>
+            )}
+            {mealOptions.length > 0 && (
+              <>
+                <div className="px-3 py-1.5 text-xs font-medium text-gray-500 uppercase tracking-wider">Meals</div>
+                {mealOptions.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => {
+                      onChange(option.value, option)
+                      setIsOpen(false)
+                      setSearchQuery("")
+                    }}
+                    className={cn(
+                      "w-full px-4 py-2.5 flex items-center gap-3 hover:bg-gray-100 transition-colors text-left cursor-pointer",
+                      option.value === value && "bg-gray-50"
+                    )}
+                  >
+                    {option.data?.color && (
+                      <div
+                        className="w-3 h-3 rounded-full shrink-0"
+                        style={{ backgroundColor: ACTIVITY_TYPE_COLORS[option.data.color] || option.data.color }}
+                      />
+                    )}
+                    <span className="text-sm truncate">{option.label}</span>
+                    {option.value === value && <Check className="h-4 w-4 text-gray-600 ml-auto shrink-0" />}
+                  </button>
+                ))}
+              </>
+            )}
+            {mealOptions.length > 0 && activityOptions.length > 0 && (
+              <div className="my-1 h-px bg-gray-200 mx-2" />
+            )}
+            {activityOptions.length > 0 && (
+              <>
+                <div className="px-3 py-1.5 text-xs font-medium text-gray-500 uppercase tracking-wider">Activities</div>
+                {activityOptions.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => {
+                      onChange(option.value, option)
+                      setIsOpen(false)
+                      setSearchQuery("")
+                    }}
+                    className={cn(
+                      "w-full px-4 py-2.5 flex items-center gap-3 hover:bg-gray-100 transition-colors text-left cursor-pointer",
+                      option.value === value && "bg-gray-50"
+                    )}
+                  >
+                    {option.data?.color && (
+                      <div
+                        className="w-3 h-3 rounded-full shrink-0"
+                        style={{ backgroundColor: ACTIVITY_TYPE_COLORS[option.data.color] || option.data.color }}
+                      />
+                    )}
+                    <span className="text-sm truncate">{option.label}</span>
+                    {option.value === value && <Check className="h-4 w-4 text-gray-600 ml-auto shrink-0" />}
+                  </button>
+                ))}
+              </>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Multi-select for staff participants with avatars and search
 function StaffParticipantSelector({
   staff,
   selectedIds,
@@ -124,7 +433,9 @@ function StaffParticipantSelector({
   onChange: (ids: number[]) => void
 }) {
   const [isOpen, setIsOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("")
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -136,7 +447,19 @@ function StaffParticipantSelector({
     return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [])
 
+  useEffect(() => {
+    if (isOpen && inputRef.current) {
+      inputRef.current.focus()
+    }
+  }, [isOpen])
+
   const selectedStaff = staff?.filter((s) => selectedIds.includes(s.id)) || []
+
+  // Filter staff based on search
+  const filteredStaff = staff?.filter((member) => {
+    if (!searchQuery) return true
+    return member.name.toLowerCase().includes(searchQuery.toLowerCase())
+  }) || []
 
   const toggleParticipant = (id: number) => {
     if (selectedIds.includes(id)) {
@@ -202,11 +525,27 @@ function StaffParticipantSelector({
 
       {isOpen && (
         <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
-          <div className="max-h-64 overflow-y-auto py-2">
-            {staff?.length === 0 && (
-              <div className="px-4 py-3 text-gray-500 text-sm">No staff members available</div>
+          {/* Search input */}
+          <div className="p-2 border-b border-gray-100">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                ref={inputRef}
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search staff..."
+                className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-400"
+              />
+            </div>
+          </div>
+          <div className="max-h-64 overflow-y-auto py-1">
+            {filteredStaff.length === 0 && (
+              <div className="px-4 py-3 text-gray-500 text-sm">
+                {searchQuery ? "No staff match your search" : "No staff members available"}
+              </div>
             )}
-            {staff?.map((member) => {
+            {filteredStaff.map((member) => {
               const isSelected = selectedIds.includes(member.id)
               return (
                 <button
@@ -238,19 +577,336 @@ function StaffParticipantSelector({
   )
 }
 
+// Multi-select for student participants with avatars and search
+function StudentParticipantSelector({
+  students,
+  selectedIds,
+  onChange,
+}: {
+  students: any[]
+  selectedIds: number[]
+  onChange: (ids: number[]) => void
+}) {
+  const [isOpen, setIsOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("")
+  const dropdownRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
+
+  useEffect(() => {
+    if (isOpen && inputRef.current) {
+      inputRef.current.focus()
+    }
+  }, [isOpen])
+
+  const selectedStudents = students?.filter((s) => selectedIds.includes(s.id)) || []
+
+  const getInitials = (firstName: string, lastName: string) => {
+    return `${firstName?.[0] || ""}${lastName?.[0] || ""}`.toUpperCase() || "?"
+  }
+
+  const getFullName = (student: any) => {
+    return `${student.firstName || ""} ${student.lastName || ""}`.trim() || "Unknown"
+  }
+
+  // Filter students based on search
+  const filteredStudents = students?.filter((student) => {
+    if (!searchQuery) return true
+    const fullName = getFullName(student).toLowerCase()
+    return fullName.includes(searchQuery.toLowerCase())
+  }) || []
+
+  const toggleParticipant = (id: number) => {
+    if (selectedIds.includes(id)) {
+      onChange(selectedIds.filter((sid) => sid !== id))
+    } else {
+      onChange([...selectedIds, id])
+    }
+  }
+
+  return (
+    <div className="space-y-2 relative" ref={dropdownRef}>
+      <Label className="text-sm font-medium">Participants (Students)</Label>
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className={cn(
+          "w-full min-h-12 rounded-lg border border-gray-200 bg-white px-4 py-2 flex items-center justify-between gap-2 text-left cursor-pointer",
+          "hover:bg-gray-50 transition-colors",
+          isOpen && "ring-2 ring-gray-400 ring-offset-2"
+        )}
+      >
+        {selectedStudents.length === 0 ? (
+          <span className="text-gray-500 text-base">Select student participants...</span>
+        ) : (
+          <div className="flex flex-wrap gap-1.5">
+            {selectedStudents.slice(0, 3).map((student) => (
+              <span
+                key={student.id}
+                className="inline-flex items-center gap-1.5 bg-gray-100 text-gray-800 px-2.5 py-1 rounded-md text-sm font-medium"
+              >
+                <Avatar className="h-5 w-5">
+                  {student.profileImage && <AvatarImage src={student.profileImage} alt={getFullName(student)} />}
+                  <AvatarFallback className="text-[10px] bg-gray-200 text-gray-700">
+                    {getInitials(student.firstName, student.lastName)}
+                  </AvatarFallback>
+                </Avatar>
+                {student.firstName}
+              </span>
+            ))}
+            {selectedStudents.length > 3 && (
+              <span className="inline-flex items-center bg-gray-200 text-gray-700 px-2.5 py-1 rounded-md text-sm font-medium">
+                +{selectedStudents.length - 3} more
+              </span>
+            )}
+          </div>
+        )}
+        <div className="flex items-center gap-2 shrink-0">
+          {selectedStudents.length > 0 && (
+            <span className="inline-flex items-center justify-center h-6 min-w-6 px-1.5 rounded-md bg-gray-800 text-white text-xs font-semibold">
+              {selectedStudents.length}
+            </span>
+          )}
+          <ChevronDown className={cn("h-4 w-4 text-gray-400 transition-transform", isOpen && "rotate-180")} />
+        </div>
+      </button>
+
+      {isOpen && (
+        <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
+          {/* Search input */}
+          <div className="p-2 border-b border-gray-100">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                ref={inputRef}
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search students..."
+                className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-400"
+              />
+            </div>
+          </div>
+          <div className="max-h-64 overflow-y-auto py-1">
+            {filteredStudents.length === 0 && (
+              <div className="px-4 py-3 text-gray-500 text-sm">
+                {searchQuery ? "No students match your search" : "No students available"}
+              </div>
+            )}
+            {filteredStudents.map((student) => {
+              const isSelected = selectedIds.includes(student.id)
+              return (
+                <button
+                  key={student.id}
+                  type="button"
+                  onClick={() => toggleParticipant(student.id)}
+                  className="w-full px-4 py-2.5 flex items-center gap-3 hover:bg-gray-100 transition-colors text-left cursor-pointer"
+                >
+                  <span
+                    className={cn(
+                      "h-5 w-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors",
+                      isSelected ? "border-gray-800 bg-gray-800" : "border-gray-300"
+                    )}
+                  >
+                    {isSelected && <Check className="h-3 w-3 text-white" />}
+                  </span>
+                  <Avatar className="h-8 w-8">
+                    {student.profileImage && <AvatarImage src={student.profileImage} alt={getFullName(student)} />}
+                    <AvatarFallback className="text-xs bg-gray-100 text-gray-800">
+                      {getInitials(student.firstName, student.lastName)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="text-sm font-medium">{getFullName(student)}</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Cookbook/Recipe selector with search
+function CookbookSelector({
+  selectedId,
+  onChange,
+  mealTypeName,
+}: {
+  selectedId: number
+  onChange: (id: number) => void
+  mealTypeName: string | undefined
+}) {
+  const [isOpen, setIsOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("")
+  const dropdownRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  // Fetch cookbook recipes by type
+  const { data: recipes = [], isLoading } = useSWR(
+    mealTypeName ? `cookbook_by_type_${mealTypeName}` : null,
+    () => mealTypeName ? getExpeditionCookbookByType(mealTypeName) : Promise.resolve([]),
+    { revalidateOnFocus: false }
+  )
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
+
+  // Focus input when dropdown opens
+  useEffect(() => {
+    if (isOpen && inputRef.current) {
+      inputRef.current.focus()
+    }
+  }, [isOpen])
+
+  // Filter recipes based on search
+  const filteredRecipes = recipes.filter((recipe: any) => {
+    if (!searchQuery) return true
+    const name = recipe.recipe_name || ""
+    return name.toLowerCase().includes(searchQuery.toLowerCase())
+  })
+
+  // Find selected recipe
+  const selectedRecipe = recipes.find((r: any) => r.id === selectedId)
+
+  return (
+    <div className="space-y-2 relative" ref={dropdownRef}>
+      <Label className="text-sm font-medium">Meal Plan</Label>
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className={cn(
+          "w-full h-12 rounded-lg border border-gray-200 bg-white px-4 flex items-center justify-between gap-2 text-left cursor-pointer",
+          "hover:bg-gray-50 transition-colors",
+          isOpen && "ring-2 ring-gray-400 ring-offset-2"
+        )}
+      >
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          {getPhotoUrl(selectedRecipe?.recipe_photo) && (
+            <Avatar className="h-7 w-7 shrink-0">
+              <AvatarImage src={getPhotoUrl(selectedRecipe.recipe_photo)!} alt={selectedRecipe.recipe_name} />
+              <AvatarFallback className="text-[10px] bg-orange-100 text-orange-600">🍽</AvatarFallback>
+            </Avatar>
+          )}
+          <span className={selectedRecipe ? "text-gray-900 text-base truncate" : "text-gray-500 text-base"}>
+            {selectedRecipe ? selectedRecipe.recipe_name : "Select a meal plan..."}
+          </span>
+        </div>
+        <ChevronDown className={cn("h-4 w-4 text-gray-400 transition-transform shrink-0", isOpen && "rotate-180")} />
+      </button>
+
+      {isOpen && (
+        <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
+          {/* Search input */}
+          <div className="p-2 border-b border-gray-100">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                ref={inputRef}
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search meal plans..."
+                className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-400"
+              />
+            </div>
+          </div>
+
+          <div className="max-h-64 overflow-y-auto py-1">
+            {/* None option */}
+            <button
+              type="button"
+              onClick={() => {
+                onChange(0)
+                setIsOpen(false)
+                setSearchQuery("")
+              }}
+              className={cn(
+                "w-full px-4 py-2.5 flex items-center gap-3 hover:bg-gray-100 transition-colors text-left cursor-pointer",
+                selectedId === 0 && "bg-gray-50"
+              )}
+            >
+              <span className="text-sm text-gray-500">None</span>
+            </button>
+
+            {isLoading ? (
+              <div className="px-4 py-3 text-gray-500 text-sm">Loading meal plans...</div>
+            ) : filteredRecipes.length === 0 ? (
+              <div className="px-4 py-3 text-gray-500 text-sm">
+                {searchQuery ? "No meal plans match your search" : "No meal plans available"}
+              </div>
+            ) : (
+              filteredRecipes.map((recipe: any) => (
+                <button
+                  key={recipe.id}
+                  type="button"
+                  onClick={() => {
+                    onChange(recipe.id)
+                    setIsOpen(false)
+                    setSearchQuery("")
+                  }}
+                  className={cn(
+                    "w-full px-4 py-2.5 flex items-center gap-3 hover:bg-gray-100 transition-colors text-left cursor-pointer",
+                    recipe.id === selectedId && "bg-gray-50"
+                  )}
+                >
+                  <Avatar className="h-8 w-8 shrink-0">
+                    {getPhotoUrl(recipe.recipe_photo) ? (
+                      <AvatarImage src={getPhotoUrl(recipe.recipe_photo)!} alt={recipe.recipe_name} />
+                    ) : null}
+                    <AvatarFallback className="text-xs bg-orange-100 text-orange-600">🍽</AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm font-medium block truncate">{recipe.recipe_name}</span>
+                  </div>
+                  {recipe.id === selectedId && <Check className="h-4 w-4 text-gray-700 shrink-0" />}
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // Helper to convert military time to Date
 function militaryToDate(military: number): Date {
   const date = new Date()
-  const hours = Math.floor(military / 100)
+  let hours = Math.floor(military / 100)
   const minutes = military % 100
+  // Handle 2400 (midnight end of day) as hour 0
+  if (hours === 24) hours = 0
   date.setHours(hours, minutes, 0, 0)
   return date
 }
 
 // Helper to convert Date to military time
-function dateToMilitary(date: Date | undefined): number {
+function dateToMilitary(date: Date | undefined, isEndTime: boolean = false): number {
   if (!date) return 800
-  return date.getHours() * 100 + date.getMinutes()
+  const hours = date.getHours()
+  const minutes = date.getMinutes()
+  // For end time, 12:00 AM (hour 0) should be 2400 (end of day)
+  if (isEndTime && hours === 0 && minutes === 0) {
+    return 2400
+  }
+  return hours * 100 + minutes
 }
 
 export function AddScheduleItemSheet({ 
@@ -259,33 +915,104 @@ export function AddScheduleItemSheet({
   scheduleId, 
   date,
   staff = [],
+  students = [],
+  expeditionsId,
+  editItem,
 }: AddScheduleItemSheetProps) {
   // Fetch item types from API
   const { data: itemTypes = [] } = useExpeditionScheduleItemTypes()
   
-  const [formData, setFormData] = useState({
-    name: "",
-    expedition_schedule_item_types_id: 0,
-    time_in: 800, // 8:00 AM in military
-    time_out: 900, // 9:00 AM in military
-    led_by: 0,
-    participants: [] as number[],
-    notes: "",
-    address: "",
-    things_to_bring: "",
-  })
+  const isEditMode = !!editItem
+  
+  // Check if an activity type is a meal using the isMeal boolean from the type record
+  const isMealType = (typeId: number) => {
+    if (!typeId) return false
+    const type = itemTypes.find((t: any) => t.id === typeId)
+    return !!type?.isMeal
+  }
+
+  const getInitialFormData = () => {
+    // Convert participants (staff) - they come as {name, isActive} objects, need to find IDs
+    let participantIds: number[] = []
+    if (editItem?.participants && Array.isArray(editItem.participants)) {
+      participantIds = editItem.participants
+        .map((p: any) => {
+          // If it's already a number, use it
+          if (typeof p === 'number') return p
+          // If it has an id, use it
+          if (p?.id) return p.id
+          // If it has a name, look up the staff member by name
+          if (p?.name && staff) {
+            const foundStaff = staff.find((s: any) => s.name === p.name)
+            return foundStaff?.id
+          }
+          return null
+        })
+        .filter((id: any) => id != null) as number[]
+    }
+
+    // Convert students_id - they come as {firstName, lastName, profileImage} objects, need to find IDs
+    let studentIds: number[] = []
+    if (editItem?.students_id && Array.isArray(editItem.students_id)) {
+      studentIds = editItem.students_id
+        .map((s: any) => {
+          // If it's already a number, use it
+          if (typeof s === 'number') return s
+          // If it has an id, use it
+          if (s?.id) return s.id
+          // If it has firstName/lastName, look up the student by name
+          if (s?.firstName && s?.lastName && students) {
+            const foundStudent = students.find((st: any) => 
+              st.firstName === s.firstName && st.lastName === s.lastName
+            )
+            return foundStudent?.id
+          }
+          return null
+        })
+        .filter((id: any) => id != null) as number[]
+    }
+
+    return {
+      name: editItem?.name || "",
+      expedition_schedule_item_types_id: editItem?.expedition_schedule_item_types_id || 0,
+      time_in: editItem?.time_in || 800,
+      time_out: editItem?.time_out || 900,
+      led_by: editItem?.led_by || 0,
+      participants: participantIds,
+      students_id: studentIds,
+      notes: editItem?.notes || "",
+      address: editItem?.address || "",
+      things_to_bring: editItem?.things_to_bring || "",
+      resources: editItem?.resources || "",
+      expedition_cookbook_id: editItem?.expedition_cookbook_id || 0,
+    }
+  }
+  
+  const [formData, setFormData] = useState(getInitialFormData())
   const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   
   // Time state as Date objects for the picker
-  const [timeInDate, setTimeInDate] = useState<Date | undefined>(militaryToDate(800))
-  const [timeOutDate, setTimeOutDate] = useState<Date | undefined>(militaryToDate(900))
+  const [timeInDate, setTimeInDate] = useState<Date | undefined>(militaryToDate(editItem?.time_in || 800))
+  const [timeOutDate, setTimeOutDate] = useState<Date | undefined>(militaryToDate(editItem?.time_out || 900))
+
+  // Reset form when editItem changes or sheet opens
+  useEffect(() => {
+    if (open) {
+      const initial = getInitialFormData()
+      setFormData(initial)
+      setTimeInDate(militaryToDate(initial.time_in))
+      setTimeOutDate(militaryToDate(initial.time_out))
+    }
+  }, [open, editItem])
 
   // Sync time picker changes to form data
   useEffect(() => {
     setFormData(prev => ({
       ...prev,
-      time_in: dateToMilitary(timeInDate),
-      time_out: dateToMilitary(timeOutDate),
+      time_in: dateToMilitary(timeInDate, false),
+      time_out: dateToMilitary(timeOutDate, true), // isEndTime = true
     }))
   }, [timeInDate, timeOutDate])
 
@@ -309,7 +1036,7 @@ export function AddScheduleItemSheet({
 
     setSaving(true)
     try {
-      await createExpeditionScheduleItem({
+      const payload = {
         name: formData.name,
         isTemplate: false,
         expedition_schedule_item_types_id: formData.expedition_schedule_item_types_id,
@@ -317,14 +1044,24 @@ export function AddScheduleItemSheet({
         time_in: formData.time_in,
         time_out: formData.time_out,
         participants: formData.participants,
+        students_id: formData.students_id,
         led_by: formData.led_by,
         notes: formData.notes,
         address: formData.address,
         things_to_bring: formData.things_to_bring,
-      })
+        resources: formData.resources,
+        expedition_cookbook_id: isMealType(formData.expedition_schedule_item_types_id) ? formData.expedition_cookbook_id : 0,
+      }
+
+      if (isEditMode && editItem) {
+        await updateExpeditionScheduleItem(editItem.id, payload)
+        toast.success("Activity updated successfully")
+      } else {
+        await createExpeditionScheduleItem(payload)
+        toast.success("Activity added successfully")
+      }
       
-      await mutate(`expedition_schedule_items_date_${date}`)
-      toast.success("Activity added successfully")
+      await mutate(`expedition_schedule_items_date_${date}_${expeditionsId || 'all'}`)
       onOpenChange(false)
       
       // Reset form
@@ -335,25 +1072,47 @@ export function AddScheduleItemSheet({
         time_out: 900,
         led_by: 0,
         participants: [],
+        students_id: [],
         notes: "",
         address: "",
         things_to_bring: "",
+        resources: "",
+        expedition_cookbook_id: 0,
       })
       setTimeInDate(militaryToDate(800))
       setTimeOutDate(militaryToDate(900))
     } catch (error) {
-      console.error("Failed to add activity:", error)
-      toast.error("Failed to add activity")
+      console.error("Failed to save activity:", error)
+      toast.error(isEditMode ? "Failed to update activity" : "Failed to add activity")
     } finally {
       setSaving(false)
     }
   }
 
+  const handleDeleteClick = () => {
+    setShowDeleteConfirm(true)
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!editItem) return
+
+    setDeleting(true)
+    setShowDeleteConfirm(false)
+    try {
+      await deleteExpeditionScheduleItem(editItem.id)
+      await mutate(`expedition_schedule_items_date_${date}_${expeditionsId || 'all'}`)
+      toast.success("Activity deleted")
+      onOpenChange(false)
+    } catch (error) {
+      console.error("Failed to delete activity:", error)
+      toast.error("Failed to delete activity")
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   // Prepare options for dropdowns
-  const typeOptions = [
-    { value: 0, label: "None" },
-    ...itemTypes.map((t: any) => ({ value: t.id, label: t.name, data: t }))
-  ]
+  const typeOptions = itemTypes.map((t: any) => ({ value: t.id, label: t.name, data: t }))
 
   const staffOptions = [
     { value: 0, label: "None" },
@@ -377,17 +1136,17 @@ export function AddScheduleItemSheet({
         <div className="flex-1 overflow-y-auto p-8 pb-24">
           <SheetHeader className="mb-8">
             <div className="flex items-center justify-between">
-              <SheetTitle className="text-2xl">Add Activity</SheetTitle>
+              <SheetTitle className="text-2xl">{isEditMode ? "Edit Activity" : "Add Activity"}</SheetTitle>
               <button
                 type="button"
                 onClick={() => onOpenChange(false)}
-                className="rounded-full p-1.5 hover:bg-gray-100 transition-colors"
+                className="rounded-full p-1.5 hover:bg-gray-100 transition-colors cursor-pointer"
               >
                 <X className="h-5 w-5 text-gray-500" />
               </button>
             </div>
             <SheetDescription className="text-base">
-              Create a new activity for this schedule
+              {isEditMode ? "Update activity details" : "Create a new activity for this schedule"}
             </SheetDescription>
           </SheetHeader>
 
@@ -395,17 +1154,10 @@ export function AddScheduleItemSheet({
             {/* Activity Type */}
             <div className="space-y-2">
               <Label className="text-sm font-medium">Activity Type</Label>
-              <CustomSelect
+              <ActivityTypeSelector
                 value={formData.expedition_schedule_item_types_id}
-                onChange={handleTypeChange}
+                onChange={(val, opt) => handleTypeChange(val, opt)}
                 options={typeOptions}
-                placeholder="Select type"
-                className="h-12 text-base"
-                renderValue={(option) => (
-                  <span className={option && option.value !== 0 ? "text-gray-900 text-base" : "text-gray-500 text-base"}>
-                    {option?.label || "Select type"}
-                  </span>
-                )}
               />
             </div>
 
@@ -432,46 +1184,17 @@ export function AddScheduleItemSheet({
                 label="End Time"
                 date={timeOutDate}
                 setDate={setTimeOutDate}
+                maxHour={24}
               />
             </div>
 
-            {/* Led By - Staff Selector with Avatar (grayscale) */}
+            {/* Led By - Staff Selector Combobox with search */}
             <div className="space-y-2">
               <Label className="text-sm font-medium">Led By</Label>
-              <CustomSelect
+              <StaffCombobox
                 value={formData.led_by}
-                onChange={(value) => setFormData({ ...formData, led_by: Number(value) })}
-                options={staffOptions}
-                placeholder="Select staff member"
-                className="h-14 text-base"
-                renderValue={(option) => {
-                  if (!option || option.value === 0) {
-                    return <span className="text-gray-500 text-base">Select staff member</span>
-                  }
-                  return (
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-8 w-8">
-                        {option.data?.photo_url && <AvatarImage src={option.data.photo_url} alt={option.label} />}
-                        <AvatarFallback className="text-xs bg-gray-100 text-gray-800">{getInitials(option.label)}</AvatarFallback>
-                      </Avatar>
-                      <span className="text-base">{option.label}</span>
-                    </div>
-                  )
-                }}
-                renderOption={(option) => {
-                  if (option.value === 0) {
-                    return <span className="text-gray-500 text-sm">None</span>
-                  }
-                  return (
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-8 w-8">
-                        {option.data?.photo_url && <AvatarImage src={option.data.photo_url} alt={option.label} />}
-                        <AvatarFallback className="text-xs bg-gray-100 text-gray-800">{getInitials(option.label)}</AvatarFallback>
-                      </Avatar>
-                      <span className="text-sm font-medium">{option.label}</span>
-                    </div>
-                  )
-                }}
+                onChange={(value) => setFormData({ ...formData, led_by: value })}
+                staff={staff}
               />
             </div>
 
@@ -481,6 +1204,47 @@ export function AddScheduleItemSheet({
               selectedIds={formData.participants}
               onChange={(ids) => setFormData({ ...formData, participants: ids })}
             />
+
+            {/* Participants Selector (Students) */}
+            <StudentParticipantSelector
+              students={students}
+              selectedIds={formData.students_id}
+              onChange={(ids) => setFormData({ ...formData, students_id: ids })}
+            />
+
+            {/* Meal Plan - Only show for meal types (Breakfast, Lunch, Dinner) */}
+            {isMealType(formData.expedition_schedule_item_types_id) && (
+              <CookbookSelector
+                selectedId={formData.expedition_cookbook_id}
+                onChange={(id) => setFormData({ ...formData, expedition_cookbook_id: id })}
+                mealTypeName={itemTypes.find((t: any) => t.id === formData.expedition_schedule_item_types_id)?.name}
+              />
+            )}
+
+            {/* Resources URL */}
+            <div className="space-y-2">
+              <Label htmlFor="resources" className="text-sm font-medium">Resources</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="resources"
+                  type="url"
+                  value={formData.resources}
+                  onChange={(e) => setFormData({ ...formData, resources: e.target.value })}
+                  placeholder="https://example.com/resource"
+                  className="h-12 text-base flex-1"
+                />
+                {formData.resources && (
+                  <a
+                    href={formData.resources}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="h-12 w-12 flex items-center justify-center rounded-lg border border-gray-200 bg-white hover:bg-gray-50 transition-colors cursor-pointer shrink-0"
+                  >
+                    <ExternalLink className="h-4 w-4 text-gray-600" />
+                  </a>
+                )}
+              </div>
+            </div>
 
             {/* Address */}
             <div className="space-y-2">
@@ -520,33 +1284,73 @@ export function AddScheduleItemSheet({
           </form>
         </div>
 
-        {/* Fixed Bottom Buttons - left justified */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 bg-white border-t flex gap-3 justify-start">
-          <Button
-            type="submit"
-            form="add-activity-form"
-            disabled={saving}
-            className="h-10 text-sm cursor-pointer px-6"
-          >
-            {saving ? (
-              <>
-                <Spinner size="sm" className="h-3 w-3 mr-2" />
-                Adding...
-              </>
-            ) : (
-              'Add Activity'
-            )}
-          </Button>
+        {/* Fixed Bottom Buttons - Trash | Cancel | Save Changes (flexible) */}
+        <div className="absolute bottom-0 left-0 right-0 p-4 bg-white border-t flex gap-3 items-center">
+          {/* Delete button - only in edit mode */}
+          {isEditMode && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleDeleteClick}
+              disabled={saving || deleting}
+              className="h-10 text-sm cursor-pointer px-3 border-gray-300"
+            >
+              {deleting ? (
+                <Spinner size="sm" className="h-4 w-4 text-gray-500" />
+              ) : (
+                <Trash2 className="h-4 w-4 text-gray-500" />
+              )}
+            </Button>
+          )}
+          
           <Button
             type="button"
             variant="outline"
             onClick={() => onOpenChange(false)}
-            disabled={saving}
+            disabled={saving || deleting}
             className="h-10 text-sm cursor-pointer px-4"
           >
             Cancel
           </Button>
+          
+          {/* Save button - flexible width */}
+          <Button
+            type="submit"
+            form="add-activity-form"
+            disabled={saving || deleting}
+            className="h-10 text-sm cursor-pointer flex-1"
+          >
+            {saving ? (
+              <>
+                <Spinner size="sm" className="h-3 w-3 mr-2" />
+                {isEditMode ? "Saving..." : "Adding..."}
+              </>
+            ) : (
+              isEditMode ? 'Save Changes' : 'Add Activity'
+            )}
+          </Button>
         </div>
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Activity</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete this activity? This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel className="cursor-pointer">Cancel</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={handleDeleteConfirm}
+                className="bg-red-600 hover:bg-red-700 cursor-pointer"
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </SheetContent>
     </Sheet>
   )

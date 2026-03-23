@@ -4,8 +4,25 @@ import * as React from "react"
 import * as SheetPrimitive from "@radix-ui/react-dialog"
 import { cn } from "@/lib/utils"
 
-function Sheet({ ...props }: React.ComponentProps<typeof SheetPrimitive.Root>) {
-  return <SheetPrimitive.Root data-slot="sheet" {...props} />
+// Context to pass onOpenChange to the overlay for click-to-close
+const SheetContext = React.createContext<{
+  onOpenChange?: (open: boolean) => void
+}>({})
+
+function Sheet({
+  onOpenChange,
+  ...props
+}: React.ComponentProps<typeof SheetPrimitive.Root>) {
+  return (
+    <SheetContext.Provider value={{ onOpenChange }}>
+      <SheetPrimitive.Root
+        data-slot="sheet"
+        modal={false}
+        onOpenChange={onOpenChange}
+        {...props}
+      />
+    </SheetContext.Provider>
+  )
 }
 
 function SheetTrigger({
@@ -30,6 +47,7 @@ function SheetOverlay({
   className,
   ...props
 }: React.ComponentProps<typeof SheetPrimitive.Overlay>) {
+  const { onOpenChange } = React.useContext(SheetContext)
   return (
     <SheetPrimitive.Overlay
       data-slot="sheet-overlay"
@@ -37,6 +55,7 @@ function SheetOverlay({
         "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/50",
         className
       )}
+      onClick={() => onOpenChange?.(false)}
       {...props}
     />
   )
@@ -46,6 +65,7 @@ function SheetContent({
   className,
   children,
   side = "right",
+  onCloseAutoFocus,
   ...props
 }: React.ComponentProps<typeof SheetPrimitive.Content> & {
   side?: "top" | "right" | "bottom" | "left"
@@ -67,6 +87,15 @@ function SheetContent({
             "data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom inset-x-0 bottom-0 h-auto border-t",
           className
         )}
+        onCloseAutoFocus={(e) => {
+          // Clean up pointer-events on body after sheet closes
+          document.body.style.removeProperty("pointer-events")
+          onCloseAutoFocus?.(e)
+        }}
+        onAnimationEnd={() => {
+          // Additional cleanup after close animation completes
+          document.body.style.removeProperty("pointer-events")
+        }}
         {...props}
       >
         {children}

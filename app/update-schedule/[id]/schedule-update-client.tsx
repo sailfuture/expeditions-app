@@ -18,9 +18,11 @@ import {
 } from "@/components/ui/breadcrumb"
 import { ArrowLeft } from "lucide-react"
 import { useExpeditionSchedules, useExpeditionLocations } from "@/lib/hooks/use-expeditions"
-import { updateExpeditionSchedule } from "@/lib/xano"
+import { useCurrentUser } from "@/lib/contexts/user-context"
+import { updateExpeditionSchedule, getExpeditionScheduleById } from "@/lib/xano"
 import { mutate } from "swr"
 import { toast } from "sonner"
+import useSWR from "swr"
 
 interface ScheduleUpdateClientProps {
   scheduleId: string
@@ -28,15 +30,16 @@ interface ScheduleUpdateClientProps {
 
 export function ScheduleUpdateClient({ scheduleId }: ScheduleUpdateClientProps) {
   const router = useRouter()
-  const { data: schedules, isLoading: loadingSchedules } = useExpeditionSchedules()
+  const { currentUser } = useCurrentUser()
+  const isAdmin = currentUser?.role === "Admin"
+  // Fetch the specific schedule by ID first
+  const { data: schedule, isLoading: loadingSchedule } = useSWR(
+    scheduleId ? `expedition_schedule_${scheduleId}` : null,
+    scheduleId ? () => getExpeditionScheduleById(Number(scheduleId)) : null
+  )
   const [updatingField, setUpdatingField] = useState<string | null>(null)
   const [notes, setNotes] = useState<string>("")
   const [notesChanged, setNotesChanged] = useState(false)
-
-  const schedule = useMemo(() => {
-    if (!schedules) return null
-    return schedules.find((s: any) => s.id === Number(scheduleId))
-  }, [schedules, scheduleId])
   
   // Update local notes state when schedule loads
   useMemo(() => {
@@ -78,7 +81,10 @@ export function ScheduleUpdateClient({ scheduleId }: ScheduleUpdateClientProps) 
         destination: isDestination ? locationId : schedule.destination,
         expeditions_id: schedule.expeditions_id,
       })
-      mutate("expedition_schedules")
+      // Invalidate both the specific schedule and the schedules list
+      // Use scheduleId (string) to match the SWR key
+      mutate(`expedition_schedule_${scheduleId}`)
+      mutate(`expedition_schedules_${schedule.expeditions_id}`)
       toast.success("Location updated")
     } catch (error) {
       console.error("Failed to update location:", error)
@@ -110,7 +116,10 @@ export function ScheduleUpdateClient({ scheduleId }: ScheduleUpdateClientProps) 
         destination: isOffshore ? schedule.destination : 0,
         expeditions_id: schedule.expeditions_id,
       })
-      mutate("expedition_schedules")
+      // Invalidate both the specific schedule and the schedules list
+      // Use scheduleId (string) to match the SWR key
+      mutate(`expedition_schedule_${scheduleId}`)
+      mutate(`expedition_schedules_${schedule.expeditions_id}`)
       toast.success("Type updated")
     } catch (error) {
       console.error("Failed to update type:", error)
@@ -148,7 +157,10 @@ export function ScheduleUpdateClient({ scheduleId }: ScheduleUpdateClientProps) 
         expeditions_id: schedule.expeditions_id,
         notes: notes,
       })
-      mutate("expedition_schedules")
+      // Invalidate both the specific schedule and the schedules list
+      // Use scheduleId (string) to match the SWR key
+      mutate(`expedition_schedule_${scheduleId}`)
+      mutate(`expedition_schedules_${schedule.expeditions_id}`)
       toast.success("Notes updated")
       setNotesChanged(false)
     } catch (error) {
@@ -159,7 +171,7 @@ export function ScheduleUpdateClient({ scheduleId }: ScheduleUpdateClientProps) 
     }
   }
 
-  if (loadingSchedules) {
+  if (loadingSchedule) {
     return (
       <div className="min-h-screen bg-background">
         <div className="border-b bg-muted/30">
@@ -199,7 +211,7 @@ export function ScheduleUpdateClient({ scheduleId }: ScheduleUpdateClientProps) 
           <Breadcrumb className="mb-4">
             <BreadcrumbList>
               <BreadcrumbItem>
-                <BreadcrumbLink href="/dashboard" className="cursor-pointer">Dashboard</BreadcrumbLink>
+                <BreadcrumbLink href={isAdmin ? "/expeditions" : "/my-expeditions"} className="cursor-pointer">{isAdmin ? "All Expeditions" : "My Expeditions"}</BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbSeparator />
               <BreadcrumbItem>
@@ -262,11 +274,7 @@ export function ScheduleUpdateClient({ scheduleId }: ScheduleUpdateClientProps) 
                         disabled={updatingField === 'current_location'}
                       >
                         <SelectTrigger className="w-[300px]">
-                          <SelectValue>
-                            <span className="text-sm">
-                              {formatLocation(schedule._expedition_current_location)}
-                            </span>
-                          </SelectValue>
+                          <SelectValue placeholder="Select location" />
                         </SelectTrigger>
                         <SelectContent>
                           {locations?.map((location: any) => (
@@ -292,35 +300,35 @@ export function ScheduleUpdateClient({ scheduleId }: ScheduleUpdateClientProps) 
                         <button
                           onClick={() => handleTypeChange("anchored")}
                           disabled={updatingField === 'type'}
-                          className={`px-4 py-2 text-sm font-medium rounded-md transition-colors cursor-pointer ${
+                          className={`px-3 py-2 text-sm font-medium rounded-md transition-colors cursor-pointer ${
                             getCurrentType() === "anchored"
                               ? 'bg-green-50 text-green-700 border-2 border-green-200'
                               : 'bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100'
                           } ${updatingField === 'type' ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
-                          Anchored
+                          A
                         </button>
                         <button
                           onClick={() => handleTypeChange("service")}
                           disabled={updatingField === 'type'}
-                          className={`px-4 py-2 text-sm font-medium rounded-md transition-colors cursor-pointer ${
+                          className={`px-3 py-2 text-sm font-medium rounded-md transition-colors cursor-pointer ${
                             getCurrentType() === "service"
                               ? 'bg-red-50 text-red-700 border-2 border-red-200'
                               : 'bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100'
                           } ${updatingField === 'type' ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
-                          Service
+                          S
                         </button>
                         <button
                           onClick={() => handleTypeChange("offshore")}
                           disabled={updatingField === 'type'}
-                          className={`px-4 py-2 text-sm font-medium rounded-md transition-colors cursor-pointer ${
+                          className={`px-3 py-2 text-sm font-medium rounded-md transition-colors cursor-pointer ${
                             getCurrentType() === "offshore"
                               ? 'bg-blue-50 text-blue-700 border-2 border-blue-200'
                               : 'bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100'
                           } ${updatingField === 'type' ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
-                          Offshore
+                          O
                         </button>
                       </div>
                       {updatingField === 'type' && (
@@ -342,18 +350,10 @@ export function ScheduleUpdateClient({ scheduleId }: ScheduleUpdateClientProps) 
                           disabled={updatingField === 'destination'}
                         >
                           <SelectTrigger className="w-[300px]">
-                            <SelectValue>
-                              {schedule._expedition_destination && schedule.destination !== 0 ? (
-                                <span className="text-sm">
-                                  {formatLocation(schedule._expedition_destination)}
-                                </span>
-                              ) : (
-                                <span className="text-sm text-gray-400">No destination</span>
-                              )}
-                            </SelectValue>
+                            <SelectValue placeholder="—" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="0">No destination</SelectItem>
+                            <SelectItem value="0">—</SelectItem>
                             {locations?.map((location: any) => (
                               <SelectItem key={location.id} value={location.id.toString()}>
                                 {location.port}, {location.country}
@@ -424,15 +424,14 @@ export function ScheduleUpdateClient({ scheduleId }: ScheduleUpdateClientProps) 
           <Button 
             variant="outline" 
             onClick={() => {
-              const dateStr = new Date(schedule.date).toISOString().split('T')[0]
-              router.push(`/schedule/${dateStr}`)
+              router.push(`/schedule/${schedule.date}`)
             }}
             className="cursor-pointer"
           >
             View Full Schedule
           </Button>
           <Button 
-            onClick={() => router.push(`/evaluate/${new Date(schedule.date).toISOString().split('T')[0]}`)}
+            onClick={() => router.push(`/evaluate/${schedule.date}`)}
             className="cursor-pointer"
           >
             Record Scores

@@ -3,23 +3,35 @@
 import useSWR from "swr"
 import {
   getExpeditions,
+  getActiveExpedition,
   getExpeditionSchedules,
   getExpeditionScheduleItems,
   getExpeditionScheduleItemsByDate,
   getExpeditionScheduleItemTypes,
   getStudents,
+  getStudentsByExpedition,
   getTeachers,
+  getTeachersByExpedition,
   getExpeditionsProfessionalism,
   getExpeditionsProfessionalismByDate,
+  getStudentProfessionalismByExpedition,
   getExpeditionBonus,
   getExpeditionPenalty,
   getExpeditionLocations,
   getExpeditionJournalStatus,
+  getSchoolTerms,
+  getSchoolYears,
+  getExpeditionsStudentInformation,
+  getEvaluationByStudent,
+  getEvaluationByStudentType,
+  getProfessionalismByStudent,
+  getExpeditionPerformanceReviews,
 } from "@/lib/xano"
 
 // SWR fetcher keys
 const KEYS = {
   expeditions: "expeditions",
+  activeExpedition: "active_expedition",
   schedules: "expedition_schedules",
   scheduleItems: "expedition_schedule_items",
   students: "students",
@@ -35,18 +47,27 @@ export function useExpeditions() {
   return useSWR(KEYS.expeditions, getExpeditions)
 }
 
-export function useExpeditionSchedules() {
-  return useSWR(KEYS.schedules, getExpeditionSchedules)
+export function useActiveExpedition() {
+  return useSWR(KEYS.activeExpedition, getActiveExpedition)
+}
+
+export function useExpeditionSchedules(expeditionsId?: number, options?: { refreshInterval?: number; revalidateOnFocus?: boolean }) {
+  return useSWR(
+    expeditionsId ? `${KEYS.schedules}_${expeditionsId}` : KEYS.schedules,
+    () => getExpeditionSchedules(expeditionsId),
+    options
+  )
 }
 
 export function useExpeditionScheduleItems() {
   return useSWR(KEYS.scheduleItems, getExpeditionScheduleItems)
 }
 
-export function useExpeditionScheduleItemsByDate(date: string | null) {
+export function useExpeditionScheduleItemsByDate(date: string | null, expeditionsId?: number, options?: { refreshInterval?: number; revalidateOnFocus?: boolean }) {
   return useSWR(
-    date ? `expedition_schedule_items_date_${date}` : null,
-    date ? () => getExpeditionScheduleItemsByDate(date) : null
+    date ? `expedition_schedule_items_date_${date}_${expeditionsId || 'all'}` : null,
+    date ? () => getExpeditionScheduleItemsByDate(date, expeditionsId) : null,
+    options
   )
 }
 
@@ -62,10 +83,10 @@ export function useExpeditionsProfessionalism() {
   return useSWR(KEYS.professionalism, getExpeditionsProfessionalism)
 }
 
-export function useExpeditionsProfessionalismByDate(date: string | null) {
+export function useExpeditionsProfessionalismByDate(date: string | null, expeditionsId: number | null) {
   return useSWR(
-    date ? `expeditions_professionalism_date_${date}` : null,
-    date ? () => getExpeditionsProfessionalismByDate(date) : null
+    date && expeditionsId ? `expeditions_professionalism_date_${date}_${expeditionsId}` : null,
+    date && expeditionsId ? () => getExpeditionsProfessionalismByDate(date, expeditionsId) : null
   )
 }
 
@@ -97,4 +118,65 @@ export function useExpeditionScheduleTemplates() {
 
 export function useExpeditionScheduleItemTypes() {
   return useSWR("expedition_schedule_item_types", getExpeditionScheduleItemTypes)
+}
+
+export function useTeachersByExpedition(expeditionsId: number | null) {
+  return useSWR(
+    expeditionsId ? `teachers_by_expedition_${expeditionsId}` : null,
+    expeditionsId ? () => getTeachersByExpedition(expeditionsId) : null
+  )
+}
+
+export function useStudentsByExpedition(expeditionsId: number | null) {
+  return useSWR(
+    expeditionsId ? `students_by_expedition_${expeditionsId}` : null,
+    expeditionsId ? () => getStudentsByExpedition(expeditionsId) : null
+  )
+}
+
+export function useSchoolTerms() {
+  return useSWR("school_terms", getSchoolTerms)
+}
+
+export function useSchoolYears() {
+  return useSWR("school_years", getSchoolYears)
+}
+
+export function useIntakeSubmissions() {
+  return useSWR("expeditions_student_information", getExpeditionsStudentInformation)
+}
+
+export function useStudentProfessionalismByExpedition(studentsId: number | null, expeditionsId: number | null) {
+  return useSWR(
+    studentsId && expeditionsId ? `student_professionalism_${studentsId}_${expeditionsId}` : null,
+    studentsId && expeditionsId ? () => getStudentProfessionalismByExpedition(studentsId, expeditionsId) : null
+  )
+}
+
+export function useEvaluationByStudent(studentsId: number | null, expeditionsId: number | null) {
+  return useSWR(
+    studentsId && expeditionsId ? `evaluation_by_student_${studentsId}_${expeditionsId}` : null,
+    studentsId && expeditionsId ? () => getEvaluationByStudent(studentsId, expeditionsId) : null
+  )
+}
+
+export function useEvaluationByStudentType(studentsId: number | null, expeditionsId: number | null, type: string | null) {
+  return useSWR(
+    studentsId && expeditionsId && type ? `evaluation_by_student_type_${studentsId}_${expeditionsId}_${type}` : null,
+    studentsId && expeditionsId && type ? () => getEvaluationByStudentType(studentsId, expeditionsId, type) : null
+  )
+}
+
+export function useProfessionalismByStudent(studentsId: number | null, expeditionsId: number | null) {
+  return useSWR(
+    studentsId && expeditionsId ? `professionalism_by_student_${studentsId}_${expeditionsId}` : null,
+    studentsId && expeditionsId ? () => getProfessionalismByStudent(studentsId, expeditionsId) : null
+  )
+}
+
+export function useExpeditionPerformanceReviews(expeditionsId: number | null) {
+  return useSWR(
+    expeditionsId ? `expedition_performance_reviews_${expeditionsId}` : null,
+    expeditionsId ? () => getExpeditionPerformanceReviews(expeditionsId) : null
+  )
 }

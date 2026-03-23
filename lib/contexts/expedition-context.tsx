@@ -10,6 +10,7 @@ interface ExpeditionContextType {
   selectedExpeditionId: number | null
   setSelectedExpeditionId: (id: number) => void
   userExpeditions: Expedition[]
+  activeExpedition: Expedition | null
   isLoading: boolean
 }
 
@@ -18,6 +19,7 @@ const ExpeditionContext = createContext<ExpeditionContextType>({
   selectedExpeditionId: null,
   setSelectedExpeditionId: () => {},
   userExpeditions: [],
+  activeExpedition: null,
   isLoading: true,
 })
 
@@ -64,6 +66,12 @@ export function ExpeditionProvider({ children }: { children: ReactNode }) {
     if (!selectedExpeditionId || !userExpeditions.length) return null
     return userExpeditions.find((e) => e.id === selectedExpeditionId) || null
   }, [selectedExpeditionId, userExpeditions])
+  
+  // Find the active expedition
+  const activeExpedition = useMemo(() => {
+    if (!allExpeditions) return null
+    return allExpeditions.find((e: any) => e.isActive === true) || null
+  }, [allExpeditions])
 
   const isLoading = loadingExpeditions || loadingUser
 
@@ -74,6 +82,7 @@ export function ExpeditionProvider({ children }: { children: ReactNode }) {
         selectedExpeditionId,
         setSelectedExpeditionId,
         userExpeditions: sortedExpeditions,
+        activeExpedition,
         isLoading,
       }}
     >

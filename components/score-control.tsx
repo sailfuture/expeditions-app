@@ -11,6 +11,7 @@ interface ScoreControlProps {
   max?: number
   disabled?: boolean
   isBlocked?: boolean // If true, category is blocked/inactive (controlled by isXUsed flags)
+  onBlockToggle?: () => void // Callback to toggle the isXUsed flag
 }
 
 function getScoreBorderColor(value: number | null): string {
@@ -33,7 +34,7 @@ function getScoreBorderColor(value: number | null): string {
   }
 }
 
-export function ScoreControl({ label, value, onChange, min = 0, max = 5, disabled = false, isBlocked = false }: ScoreControlProps) {
+export function ScoreControl({ label, value, onChange, min = 0, max = 5, disabled = false, isBlocked = false, onBlockToggle }: ScoreControlProps) {
   // isBlocked is now controlled by the parent via isXUsed flags, not by null value
   const displayValue = value ?? 3 // Default display to 3 if null
   const isAtMin = displayValue === min
@@ -59,8 +60,20 @@ export function ScoreControl({ label, value, onChange, min = 0, max = 5, disable
     <div className="flex flex-col gap-1.5">
       <div className="flex items-center gap-1.5">
         <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{label}</span>
-        {isBlocked && (
-          <Ban className="h-3.5 w-3.5 text-gray-400" title="This category is disabled" />
+        {onBlockToggle && (
+          <button
+            type="button"
+            onClick={onBlockToggle}
+            disabled={disabled}
+            className={cn(
+              "p-0.5 rounded transition-colors cursor-pointer",
+              isBlocked ? "text-red-500 hover:text-red-600" : "text-gray-300 hover:text-gray-400",
+              disabled && "opacity-50 cursor-not-allowed"
+            )}
+            title={isBlocked ? "Enable this category" : "Disable this category (N/A)"}
+          >
+            <Ban className="h-3.5 w-3.5" />
+          </button>
         )}
       </div>
       <div

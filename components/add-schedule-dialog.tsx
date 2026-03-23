@@ -79,8 +79,8 @@ export function AddScheduleDialog({ open, onOpenChange }: AddScheduleDialogProps
         }
       }
       
-      // Refresh schedules data
-      mutate("expedition_schedules")
+      // Refresh schedules data with correct SWR key
+      mutate(`expedition_schedules_${selectedExpeditionId}`)
       onOpenChange(false)
       
       // Reset form
@@ -213,7 +213,7 @@ export function AddScheduleDialog({ open, onOpenChange }: AddScheduleDialogProps
                   <SelectValue placeholder="Select destination" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="0">No destination</SelectItem>
+                  <SelectItem value="0">—</SelectItem>
                   {locations?.map((location: any) => (
                     <SelectItem key={location.id} value={location.id.toString()}>
                       {location.port}, {location.country}

@@ -63,8 +63,8 @@ export function EditScheduleDialog({ schedule, open, onOpenChange }: EditSchedul
         ...formData,
       })
       
-      // Refresh schedules data
-      mutate("expedition_schedules")
+      // Refresh schedules data with correct SWR key
+      mutate(`expedition_schedules_${schedule.expeditions_id}`)
       onOpenChange(false)
       toast.success("Schedule updated successfully")
     } catch (error) {
@@ -166,7 +166,7 @@ export function EditScheduleDialog({ schedule, open, onOpenChange }: EditSchedul
                   <SelectValue placeholder="Select destination" />
                 </SelectTrigger>
                 <SelectContent className="w-full">
-                  <SelectItem value="0">No destination</SelectItem>
+                  <SelectItem value="0">—</SelectItem>
                   {locations?.map((location: any) => (
                     <SelectItem key={location.id} value={location.id.toString()}>
                       {location.port}, {location.country}

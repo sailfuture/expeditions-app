@@ -1,17 +1,33 @@
 import type React from "react"
 import type { Metadata } from "next"
+import { Suspense } from "react"
 import { Inter } from "next/font/google"
 import "./globals.css"
 import { Navbar } from "@/components/navbar"
 import { Providers } from "@/components/providers"
 import { Toaster } from "sonner"
+import { PointerEventsFix } from "@/components/pointer-events-fix"
 
 const fontSans = Inter({ subsets: ["latin"], variable: "--font-sans" })
 
 export const metadata: Metadata = {
-  title: "Expedition Tracker",
-  description: "Track student professionalism scores",
-    generator: 'v0.app'
+  title: "SailFuture Academy: Expeditions Staff Access Portal",
+  description: "A staff dashboard for recording and managing daily operations during sailing expeditions.",
+  icons: {
+    icon: "/sailfuture-square (8).webp",
+    shortcut: "/sailfuture-square (8).webp",
+    apple: "/sailfuture-square (8).webp",
+  },
+  openGraph: {
+    title: "SailFuture Academy: Expeditions Staff Access Portal",
+    description: "A staff dashboard for recording and managing daily operations during sailing expeditions.",
+    images: ["/sailfuture-square (8).webp"],
+    type: "website",
+  },
+  appleWebApp: {
+    title: "SailFuture Expeditions",
+    statusBarStyle: "default",
+  },
 }
 
 export default function RootLayout({
@@ -23,9 +39,12 @@ export default function RootLayout({
     <html lang="en" className={fontSans.variable}>
       <body className="antialiased">
         <Providers>
-          <Navbar />
+          <Suspense fallback={<div className="h-16 bg-white border-b" />}>
+            <Navbar />
+          </Suspense>
           {children}
           <Toaster position="bottom-right" />
+          <PointerEventsFix />
         </Providers>
       </body>
     </html>

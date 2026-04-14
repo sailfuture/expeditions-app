@@ -574,7 +574,14 @@ export default function PassageLogsPage() {
         if (!formData.ovenBreakerOff) invalidFieldKeys.push("ovenBreakerOff")
         break
       case 6: // Confirmation
-        if (formData.crewMembers.length === 0) invalidFieldKeys.push("crewMembers")
+        if (formData.crewMembers.length === 0) {
+          invalidFieldKeys.push("crewMembers")
+        } else {
+          // Require at least one staff member in crew
+          const staffNames = staff.map(s => s.name)
+          const hasStaff = formData.crewMembers.some(name => staffNames.includes(name))
+          if (!hasStaff) invalidFieldKeys.push("crewMembers")
+        }
         if (!formData.approvedBy) invalidFieldKeys.push("approvedBy")
         // generalObservations and additionalNotes are optional
         break
@@ -603,12 +610,47 @@ export default function PassageLogsPage() {
     }
   }
 
+  const fieldLabels: Record<string, string> = {
+    date: "Date", time: "Time", departureLocation: "Departure Location", destinationLocation: "Destination Location",
+    windSpeed: "Wind Speed", windDirection: "Wind Direction", boatSpeed: "Boat Speed", heading: "Heading", courseOverGround: "Course Over Ground",
+    logbookEntry: "Logbook Entry", plotPosition: "Plot Position", spotlightCharged: "Spotlight Charged",
+    latitudeDeg: "Latitude Degrees", latitudeMin: "Latitude Minutes", latitudeSec: "Latitude Seconds", latitudeDir: "Latitude Direction",
+    longitudeDeg: "Longitude Degrees", longitudeMin: "Longitude Minutes", longitudeSec: "Longitude Seconds", longitudeDir: "Longitude Direction",
+    binoculars: "Binoculars", vhfChannel16: "VHF Channel 16",
+    fuelDayTank: "Fuel Day Tank", grayWaterTank: "Gray Water Tank", blackWaterTank: "Black Water Tank",
+    portWaterTank: "Port Water Tank", starboardWaterTank: "Starboard Water Tank",
+    chilledWaterTemp: "Chilled Water Temp", voltageAmpDraw: "Voltage/Amp Draw",
+    serviceBatteryVoltage: "Service Battery", electronicsBatteryVoltage: "Electronics Battery",
+    engineBatteryVoltage: "Engine Battery", emergencyBatteryVoltage: "Emergency Battery",
+    mainEngineRpm: "Main Engine RPM", mainEngineGearOilPressure: "Gear Oil Pressure", mainEngineOilPressure: "Oil Pressure",
+    mainEngineTemp: "Engine Temp", mainEngineValveCoverTemp: "Valve Cover Temp",
+    generatorOilTemp: "Generator Oil Temp", generatorOilPressure: "Generator Oil Pressure",
+    catamaranSecure: "Catamaran Secure", sternRibSecure: "Stern RIB Secure", bowRibSecure: "Bow RIB Secure",
+    fuelCansSecure: "Fuel Cans Secure", jackLinesSecure: "Jack Lines Secure", anchorsSecure: "Anchors Secure",
+    sailingLinesClean: "Sailing Lines Coiled", rsCatMastSecure: "RS Cat Mast Secure",
+    salonItemsSecure: "Salon Items Secure", galleyItemsSecure: "Galley Items Secure", allCabinItemsSecure: "Cabin Items Secure",
+    forepeakFreezerTemp: "Forepeak Freezer Temp", salonFridgeTemp: "Salon Fridge Temp",
+    galleyTopFridgeTemp: "Galley Top Fridge Temp", galleyBottomFreezerTemp: "Galley Bottom Freezer Temp",
+    lazaretteDeepFreezerTemp: "Lazarette Deep Freezer Temp", propaneSolenoidOff: "Propane Solenoid Off", ovenBreakerOff: "Oven Breaker Off",
+    crewMembers: "Crew Members (staff required)", approvedBy: "Approved By",
+  }
+
+  const formatMissingFields = (keys: string[]): string => {
+    const uniqueLabels = [...new Set(keys.map(k => fieldLabels[k] || k))]
+    if (uniqueLabels.length <= 3) return uniqueLabels.join(", ")
+    return `${uniqueLabels.slice(0, 3).join(", ")} and ${uniqueLabels.length - 3} more`
+  }
+
   const handleNext = () => {
     const { valid, invalidFieldKeys, missingCount } = validateStep(currentStep)
     if (!valid) {
       setInvalidFields(new Set(invalidFieldKeys))
+      const description = coordError
+        ? `${coordError}. Missing: ${formatMissingFields(invalidFieldKeys)}`
+        : `Missing: ${formatMissingFields(invalidFieldKeys)}`
       toast.error(`Please complete all required fields`, {
-        description: `${missingCount} field${missingCount > 1 ? 's' : ''} missing on this page`,
+        description,
+        duration: 6000,
       })
       return
     }
@@ -628,7 +670,8 @@ export default function PassageLogsPage() {
     if (!valid) {
       setInvalidFields(new Set(invalidFieldKeys))
       toast.error(`Please complete all required fields`, {
-        description: `${missingCount} field${missingCount > 1 ? 's' : ''} missing`,
+        description: `Missing: ${formatMissingFields(invalidFieldKeys)}`,
+        duration: 6000,
       })
       return
     }
@@ -733,14 +776,29 @@ export default function PassageLogsPage() {
       })
 
       if (!response.ok) {
-        throw new Error(`Failed to submit: ${response.status} ${response.statusText}`)
+        let errorMessage = `${response.status} ${response.statusText}`
+        try {
+          const errorData = await response.json()
+          if (errorData?.message) {
+            errorMessage = errorData.message
+          } else if (errorData?.payload?.message) {
+            errorMessage = errorData.payload.message
+          }
+        } catch {
+          // response body wasn't JSON, use status text
+        }
+        throw new Error(errorMessage)
       }
 
       console.log("Form submitted successfully:", payload)
       setIsSubmitted(true)
     } catch (error) {
       console.error("Failed to submit passage log:", error)
-      alert("Failed to submit passage log. Please try again.")
+      const message = error instanceof Error ? error.message : "An unexpected error occurred"
+      toast.error("Failed to submit passage log", {
+        description: message,
+        duration: 8000,
+      })
     } finally {
       setIsSubmitting(false)
     }
@@ -1227,7 +1285,7 @@ export default function PassageLogsPage() {
                       <LabelWithTooltip htmlFor="latitudeDeg" tooltip="Degrees: 0-90">
                         Degrees (°)
                       </LabelWithTooltip>
-                      <InputGroup className={isFieldInvalid("latitudeDeg") ? "[&>input]:border-destructive" : ""}>
+                      <InputGroup className={cn("h-11", isFieldInvalid("latitudeDeg") ? "[&>input]:border-destructive" : "")}>
                         <InputGroupInput
                           id="latitudeDeg"
                           type="text" inputMode="numeric" pattern="[0-9]*"
@@ -1246,7 +1304,7 @@ export default function PassageLogsPage() {
                       <LabelWithTooltip htmlFor="latitudeMin" tooltip="Minutes: 0-59">
                         Minutes (&apos;)
                       </LabelWithTooltip>
-                      <InputGroup className={isFieldInvalid("latitudeMin") ? "[&>input]:border-destructive" : ""}>
+                      <InputGroup className={cn("h-11", isFieldInvalid("latitudeMin") ? "[&>input]:border-destructive" : "")}>
                         <InputGroupInput
                           id="latitudeMin"
                           type="text" inputMode="numeric" pattern="[0-9]*"
@@ -1265,7 +1323,7 @@ export default function PassageLogsPage() {
                       <LabelWithTooltip htmlFor="latitudeSec" tooltip="Seconds: 0-59">
                         Seconds (&quot;)
                       </LabelWithTooltip>
-                      <InputGroup className={isFieldInvalid("latitudeSec") ? "[&>input]:border-destructive" : ""}>
+                      <InputGroup className={cn("h-11", isFieldInvalid("latitudeSec") ? "[&>input]:border-destructive" : "")}>
                         <InputGroupInput
                           id="latitudeSec"
                           type="text" inputMode="numeric" pattern="[0-9]*"
@@ -1299,7 +1357,7 @@ export default function PassageLogsPage() {
                       <LabelWithTooltip htmlFor="longitudeDeg" tooltip="Degrees: 0-180">
                         Degrees (°)
                       </LabelWithTooltip>
-                      <InputGroup className={isFieldInvalid("longitudeDeg") ? "[&>input]:border-destructive" : ""}>
+                      <InputGroup className={cn("h-11", isFieldInvalid("longitudeDeg") ? "[&>input]:border-destructive" : "")}>
                         <InputGroupInput
                           id="longitudeDeg"
                           type="text" inputMode="numeric" pattern="[0-9]*"
@@ -1318,7 +1376,7 @@ export default function PassageLogsPage() {
                       <LabelWithTooltip htmlFor="longitudeMin" tooltip="Minutes: 0-59">
                         Minutes (&apos;)
                       </LabelWithTooltip>
-                      <InputGroup className={isFieldInvalid("longitudeMin") ? "[&>input]:border-destructive" : ""}>
+                      <InputGroup className={cn("h-11", isFieldInvalid("longitudeMin") ? "[&>input]:border-destructive" : "")}>
                         <InputGroupInput
                           id="longitudeMin"
                           type="text" inputMode="numeric" pattern="[0-9]*"
@@ -1337,7 +1395,7 @@ export default function PassageLogsPage() {
                       <LabelWithTooltip htmlFor="longitudeSec" tooltip="Seconds: 0-59">
                         Seconds (&quot;)
                       </LabelWithTooltip>
-                      <InputGroup className={isFieldInvalid("longitudeSec") ? "[&>input]:border-destructive" : ""}>
+                      <InputGroup className={cn("h-11", isFieldInvalid("longitudeSec") ? "[&>input]:border-destructive" : "")}>
                         <InputGroupInput
                           id="longitudeSec"
                           type="text" inputMode="numeric" pattern="[0-9]*"
@@ -2064,6 +2122,118 @@ export default function PassageLogsPage() {
 
         {/* Step 6 - Confirmation */}
         {currentStep === 6 && (
+          <>
+          {/* Review Summary */}
+          <FormSection title="Review Summary" description="Review all entered values before submitting. Go back to correct any errors.">
+            <div className="space-y-6">
+              {/* Overview */}
+              <div>
+                <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">Overview</h4>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-2 text-sm">
+                  <div><span className="text-muted-foreground">Date:</span> <span className="font-medium">{formData.date ? formData.date.toLocaleDateString() : "—"}</span></div>
+                  <div><span className="text-muted-foreground">Time:</span> <span className="font-medium">{formData.time || "—"}</span></div>
+                  <div><span className="text-muted-foreground">Departure:</span> <span className="font-medium">{locations.find(l => l.id.toString() === formData.departureLocation)?.port || "—"}</span></div>
+                  <div><span className="text-muted-foreground">Destination:</span> <span className="font-medium">{locations.find(l => l.id.toString() === formData.destinationLocation)?.port || "—"}</span></div>
+                  <div><span className="text-muted-foreground">Wind Speed:</span> <span className="font-medium">{formData.windSpeed ? `${formData.windSpeed} kn` : "—"}</span></div>
+                  <div><span className="text-muted-foreground">Wind Direction:</span> <span className="font-medium">{formData.windDirection ? `${formData.windDirection}°` : "—"}</span></div>
+                  <div><span className="text-muted-foreground">Boat Speed:</span> <span className="font-medium">{formData.boatSpeed ? `${formData.boatSpeed} kn` : "—"}</span></div>
+                  <div><span className="text-muted-foreground">Heading:</span> <span className="font-medium">{formData.heading ? `${formData.heading}°` : "—"}</span></div>
+                  <div><span className="text-muted-foreground">COG:</span> <span className="font-medium">{formData.courseOverGround ? `${formData.courseOverGround}°` : "—"}</span></div>
+                </div>
+              </div>
+
+              <hr className="border-border" />
+
+              {/* Bridge */}
+              <div>
+                <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">Bridge Department</h4>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-2 text-sm">
+                  <div><span className="text-muted-foreground">Logbook Entry:</span> <span className="font-medium capitalize">{formData.logbookEntry || "—"}</span></div>
+                  <div><span className="text-muted-foreground">Plot Position:</span> <span className="font-medium capitalize">{formData.plotPosition || "—"}</span></div>
+                  <div><span className="text-muted-foreground">Spotlight Charged:</span> <span className="font-medium capitalize">{formData.spotlightCharged || "—"}</span></div>
+                  <div className="col-span-2 md:col-span-3">
+                    <span className="text-muted-foreground">Position:</span>{" "}
+                    <span className="font-medium">
+                      {formData.latitudeDeg && formData.latitudeMin && formData.latitudeSec && formData.latitudeDir
+                        ? `${formData.latitudeDeg}° ${formData.latitudeMin}' ${formData.latitudeSec}" ${formData.latitudeDir}`
+                        : "—"}{", "}
+                      {formData.longitudeDeg && formData.longitudeMin && formData.longitudeSec && formData.longitudeDir
+                        ? `${formData.longitudeDeg}° ${formData.longitudeMin}' ${formData.longitudeSec}" ${formData.longitudeDir}`
+                        : "—"}
+                    </span>
+                  </div>
+                  <div><span className="text-muted-foreground">Binoculars:</span> <span className="font-medium capitalize">{formData.binoculars || "—"}</span></div>
+                  <div><span className="text-muted-foreground">VHF Ch. 16:</span> <span className="font-medium capitalize">{formData.vhfChannel16 || "—"}</span></div>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-2 text-sm mt-3">
+                  <div><span className="text-muted-foreground">Fuel Day Tank:</span> <span className="font-medium">{formData.fuelDayTank || "—"}</span></div>
+                  <div><span className="text-muted-foreground">Gray Water:</span> <span className="font-medium">{formData.grayWaterTank || "—"}</span></div>
+                  <div><span className="text-muted-foreground">Black Water:</span> <span className="font-medium">{formData.blackWaterTank || "—"}</span></div>
+                  <div><span className="text-muted-foreground">Port Water:</span> <span className="font-medium">{formData.portWaterTank || "—"}</span></div>
+                  <div><span className="text-muted-foreground">Starboard Water:</span> <span className="font-medium">{formData.starboardWaterTank || "—"}</span></div>
+                  <div><span className="text-muted-foreground">Chilled Water:</span> <span className="font-medium">{formData.chilledWaterTemp ? `${formData.chilledWaterTemp}°F` : "—"}</span></div>
+                  <div><span className="text-muted-foreground">Voltage/Amp Draw:</span> <span className="font-medium">{formData.voltageAmpDraw ? `${formData.voltageAmpDraw} A` : "—"}</span></div>
+                  <div><span className="text-muted-foreground">Service Battery:</span> <span className="font-medium">{formData.serviceBatteryVoltage ? `${formData.serviceBatteryVoltage} V` : "—"}</span></div>
+                  <div><span className="text-muted-foreground">Electronics Battery:</span> <span className="font-medium">{formData.electronicsBatteryVoltage ? `${formData.electronicsBatteryVoltage} V` : "—"}</span></div>
+                  <div><span className="text-muted-foreground">Engine Battery:</span> <span className="font-medium">{formData.engineBatteryVoltage ? `${formData.engineBatteryVoltage} V` : "—"}</span></div>
+                  <div><span className="text-muted-foreground">Emergency Battery:</span> <span className="font-medium">{formData.emergencyBatteryVoltage ? `${formData.emergencyBatteryVoltage} V` : "—"}</span></div>
+                </div>
+              </div>
+
+              <hr className="border-border" />
+
+              {/* Engineering */}
+              <div>
+                <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">Engineering Department</h4>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-2 text-sm">
+                  <div><span className="text-muted-foreground">Main Engine RPM:</span> <span className="font-medium">{formData.mainEngineRpm || "—"}</span></div>
+                  <div><span className="text-muted-foreground">Gear Oil Pressure:</span> <span className="font-medium">{formData.mainEngineGearOilPressure ? `${formData.mainEngineGearOilPressure} PSI` : "—"}</span></div>
+                  <div><span className="text-muted-foreground">Oil Pressure:</span> <span className="font-medium">{formData.mainEngineOilPressure ? `${formData.mainEngineOilPressure} PSI` : "—"}</span></div>
+                  <div><span className="text-muted-foreground">Engine Temp:</span> <span className="font-medium">{formData.mainEngineTemp ? `${formData.mainEngineTemp}°F` : "—"}</span></div>
+                  <div><span className="text-muted-foreground">Valve Cover Temp:</span> <span className="font-medium">{formData.mainEngineValveCoverTemp ? `${formData.mainEngineValveCoverTemp}°F` : "—"}</span></div>
+                  <div><span className="text-muted-foreground">Generator Oil Temp:</span> <span className="font-medium">{formData.generatorOilTemp ? `${formData.generatorOilTemp}°F` : "—"}</span></div>
+                  <div><span className="text-muted-foreground">Generator Oil Pressure:</span> <span className="font-medium">{formData.generatorOilPressure ? `${formData.generatorOilPressure} PSI` : "—"}</span></div>
+                </div>
+              </div>
+
+              <hr className="border-border" />
+
+              {/* Deck */}
+              <div>
+                <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">Deck Department</h4>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-2 text-sm">
+                  <div><span className="text-muted-foreground">Catamaran Secure:</span> <span className="font-medium capitalize">{formData.catamaranSecure || "—"}</span></div>
+                  <div><span className="text-muted-foreground">Stern RIB Secure:</span> <span className="font-medium capitalize">{formData.sternRibSecure || "—"}</span></div>
+                  <div><span className="text-muted-foreground">Bow RIB Secure:</span> <span className="font-medium capitalize">{formData.bowRibSecure || "—"}</span></div>
+                  <div><span className="text-muted-foreground">Fuel Cans Secure:</span> <span className="font-medium capitalize">{formData.fuelCansSecure || "—"}</span></div>
+                  <div><span className="text-muted-foreground">Jack Lines Secure:</span> <span className="font-medium capitalize">{formData.jackLinesSecure || "—"}</span></div>
+                  <div><span className="text-muted-foreground">Anchors Secure:</span> <span className="font-medium capitalize">{formData.anchorsSecure || "—"}</span></div>
+                  <div><span className="text-muted-foreground">Sailing Lines Coiled:</span> <span className="font-medium capitalize">{formData.sailingLinesClean || "—"}</span></div>
+                  <div><span className="text-muted-foreground">RS Cat Mast Secure:</span> <span className="font-medium capitalize">{formData.rsCatMastSecure || "—"}</span></div>
+                </div>
+              </div>
+
+              <hr className="border-border" />
+
+              {/* Interior */}
+              <div>
+                <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">Interior Department</h4>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-2 text-sm">
+                  <div><span className="text-muted-foreground">Salon Items Secure:</span> <span className="font-medium capitalize">{formData.salonItemsSecure || "—"}</span></div>
+                  <div><span className="text-muted-foreground">Galley Items Secure:</span> <span className="font-medium capitalize">{formData.galleyItemsSecure || "—"}</span></div>
+                  <div><span className="text-muted-foreground">Cabin Items Secure:</span> <span className="font-medium capitalize">{formData.allCabinItemsSecure || "—"}</span></div>
+                  <div><span className="text-muted-foreground">Forepeak Freezer:</span> <span className="font-medium">{formData.forepeakFreezerTemp ? `${formData.forepeakFreezerTemp}°F` : "—"}</span></div>
+                  <div><span className="text-muted-foreground">Salon Fridge:</span> <span className="font-medium">{formData.salonFridgeTemp ? `${formData.salonFridgeTemp}°F` : "—"}</span></div>
+                  <div><span className="text-muted-foreground">Galley Top Fridge:</span> <span className="font-medium">{formData.galleyTopFridgeTemp ? `${formData.galleyTopFridgeTemp}°F` : "—"}</span></div>
+                  <div><span className="text-muted-foreground">Galley Bottom Freezer:</span> <span className="font-medium">{formData.galleyBottomFreezerTemp ? `${formData.galleyBottomFreezerTemp}°F` : "—"}</span></div>
+                  <div><span className="text-muted-foreground">Lazarette Deep Freezer:</span> <span className="font-medium">{formData.lazaretteDeepFreezerTemp ? `${formData.lazaretteDeepFreezerTemp}°F` : "—"}</span></div>
+                  <div><span className="text-muted-foreground">Propane Solenoid Off:</span> <span className="font-medium capitalize">{formData.propaneSolenoidOff || "—"}</span></div>
+                  <div><span className="text-muted-foreground">Oven Breaker Off:</span> <span className="font-medium capitalize">{formData.ovenBreakerOff || "—"}</span></div>
+                </div>
+              </div>
+            </div>
+          </FormSection>
+
           <FormSection title="Final Review" >
             <FieldSet>
               <FieldGroup>
@@ -2127,19 +2297,45 @@ export default function PassageLogsPage() {
                     </PopoverTrigger>
                     <PopoverContent className="p-0 w-[var(--radix-popover-trigger-width)]" align="start">
                       <Command>
-                        <CommandInput placeholder="Search students..." className="h-11" />
+                        <CommandInput placeholder="Search crew..." className="h-11" />
                         <CommandList>
-                          <CommandEmpty>No students found.</CommandEmpty>
+                          <CommandEmpty>No crew found.</CommandEmpty>
+                          <CommandGroup heading="Staff">
+                            {staff.filter((person) => person.name).map((person) => (
+                              <CommandItem
+                                key={`crew-staff-${person.id}`}
+                                value={person.name}
+                                onSelect={() => {
+                                  toggleCrewMember(person.name)
+                                  if (invalidFields.has("crewMembers")) {
+                                    setInvalidFields(prev => {
+                                      const next = new Set(prev)
+                                      next.delete("crewMembers")
+                                      return next
+                                    })
+                                  }
+                                }}
+                                className="flex items-center justify-between"
+                              >
+                                <div className="flex items-center gap-2">
+                                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-medium shrink-0">
+                                    {getInitials(person.name)}
+                                  </div>
+                                  {person.name}
+                                </div>
+                                {formData.crewMembers.includes(person.name) && <Check className="h-4 w-4 shrink-0" />}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
                           <CommandGroup heading="Students">
                             {students.filter((person) => getFullName(person)).map((person) => {
                               const fullName = getFullName(person)
                               return (
                                 <CommandItem
-                                  key={`crew-${person.id}`}
+                                  key={`crew-student-${person.id}`}
                                   value={fullName}
                                   onSelect={() => {
                                     toggleCrewMember(fullName)
-                                    // Clear invalid state when a crew member is selected
                                     if (invalidFields.has("crewMembers")) {
                                       setInvalidFields(prev => {
                                         const next = new Set(prev)
@@ -2148,17 +2344,15 @@ export default function PassageLogsPage() {
                                       })
                                     }
                                   }}
+                                  className="flex items-center justify-between"
                                 >
-                                  <Check
-                                    className={cn(
-                                      "mr-2 h-4 w-4",
-                                      formData.crewMembers.includes(fullName) ? "opacity-100" : "opacity-0"
-                                    )}
-                                  />
-                                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-secondary text-secondary-foreground text-xs font-medium mr-2">
-                                    {getInitials(fullName)}
+                                  <div className="flex items-center gap-2">
+                                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-secondary text-secondary-foreground text-xs font-medium shrink-0">
+                                      {getInitials(fullName)}
+                                    </div>
+                                    {fullName}
                                   </div>
-                                  {fullName}
+                                  {formData.crewMembers.includes(fullName) && <Check className="h-4 w-4 shrink-0" />}
                                 </CommandItem>
                               )
                             })}
@@ -2168,7 +2362,7 @@ export default function PassageLogsPage() {
                     </PopoverContent>
                   </Popover>
                   <FieldDescription>
-                    Select all students who participated in this passage.
+                    Select all crew members (staff and students) who participated in this passage. At least one staff member is required.
                   </FieldDescription>
                 </Field>
 
@@ -2213,17 +2407,15 @@ export default function PassageLogsPage() {
                                   updateFieldAndClearInvalid("approvedBy", currentValue === formData.approvedBy ? "" : currentValue)
                                   setApprovedByOpen(false)
                                 }}
+                                className="flex items-center justify-between"
                               >
-                                <Check
-                                  className={cn(
-                                    "mr-2 h-4 w-4",
-                                    formData.approvedBy === person.name ? "opacity-100" : "opacity-0"
-                                  )}
-                                />
-                                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-medium mr-2">
-                                  {getInitials(person.name)}
+                                <div className="flex items-center gap-2">
+                                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-medium shrink-0">
+                                    {getInitials(person.name)}
+                                  </div>
+                                  {person.name}
                                 </div>
-                                {person.name}
+                                {formData.approvedBy === person.name && <Check className="h-4 w-4 shrink-0" />}
                               </CommandItem>
                             ))}
                           </CommandGroup>
@@ -2238,6 +2430,7 @@ export default function PassageLogsPage() {
               </FieldGroup>
             </FieldSet>
           </FormSection>
+          </>
         )}
 
       </div>

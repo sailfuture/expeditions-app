@@ -385,6 +385,36 @@ export default function PassageLogsPage() {
     }
   }, [])
 
+  // Offline detection
+  const [isOffline, setIsOffline] = useState(false)
+  useEffect(() => {
+    const handleOffline = () => {
+      setIsOffline(true)
+      toast.error("You are offline", {
+        id: "offline-toast",
+        description: "Your internet connection was lost. The form cannot be submitted until you are back online.",
+        duration: Infinity,
+      })
+    }
+    const handleOnline = () => {
+      setIsOffline(false)
+      toast.dismiss("offline-toast")
+      toast.success("Back online", {
+        description: "Your internet connection has been restored.",
+        duration: 4000,
+      })
+    }
+    // Check initial state
+    if (!navigator.onLine) handleOffline()
+
+    window.addEventListener("offline", handleOffline)
+    window.addEventListener("online", handleOnline)
+    return () => {
+      window.removeEventListener("offline", handleOffline)
+      window.removeEventListener("online", handleOnline)
+    }
+  }, [])
+
   useEffect(() => {
     const fetchActiveExpedition = async () => {
       try {
@@ -2454,8 +2484,8 @@ export default function PassageLogsPage() {
             ) : (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button disabled={isSubmitting} className="flex-1 h-10 cursor-pointer">
-                    {isSubmitting ? "Submitting..." : "Submit Passage Log"}
+                  <Button disabled={isSubmitting || isOffline} className="flex-1 h-10 cursor-pointer">
+                    {isOffline ? "Offline — Cannot Submit" : isSubmitting ? "Submitting..." : "Submit Passage Log"}
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>

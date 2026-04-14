@@ -18,18 +18,28 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
-import { Calendar, Plus, Check, X, ChevronDown, ChevronRight, ExternalLink, MapPin, Users, Ship, RefreshCw } from "lucide-react"
+import { Calendar, Plus, Check, X, ChevronDown, ChevronRight, ExternalLink, MapPin, Users, Ship, RefreshCw, Trash2 } from "lucide-react"
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Textarea } from "@/components/ui/textarea"
 import { useExpeditionSchedules, useExpeditionLocations, useTeachers } from "@/lib/hooks/use-expeditions"
 import { useExpeditionContext } from "@/lib/contexts/expedition-context"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { addAllDatesForExpedition, updateExpeditionSchedule, getExpeditionsGalleyTeam, getExpeditionDishDays } from "@/lib/xano"
+import { addAllDatesForExpedition, deleteExpeditionSchedule, updateExpeditionSchedule, getExpeditionsGalleyTeam, getExpeditionDishDays } from "@/lib/xano"
 import useSWR, { mutate } from "swr"
 import { toast } from "sonner"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -208,7 +218,10 @@ export default function DashboardPage() {
   const [selectedSchedule, setSelectedSchedule] = useState<any>(null)
   const [detailNotes, setDetailNotes] = useState("")
   const [savingDetailNotes, setSavingDetailNotes] = useState(false)
-  
+  const [deleteRowDialogOpen, setDeleteRowDialogOpen] = useState(false)
+  const [scheduleToDelete, setScheduleToDelete] = useState<any>(null)
+  const [deletingRow, setDeletingRow] = useState(false)
+
   // Scroll tracking for gradient indicators
   const [scrollState, setScrollState] = useState<Record<string, { left: boolean; right: boolean }>>({})
   const scrollRefs = useRef<Record<string, HTMLDivElement | null>>({})
@@ -385,6 +398,29 @@ export default function DashboardPage() {
     e?.stopPropagation()
     // Use the date string directly - it's already in YYYY-MM-DD format
     router.push(`/schedule/${schedule.date}`)
+  }
+
+  const handleDeleteRowClick = (schedule: any, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setScheduleToDelete(schedule)
+    setDeleteRowDialogOpen(true)
+  }
+
+  const handleConfirmDeleteRow = async () => {
+    if (!scheduleToDelete) return
+    setDeletingRow(true)
+    try {
+      await deleteExpeditionSchedule(scheduleToDelete.id)
+      mutate(`expedition_schedules_${activeExpeditionId}`)
+      toast.success(`Deleted ${formatDate(scheduleToDelete.date)}`)
+      setDeleteRowDialogOpen(false)
+      setScheduleToDelete(null)
+    } catch (error) {
+      console.error("Failed to delete date row:", error)
+      toast.error("Failed to delete date row")
+    } finally {
+      setDeletingRow(false)
+    }
   }
 
   const handleRowClick = (schedule: any) => {
@@ -1107,7 +1143,16 @@ export default function DashboardPage() {
                               </TableCell>
                               <TableCell className="h-14 px-4" style={{ width: "100px" }}>
                                 <div className="flex items-center justify-end gap-2">
-                                  <Button 
+                                  <Button
+                                    variant="outline"
+                                    size="icon"
+                                    onClick={(e) => handleDeleteRowClick(schedule, e)}
+                                    className="h-8 w-8 text-gray-500 hover:text-red-600 hover:bg-red-50 hover:border-red-300 cursor-pointer border-gray-300"
+                                    title="Delete date row"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                  <Button
                                     variant="outline"
                                     size="icon"
                                     onClick={(e) => handleViewSchedule(schedule, e)}
@@ -1357,7 +1402,16 @@ export default function DashboardPage() {
                               </TableCell>
                               <TableCell className="h-14 px-4" style={{ width: "100px" }}>
                                 <div className="flex items-center justify-end gap-2">
-                                  <Button 
+                                  <Button
+                                    variant="outline"
+                                    size="icon"
+                                    onClick={(e) => handleDeleteRowClick(schedule, e)}
+                                    className="h-8 w-8 text-gray-500 hover:text-red-600 hover:bg-red-50 hover:border-red-300 cursor-pointer border-gray-300"
+                                    title="Delete date row"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                  <Button
                                     variant="outline"
                                     size="icon"
                                     onClick={(e) => handleViewSchedule(schedule, e)}
@@ -1510,6 +1564,28 @@ export default function DashboardPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Delete Date Row Confirmation */}
+      <AlertDialog open={deleteRowDialogOpen} onOpenChange={setDeleteRowDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Date Row</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete {scheduleToDelete ? formatDate(scheduleToDelete.date) : "this date"}? This will also remove all activities for this day. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletingRow} className="cursor-pointer">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDeleteRow}
+              className="bg-red-600 hover:bg-red-700 text-white cursor-pointer"
+              disabled={deletingRow}
+            >
+              {deletingRow ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

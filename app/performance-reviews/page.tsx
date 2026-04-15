@@ -16,13 +16,13 @@ import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ExpeditionHeader } from "@/components/expedition-header"
 import { useExpeditions, useExpeditionPerformanceReviews, useTeachersByExpedition } from "@/lib/hooks/use-expeditions"
-import { FileText, User, Download, ExternalLink, Plus, Calendar, Eye, Trash2 } from "lucide-react"
+import { FileText, User, Download, ExternalLink, Plus, Calendar, Eye, Trash2, Mail } from "lucide-react"
 import { Textarea } from "@/components/ui/textarea"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { generatePerformanceReviewPDF } from "@/lib/pdf-generator"
 import { toast } from "sonner"
-import { getProfessionalismByStudentAndDate, createPerformanceReview, updatePerformanceReviewNotes, getPerformanceReviewById, deletePerformanceReview, getExpeditionTransactionsByDateByStudent, getEvaluationByStudent } from "@/lib/xano"
+import { getProfessionalismByStudentAndDate, createPerformanceReview, updatePerformanceReviewNotes, getPerformanceReviewById, deletePerformanceReview, getExpeditionTransactionsByDateByStudent, getEvaluationByStudent, getStudentById } from "@/lib/xano"
 import { Spinner } from "@/components/ui/spinner"
 import { mutate } from "swr"
 import {
@@ -150,6 +150,58 @@ function PreviewModal({
     }
   )
   
+  // Fetch student details to get parent contact info
+  const { data: studentDetails } = useSWR(
+    open && review?.students_id ? `student_details_${review.students_id}` : null,
+    open && review?.students_id ? () => getStudentById(review.students_id) : null
+  )
+  const parentEmail = studentDetails?._expeditions_student_information?.primary_contact_email || null
+  const parentName = studentDetails?._expeditions_student_information?.primary_contact_name || null
+
+  const [isSendingEmail, setIsSendingEmail] = useState(false)
+
+  const handleEmailToParent = async () => {
+    if (!reviewId || !parentEmail || !review) return
+    setIsSendingEmail(true)
+    try {
+      const studentName = `${review._students?.firstName || ""} ${review._students?.lastName || ""}`.trim()
+
+      // Generate PDF client-side
+      const pdfDoc = await generatePerformanceReviewPDF(reviewId)
+      const pdfBase64 = pdfDoc.output("datauristring").split(",")[1]
+
+      const response = await fetch("/api/send-performance-review", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          parentEmail,
+          parentName,
+          studentName,
+          reportName: review.report_name,
+          startDate: review.startDate ? formatDate(review.startDate) : null,
+          endDate: review.endDate ? formatDate(review.endDate) : null,
+          pdfBase64,
+        }),
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || "Failed to send email")
+      }
+
+      toast.success(`Email sent to ${parentName || parentEmail}`, {
+        description: `Performance review delivered to ${parentEmail}`,
+      })
+    } catch (error: any) {
+      console.error("Failed to send email:", error)
+      toast.error("Failed to send email", {
+        description: error.message || "An unexpected error occurred",
+      })
+    } finally {
+      setIsSendingEmail(false)
+    }
+  }
+
   // Fetch daily scores for this student and date range (for Daily Scores table)
   const { data: dailyScores, isLoading: loadingDailyScores } = useSWR(
     open && review?.students_id && review?.expeditions_id && review?.startDate && review?.endDate
@@ -526,17 +578,36 @@ function PreviewModal({
         </div>
         
         <DialogFooter className="flex-shrink-0">
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={() => onOpenChange(false)}
-            disabled={saving}
+            disabled={saving || isSendingEmail}
             className="cursor-pointer"
           >
             Close
           </Button>
-          <Button 
+          <Button
+            variant="outline"
+            onClick={handleEmailToParent}
+            disabled={!parentEmail || isSendingEmail || saving}
+            className="cursor-pointer"
+            title={parentEmail ? `Send to ${parentName || parentEmail}` : "No parent email on file"}
+          >
+            {isSendingEmail ? (
+              <>
+                <Spinner size="sm" className="h-4 w-4 mr-2" />
+                Sending...
+              </>
+            ) : (
+              <>
+                <Mail className="h-4 w-4 mr-2" />
+                {parentEmail ? "Email to Parent" : "No Parent Email"}
+              </>
+            )}
+          </Button>
+          <Button
             onClick={onSave}
-            disabled={saving}
+            disabled={saving || isSendingEmail}
             className="cursor-pointer"
           >
             {saving ? (

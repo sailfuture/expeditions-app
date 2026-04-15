@@ -44,7 +44,8 @@ import {
   FileUploadItemPreview,
   FileUploadList,
 } from "@/components/ui/file-upload"
-import { getPhotoUrl } from "@/lib/utils"
+import { cn, getPhotoUrl } from "@/lib/utils"
+import { getGalleyEquipment } from "@/lib/xano"
 
 const XANO_BASE_URL = "https://xsc3-mvx7-r86m.n7e.xano.io/api:bXFdqx8y"
 
@@ -54,10 +55,11 @@ interface Recipe {
   recipe_name: string
   recipe_photo: any
   type: string
+  types?: string[]
   summary?: string
   duration_minutes?: string
-  equipment_required?: string
   expeditions_id?: number[]
+  instructions?: any[]
 }
 
 async function uploadImageToXano(file: File): Promise<any> {
@@ -89,10 +91,9 @@ export default function MealPlanningPage() {
   const [addForm, setAddForm] = useState({
     recipe_name: "",
     recipe_photo: null as any,
-    type: "",
+    types: [] as string[],
     summary: "",
     duration_minutes: "",
-    equipment_required: "",
     expeditions_id: [] as number[],
   })
   const [addPhotoFile, setAddPhotoFile] = useState<File | null>(null)
@@ -106,10 +107,9 @@ export default function MealPlanningPage() {
   const [editForm, setEditForm] = useState({
     recipe_name: "",
     recipe_photo: null as any,
-    type: "",
+    types: [] as string[],
     summary: "",
     duration_minutes: "",
-    equipment_required: "",
     expeditions_id: [] as number[],
   })
   const [editPhotoFile, setEditPhotoFile] = useState<File | null>(null)
@@ -127,7 +127,36 @@ export default function MealPlanningPage() {
     fetcher
   )
 
-  // Group recipes by type
+  // Galley equipment
+  const { data: galleyEquipment = [] } = useSWR("galley_equipment", getGalleyEquipment)
+
+  // Fetch recipe details (with instructions) for equipment display
+  const recipeIds = useMemo(() => (recipes || []).map(r => r.id), [recipes])
+  const { data: recipeDetails } = useSWR(
+    recipeIds.length > 0 ? `recipe_details_${recipeIds.join(",")}` : null,
+    async () => {
+      const details = await Promise.all(
+        recipeIds.map(id => fetch(`${XANO_BASE_URL}/expedition_cookbook/${id}`).then(r => r.json()))
+      )
+      const map: Record<number, any> = {}
+      details.forEach(d => { if (d.id) map[d.id] = d })
+      return map
+    }
+  )
+
+  const getRecipeEquipment = (recipeId: number): string[] => {
+    const detail = recipeDetails?.[recipeId]
+    if (!detail?.instructions) return []
+    const ids = new Set<number>()
+    detail.instructions.forEach((inst: any) => {
+      if (Array.isArray(inst.expedition_galley_equipment_id)) {
+        inst.expedition_galley_equipment_id.forEach((id: number) => ids.add(id))
+      }
+    })
+    return [...ids].map(id => galleyEquipment.find((e: any) => e.id === id)?.name).filter(Boolean).sort()
+  }
+
+  // Group recipes by types array (a recipe can appear in multiple groups)
   const groupedRecipes = useMemo(() => {
     if (!recipes) return { Breakfast: [], Lunch: [], Dinner: [], Snack: [] }
 
@@ -137,18 +166,21 @@ export default function MealPlanningPage() {
       Dinner: [],
       Snack: [],
     }
-    
+
     recipes.forEach((recipe) => {
-      if (groups[recipe.type]) {
-        groups[recipe.type].push(recipe)
-      }
+      const recipeTypes = Array.isArray(recipe.types) && recipe.types.length > 0
+        ? recipe.types
+        : recipe.type ? [recipe.type] : []
+      recipeTypes.forEach((t) => {
+        if (groups[t]) groups[t].push(recipe)
+      })
     })
-    
+
     // Sort each group alphabetically by name
     Object.keys(groups).forEach((key) => {
       groups[key].sort((a, b) => a.recipe_name.localeCompare(b.recipe_name))
     })
-    
+
     return groups
   }, [recipes])
 
@@ -162,10 +194,9 @@ export default function MealPlanningPage() {
     setEditForm({
       recipe_name: recipe.recipe_name || "",
       recipe_photo: recipe.recipe_photo || null,
-      type: recipe.type || "",
+      types: Array.isArray(recipe.types) && recipe.types.length > 0 ? recipe.types : recipe.type ? [recipe.type] : [],
       summary: recipe.summary || "",
       duration_minutes: recipe.duration_minutes || "",
-      equipment_required: recipe.equipment_required || "",
       expeditions_id: recipe.expeditions_id || [],
     })
     setEditPhotoFile(null)
@@ -192,10 +223,9 @@ export default function MealPlanningPage() {
           expedition_cookbook_id: editRecipe.id,
           recipe_name: editForm.recipe_name,
           recipe_photo: photoData,
-          type: editForm.type,
+          types: editForm.types,
           summary: editForm.summary,
           duration_minutes: editForm.duration_minutes,
-          equipment_required: editForm.equipment_required,
           expeditions_id: editForm.expeditions_id,
         }),
       })
@@ -227,7 +257,7 @@ export default function MealPlanningPage() {
   }
 
   const handleSaveAdd = async () => {
-    if (!addForm.recipe_name.trim() || !addForm.type) return
+    if (!addForm.recipe_name.trim() || addForm.types.length === 0) return
 
     setIsSavingAdd(true)
     try {
@@ -244,10 +274,9 @@ export default function MealPlanningPage() {
         body: JSON.stringify({
           recipe_name: addForm.recipe_name,
           recipe_photo: photoData,
-          type: addForm.type,
+          types: addForm.types,
           summary: addForm.summary,
           duration_minutes: addForm.duration_minutes,
-          equipment_required: addForm.equipment_required,
           expeditions_id: addForm.expeditions_id,
         }),
       })
@@ -259,10 +288,9 @@ export default function MealPlanningPage() {
       setAddForm({
         recipe_name: "",
         recipe_photo: null,
-        type: "",
+        types: [],
         summary: "",
         duration_minutes: "",
-        equipment_required: "",
         expeditions_id: [],
       })
       setAddPhotoFile(null)
@@ -334,7 +362,7 @@ export default function MealPlanningPage() {
                 <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[7%]">Photo</TableHead>
                 <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[30%]">Recipe Name</TableHead>
                 <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[10%]">Total Time</TableHead>
-                <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden lg:table-cell w-[46%]">Summary</TableHead>
+                <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden lg:table-cell w-[46%]">Equipment</TableHead>
                 <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[7%]">Edit</TableHead>
               </TableRow>
             </TableHeader>
@@ -385,7 +413,7 @@ export default function MealPlanningPage() {
                     </TableCell>
                     <TableCell className="h-16 px-4 sm:px-6 hidden lg:table-cell cursor-pointer" onClick={() => handleRowClick(meal.id)}>
                       <span className="text-sm text-gray-500 truncate block">
-                        {meal.summary ? truncateText(meal.summary, 80) : "—"}
+                        {getRecipeEquipment(meal.id).join(", ") || "—"}
                       </span>
                     </TableCell>
                     <TableCell className="h-16 px-4 sm:px-6">
@@ -466,10 +494,9 @@ export default function MealPlanningPage() {
               setAddForm({
                 recipe_name: "",
                 recipe_photo: null,
-                type: "",
+                types: [],
                 summary: "",
                 duration_minutes: "",
-                equipment_required: "",
                 expeditions_id: [],
               })
               setAddPhotoFile(null)
@@ -536,31 +563,26 @@ export default function MealPlanningPage() {
 
             <div className="space-y-2">
               <Label className="text-sm font-medium">Type *</Label>
-              <Select
-                value={addForm.type}
-                onValueChange={(val) => setAddForm({ ...addForm, type: val })}
-              >
-                <SelectTrigger className="h-11 cursor-pointer">
-                  <SelectValue placeholder="Select type..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Breakfast" className="cursor-pointer">Breakfast</SelectItem>
-                  <SelectItem value="Lunch" className="cursor-pointer">Lunch</SelectItem>
-                  <SelectItem value="Dinner" className="cursor-pointer">Dinner</SelectItem>
-                  <SelectItem value="Snack" className="cursor-pointer">Snack</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="add-summary" className="text-sm font-medium">Summary</Label>
-              <Textarea
-                id="add-summary"
-                value={addForm.summary}
-                onChange={(e) => setAddForm({ ...addForm, summary: e.target.value })}
-                placeholder="Brief description of the recipe..."
-                rows={3}
-              />
+              <div className="flex flex-wrap gap-2">
+                {["Breakfast", "Lunch", "Dinner", "Snack"].map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setAddForm(f => ({
+                      ...f,
+                      types: f.types.includes(t) ? f.types.filter(x => x !== t) : [...f.types, t]
+                    }))}
+                    className={cn(
+                      "px-3 py-1.5 rounded-full border text-sm cursor-pointer transition-colors",
+                      addForm.types.includes(t)
+                        ? "bg-gray-900 text-white border-gray-900"
+                        : "bg-white text-gray-600 border-gray-200 hover:border-gray-400"
+                    )}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -601,17 +623,6 @@ export default function MealPlanningPage() {
                   </SelectContent>
                 </Select>
               </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="add-equipment" className="text-sm font-medium">Equipment Required</Label>
-              <Textarea
-                id="add-equipment"
-                value={addForm.equipment_required}
-                onChange={(e) => setAddForm({ ...addForm, equipment_required: e.target.value })}
-                placeholder="e.g., Pot, stove, cutting board, knife..."
-                rows={2}
-              />
             </div>
 
             <div className="space-y-2">
@@ -698,7 +709,7 @@ export default function MealPlanningPage() {
               <Button
                 onClick={handleSaveAdd}
                 className="flex-1 cursor-pointer"
-                disabled={isSavingAdd || !addForm.recipe_name.trim() || !addForm.type}
+                disabled={isSavingAdd || !addForm.recipe_name.trim() || addForm.types.length === 0}
               >
                 {isSavingAdd ? (
                   <>
@@ -750,32 +761,26 @@ export default function MealPlanningPage() {
             {/* Type */}
             <div className="space-y-2">
               <Label className="text-sm font-medium">Type</Label>
-              <Select
-                value={editForm.type}
-                onValueChange={(val) => setEditForm({ ...editForm, type: val })}
-              >
-                <SelectTrigger className="h-11 cursor-pointer">
-                  <SelectValue placeholder="Select type..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Breakfast" className="cursor-pointer">Breakfast</SelectItem>
-                  <SelectItem value="Lunch" className="cursor-pointer">Lunch</SelectItem>
-                  <SelectItem value="Dinner" className="cursor-pointer">Dinner</SelectItem>
-                  <SelectItem value="Snack" className="cursor-pointer">Snack</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Summary */}
-            <div className="space-y-2">
-              <Label htmlFor="edit-summary" className="text-sm font-medium">Summary</Label>
-              <Textarea
-                id="edit-summary"
-                value={editForm.summary}
-                onChange={(e) => setEditForm({ ...editForm, summary: e.target.value })}
-                placeholder="Brief description of the recipe..."
-                rows={3}
-              />
+              <div className="flex flex-wrap gap-2">
+                {["Breakfast", "Lunch", "Dinner", "Snack"].map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setEditForm(f => ({
+                      ...f,
+                      types: f.types.includes(t) ? f.types.filter(x => x !== t) : [...f.types, t]
+                    }))}
+                    className={cn(
+                      "px-3 py-1.5 rounded-full border text-sm cursor-pointer transition-colors",
+                      editForm.types.includes(t)
+                        ? "bg-gray-900 text-white border-gray-900"
+                        : "bg-white text-gray-600 border-gray-200 hover:border-gray-400"
+                    )}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Total Cooking and Prep Time */}
@@ -817,18 +822,6 @@ export default function MealPlanningPage() {
                   </SelectContent>
                 </Select>
               </div>
-            </div>
-
-            {/* Equipment Required */}
-            <div className="space-y-2">
-              <Label htmlFor="edit-equipment" className="text-sm font-medium">Equipment Required</Label>
-              <Textarea
-                id="edit-equipment"
-                value={editForm.equipment_required}
-                onChange={(e) => setEditForm({ ...editForm, equipment_required: e.target.value })}
-                placeholder="e.g., Pot, stove, cutting board, knife..."
-                rows={2}
-              />
             </div>
 
             {/* Recipe Photo */}

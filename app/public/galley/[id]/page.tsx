@@ -200,6 +200,12 @@ function PublicRecipeDetailPage() {
     fetcher
   )
 
+  // Galley equipment
+  const { data: galleyEquipment = [] } = useSWR(
+    "galley_equipment",
+    () => fetch(`${XANO_BASE_URL}/expedition_galley_equipment`).then(r => r.json())
+  )
+
   // Active expedition + schedule items for prev/next meal nav
   const { data: activeExpedition } = useActiveExpedition()
   const expeditionId = activeExpedition?.id
@@ -516,12 +522,24 @@ function PublicRecipeDetailPage() {
                       </span>
                     </div>
                   )}
-                  {recipe.equipment_required && (
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <Wrench className="h-4 w-4 text-gray-400" />
-                      <span className="line-clamp-2 sm:line-clamp-none">{recipe.equipment_required}</span>
-                    </div>
-                  )}
+                  {(() => {
+                    const allEquipIds = new Set<number>()
+                    recipe.instructions?.forEach((inst: any) => {
+                      if (Array.isArray(inst.expedition_galley_equipment_id)) {
+                        inst.expedition_galley_equipment_id.forEach((id: number) => allEquipIds.add(id))
+                      }
+                    })
+                    const equipNames = [...allEquipIds]
+                      .map(id => galleyEquipment.find((e: any) => e.id === id)?.name)
+                      .filter(Boolean)
+                      .sort()
+                    return equipNames.length > 0 ? (
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <Wrench className="h-4 w-4 text-gray-400" />
+                        <span className="line-clamp-2 sm:line-clamp-none">{equipNames.join(", ")}</span>
+                      </div>
+                    ) : null
+                  })()}
                 </div>
               </div>
             </div>
@@ -676,10 +694,10 @@ function PublicRecipeDetailPage() {
                               <span>{instruction.duration} min</span>
                             </div>
                           )}
-                          {instruction.equipment && (
+                          {Array.isArray(instruction.expedition_galley_equipment_id) && instruction.expedition_galley_equipment_id.length > 0 && (
                             <div className="flex items-center gap-1.5 text-gray-600">
                               <Wrench className="h-4 w-4 text-gray-400" />
-                              <span className="break-words">{instruction.equipment}</span>
+                              <span className="break-words">{instruction.expedition_galley_equipment_id.map((id: number) => galleyEquipment.find((e: any) => e.id === id)?.name).filter(Boolean).join(", ")}</span>
                             </div>
                           )}
                         </div>

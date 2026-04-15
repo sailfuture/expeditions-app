@@ -705,9 +705,34 @@ export async function getExpeditionsIngredientTypes() {
   return xanoFetch<any[]>("/expeditions_ingredient_types")
 }
 
+// ============ Galley Equipment ============
+export async function getGalleyEquipment() {
+  return xanoFetch<any[]>("/expedition_galley_equipment")
+}
+
 // ============ Expedition Inventory Locations ============
 export async function getExpeditionInventoryLocations() {
   return xanoFetch<any[]>("/expedition_inventory_locations")
+}
+
+export async function createExpeditionInventoryLocation(data: Record<string, any>) {
+  return xanoFetch<any>("/expedition_inventory_locations", {
+    method: "POST",
+    body: JSON.stringify(data),
+  })
+}
+
+export async function updateExpeditionInventoryLocation(id: number, data: Record<string, any>) {
+  return xanoFetch<any>(`/expedition_inventory_locations/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  })
+}
+
+export async function deleteExpeditionInventoryLocation(id: number) {
+  return xanoFetch<any>(`/expedition_inventory_locations/${id}`, {
+    method: "DELETE",
+  })
 }
 
 // ============ Expedition Departments ============

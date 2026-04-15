@@ -32,7 +32,8 @@ import {
   ComboboxItem,
   ComboboxList,
 } from "@/components/ui/combobox"
-import { PlusCircle, Pencil, Trash2, Boxes, Eye, Minus, Plus } from "lucide-react"
+import { PlusCircle, Pencil, Trash2, Boxes, Eye, Minus, Plus, Search, MapPin, Check } from "lucide-react"
+import { cn } from "@/lib/utils"
 import {
   getExpeditionsInventory,
   createExpeditionsInventoryItem,
@@ -40,6 +41,8 @@ import {
   deleteExpeditionsInventoryItem,
   getExpeditionsIngredientTypes,
   getExpeditionInventoryLocations,
+  createExpeditionInventoryLocation,
+  deleteExpeditionInventoryLocation,
 } from "@/lib/xano"
 import { useCurrentUser } from "@/lib/contexts/user-context"
 
@@ -53,6 +56,7 @@ interface InventoryItem {
   location: string
   packages: number
   oz_per_package: number
+  isNotPackage?: boolean
   notes: string
 }
 
@@ -198,6 +202,12 @@ export default function InventoryPage() {
   const { data: ingredientTypes } = useSWR("ingredient_types", getExpeditionsIngredientTypes)
   const { data: inventoryLocations } = useSWR("inventory_locations", getExpeditionInventoryLocations)
 
+  const [inventorySearch, setInventorySearch] = useState("")
+  const [locationsDialogOpen, setLocationsDialogOpen] = useState(false)
+  const [newLocationName, setNewLocationName] = useState("")
+  const [savingLocation, setSavingLocation] = useState(false)
+  const [deletingLocationId, setDeletingLocationId] = useState<number | null>(null)
+
   // Dialog state
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null)
@@ -212,6 +222,7 @@ export default function InventoryPage() {
     location: "",
     packages: "" as string | number,
     oz_per_package: "" as string | number,
+    isNotPackage: false,
     notes: "",
   })
 
@@ -223,6 +234,7 @@ export default function InventoryPage() {
       location: "",
       packages: "",
       oz_per_package: "",
+      isNotPackage: false,
       notes: "",
     })
     setDialogOpen(true)
@@ -237,6 +249,7 @@ export default function InventoryPage() {
       location: item.location || "",
       packages: item.packages || "",
       oz_per_package: item.oz_per_package || "",
+      isNotPackage: item.isNotPackage || false,
       notes: item.notes || "",
     })
     setDialogOpen(true)
@@ -275,7 +288,8 @@ export default function InventoryPage() {
         type: formData.type,
         location: formData.location,
         packages: formData.packages === "" ? 0 : Number(formData.packages),
-        oz_per_package: formData.oz_per_package === "" ? 0 : Number(formData.oz_per_package),
+        oz_per_package: formData.isNotPackage ? 0 : (formData.oz_per_package === "" ? 0 : Number(formData.oz_per_package)),
+        isNotPackage: formData.isNotPackage,
         notes: formData.notes,
       }
 
@@ -349,20 +363,25 @@ export default function InventoryPage() {
 
     sortedKeys.forEach((key) => {
       const color = typeColorLookup[key] || "gray"
-      groups.push({ type: key, color, items: groupMap.get(key)! })
+      const items = groupMap.get(key)!.sort((a, b) => (a.name || "").localeCompare(b.name || ""))
+      groups.push({ type: key, color, items })
     })
 
     return groups
   }, [inventoryItems, ingredientTypes, typeColorLookup])
 
-  // Split into in-stock and out-of-stock groups
+  // Split into in-stock and out-of-stock groups, filtered by search
   const { inStockGroups, outOfStockGroups } = useMemo(() => {
     const inStock: typeof groupedItems = []
     const outOfStock: typeof groupedItems = []
+    const query = inventorySearch.toLowerCase().trim()
 
     groupedItems.forEach((group) => {
-      const inStockItems = group.items.filter((item) => (item.packages ?? 0) > 0)
-      const outOfStockItems = group.items.filter((item) => (item.packages ?? 0) === 0)
+      const filtered = query
+        ? group.items.filter((item) => item.name?.toLowerCase().includes(query) || item.type?.toLowerCase().includes(query))
+        : group.items
+      const inStockItems = filtered.filter((item) => (item.packages ?? 0) > 0)
+      const outOfStockItems = filtered.filter((item) => (item.packages ?? 0) === 0)
       if (inStockItems.length > 0) {
         inStock.push({ ...group, items: inStockItems })
       }
@@ -372,9 +391,37 @@ export default function InventoryPage() {
     })
 
     return { inStockGroups: inStock, outOfStockGroups: outOfStock }
-  }, [groupedItems])
+  }, [groupedItems, inventorySearch])
 
   const items = (inventoryItems || []) as InventoryItem[]
+
+  const handleAddLocation = async () => {
+    if (!newLocationName.trim()) return
+    setSavingLocation(true)
+    try {
+      await createExpeditionInventoryLocation({ name: newLocationName.trim(), notInUse: false })
+      mutate("inventory_locations")
+      setNewLocationName("")
+      toast.success("Location added")
+    } catch {
+      toast.error("Failed to add location")
+    } finally {
+      setSavingLocation(false)
+    }
+  }
+
+  const handleDeleteLocation = async (id: number) => {
+    setDeletingLocationId(id)
+    try {
+      await deleteExpeditionInventoryLocation(id)
+      mutate("inventory_locations")
+      toast.success("Location deleted")
+    } catch {
+      toast.error("Failed to delete location")
+    } finally {
+      setDeletingLocationId(null)
+    }
+  }
 
   // Get bullet class for view dialog
   const viewItemBulletClass = viewItem
@@ -393,12 +440,29 @@ export default function InventoryPage() {
                 Manage food and supply inventory on the boat
               </p>
             </div>
-            {isAdmin && (
-              <Button size="sm" onClick={handleAddItem} className="cursor-pointer">
-                <PlusCircle className="h-4 w-4 mr-2" />
-                Add Item
-              </Button>
-            )}
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Search inventory..."
+                  value={inventorySearch}
+                  onChange={(e) => setInventorySearch(e.target.value)}
+                  className="pl-9 h-9 w-48 sm:w-64"
+                />
+              </div>
+              {isAdmin && (
+                <>
+                  <Button size="sm" variant="outline" onClick={() => setLocationsDialogOpen(true)} className="cursor-pointer">
+                    <MapPin className="h-4 w-4 mr-2" />
+                    Locations
+                  </Button>
+                  <Button size="sm" onClick={handleAddItem} className="cursor-pointer">
+                    <PlusCircle className="h-4 w-4 mr-2" />
+                    Add Item
+                  </Button>
+                </>
+              )}
+            </div>
           </div>
 
           {/* Table */}
@@ -408,7 +472,7 @@ export default function InventoryPage() {
                 <TableRow className="border-b bg-gray-50/30 hover:bg-gray-50/30">
                   <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[20%]">Name</TableHead>
                   <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden md:table-cell w-[15%]">Location</TableHead>
-                  <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 text-center w-[10%]">Packages</TableHead>
+                  <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 text-center w-[10%]">Pkg / Qty</TableHead>
                   <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 text-center w-[10%]">Oz/Pkg</TableHead>
                   <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 text-center w-[12%]">Total Oz</TableHead>
                   <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 text-center w-[12%]">Total Lbs</TableHead>
@@ -456,7 +520,7 @@ export default function InventoryPage() {
                 <TableRow className="border-b bg-gray-50/30 hover:bg-gray-50/30">
                   <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[20%]">Name</TableHead>
                   <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden md:table-cell w-[15%]">Location</TableHead>
-                  <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 text-center w-[10%]">Packages</TableHead>
+                  <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 text-center w-[10%]">Pkg / Qty</TableHead>
                   <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 text-center w-[10%]">Oz/Pkg</TableHead>
                   <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 text-center w-[12%]">Total Oz</TableHead>
                   <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 text-center w-[12%]">Total Lbs</TableHead>
@@ -503,19 +567,27 @@ export default function InventoryPage() {
                             />
                           </TableCell>
                           <TableCell className="h-12 px-4 sm:px-6 text-center">
-                            <span className="text-sm text-gray-700">{item.oz_per_package ?? 0}</span>
+                            <span className="text-sm text-gray-700">{item.isNotPackage ? "—" : (item.oz_per_package ?? 0)}</span>
                           </TableCell>
                           <TableCell className="h-12 px-4 sm:px-6 text-center">
-                            <span className="text-sm font-semibold text-gray-900">
-                              {(item.packages ?? 0) * (item.oz_per_package ?? 0)}
-                              <span className="text-xs font-semibold text-gray-400 ml-1">oz</span>
-                            </span>
+                            {item.isNotPackage ? (
+                              <span className="text-sm text-gray-400">—</span>
+                            ) : (
+                              <span className="text-sm font-semibold text-gray-900">
+                                {(item.packages ?? 0) * (item.oz_per_package ?? 0)}
+                                <span className="text-xs font-semibold text-gray-400 ml-1">oz</span>
+                              </span>
+                            )}
                           </TableCell>
                           <TableCell className="h-12 px-4 sm:px-6 text-center">
-                            <span className="text-sm font-semibold text-gray-900">
-                              {(((item.packages ?? 0) * (item.oz_per_package ?? 0)) / 16).toFixed(1)}
-                              <span className="text-xs font-semibold text-gray-400 ml-1">lb</span>
-                            </span>
+                            {item.isNotPackage ? (
+                              <span className="text-sm text-gray-400">—</span>
+                            ) : (
+                              <span className="text-sm font-semibold text-gray-900">
+                                {(((item.packages ?? 0) * (item.oz_per_package ?? 0)) / 16).toFixed(1)}
+                                <span className="text-xs font-semibold text-gray-400 ml-1">lb</span>
+                              </span>
+                            )}
                           </TableCell>
                           <TableCell className="h-12 px-4 sm:px-6 hidden lg:table-cell overflow-hidden">
                             <span className="text-sm text-gray-500 truncate block">{item.notes || "—"}</span>
@@ -572,7 +644,7 @@ export default function InventoryPage() {
                 <TableRow className="border-b bg-gray-50/30 hover:bg-gray-50/30">
                   <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[20%]">Name</TableHead>
                   <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden md:table-cell w-[15%]">Location</TableHead>
-                  <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 text-center w-[10%]">Packages</TableHead>
+                  <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 text-center w-[10%]">Pkg / Qty</TableHead>
                   <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 text-center w-[10%]">Oz/Pkg</TableHead>
                   <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 text-center w-[12%]">Total Oz</TableHead>
                   <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 text-center w-[12%]">Total Lbs</TableHead>
@@ -617,19 +689,13 @@ export default function InventoryPage() {
                             />
                           </TableCell>
                           <TableCell className="h-12 px-4 sm:px-6 text-center">
-                            <span className="text-sm text-gray-400">{item.oz_per_package ?? 0}</span>
+                            <span className="text-sm text-gray-400">{item.isNotPackage ? "—" : (item.oz_per_package ?? 0)}</span>
                           </TableCell>
                           <TableCell className="h-12 px-4 sm:px-6 text-center">
-                            <span className="text-sm font-semibold text-gray-400">
-                              {(item.packages ?? 0) * (item.oz_per_package ?? 0)}
-                              <span className="text-xs font-semibold text-gray-300 ml-1">oz</span>
-                            </span>
+                            <span className="text-sm text-gray-400">{item.isNotPackage ? "—" : `${(item.packages ?? 0) * (item.oz_per_package ?? 0)} oz`}</span>
                           </TableCell>
                           <TableCell className="h-12 px-4 sm:px-6 text-center">
-                            <span className="text-sm font-semibold text-gray-400">
-                              {(((item.packages ?? 0) * (item.oz_per_package ?? 0)) / 16).toFixed(1)}
-                              <span className="text-xs font-semibold text-gray-300 ml-1">lb</span>
-                            </span>
+                            <span className="text-sm text-gray-400">{item.isNotPackage ? "—" : `${(((item.packages ?? 0) * (item.oz_per_package ?? 0)) / 16).toFixed(1)} lb`}</span>
                           </TableCell>
                           <TableCell className="h-12 px-4 sm:px-6 hidden lg:table-cell overflow-hidden">
                             <span className="text-sm text-gray-400 truncate block">{item.notes || "—"}</span>
@@ -697,26 +763,28 @@ export default function InventoryPage() {
                   <p className="text-sm text-gray-900 mt-1">{viewItem.location || "—"}</p>
                 </div>
                 <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Packages</p>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">{viewItem.isNotPackage ? "Quantity" : "Packages"}</p>
                   <p className="text-sm text-gray-900 mt-1">{viewItem.packages ?? 0}</p>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Oz / Package</p>
-                  <p className="text-sm text-gray-900 mt-1">{viewItem.oz_per_package ?? 0}</p>
+              {!viewItem.isNotPackage && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Oz / Package</p>
+                    <p className="text-sm text-gray-900 mt-1">{viewItem.oz_per_package ?? 0}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Total Weight</p>
+                    <p className="text-sm font-semibold text-gray-900 mt-1">
+                      {(viewItem.packages ?? 0) * (viewItem.oz_per_package ?? 0)}
+                      <span className="text-xs text-gray-400 ml-1">oz</span>
+                      <span className="text-gray-300 mx-1.5">/</span>
+                      {(((viewItem.packages ?? 0) * (viewItem.oz_per_package ?? 0)) / 16).toFixed(1)}
+                      <span className="text-xs text-gray-400 ml-1">lb</span>
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Total Weight</p>
-                  <p className="text-sm font-semibold text-gray-900 mt-1">
-                    {(viewItem.packages ?? 0) * (viewItem.oz_per_package ?? 0)}
-                    <span className="text-xs text-gray-400 ml-1">oz</span>
-                    <span className="text-gray-300 mx-1.5">/</span>
-                    {(((viewItem.packages ?? 0) * (viewItem.oz_per_package ?? 0)) / 16).toFixed(1)}
-                    <span className="text-xs text-gray-400 ml-1">lb</span>
-                  </p>
-                </div>
-              </div>
+              )}
               {viewItem.notes && (
                 <div>
                   <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Notes</p>
@@ -835,9 +903,27 @@ export default function InventoryPage() {
               </div>
             </div>
 
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, isNotPackage: !formData.isNotPackage })}
+                className={cn(
+                  "h-5 w-5 rounded border-2 flex items-center justify-center cursor-pointer transition-colors",
+                  formData.isNotPackage
+                    ? "bg-gray-900 border-gray-900 text-white"
+                    : "border-gray-300 bg-white"
+                )}
+              >
+                {formData.isNotPackage && <Check className="h-3 w-3" />}
+              </button>
+              <Label className="text-sm cursor-pointer" onClick={() => setFormData({ ...formData, isNotPackage: !formData.isNotPackage })}>
+                Individual item (not packaged)
+              </Label>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="packages">Packages</Label>
+                <Label htmlFor="packages">{formData.isNotPackage ? "Quantity" : "Packages"}</Label>
                 <Input
                   id="packages"
                   type="number"
@@ -850,19 +936,21 @@ export default function InventoryPage() {
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="oz_per_package">Oz / Package</Label>
-                <Input
-                  id="oz_per_package"
-                  type="number"
-                  min="0"
-                  placeholder="0"
-                  value={formData.oz_per_package}
-                  onChange={(e) =>
-                    setFormData({ ...formData, oz_per_package: e.target.value })
-                  }
-                />
-              </div>
+              {!formData.isNotPackage && (
+                <div className="space-y-2">
+                  <Label htmlFor="oz_per_package">Oz / Package</Label>
+                  <Input
+                    id="oz_per_package"
+                    type="number"
+                    min="0"
+                    placeholder="0"
+                    value={formData.oz_per_package}
+                    onChange={(e) =>
+                      setFormData({ ...formData, oz_per_package: e.target.value })
+                    }
+                  />
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -931,6 +1019,56 @@ export default function InventoryPage() {
               Delete
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Locations Dialog */}
+      <Dialog open={locationsDialogOpen} onOpenChange={setLocationsDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Inventory Locations</DialogTitle>
+            <DialogDescription>
+              Manage storage locations on the boat.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="flex gap-2">
+              <Input
+                placeholder="New location name..."
+                value={newLocationName}
+                onChange={(e) => setNewLocationName(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleAddLocation()}
+                className="flex-1"
+              />
+              <Button onClick={handleAddLocation} disabled={savingLocation || !newLocationName.trim()} className="cursor-pointer">
+                {savingLocation ? <Spinner size="sm" className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+              </Button>
+            </div>
+            <div className="border rounded-lg divide-y max-h-[300px] overflow-y-auto">
+              {(inventoryLocations || []).length === 0 ? (
+                <div className="p-4 text-center text-sm text-gray-400">No locations yet</div>
+              ) : (
+                (inventoryLocations as InventoryLocation[]).map((loc) => (
+                  <div key={loc.id} className="flex items-center justify-between px-3 py-2.5">
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-3.5 w-3.5 text-gray-400" />
+                      <span className="text-sm text-gray-900">{loc.name}</span>
+                      {loc.notInUse && <span className="text-xs text-gray-400">(inactive)</span>}
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 cursor-pointer text-gray-400 hover:text-red-600"
+                      onClick={() => handleDeleteLocation(loc.id)}
+                      disabled={deletingLocationId === loc.id}
+                    >
+                      {deletingLocationId === loc.id ? <Spinner size="sm" className="h-3 w-3" /> : <Trash2 className="h-3.5 w-3.5" />}
+                    </Button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

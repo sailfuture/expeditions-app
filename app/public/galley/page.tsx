@@ -37,6 +37,7 @@ import {
   FileText,
   PlusCircle,
   ArrowRight,
+  Search,
 } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -245,6 +246,7 @@ function PublicGalleyPage() {
   const [activeTab, setActiveTab] = useState<TabId>(initialTab)
   const [selectedDateStr, setSelectedDateStr] = useState(initialDate)
   const [calendarOpen, setCalendarOpen] = useState(false)
+  const [inventorySearch, setInventorySearch] = useState("")
   const [viewItem, setViewItem] = useState<InventoryItem | null>(null)
   const [editingViewItem, setEditingViewItem] = useState(false)
   const [editFormData, setEditFormData] = useState({ packages: 0, notes: "" })
@@ -371,20 +373,25 @@ function PublicGalleyPage() {
 
     sortedKeys.forEach((key) => {
       const color = typeColorLookup[key] || "gray"
-      groups.push({ type: key, color, items: groupMap.get(key)! })
+      const items = groupMap.get(key)!.sort((a, b) => (a.name || "").localeCompare(b.name || ""))
+      groups.push({ type: key, color, items })
     })
 
     return groups
   }, [inventoryItems, ingredientTypes, typeColorLookup])
 
-  // Split into in-stock and out-of-stock groups
+  // Split into in-stock and out-of-stock groups, filtered by search
   const { inStockGroups, outOfStockGroups } = useMemo(() => {
     const inStock: typeof groupedItems = []
     const outOfStock: typeof groupedItems = []
+    const query = inventorySearch.toLowerCase().trim()
 
     groupedItems.forEach((group) => {
-      const inStockItems = group.items.filter((item) => (item.packages ?? 0) > 0)
-      const outOfStockItems = group.items.filter((item) => (item.packages ?? 0) === 0)
+      const filtered = query
+        ? group.items.filter((item) => item.name?.toLowerCase().includes(query) || item.type?.toLowerCase().includes(query))
+        : group.items
+      const inStockItems = filtered.filter((item) => (item.packages ?? 0) > 0)
+      const outOfStockItems = filtered.filter((item) => (item.packages ?? 0) === 0)
       if (inStockItems.length > 0) {
         inStock.push({ ...group, items: inStockItems })
       }
@@ -394,7 +401,7 @@ function PublicGalleyPage() {
     })
 
     return { inStockGroups: inStock, outOfStockGroups: outOfStock }
-  }, [groupedItems])
+  }, [groupedItems, inventorySearch])
 
   // Get bullet class for view dialog
   const viewItemBulletClass = viewItem
@@ -1080,10 +1087,21 @@ function PublicGalleyPage() {
                     Food and supply inventory on the boat
                   </p>
                 </div>
-                <Button size="sm" onClick={handleOpenAddDialog} className="cursor-pointer">
-                  <PlusCircle className="h-4 w-4 mr-2" />
-                  Add Item
-                </Button>
+                <div className="flex items-center gap-2">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                      placeholder="Search inventory..."
+                      value={inventorySearch}
+                      onChange={(e) => setInventorySearch(e.target.value)}
+                      className="pl-9 h-9 w-48 sm:w-64"
+                    />
+                  </div>
+                  <Button size="sm" onClick={handleOpenAddDialog} className="cursor-pointer">
+                    <PlusCircle className="h-4 w-4 mr-2" />
+                    Add Item
+                  </Button>
+                </div>
               </div>
 
               {/* Table */}

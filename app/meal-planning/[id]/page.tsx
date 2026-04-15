@@ -51,9 +51,27 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
-import { Clock, Wrench, Plus, Pencil, Trash2, X } from "lucide-react"
+import { Clock, Wrench, Plus, Pencil, Trash2, X, FileUp, Check } from "lucide-react"
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command"
+import {
+  FileUpload,
+  FileUploadDropzone,
+  FileUploadItem,
+  FileUploadItemDelete,
+  FileUploadItemMetadata,
+  FileUploadItemPreview,
+  FileUploadList,
+} from "@/components/ui/file-upload"
 import { toast } from "sonner"
-import { getPhotoUrl } from "@/lib/utils"
+import { cn, getPhotoUrl } from "@/lib/utils"
+import { getExpeditionsInventory } from "@/lib/xano"
 import { useExpeditionContext } from "@/lib/contexts/expedition-context"
 
 const XANO_BASE_URL = "https://xsc3-mvx7-r86m.n7e.xano.io/api:bXFdqx8y"
@@ -79,6 +97,7 @@ interface Instruction {
   instructions: string
   duration: string
   equipment: string
+  expedition_galley_equipment_id?: number[]
 }
 
 interface Ingredient {
@@ -98,9 +117,9 @@ interface Recipe {
   recipe_name: string
   recipe_photo: any
   type: string
+  types?: string[]
   summary?: string
   duration_minutes?: string
-  equipment_required?: string
   instructions?: Instruction[]
   ingredients?: Ingredient[]
 }
@@ -118,6 +137,16 @@ export default function RecipeDetailPage() {
     fetcher
   )
 
+  // Galley equipment
+  const { data: galleyEquipment = [] } = useSWR(
+    "galley_equipment",
+    () => fetch(`${XANO_BASE_URL}/expedition_galley_equipment`).then(r => r.json())
+  )
+
+  // Inventory items for ingredient autocomplete
+  const { data: inventoryItems = [] } = useSWR("expeditions_inventory", getExpeditionsInventory)
+  const [ingredientDropdownOpen, setIngredientDropdownOpen] = useState(false)
+
   // Instruction sheet state
   const [instructionSheetOpen, setInstructionSheetOpen] = useState(false)
   const [editingInstruction, setEditingInstruction] = useState<Instruction | null>(null)
@@ -125,7 +154,7 @@ export default function RecipeDetailPage() {
     step: 1,
     instructions: "",
     duration: "",
-    equipment: "",
+    equipmentIds: [] as number[],
   })
   const [isSavingInstruction, setIsSavingInstruction] = useState(false)
   const [deleteInstructionDialog, setDeleteInstructionDialog] = useState<Instruction | null>(null)
@@ -144,6 +173,70 @@ export default function RecipeDetailPage() {
   const [isSavingIngredient, setIsSavingIngredient] = useState(false)
   const [deleteIngredientDialog, setDeleteIngredientDialog] = useState<Ingredient | null>(null)
   const [isDeletingIngredient, setIsDeletingIngredient] = useState(false)
+
+  // Edit recipe details sheet state
+  const [editRecipeSheetOpen, setEditRecipeSheetOpen] = useState(false)
+  const [editRecipeForm, setEditRecipeForm] = useState({
+    recipe_name: "",
+    types: [] as string[],
+    summary: "",
+    duration_minutes: "",
+  })
+  const [editRecipePhotoFile, setEditRecipePhotoFile] = useState<File | null>(null)
+  const [editRecipePhotoPreview, setEditRecipePhotoPreview] = useState<string | null>(null)
+  const [isSavingRecipe, setIsSavingRecipe] = useState(false)
+
+  const handleOpenEditRecipe = () => {
+    if (!recipe) return
+    setEditRecipeForm({
+      recipe_name: recipe.recipe_name || "",
+      types: Array.isArray(recipe.types) && recipe.types.length > 0 ? recipe.types : recipe.type ? [recipe.type] : [],
+      summary: recipe.summary || "",
+      duration_minutes: recipe.duration_minutes || "",
+    })
+    setEditRecipePhotoFile(null)
+    setEditRecipePhotoPreview(getPhotoUrl(recipe.recipe_photo))
+    setEditRecipeSheetOpen(true)
+  }
+
+  const handleSaveRecipe = async () => {
+    if (!recipe || !editRecipeForm.recipe_name.trim()) return
+    setIsSavingRecipe(true)
+    try {
+      let photoData = recipe.recipe_photo
+      if (editRecipePhotoFile) {
+        const formData = new FormData()
+        formData.append("content", editRecipePhotoFile)
+        const uploadRes = await fetch(`${XANO_BASE_URL}/upload/image`, { method: "POST", body: formData })
+        if (!uploadRes.ok) throw new Error("Failed to upload image")
+        photoData = await uploadRes.json()
+      } else if (!editRecipePhotoPreview) {
+        photoData = null
+      }
+
+      const response = await fetch(`${XANO_BASE_URL}/expedition_cookbook/${recipe.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          expedition_cookbook_id: recipe.id,
+          recipe_name: editRecipeForm.recipe_name,
+          recipe_photo: photoData,
+          types: editRecipeForm.types,
+          summary: editRecipeForm.summary,
+          duration_minutes: editRecipeForm.duration_minutes,
+        }),
+      })
+      if (!response.ok) throw new Error("Failed to update recipe")
+      mutate(`${XANO_BASE_URL}/expedition_cookbook/${recipeId}`)
+      setEditRecipeSheetOpen(false)
+      toast.success("Recipe updated")
+    } catch (error) {
+      console.error("Error updating recipe:", error)
+      toast.error("Failed to update recipe")
+    } finally {
+      setIsSavingRecipe(false)
+    }
+  }
 
   // Group ingredients by type
   const groupedIngredients = useMemo(() => {
@@ -198,7 +291,7 @@ export default function RecipeDetailPage() {
       step: nextStep,
       instructions: "",
       duration: "",
-      equipment: "",
+      equipmentIds: [],
     })
     setInstructionSheetOpen(true)
   }
@@ -209,7 +302,7 @@ export default function RecipeDetailPage() {
       step: instruction.step,
       instructions: instruction.instructions,
       duration: instruction.duration || "",
-      equipment: instruction.equipment || "",
+      equipmentIds: Array.isArray(instruction.expedition_galley_equipment_id) ? instruction.expedition_galley_equipment_id : [],
     })
     setInstructionSheetOpen(true)
   }
@@ -232,7 +325,7 @@ export default function RecipeDetailPage() {
             step: instructionForm.step,
             instructions: instructionForm.instructions,
             duration: instructionForm.duration,
-            equipment: instructionForm.equipment,
+            expedition_galley_equipment_id: instructionForm.equipmentIds,
           }),
         })
         if (!response.ok) throw new Error("Failed to update instruction")
@@ -247,7 +340,7 @@ export default function RecipeDetailPage() {
             step: instructionForm.step,
             instructions: instructionForm.instructions,
             duration: instructionForm.duration,
-            equipment: instructionForm.equipment,
+            expedition_galley_equipment_id: instructionForm.equipmentIds,
           }),
         })
         if (!response.ok) throw new Error("Failed to add instruction")
@@ -477,9 +570,15 @@ export default function RecipeDetailPage() {
               </div>
             )}
             <div className="flex-1">
-              <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-1">
-                <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{recipe.recipe_name}</h1>
-                <span className="text-xs sm:text-sm text-muted-foreground bg-gray-100 px-2 py-0.5 rounded">{recipe.type}</span>
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">{recipe.recipe_name}</h1>
+              <div className="flex flex-wrap items-center gap-2 mb-1">
+                {(Array.isArray(recipe.types) && recipe.types.length > 0 ? recipe.types : [recipe.type].filter(Boolean)).map((t: string) => (
+                  <span key={t} className="text-xs sm:text-sm text-muted-foreground bg-gray-100 px-2 py-0.5 rounded">{t}</span>
+                ))}
+                <Button variant="outline" size="sm" onClick={handleOpenEditRecipe} className="cursor-pointer">
+                  <Pencil className="h-3.5 w-3.5 mr-1.5" />
+                  Edit
+                </Button>
               </div>
 
               {recipe.summary && (
@@ -500,12 +599,24 @@ export default function RecipeDetailPage() {
                     </span>
                   </div>
                 )}
-                {recipe.equipment_required && (
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <Wrench className="h-4 w-4 text-gray-400" />
-                    <span className="line-clamp-2 sm:line-clamp-none">{recipe.equipment_required}</span>
-                  </div>
-                )}
+                {(() => {
+                  const allEquipIds = new Set<number>()
+                  recipe.instructions?.forEach((inst) => {
+                    if (Array.isArray(inst.expedition_galley_equipment_id)) {
+                      inst.expedition_galley_equipment_id.forEach((id) => allEquipIds.add(id))
+                    }
+                  })
+                  const equipNames = [...allEquipIds]
+                    .map(id => galleyEquipment.find((e: any) => e.id === id)?.name)
+                    .filter(Boolean)
+                    .sort()
+                  return equipNames.length > 0 ? (
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <Wrench className="h-4 w-4 text-gray-400" />
+                      <span className="line-clamp-2 sm:line-clamp-none">{equipNames.join(", ")}</span>
+                    </div>
+                  ) : null
+                })()}
               </div>
             </div>
           </div>
@@ -655,10 +766,10 @@ export default function RecipeDetailPage() {
                               <span>{instruction.duration} min</span>
                             </div>
                           )}
-                          {instruction.equipment && (
+                          {Array.isArray(instruction.expedition_galley_equipment_id) && instruction.expedition_galley_equipment_id.length > 0 && (
                             <div className="flex items-center gap-1.5 text-gray-600">
                               <Wrench className="h-4 w-4 text-gray-400" />
-                              <span className="break-words">{instruction.equipment}</span>
+                              <span className="break-words">{instruction.expedition_galley_equipment_id.map((id) => galleyEquipment.find((e: any) => e.id === id)?.name).filter(Boolean).join(", ")}</span>
                             </div>
                           )}
                         </div>
@@ -761,14 +872,43 @@ export default function RecipeDetailPage() {
 
             {/* Equipment */}
             <div className="space-y-2">
-              <Label htmlFor="instruction-equipment" className="text-sm font-medium">Equipment</Label>
-              <Input
-                id="instruction-equipment"
-                value={instructionForm.equipment}
-                onChange={(e) => setInstructionForm({ ...instructionForm, equipment: e.target.value })}
-                placeholder="e.g., Pot, stove, cutting board"
-                className="h-11"
-              />
+              <Label className="text-sm font-medium">Equipment</Label>
+              <div className="space-y-3">
+                {Object.entries(
+                  galleyEquipment.reduce((acc: Record<string, any[]>, eq: any) => {
+                    const cat = eq.category || "Other"
+                    if (!acc[cat]) acc[cat] = []
+                    acc[cat].push(eq)
+                    return acc
+                  }, {} as Record<string, any[]>)
+                ).map(([category, items]) => (
+                  <div key={category}>
+                    <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wide mb-1.5">{category}</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {(items as any[]).map((eq: any) => (
+                        <button
+                          key={eq.id}
+                          type="button"
+                          onClick={() => setInstructionForm(f => ({
+                            ...f,
+                            equipmentIds: f.equipmentIds.includes(eq.id)
+                              ? f.equipmentIds.filter(id => id !== eq.id)
+                              : [...f.equipmentIds, eq.id]
+                          }))}
+                          className={cn(
+                            "text-xs px-2.5 py-1.5 rounded-full border cursor-pointer transition-colors",
+                            instructionForm.equipmentIds.includes(eq.id)
+                              ? "bg-gray-900 text-white border-gray-900"
+                              : "bg-white text-gray-600 border-gray-200 hover:border-gray-400"
+                          )}
+                        >
+                          {eq.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -823,16 +963,98 @@ export default function RecipeDetailPage() {
           </SheetHeader>
 
           <div className="flex-1 overflow-y-auto p-6 space-y-5">
-            {/* Ingredient Name */}
-            <div className="space-y-2">
-              <Label htmlFor="ingredient-name" className="text-sm font-medium">Ingredient *</Label>
-              <Input
-                id="ingredient-name"
-                value={ingredientForm.ingredient}
-                onChange={(e) => setIngredientForm({ ...ingredientForm, ingredient: e.target.value })}
-                placeholder="e.g., Chicken breast"
-                className="h-11"
-              />
+            {/* Ingredient Name - input with overlay dropdown */}
+            <div className="space-y-2 relative">
+              <Label className="text-sm font-medium">Ingredient Name *</Label>
+              <div className="relative">
+                <Input
+                  value={ingredientForm.ingredient}
+                  onChange={(e) => {
+                    setIngredientForm({ ...ingredientForm, ingredient: e.target.value })
+                    if (!ingredientDropdownOpen) setIngredientDropdownOpen(true)
+                  }}
+                  onFocus={() => setIngredientDropdownOpen(true)}
+                  placeholder="Search inventory or type a name..."
+                  className="h-11 pr-9"
+                />
+                {ingredientForm.ingredient && (
+                  <button
+                    type="button"
+                    onClick={() => { setIngredientForm({ ...ingredientForm, ingredient: "" }); setIngredientDropdownOpen(false) }}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+              {ingredientDropdownOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setIngredientDropdownOpen(false)} />
+                  <div className="absolute left-0 right-0 top-full mt-1 z-50 rounded-lg border bg-white shadow-lg">
+                    <Command shouldFilter={false}>
+                      <CommandList className="max-h-[250px]">
+                        {(() => {
+                          const query = ingredientForm.ingredient.toLowerCase().trim()
+                          const grouped: Record<string, any[]> = {}
+                          inventoryItems
+                            .filter((item: any) => item.name && (!query || item.name.toLowerCase().includes(query)))
+                            .forEach((item: any) => {
+                              const cat = item.type || "Other"
+                              if (!grouped[cat]) grouped[cat] = []
+                              grouped[cat].push(item)
+                            })
+                          Object.values(grouped).forEach(items => items.sort((a: any, b: any) => (a.name || "").localeCompare(b.name || "")))
+                          const typeOrder = ["Protein", "Starch", "Veg", "Dairy", "Frozen", "Dry Goods", "Seasoning", "Other"]
+                          const sortedKeys = Object.keys(grouped).sort((a, b) => {
+                            const ai = typeOrder.indexOf(a), bi = typeOrder.indexOf(b)
+                            if (ai === -1 && bi === -1) return a.localeCompare(b)
+                            if (ai === -1) return 1
+                            if (bi === -1) return -1
+                            return ai - bi
+                          })
+                          return sortedKeys.length > 0 ? sortedKeys.map(cat => (
+                            <CommandGroup key={cat} heading={cat}>
+                              {grouped[cat].map((item: any) => (
+                                <CommandItem
+                                  key={item.id}
+                                  value={item.name}
+                                  onSelect={() => {
+                                    setIngredientForm(f => ({ ...f, ingredient: item.name, type: item.type || f.type }))
+                                    setIngredientDropdownOpen(false)
+                                  }}
+                                  className={cn("cursor-pointer", (item.packages ?? 0) === 0 && "opacity-40")}
+                                >
+                                  <div className={cn("w-2 h-2 rounded-full mr-2 shrink-0", getIngredientTypeColor(cat))} />
+                                  <span className="text-sm flex-1">
+                                    {item.name}
+                                  </span>
+                                  <span className="text-xs text-muted-foreground ml-2 shrink-0">
+                                    {item.isNotPackage
+                                      ? `${item.packages ?? 0} item${(item.packages ?? 0) === 1 ? "" : "s"}`
+                                      : `${item.packages ?? 0} pkg · ${(item.packages ?? 0) * (item.oz_per_package ?? 0)} oz · ${(((item.packages ?? 0) * (item.oz_per_package ?? 0)) / 16).toFixed(1)} lb`}
+                                  </span>
+                                  {ingredientForm.ingredient === item.name && <Check className="ml-2 h-4 w-4 shrink-0" />}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          )) : null
+                        })()}
+                        {ingredientForm.ingredient.trim() && (
+                          <div className="border-t sticky bottom-0 bg-white">
+                            <CommandItem
+                              onSelect={() => setIngredientDropdownOpen(false)}
+                              className="cursor-pointer justify-center text-sm font-medium py-2.5"
+                            >
+                              <Plus className="h-4 w-4 mr-1.5" />
+                              Use &quot;{ingredientForm.ingredient}&quot; as new ingredient
+                            </CommandItem>
+                          </div>
+                        )}
+                      </CommandList>
+                    </Command>
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Oz per Meal */}
@@ -972,6 +1194,156 @@ export default function RecipeDetailPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Edit Recipe Details Sheet */}
+      <Sheet open={editRecipeSheetOpen} onOpenChange={setEditRecipeSheetOpen}>
+        <SheetContent className="w-full sm:max-w-lg p-0 flex flex-col h-full">
+          <SheetHeader className="p-6 pb-4 border-b shrink-0">
+            <SheetTitle>Edit Recipe</SheetTitle>
+            <SheetDescription>Update the recipe name, type, photo and details.</SheetDescription>
+          </SheetHeader>
+          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            {/* Recipe Name */}
+            <div className="space-y-2">
+              <Label htmlFor="edit-recipe-name" className="text-sm font-medium">Recipe Name *</Label>
+              <Input
+                id="edit-recipe-name"
+                value={editRecipeForm.recipe_name}
+                onChange={(e) => setEditRecipeForm({ ...editRecipeForm, recipe_name: e.target.value })}
+                placeholder="Recipe name..."
+                className="h-11"
+              />
+            </div>
+
+            {/* Types */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Type *</Label>
+              <div className="flex flex-wrap gap-2">
+                {["Breakfast", "Lunch", "Dinner", "Snack"].map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setEditRecipeForm(f => ({
+                      ...f,
+                      types: f.types.includes(t) ? f.types.filter(x => x !== t) : [...f.types, t]
+                    }))}
+                    className={cn(
+                      "px-3 py-1.5 rounded-full border text-sm cursor-pointer transition-colors",
+                      editRecipeForm.types.includes(t)
+                        ? "bg-gray-900 text-white border-gray-900"
+                        : "bg-white text-gray-600 border-gray-200 hover:border-gray-400"
+                    )}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Summary */}
+            <div className="space-y-2">
+              <Label htmlFor="edit-recipe-summary" className="text-sm font-medium">Summary</Label>
+              <Textarea
+                id="edit-recipe-summary"
+                value={editRecipeForm.summary}
+                onChange={(e) => setEditRecipeForm({ ...editRecipeForm, summary: e.target.value })}
+                placeholder="Brief description..."
+                rows={3}
+              />
+            </div>
+
+            {/* Duration */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Total Cooking and Prep Time</Label>
+              <div className="flex items-center gap-2">
+                <Select
+                  value={String(Math.floor(parseInt(editRecipeForm.duration_minutes || "0") / 60) || 0)}
+                  onValueChange={(val) => {
+                    const hours = parseInt(val) || 0
+                    const mins = parseInt(editRecipeForm.duration_minutes || "0") % 60
+                    setEditRecipeForm({ ...editRecipeForm, duration_minutes: String(hours * 60 + mins) })
+                  }}
+                >
+                  <SelectTrigger className="w-24 cursor-pointer"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 6 }, (_, i) => (
+                      <SelectItem key={i} value={String(i)} className="cursor-pointer">{i}h</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={String(parseInt(editRecipeForm.duration_minutes || "0") % 60)}
+                  onValueChange={(val) => {
+                    const hours = Math.floor(parseInt(editRecipeForm.duration_minutes || "0") / 60)
+                    setEditRecipeForm({ ...editRecipeForm, duration_minutes: String(hours * 60 + (parseInt(val) || 0)) })
+                  }}
+                >
+                  <SelectTrigger className="w-24 cursor-pointer"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map((m) => (
+                      <SelectItem key={m} value={String(m)} className="cursor-pointer">{m}m</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Recipe Photo */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Recipe Photo</Label>
+              {editRecipePhotoPreview && !editRecipePhotoFile && (
+                <div className="relative w-full h-32 rounded-lg overflow-hidden bg-gray-100">
+                  <img src={editRecipePhotoPreview} alt="Recipe photo" className="object-cover w-full h-full" />
+                  <button
+                    type="button"
+                    onClick={() => { setEditRecipePhotoPreview(null); }}
+                    className="absolute top-2 right-2 bg-black/60 hover:bg-black/80 rounded-md p-1 cursor-pointer transition-colors"
+                  >
+                    <X className="h-4 w-4 text-white" />
+                  </button>
+                </div>
+              )}
+              <FileUpload
+                maxFiles={1}
+                maxSize={10 * 1024 * 1024}
+                accept="image/*"
+                value={editRecipePhotoFile ? [editRecipePhotoFile] : []}
+                onValueChange={(files) => {
+                  const file = files[0] || null
+                  setEditRecipePhotoFile(file)
+                  setEditRecipePhotoPreview(file ? URL.createObjectURL(file) : null)
+                }}
+              >
+                <FileUploadDropzone className="flex-row gap-3 px-4 py-3">
+                  <FileUp className="size-5 text-muted-foreground" />
+                  <div className="flex-1 text-left">
+                    <p className="text-sm font-medium">{editRecipePhotoPreview && !editRecipePhotoFile ? "Replace photo" : "Drop image or click to upload"}</p>
+                    <p className="text-xs text-muted-foreground">Max 10MB</p>
+                  </div>
+                </FileUploadDropzone>
+                <FileUploadList>
+                  {editRecipePhotoFile && (
+                    <FileUploadItem value={editRecipePhotoFile}>
+                      <FileUploadItemPreview />
+                      <FileUploadItemMetadata />
+                      <FileUploadItemDelete asChild>
+                        <Button variant="ghost" size="icon" className="size-7"><X className="size-4" /></Button>
+                      </FileUploadItemDelete>
+                    </FileUploadItem>
+                  )}
+                </FileUploadList>
+              </FileUpload>
+            </div>
+
+          </div>
+          <div className="p-6 pt-4 border-t shrink-0 flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setEditRecipeSheetOpen(false)} className="cursor-pointer">Cancel</Button>
+            <Button onClick={handleSaveRecipe} disabled={isSavingRecipe || !editRecipeForm.recipe_name.trim() || editRecipeForm.types.length === 0} className="cursor-pointer">
+              {isSavingRecipe ? <><Spinner size="sm" className="h-4 w-4 mr-2" />Saving...</> : "Save Changes"}
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
     </main>
   )
 }

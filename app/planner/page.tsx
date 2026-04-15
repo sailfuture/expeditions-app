@@ -46,13 +46,21 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
-import { ChevronLeft, ChevronRight, ExternalLink, Calendar, Plus, X, Pencil, Trash2, Clock, Wrench, ClipboardList } from "lucide-react"
+import { ChevronLeft, ChevronRight, ExternalLink, Calendar, Plus, X, Pencil, Trash2, Clock, Wrench, ClipboardList, ChevronsUpDown, Check, CircleDot } from "lucide-react"
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command"
 import { useExpeditionScheduleItemsByDate, useExpeditionSchedules, useTeachers, useExpeditionScheduleTemplates, useStudentsByExpedition } from "@/lib/hooks/use-expeditions"
 import { useExpeditionContext } from "@/lib/contexts/expedition-context"
 import { cn, isDateWithinExpeditionRange, getExpeditionFirstDate, getPhotoUrl } from "@/lib/utils"
 import { AddScheduleItemSheet } from "@/components/add-schedule-item-sheet"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { deleteExpeditionScheduleItem, addExpeditionScheduleTemplate, getExpeditionDishDays, getExpeditionsGalleyTeam, updateExpeditionSchedule } from "@/lib/xano"
+import { deleteExpeditionScheduleItem, addExpeditionScheduleTemplate, getExpeditionDishDays, getExpeditionsGalleyTeam, updateExpeditionSchedule, updateExpeditionScheduleItem, getExpeditionCookbookByType, getGalleyEquipment } from "@/lib/xano"
 import useSWR from "swr"
 import { mutate } from "swr"
 import { toast } from "sonner"
@@ -61,7 +69,514 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { ExpeditionHeader } from "@/components/expedition-header"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { useExpeditions } from "@/lib/hooks/use-expeditions"
+
+const XANO_BASE_URL = "https://xsc3-mvx7-r86m.n7e.xano.io/api:bXFdqx8y"
+
+function MealPlanSheet({ open, onOpenChange, recipe, loading, recipeId }: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  recipe: any
+  loading: boolean
+  recipeId: number | null
+}) {
+  const [editing, setEditing] = useState(false)
+  const [savingId, setSavingId] = useState<number | null>(null)
+
+  // Ingredient inline edit
+  const [editIngredient, setEditIngredient] = useState<any>(null)
+  const [ingredientForm, setIngredientForm] = useState({ ingredient: "", oz_per_meal: "", prep_notes: "" })
+  const [addingIngredient, setAddingIngredient] = useState(false)
+  const [savingNewIngredient, setSavingNewIngredient] = useState(false)
+  const [newIngredientForm, setNewIngredientForm] = useState({ ingredient: "", oz_per_meal: "", prep_notes: "" })
+
+  // Instruction inline edit
+  // Instruction inline edit
+  const [editInstruction, setEditInstruction] = useState<any>(null)
+  const [instructionForm, setInstructionForm] = useState({ instructions: "", duration: "", equipmentIds: [] as number[] })
+  const [addingInstruction, setAddingInstruction] = useState(false)
+  const [savingNewInstruction, setSavingNewInstruction] = useState(false)
+  const [newInstructionForm, setNewInstructionForm] = useState({ instructions: "", duration: "", equipmentIds: [] as number[] })
+
+  // Galley equipment list
+  const { data: galleyEquipment = [] } = useSWR("galley_equipment", getGalleyEquipment)
+
+  const startEditIngredient = (ing: any) => {
+    setEditIngredient(ing)
+    setIngredientForm({ ingredient: ing.ingredient, oz_per_meal: String(ing.oz_per_meal || ""), prep_notes: ing.prep_notes || "" })
+  }
+
+  const saveIngredient = async (ing: any) => {
+    setSavingId(ing.id)
+    try {
+      const response = await fetch(`${XANO_BASE_URL}/expeditions_recipes/${ing.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          expedition_cookbook_id: recipeId,
+          ingredient: ingredientForm.ingredient,
+          oz_per_meal: parseFloat(ingredientForm.oz_per_meal) || 0,
+          prep_notes: ingredientForm.prep_notes,
+        }),
+      })
+      if (!response.ok) throw new Error("Failed to update")
+      mutate(`${XANO_BASE_URL}/expedition_cookbook/${recipeId}`)
+      setEditIngredient(null)
+      toast.success("Ingredient updated")
+    } catch {
+      toast.error("Failed to update ingredient")
+    } finally {
+      setSavingId(null)
+    }
+  }
+
+  const startEditInstruction = (inst: any) => {
+    setEditInstruction(inst)
+    setInstructionForm({
+      instructions: inst.instructions,
+      duration: inst.duration || "",
+      equipmentIds: Array.isArray(inst.expedition_galley_equipment_id) ? inst.expedition_galley_equipment_id : [],
+    })
+  }
+
+  const saveInstruction = async (inst: any) => {
+    setSavingId(inst.id)
+    try {
+      const response = await fetch(`${XANO_BASE_URL}/expedition_recipe_instructions/${inst.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          expedition_cookbook_id: recipeId,
+          step: inst.step,
+          instructions: instructionForm.instructions,
+          duration: instructionForm.duration,
+          expedition_galley_equipment_id: instructionForm.equipmentIds,
+        }),
+      })
+      if (!response.ok) throw new Error("Failed to update")
+      mutate(`${XANO_BASE_URL}/expedition_cookbook/${recipeId}`)
+      setEditInstruction(null)
+      toast.success("Instruction updated")
+    } catch {
+      toast.error("Failed to update instruction")
+    } finally {
+      setSavingId(null)
+    }
+  }
+
+  const addNewIngredient = async () => {
+    if (!newIngredientForm.ingredient.trim()) { toast.error("Ingredient name is required"); return }
+    setSavingNewIngredient(true)
+    try {
+      const response = await fetch(`${XANO_BASE_URL}/expeditions_recipes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          expedition_cookbook_id: recipeId,
+          ingredient: newIngredientForm.ingredient,
+          oz_per_meal: parseFloat(newIngredientForm.oz_per_meal) || 0,
+          prep_notes: newIngredientForm.prep_notes,
+        }),
+      })
+      if (!response.ok) throw new Error("Failed to add")
+      mutate(`${XANO_BASE_URL}/expedition_cookbook/${recipeId}`)
+      setNewIngredientForm({ ingredient: "", oz_per_meal: "", prep_notes: "" })
+      setAddingIngredient(false)
+      toast.success("Ingredient added")
+    } catch {
+      toast.error("Failed to add ingredient")
+    } finally {
+      setSavingNewIngredient(false)
+    }
+  }
+
+  const addNewInstruction = async () => {
+    if (!newInstructionForm.instructions.trim()) { toast.error("Instructions are required"); return }
+    setSavingNewInstruction(true)
+    try {
+      const nextStep = recipe?.instructions ? Math.max(...recipe.instructions.map((i: any) => i.step || 0), 0) + 1 : 1
+      const response = await fetch(`${XANO_BASE_URL}/expedition_recipe_instructions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          expedition_cookbook_id: recipeId,
+          step: nextStep,
+          instructions: newInstructionForm.instructions,
+          duration: newInstructionForm.duration,
+          expedition_galley_equipment_id: newInstructionForm.equipmentIds,
+        }),
+      })
+      if (!response.ok) throw new Error("Failed to add")
+      mutate(`${XANO_BASE_URL}/expedition_cookbook/${recipeId}`)
+      setNewInstructionForm({ instructions: "", duration: "", equipmentIds: [] })
+      setAddingInstruction(false)
+      toast.success("Instruction added")
+    } catch {
+      toast.error("Failed to add instruction")
+    } finally {
+      setSavingNewInstruction(false)
+    }
+  }
+
+  // Reset edit state when sheet closes
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
+      setEditing(false)
+      setEditIngredient(null)
+      setEditInstruction(null)
+      setAddingIngredient(false)
+      setAddingInstruction(false)
+    }
+    onOpenChange(open)
+  }
+
+  return (
+    <Sheet open={open} onOpenChange={handleOpenChange}>
+      <SheetContent className="w-full sm:w-[600px] sm:max-w-[90vw] p-0 flex flex-col h-full overflow-hidden">
+        <SheetHeader className="p-6 pb-4 border-b shrink-0">
+          <div className="flex items-center justify-between">
+            <SheetTitle className="text-xl">
+              {loading ? "Loading..." : (recipe?.recipe_name || "Recipe Details")}
+            </SheetTitle>
+            <div className="flex items-center gap-2">
+              {recipe && !loading && (
+                <Button
+                  variant={editing ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => { setEditing(!editing); setEditIngredient(null); setEditInstruction(null) }}
+                  className="cursor-pointer"
+                >
+                  <Pencil className="h-3.5 w-3.5 mr-1.5" />
+                  {editing ? "Done" : "Edit"}
+                </Button>
+              )}
+              <button
+                onClick={() => handleOpenChange(false)}
+                className="rounded-full p-1.5 hover:bg-gray-100 transition-colors cursor-pointer"
+              >
+                <X className="h-5 w-5 text-gray-500" />
+              </button>
+            </div>
+          </div>
+        </SheetHeader>
+
+        <div className="flex-1 overflow-y-auto p-6">
+          {loading ? (
+            <div className="space-y-4">
+              <Skeleton className="h-48 w-full rounded-xl" />
+              <Skeleton className="h-6 w-48" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-3/4" />
+            </div>
+          ) : recipe ? (
+            <div className="space-y-6">
+              {/* Recipe Header */}
+              <div className="flex flex-col sm:flex-row gap-4">
+                {getPhotoUrl(recipe.recipe_photo) && (
+                  <div className="w-full sm:w-40 h-40 rounded-xl overflow-hidden bg-gray-100 shrink-0">
+                    <img src={getPhotoUrl(recipe.recipe_photo)!} alt={recipe.recipe_name} className="object-cover w-full h-full" />
+                  </div>
+                )}
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-xs text-muted-foreground bg-gray-100 px-2 py-0.5 rounded">{recipe.type}</span>
+                  </div>
+                  {recipe.summary && <p className="text-sm text-gray-600">{recipe.summary}</p>}
+                  <div className="flex flex-wrap gap-3 mt-3">
+                    {recipe.duration_minutes && (
+                      <div className="flex items-center gap-1.5 text-sm text-gray-600">
+                        <Clock className="h-4 w-4 text-gray-400" />
+                        <span>{recipe.duration_minutes}</span>
+                      </div>
+                    )}
+                    {(() => {
+                      // Compile equipment from all instructions
+                      const allEquipIds = new Set<number>()
+                      recipe.instructions?.forEach((inst: any) => {
+                        if (Array.isArray(inst.expedition_galley_equipment_id)) {
+                          inst.expedition_galley_equipment_id.forEach((id: number) => allEquipIds.add(id))
+                        }
+                      })
+                      const equipNames = [...allEquipIds]
+                        .map(id => galleyEquipment.find((e: any) => e.id === id)?.name)
+                        .filter(Boolean)
+                        .sort()
+                      return equipNames.length > 0 ? (
+                        <div className="flex items-center gap-1.5 text-sm text-gray-600">
+                          <Wrench className="h-4 w-4 text-gray-400" />
+                          <span>{equipNames.join(", ")}</span>
+                        </div>
+                      ) : null
+                    })()}
+                  </div>
+                </div>
+              </div>
+
+              {/* Instructions */}
+              {((recipe.instructions && recipe.instructions.length > 0) || editing) && (
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-semibold text-gray-900">Instructions</h3>
+                    {editing && !addingInstruction && (
+                      <Button variant="outline" size="sm" onClick={() => { setAddingInstruction(true); setNewInstructionForm({ instructions: "", duration: "", equipmentIds: [] }) }} className="cursor-pointer h-7 text-xs">
+                        <Plus className="h-3 w-3 mr-1" />Add Step
+                      </Button>
+                    )}
+                  </div>
+                  <div className="space-y-3">
+                    {[...recipe.instructions].sort((a: any, b: any) => a.step - b.step).map((instruction: any) => (
+                      <div key={instruction.id} className="border rounded-lg p-3 bg-white">
+                        {editing && editInstruction?.id === instruction.id ? (
+                          <div className="space-y-2">
+                            <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Step {instruction.step}</div>
+                            <Textarea
+                              value={instructionForm.instructions}
+                              onChange={(e) => setInstructionForm(f => ({ ...f, instructions: e.target.value }))}
+                              className="text-sm min-h-[60px]"
+                              placeholder="Instructions..."
+                            />
+                            <Input
+                              value={instructionForm.duration}
+                              onChange={(e) => setInstructionForm(f => ({ ...f, duration: e.target.value }))}
+                              placeholder="Duration (min)"
+                              className="text-sm"
+                            />
+                            <div className="space-y-2">
+                              {Object.entries(
+                                galleyEquipment.reduce((acc: Record<string, any[]>, eq: any) => {
+                                  const cat = eq.category || "Other"
+                                  if (!acc[cat]) acc[cat] = []
+                                  acc[cat].push(eq)
+                                  return acc
+                                }, {} as Record<string, any[]>)
+                              ).map(([category, items]) => (
+                                <div key={category}>
+                                  <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wide mb-1">{category}</p>
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {(items as any[]).map((eq: any) => (
+                                      <button
+                                        key={eq.id}
+                                        type="button"
+                                        onClick={() => setInstructionForm(f => ({
+                                          ...f,
+                                          equipmentIds: f.equipmentIds.includes(eq.id)
+                                            ? f.equipmentIds.filter(id => id !== eq.id)
+                                            : [...f.equipmentIds, eq.id]
+                                        }))}
+                                        className={cn(
+                                          "text-xs px-2 py-1 rounded-full border cursor-pointer transition-colors",
+                                          instructionForm.equipmentIds.includes(eq.id)
+                                            ? "bg-gray-900 text-white border-gray-900"
+                                            : "bg-white text-gray-600 border-gray-200 hover:border-gray-400"
+                                        )}
+                                      >
+                                        {eq.name}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                            <div className="flex justify-end gap-2">
+                              <Button variant="outline" size="sm" onClick={() => setEditInstruction(null)} className="cursor-pointer">Cancel</Button>
+                              <Button size="sm" onClick={() => saveInstruction(instruction)} disabled={savingId === instruction.id} className="cursor-pointer">
+                                {savingId === instruction.id ? <Spinner size="sm" className="h-3.5 w-3.5 mr-1.5" /> : null}
+                                Save
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div
+                            className={editing ? "cursor-pointer hover:bg-gray-50 -m-3 p-3 rounded-lg transition-colors" : ""}
+                            onClick={() => editing && startEditInstruction(instruction)}
+                          >
+                            <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">Step {instruction.step}</div>
+                            <p className="text-sm text-gray-900 mb-2">{instruction.instructions}</p>
+                            <div className="flex flex-wrap items-center gap-3 text-xs">
+                              {instruction.duration && (
+                                <div className="flex items-center gap-1 text-gray-600">
+                                  <Clock className="h-3 w-3 text-gray-400" /><span>{instruction.duration} min</span>
+                                </div>
+                              )}
+                              {Array.isArray(instruction.expedition_galley_equipment_id) && instruction.expedition_galley_equipment_id.length > 0 && (
+                                <div className="flex items-center gap-1 text-gray-600">
+                                  <Wrench className="h-3 w-3 text-gray-400" />
+                                  <span>{instruction.expedition_galley_equipment_id.map((id: number) => galleyEquipment.find((e: any) => e.id === id)?.name).filter(Boolean).join(", ")}</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                    {editing && addingInstruction && (
+                      <div className="border rounded-lg p-3 bg-white space-y-2">
+                        <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">New Step</div>
+                        <Textarea
+                          value={newInstructionForm.instructions}
+                          onChange={(e) => setNewInstructionForm(f => ({ ...f, instructions: e.target.value }))}
+                          className="text-sm min-h-[60px]"
+                          placeholder="Instructions..."
+                        />
+                        <Input value={newInstructionForm.duration} onChange={(e) => setNewInstructionForm(f => ({ ...f, duration: e.target.value }))} placeholder="Duration (min)" className="text-sm" />
+                        <div className="space-y-2">
+                          {Object.entries(
+                            galleyEquipment.reduce((acc: Record<string, any[]>, eq: any) => {
+                              const cat = eq.category || "Other"
+                              if (!acc[cat]) acc[cat] = []
+                              acc[cat].push(eq)
+                              return acc
+                            }, {} as Record<string, any[]>)
+                          ).map(([category, items]) => (
+                            <div key={category}>
+                              <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wide mb-1">{category}</p>
+                              <div className="flex flex-wrap gap-1.5">
+                                {(items as any[]).map((eq: any) => (
+                                  <button
+                                    key={eq.id}
+                                    type="button"
+                                    onClick={() => setNewInstructionForm(f => ({
+                                      ...f,
+                                      equipmentIds: f.equipmentIds.includes(eq.id)
+                                        ? f.equipmentIds.filter(id => id !== eq.id)
+                                        : [...f.equipmentIds, eq.id]
+                                    }))}
+                                    className={cn(
+                                      "text-xs px-2 py-1 rounded-full border cursor-pointer transition-colors",
+                                      newInstructionForm.equipmentIds.includes(eq.id)
+                                        ? "bg-gray-900 text-white border-gray-900"
+                                        : "bg-white text-gray-600 border-gray-200 hover:border-gray-400"
+                                    )}
+                                  >
+                                    {eq.name}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="flex justify-end gap-2">
+                          <Button variant="outline" size="sm" onClick={() => setAddingInstruction(false)} className="cursor-pointer">Cancel</Button>
+                          <Button size="sm" onClick={addNewInstruction} disabled={savingNewInstruction} className="cursor-pointer">
+                            {savingNewInstruction ? <Spinner size="sm" className="h-3.5 w-3.5 mr-1.5" /> : <Plus className="h-3.5 w-3.5 mr-1.5" />}
+                            Add
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Ingredients */}
+              {((recipe.ingredients && recipe.ingredients.length > 0) || editing) && (
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-semibold text-gray-900">Ingredients</h3>
+                    {editing && !addingIngredient && (
+                      <Button variant="outline" size="sm" onClick={() => { setAddingIngredient(true); setNewIngredientForm({ ingredient: "", oz_per_meal: "", prep_notes: "" }) }} className="cursor-pointer h-7 text-xs">
+                        <Plus className="h-3 w-3 mr-1" />Add Ingredient
+                      </Button>
+                    )}
+                  </div>
+                  <div className="border rounded-lg overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-gray-50/80">
+                          <TableHead className="h-9 px-3 text-xs font-semibold text-gray-600">Ingredient</TableHead>
+                          <TableHead className="h-9 px-3 text-xs font-semibold text-gray-600 w-20">Oz/Meal</TableHead>
+                          <TableHead className="h-9 px-3 text-xs font-semibold text-gray-600">Prep</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {[...recipe.ingredients].sort((a: any, b: any) => (a.ingredient || "").localeCompare(b.ingredient || "")).map((ingredient: any) => (
+                          <TableRow key={ingredient.id}>
+                            {editing && editIngredient?.id === ingredient.id ? (
+                              <>
+                                <TableCell className="h-10 px-3">
+                                  <Input value={ingredientForm.ingredient} onChange={(e) => setIngredientForm(f => ({ ...f, ingredient: e.target.value }))} className="h-8 text-sm" />
+                                </TableCell>
+                                <TableCell className="h-10 px-3">
+                                  <Input value={ingredientForm.oz_per_meal} onChange={(e) => setIngredientForm(f => ({ ...f, oz_per_meal: e.target.value }))} className="h-8 text-sm w-16" />
+                                </TableCell>
+                                <TableCell className="h-10 px-3">
+                                  <div className="flex items-center gap-1">
+                                    <Input value={ingredientForm.prep_notes} onChange={(e) => setIngredientForm(f => ({ ...f, prep_notes: e.target.value }))} className="h-8 text-sm" />
+                                    <Button size="sm" className="h-8 px-2 cursor-pointer shrink-0" onClick={() => saveIngredient(ingredient)} disabled={savingId === ingredient.id}>
+                                      {savingId === ingredient.id ? <Spinner size="sm" className="h-3 w-3" /> : <Check className="h-3 w-3" />}
+                                    </Button>
+                                    <Button variant="outline" size="sm" className="h-8 px-2 cursor-pointer shrink-0" onClick={() => setEditIngredient(null)}>
+                                      <X className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              </>
+                            ) : (
+                              <>
+                                <TableCell
+                                  className={cn("h-10 px-3", editing && "cursor-pointer hover:bg-gray-50")}
+                                  onClick={() => editing && startEditIngredient(ingredient)}
+                                >
+                                  <span className="text-sm font-medium text-gray-900">{ingredient.ingredient}</span>
+                                </TableCell>
+                                <TableCell
+                                  className={cn("h-10 px-3", editing && "cursor-pointer hover:bg-gray-50")}
+                                  onClick={() => editing && startEditIngredient(ingredient)}
+                                >
+                                  <span className="text-sm text-gray-600">{ingredient.oz_per_meal}</span>
+                                </TableCell>
+                                <TableCell
+                                  className={cn("h-10 px-3", editing && "cursor-pointer hover:bg-gray-50")}
+                                  onClick={() => editing && startEditIngredient(ingredient)}
+                                >
+                                  <span className="text-sm text-gray-500">{ingredient.prep_notes || "—"}</span>
+                                </TableCell>
+                              </>
+                            )}
+                          </TableRow>
+                        ))}
+                        {editing && addingIngredient && (
+                          <TableRow>
+                            <TableCell className="h-10 px-3">
+                              <Input value={newIngredientForm.ingredient} onChange={(e) => setNewIngredientForm(f => ({ ...f, ingredient: e.target.value }))} className="h-8 text-sm" placeholder="Ingredient name" />
+                            </TableCell>
+                            <TableCell className="h-10 px-3">
+                              <Input value={newIngredientForm.oz_per_meal} onChange={(e) => setNewIngredientForm(f => ({ ...f, oz_per_meal: e.target.value }))} className="h-8 text-sm w-16" placeholder="Oz" />
+                            </TableCell>
+                            <TableCell className="h-10 px-3">
+                              <div className="flex items-center gap-1">
+                                <Input value={newIngredientForm.prep_notes} onChange={(e) => setNewIngredientForm(f => ({ ...f, prep_notes: e.target.value }))} className="h-8 text-sm" placeholder="Prep notes" />
+                                <Button size="sm" className="h-8 px-2 cursor-pointer shrink-0" onClick={addNewIngredient} disabled={savingNewIngredient}>
+                                  {savingNewIngredient ? <Spinner size="sm" className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
+                                </Button>
+                                <Button variant="outline" size="sm" className="h-8 px-2 cursor-pointer shrink-0" onClick={() => setAddingIngredient(false)}>
+                                  <X className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              )}
+
+              {(!recipe.instructions || recipe.instructions.length === 0) &&
+               (!recipe.ingredients || recipe.ingredients.length === 0) && !editing && (
+                <div className="text-center py-8 text-muted-foreground">No detailed recipe information available.</div>
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">Recipe not found.</div>
+          )}
+        </div>
+      </SheetContent>
+    </Sheet>
+  )
+}
 
 export default function PlannerPage() {
   return (
@@ -114,6 +629,7 @@ function PlannerPageContent() {
     }
   }, [displayExpedition?.id, displayExpedition?.isActive])
   const [calendarOpen, setCalendarOpen] = useState(false)
+  const [plannerView, setPlannerView] = useState<"schedule" | "galley">("schedule")
   const [selectedItem, setSelectedItem] = useState<any>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [selectedTemplates, setSelectedTemplates] = useState<Record<string, number>>({})
@@ -139,10 +655,66 @@ function PlannerPageContent() {
   )
   
   const handleMealPlanClick = (recipeId: number) => {
-    setSelectedRecipeId(recipeId)
-    setMealPlanSheetOpen(true)
+    // Close the dialog first, then open the sheet after a brief delay
+    // to avoid Radix focus management conflicts
+    setDialogOpen(false)
+    setTimeout(() => {
+      setSelectedRecipeId(recipeId)
+      setMealPlanSheetOpen(true)
+    }, 150)
   }
   
+  // Cookbook recipes for galley view
+  const { data: breakfastRecipes = [] } = useSWR(
+    plannerView === "galley" ? "cookbook_by_type_Breakfast" : null,
+    () => getExpeditionCookbookByType("Breakfast")
+  )
+  const { data: lunchRecipes = [] } = useSWR(
+    plannerView === "galley" ? "cookbook_by_type_Lunch" : null,
+    () => getExpeditionCookbookByType("Lunch")
+  )
+  const { data: dinnerRecipes = [] } = useSWR(
+    plannerView === "galley" ? "cookbook_by_type_Dinner" : null,
+    () => getExpeditionCookbookByType("Dinner")
+  )
+
+  const [updatingMealPlan, setUpdatingMealPlan] = useState<{ key: string; cookbookId: number } | null>(null)
+  // Optimistic state: itemId -> cookbookId override
+  const [optimisticMeals, setOptimisticMeals] = useState<Record<number, number>>({})
+
+  const handleMealPlanChange = async (itemId: number, cookbookId: number, dateStr: string) => {
+    // Optimistically update immediately
+    setOptimisticMeals(prev => ({ ...prev, [itemId]: cookbookId }))
+
+    const key = `${itemId}-${dateStr}`
+    setUpdatingMealPlan({ key, cookbookId })
+    try {
+      await updateExpeditionScheduleItem(itemId, { expedition_cookbook_id: cookbookId })
+      await Promise.all(
+        dateStrings.map(date =>
+          mutate(`expedition_schedule_items_date_${date}_${effectiveExpeditionId || 'all'}`)
+        )
+      )
+    } catch (error) {
+      console.error("Failed to update meal plan:", error)
+      toast.error("Failed to update meal plan")
+      // Revert optimistic update on error
+      setOptimisticMeals(prev => {
+        const next = { ...prev }
+        delete next[itemId]
+        return next
+      })
+    } finally {
+      setUpdatingMealPlan(null)
+      // Clear optimistic state after SWR has resolved
+      setOptimisticMeals(prev => {
+        const next = { ...prev }
+        delete next[itemId]
+        return next
+      })
+    }
+  }
+
   // Scroll gradient tracking for each day column
   const [scrollGradients, setScrollGradients] = useState<Record<number, boolean>>({})
   
@@ -544,12 +1116,171 @@ function PlannerPageContent() {
                   Today
                 </Button>
               )}
+              <div className="ml-auto flex items-center gap-1 bg-white border rounded-lg p-0.5">
+                <Button
+                  variant={plannerView === "schedule" ? "default" : "ghost"}
+                  onClick={() => setPlannerView("schedule")}
+                  className={cn("h-10 px-4 cursor-pointer", plannerView !== "schedule" && "text-black hover:text-black")}
+                >
+                  Schedule
+                </Button>
+                <Button
+                  variant={plannerView === "galley" ? "default" : "ghost"}
+                  onClick={() => setPlannerView("galley")}
+                  className={cn("h-10 px-4 cursor-pointer", plannerView !== "galley" && "text-black hover:text-black")}
+                >
+                  Galley
+                </Button>
+              </div>
             </div>
           </div>
         </div>
       </div>
-      
-      {/* Planner Grid - fills remaining height */}
+
+      {plannerView === "galley" ? (
+        /* Galley Meal Planning View */
+        <div className="flex-1 min-h-0 overflow-hidden px-4 pb-4 pt-4">
+          <div className="h-full container w-full mx-auto">
+            <div className="grid grid-cols-5 gap-2 h-full">
+              {days.map((day, index) => {
+                const items = Array.isArray(allItems[index]) ? allItems[index] : []
+                const isTodayColumn = isToday(day)
+                const mealItems = items.filter((item: any) => isMealType(item))
+                const mealTypes = ["Breakfast", "Lunch", "Dinner"]
+
+                const isWithinRange = isDateWithinExpeditionRange(
+                  day,
+                  displayExpedition?.startDate || displayExpedition?.start_date,
+                  displayExpedition?.endDate || displayExpedition?.end_date
+                )
+
+                return (
+                  <div
+                    key={`galley-${dateStrings[index]}`}
+                    className={cn(
+                      "bg-white rounded-xl border-2 overflow-hidden flex flex-col h-full",
+                      isTodayColumn && isWithinRange ? "border-green-500 shadow-lg" : "border-gray-200",
+                      !isWithinRange && "opacity-50 bg-gray-50"
+                    )}
+                  >
+                    {/* Day Header */}
+                    <div className="px-3 py-2.5 border-b bg-white flex-shrink-0">
+                      <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400">
+                        {format(day, "EEE")}
+                      </p>
+                      <p className="text-base font-bold text-gray-900">
+                        {format(day, "MMM d")}
+                      </p>
+                    </div>
+
+                    {/* Meal Slots */}
+                    <div className="flex-1 overflow-y-auto p-2 space-y-2">
+                      {mealTypes.map((mealType) => {
+                        const mealItem = mealItems.find(
+                          (item: any) => item._expedition_schedule_item_types?.name === mealType
+                        )
+                        const recipesForType = mealType === "Breakfast" ? breakfastRecipes
+                          : mealType === "Lunch" ? lunchRecipes
+                          : dinnerRecipes
+                        const updatingKey = `${mealItem?.id}-${dateStrings[index]}`
+                        const isUpdating = updatingMealPlan?.key === updatingKey
+
+                        const effectiveCookbookId = mealItem
+                          ? (optimisticMeals[mealItem.id] ?? mealItem.expedition_cookbook_id)
+                          : 0
+                        const selectedRecipeName = effectiveCookbookId > 0
+                          ? recipesForType.find((r: any) => r.id === effectiveCookbookId)?.recipe_name
+                            || mealItem?._expedition_cookbook?.recipe_name
+                            || "Meal Plan"
+                          : null
+
+                        return (
+                          <div key={mealType} className="space-y-1">
+                            <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 px-1">
+                              {mealType}
+                            </p>
+                            {mealItem ? (
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    role="combobox"
+                                    disabled={isUpdating}
+                                    className={cn(
+                                      "w-full h-9 justify-between font-normal cursor-pointer text-sm",
+                                      isUpdating && "opacity-50"
+                                    )}
+                                  >
+                                    {isUpdating ? (
+                                      <>
+                                        <Spinner size="sm" className="h-3.5 w-3.5 mr-1.5" />
+                                        <span className="truncate text-muted-foreground">Updating...</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <span className="truncate max-w-[calc(100%-20px)]">
+                                          {selectedRecipeName || "Assign meal..."}
+                                        </span>
+                                        <ChevronsUpDown className="ml-1 h-3 w-3 shrink-0 opacity-50" />
+                                      </>
+                                    )}
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-[300px] p-0" align="start">
+                                  <Command>
+                                    <CommandInput placeholder="Search recipes..." className="h-10" />
+                                    <CommandList className="max-h-[250px]">
+                                      <CommandEmpty>No recipes found.</CommandEmpty>
+                                      <CommandGroup>
+                                        <CommandItem
+                                          value="none"
+                                          onSelect={() => handleMealPlanChange(mealItem.id, 0, dateStrings[index])}
+                                          className="text-sm text-gray-400 cursor-pointer"
+                                          disabled={isUpdating}
+                                        >
+                                          {isUpdating && updatingMealPlan?.cookbookId === 0
+                                            ? <Spinner size="sm" className="mr-2 h-4 w-4" />
+                                            : <Check className={cn("mr-2 h-4 w-4", effectiveCookbookId === 0 ? "opacity-100" : "opacity-0")} />}
+                                          None
+                                        </CommandItem>
+                                        {recipesForType.map((recipe: any) => (
+                                          <CommandItem
+                                            key={recipe.id}
+                                            value={recipe.recipe_name}
+                                            onSelect={() => handleMealPlanChange(mealItem.id, recipe.id, dateStrings[index])}
+                                            className="text-sm cursor-pointer"
+                                            disabled={isUpdating}
+                                          >
+                                            {isUpdating && updatingMealPlan?.cookbookId === recipe.id
+                                              ? <Spinner size="sm" className="mr-2 h-4 w-4" />
+                                              : effectiveCookbookId === recipe.id
+                                                ? <Check className="mr-2 h-4 w-4" />
+                                                : <CircleDot className="mr-2 h-4 w-4 text-gray-300" />}
+                                            <span className="truncate">{recipe.recipe_name}</span>
+                                          </CommandItem>
+                                        ))}
+                                      </CommandGroup>
+                                    </CommandList>
+                                  </Command>
+                                </PopoverContent>
+                              </Popover>
+                            ) : (
+                              <div className="h-9 rounded-md border border-dashed border-gray-200 flex items-center justify-center">
+                                <span className="text-[10px] text-gray-300">No {mealType.toLowerCase()} slot</span>
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      ) : (
+      /* Schedule Planner Grid - fills remaining height */
       <div className="flex-1 min-h-0 overflow-hidden px-4 pb-4 pt-4">
         <div className="h-full container w-full mx-auto">
           <div className="grid grid-cols-5 gap-2 h-full">
@@ -1002,7 +1733,8 @@ function PlannerPageContent() {
           </div>
         </div>
       </div>
-      
+      )}
+
       {/* Event Details Modal */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-lg p-0 border-2 border-gray-100 bg-gray-50 flex flex-col overflow-hidden gap-0" showCloseButton={false}>
@@ -1264,152 +1996,13 @@ function PlannerPageContent() {
       />
 
       {/* Meal Plan Detail Sheet */}
-      <Sheet open={mealPlanSheetOpen} onOpenChange={setMealPlanSheetOpen}>
-        <SheetContent className="w-full sm:w-[600px] sm:max-w-[90vw] p-0 flex flex-col h-full overflow-hidden">
-          <SheetHeader className="p-6 pb-4 border-b shrink-0">
-            <div className="flex items-center justify-between">
-              <SheetTitle className="text-xl">
-                {loadingRecipe ? "Loading..." : (selectedRecipe?.recipe_name || "Recipe Details")}
-              </SheetTitle>
-              <button
-                onClick={() => setMealPlanSheetOpen(false)}
-                className="rounded-full p-1.5 hover:bg-gray-100 transition-colors cursor-pointer"
-              >
-                <X className="h-5 w-5 text-gray-500" />
-              </button>
-            </div>
-          </SheetHeader>
-          
-          <div className="flex-1 overflow-y-auto p-6">
-            {loadingRecipe ? (
-              <div className="space-y-4">
-                <Skeleton className="h-48 w-full rounded-xl" />
-                <Skeleton className="h-6 w-48" />
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-3/4" />
-              </div>
-            ) : selectedRecipe ? (
-              <div className="space-y-6">
-                {/* Recipe Header */}
-                <div className="flex flex-col sm:flex-row gap-4">
-                  {getPhotoUrl(selectedRecipe.recipe_photo) && (
-                    <div className="w-full sm:w-40 h-40 rounded-xl overflow-hidden bg-gray-100 shrink-0">
-                      <img
-                        src={getPhotoUrl(selectedRecipe.recipe_photo)!}
-                        alt={selectedRecipe.recipe_name}
-                        className="object-cover w-full h-full"
-                      />
-                    </div>
-                  )}
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-xs text-muted-foreground bg-gray-100 px-2 py-0.5 rounded">{selectedRecipe.type}</span>
-                    </div>
-                    {selectedRecipe.summary && (
-                      <p className="text-sm text-gray-600">{selectedRecipe.summary}</p>
-                    )}
-                    <div className="flex flex-wrap gap-3 mt-3">
-                      {selectedRecipe.duration_minutes && (
-                        <div className="flex items-center gap-1.5 text-sm text-gray-600">
-                          <Clock className="h-4 w-4 text-gray-400" />
-                          <span>{selectedRecipe.duration_minutes}</span>
-                        </div>
-                      )}
-                      {selectedRecipe.equipment_required && (
-                        <div className="flex items-center gap-1.5 text-sm text-gray-600">
-                          <Wrench className="h-4 w-4 text-gray-400" />
-                          <span>{selectedRecipe.equipment_required}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Instructions */}
-                {selectedRecipe.instructions && selectedRecipe.instructions.length > 0 && (
-                  <div>
-                    <h3 className="text-sm font-semibold text-gray-900 mb-3">Instructions</h3>
-                    <div className="space-y-3">
-                      {[...selectedRecipe.instructions]
-                        .sort((a: any, b: any) => a.step - b.step)
-                        .map((instruction: any) => (
-                          <div
-                            key={instruction.id}
-                            className="border rounded-lg p-3 bg-white"
-                          >
-                            <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">
-                              Step {instruction.step}
-                            </div>
-                            <p className="text-sm text-gray-900 mb-2">{instruction.instructions}</p>
-                            <div className="flex flex-wrap items-center gap-3 text-xs">
-                              {instruction.duration && (
-                                <div className="flex items-center gap-1 text-gray-600">
-                                  <Clock className="h-3 w-3 text-gray-400" />
-                                  <span>{instruction.duration} min</span>
-                                </div>
-                              )}
-                              {instruction.equipment && (
-                                <div className="flex items-center gap-1 text-gray-600">
-                                  <Wrench className="h-3 w-3 text-gray-400" />
-                                  <span>{instruction.equipment}</span>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Ingredients */}
-                {selectedRecipe.ingredients && selectedRecipe.ingredients.length > 0 && (
-                  <div>
-                    <h3 className="text-sm font-semibold text-gray-900 mb-3">Ingredients</h3>
-                    <div className="border rounded-lg overflow-hidden">
-                      <Table>
-                        <TableHeader>
-                          <TableRow className="bg-gray-50/80">
-                            <TableHead className="h-9 px-3 text-xs font-semibold text-gray-600">Ingredient</TableHead>
-                            <TableHead className="h-9 px-3 text-xs font-semibold text-gray-600 w-20">Oz/Meal</TableHead>
-                            <TableHead className="h-9 px-3 text-xs font-semibold text-gray-600">Prep</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {selectedRecipe.ingredients.map((ingredient: any) => (
-                            <TableRow key={ingredient.id}>
-                              <TableCell className="h-10 px-3">
-                                <span className="text-sm font-medium text-gray-900">{ingredient.ingredient}</span>
-                              </TableCell>
-                              <TableCell className="h-10 px-3">
-                                <span className="text-sm text-gray-600">{ingredient.oz_per_meal}</span>
-                              </TableCell>
-                              <TableCell className="h-10 px-3">
-                                <span className="text-sm text-gray-500">{ingredient.prep_notes || "—"}</span>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </div>
-                )}
-
-                {/* Empty states */}
-                {(!selectedRecipe.instructions || selectedRecipe.instructions.length === 0) && 
-                 (!selectedRecipe.ingredients || selectedRecipe.ingredients.length === 0) && (
-                  <div className="text-center py-8 text-muted-foreground">
-                    No detailed recipe information available.
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                Recipe not found.
-              </div>
-            )}
-          </div>
-        </SheetContent>
-      </Sheet>
+      <MealPlanSheet
+        open={mealPlanSheetOpen}
+        onOpenChange={setMealPlanSheetOpen}
+        recipe={selectedRecipe}
+        loading={loadingRecipe}
+        recipeId={selectedRecipeId}
+      />
       </div>
     </div>
   )

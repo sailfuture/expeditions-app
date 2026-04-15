@@ -66,6 +66,7 @@
     "react-leaflet": "^5.0.0",
     "react-resizable-panels": "^2.1.7",
     "recharts": "2.15.4",
+    "resend": "^6.11.0",
     "shadcn": "3.6.2",
     "sonner": "^1.7.4",
     "swr": "2.3.8",

@@ -132,8 +132,8 @@ export default function PassportManifestPage({ params }: PageProps) {
           gender: editFormData.gender,
           nationality: editFormData.nationality,
           passport_number: editFormData.passport_number,
-          passport_issue_date: editFormData.issue_date,
-          passport_expiration_date: editFormData.expiration_date,
+          issue_date: editFormData.issue_date,
+          expiration_date: editFormData.expiration_date,
           passport_photo: editFormData.passport_photo,
         })
       } else {

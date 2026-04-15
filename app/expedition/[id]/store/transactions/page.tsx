@@ -2,7 +2,7 @@
 
 import { use, useState, useMemo, useEffect } from "react"
 import useSWR, { mutate } from "swr"
-import { format } from "date-fns"
+import { format, eachDayOfInterval } from "date-fns"
 import { toast } from "sonner"
 import {
   Table,
@@ -35,7 +35,7 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Spinner } from "@/components/ui/spinner"
 import { ExpeditionHeader } from "@/components/expedition-header"
-import { 
+import {
   Search,
   Receipt,
   ShoppingCart,
@@ -47,8 +47,10 @@ import {
   Users,
   Copy,
   QrCode,
-  MoreHorizontal
+  MoreHorizontal,
+  DollarSign
 } from "lucide-react"
+import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import React from "react"
 import { 
   getExpeditionTransactions,
@@ -102,17 +104,13 @@ export default function StoreTransactionsPage({ params }: PageProps) {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set())
-  const [balancesExpanded, setBalancesExpanded] = useState(false)
+  const [payDayDialogOpen, setPayDayDialogOpen] = useState(false)
+  const [studentHistoryDialogOpen, setStudentHistoryDialogOpen] = useState(false)
+  const [selectedStudent, setSelectedStudent] = useState<any>(null)
   const [editFormData, setEditFormData] = useState({
     amount: 0,
     quantity: 1
   })
-
-  // Set balancesExpanded based on screen size on mount
-  useEffect(() => {
-    const isDesktop = window.matchMedia('(min-width: 640px)').matches
-    setBalancesExpanded(isDesktop)
-  }, [])
 
   // Get the public store URL
   const publicStoreUrl = typeof window !== 'undefined' 
@@ -169,6 +167,73 @@ export default function StoreTransactionsPage({ params }: PageProps) {
   const purchaseTransactions = (allTransactions || []).filter(
     (t: ExpeditionTransaction) => t.transaction === "Purchase"
   )
+
+  // Collect dates that already have pay day transactions
+  const paidDates = useMemo(() => {
+    if (!allTransactions) return new Set<string>()
+    const dates = new Set<string>()
+    ;(allTransactions as ExpeditionTransaction[]).forEach((t) => {
+      if (t.transaction !== "Purchase" && t.date) {
+        dates.add(t.date)
+      }
+    })
+    return dates
+  }, [allTransactions])
+
+  // Expedition date range for calendar bounds
+  const expeditionStartDate = useMemo(() => {
+    const d = expedition?.startDate || expedition?.start_date
+    if (!d) return undefined
+    const [y, m, day] = d.split("-").map(Number)
+    return new Date(y, m - 1, day)
+  }, [expedition])
+
+  const expeditionEndDate = useMemo(() => {
+    const d = expedition?.endDate || expedition?.end_date
+    if (!d) return undefined
+    const [y, m, day] = d.split("-").map(Number)
+    return new Date(y, m - 1, day)
+  }, [expedition])
+
+  // Build daily earnings history for selected student
+  const studentDailyHistory = useMemo(() => {
+    if (!selectedStudent || !expeditionStartDate || !expeditionEndDate) return []
+    const today = new Date()
+    today.setHours(23, 59, 59, 999)
+    const endDate = expeditionEndDate > today ? today : expeditionEndDate
+    const allDates = eachDayOfInterval({ start: expeditionStartDate, end: endDate })
+    const studentTransactions = (allTransactions || []) as ExpeditionTransaction[]
+
+    return allDates.map((date) => {
+      const dateStr = format(date, "yyyy-MM-dd")
+      const dayTransactions = studentTransactions.filter(
+        (t) => t.students_id === selectedStudent.id && t.date === dateStr
+      )
+      const payTransaction = dayTransactions.find((t) => t.transaction !== "Purchase")
+
+      return {
+        date,
+        dateStr,
+        earned: payTransaction ? payTransaction.amount : null,
+      }
+    })
+  }, [selectedStudent, expeditionStartDate, expeditionEndDate, allTransactions])
+
+  // Build purchase history for selected student
+  const studentPurchases = useMemo(() => {
+    if (!selectedStudent) return []
+    return ((allTransactions || []) as ExpeditionTransaction[])
+      .filter((t) => t.students_id === selectedStudent.id && t.transaction === "Purchase")
+      .sort((a, b) => b.created_at - a.created_at)
+  }, [selectedStudent, allTransactions])
+
+  const studentTotalEarned = useMemo(() => {
+    return studentDailyHistory.reduce((sum, day) => sum + (day.earned || 0), 0)
+  }, [studentDailyHistory])
+
+  const studentTotalSpent = useMemo(() => {
+    return studentPurchases.reduce((sum, t) => sum + Math.abs(t.amount), 0)
+  }, [studentPurchases])
 
   const isLoading = expeditionsLoading || transactionsLoading
 
@@ -400,6 +465,42 @@ export default function StoreTransactionsPage({ params }: PageProps) {
     }
   }
 
+  const [processingPayDate, setProcessingPayDate] = useState<string | null>(null)
+
+  const handlePayDate = async (date: Date) => {
+    const dateStr = format(date, "yyyy-MM-dd")
+    const isRerun = paidDates.has(dateStr)
+    setProcessingPayDate(dateStr)
+    try {
+      const response = await fetch(`https://xsc3-mvx7-r86m.n7e.xano.io/api:bXFdqx8y/pay_students?target_date=${dateStr}&expeditions_id=${expeditionId}`)
+      if (!response.ok) {
+        let errorMessage = `${response.status} ${response.statusText}`
+        try {
+          const errorData = await response.json()
+          if (errorData?.message) errorMessage = errorData.message
+        } catch {}
+        throw new Error(errorMessage)
+      }
+      // Small delay to ensure backend has finished processing
+      await new Promise(resolve => setTimeout(resolve, 500))
+      await mutate(`students_with_balance_${expeditionId}`)
+      await mutate(`expedition_transactions_${expeditionId}`)
+      if (isRerun) {
+        toast.success(`Pay day values updated for ${format(date, "MMM d, yyyy")}`, {
+          description: "Student balances have been recalculated.",
+        })
+      } else {
+        toast.success(`Pay day processed for ${format(date, "MMM d, yyyy")}`)
+      }
+    } catch (error) {
+      console.error("Failed to pay students:", error)
+      const message = error instanceof Error ? error.message : "An unexpected error occurred"
+      toast.error("Failed to process pay day", { description: message })
+    } finally {
+      setProcessingPayDate(null)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Expedition Header with Navigation */}
@@ -444,29 +545,30 @@ export default function StoreTransactionsPage({ params }: PageProps) {
 
         {/* Two Column Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Student Balances Table - Collapsible */}
+          {/* Student Balances Table */}
           <div className="lg:col-span-1">
             <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-              <button
-                onClick={() => setBalancesExpanded(!balancesExpanded)}
-                className="w-full px-4 sm:px-6 py-4 border-b bg-gray-50/50 flex items-center justify-between cursor-pointer hover:bg-gray-100/50 transition-colors"
-              >
-                <div className="text-left">
+              <div className="px-4 sm:px-6 py-4 border-b bg-gray-50/50 flex items-center justify-between">
+                <div>
                   <h2 className="text-lg font-semibold">Account Balances</h2>
                   <p className="text-sm text-gray-600 mt-1">
                     {sortedStudentsWithBalance.length} students
                   </p>
                 </div>
-                {balancesExpanded ? (
-                  <ChevronDown className="h-5 w-5 text-gray-500" />
-                ) : (
-                  <ChevronRight className="h-5 w-5 text-gray-500" />
+                {isAdmin && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="cursor-pointer h-8"
+                    onClick={() => setPayDayDialogOpen(true)}
+                  >
+                    <DollarSign className="h-3.5 w-3.5 mr-1.5" />
+                    Pay Day
+                  </Button>
                 )}
-              </button>
-              
-              {balancesExpanded && (
-                <>
-                  {balancesLoading ? (
+              </div>
+
+              {balancesLoading ? (
                     <div className="p-4 space-y-3">
                       {Array.from({ length: 5 }).map((_, i) => (
                         <div key={i} className="flex items-center gap-3">
@@ -492,14 +594,21 @@ export default function StoreTransactionsPage({ params }: PageProps) {
                         </TableHeader>
                         <TableBody>
                           {sortedStudentsWithBalance.map((student: any) => (
-                            <TableRow key={student.id} className="border-b last:border-0">
+                            <TableRow
+                              key={student.id}
+                              className="border-b last:border-0 cursor-pointer hover:bg-gray-50"
+                              onClick={() => {
+                                setSelectedStudent(student)
+                                setStudentHistoryDialogOpen(true)
+                              }}
+                            >
                               <TableCell className="h-12 px-4">
                                 <div className="flex items-center gap-2">
                                   <Avatar className="h-7 w-7">
                                     {student.profileImage ? (
-                                      <AvatarImage 
-                                        src={student.profileImage} 
-                                        alt={`${student.firstName} ${student.lastName}`} 
+                                      <AvatarImage
+                                        src={student.profileImage}
+                                        alt={`${student.firstName} ${student.lastName}`}
                                       />
                                     ) : null}
                                     <AvatarFallback className="text-xs bg-gray-200 text-gray-600">
@@ -522,8 +631,6 @@ export default function StoreTransactionsPage({ params }: PageProps) {
                       </Table>
                     </div>
                   )}
-                </>
-              )}
             </div>
           </div>
 
@@ -919,6 +1026,189 @@ export default function StoreTransactionsPage({ params }: PageProps) {
               Close
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Pay Day Dialog */}
+      <Dialog open={payDayDialogOpen} onOpenChange={(open) => { if (!processingPayDate) setPayDayDialogOpen(open) }}>
+        <DialogContent className="sm:max-w-md">
+          {processingPayDate && (
+            <div className="absolute inset-0 bg-gray-500/50 z-50 flex items-center justify-center rounded-lg">
+              <div className="bg-white rounded-lg px-6 py-4 flex items-center gap-3 shadow-lg">
+                <Spinner size="sm" />
+                <span className="text-sm font-medium text-gray-700">Processing...</span>
+              </div>
+            </div>
+          )}
+          <DialogHeader>
+            <DialogTitle>Pay Day</DialogTitle>
+            <DialogDescription>
+              Click a date to process payments for all active students. Green dates have already been paid.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col items-center gap-3">
+            <CalendarComponent
+              mode="single"
+              selected={undefined}
+              onSelect={(date) => {
+                if (date && !processingPayDate) handlePayDate(date)
+              }}
+              disabled={(date) => {
+                if (expeditionStartDate && date < expeditionStartDate) return true
+                if (expeditionEndDate && date > expeditionEndDate) return true
+                const today = new Date()
+                today.setHours(23, 59, 59, 999)
+                if (date > today) return true
+                return false
+              }}
+              modifiers={{
+                paid: (date) => paidDates.has(format(date, "yyyy-MM-dd")),
+              }}
+              modifiersClassNames={{
+                paid: "[&_button]:!bg-green-100 [&_button]:!text-green-700 [&_button]:!opacity-100",
+              }}
+              className="rounded-md border [--cell-size:1.75rem] [&_td[data-disabled]]:!cursor-default [&_td[data-disabled]]:!pointer-events-none [&_button:disabled]:!cursor-default [&_button:disabled]:!pointer-events-none [&_button:disabled]:hover:!bg-transparent"
+            />
+            <div className="flex items-center justify-between w-full">
+              <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                <div className="flex items-center gap-1.5">
+                  <div className="h-3 w-3 rounded bg-green-100 border border-green-200" />
+                  <span>Paid</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="h-3 w-3 rounded bg-gray-100 border border-gray-200" />
+                  <span>Unpaid</span>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPayDayDialogOpen(false)}
+                className="cursor-pointer"
+              >
+                Done
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Student Transaction History Dialog */}
+      <Dialog open={studentHistoryDialogOpen} onOpenChange={setStudentHistoryDialogOpen}>
+        <DialogContent className="sm:max-w-lg max-h-[85vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3">
+              {selectedStudent && (
+                <>
+                  <Avatar className="h-8 w-8">
+                    {selectedStudent.profileImage ? (
+                      <AvatarImage src={selectedStudent.profileImage} alt={`${selectedStudent.firstName} ${selectedStudent.lastName}`} />
+                    ) : null}
+                    <AvatarFallback className="text-xs bg-gray-200 text-gray-600">
+                      {selectedStudent.firstName?.[0]}{selectedStudent.lastName?.[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span>{selectedStudent.firstName} {selectedStudent.lastName}</span>
+                </>
+              )}
+            </DialogTitle>
+            <DialogDescription>
+              Transaction history for this expedition
+            </DialogDescription>
+          </DialogHeader>
+          <div className="overflow-auto flex-1 -mx-6 px-6 space-y-6">
+            {/* Balance at top */}
+            <div className="rounded-lg border bg-gray-50 px-4 py-3 flex items-center justify-between">
+              <span className="text-sm font-semibold text-gray-700">Balance</span>
+              <span className={`text-lg font-bold ${(studentTotalEarned - studentTotalSpent) >= 0 ? "text-green-600" : "text-red-600"}`}>
+                {formatPrice(studentTotalEarned - studentTotalSpent)}
+              </span>
+            </div>
+
+            {/* Daily Pay Table */}
+            <div>
+              <h3 className="text-sm font-semibold text-gray-700 mb-2">Daily Pay</h3>
+              <div className="rounded-lg border overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-gray-50/30 hover:bg-gray-50/30">
+                      <TableHead className="h-9 px-3 text-xs font-semibold text-gray-600">Date</TableHead>
+                      <TableHead className="h-9 px-3 text-xs font-semibold text-gray-600 text-right">Amount</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {studentDailyHistory.map((day) => (
+                      <TableRow key={day.dateStr} className="border-b last:border-0">
+                        <TableCell className="h-9 px-3">
+                          <span className="text-sm text-gray-700">{format(day.date, "EEE, MMM d")}</span>
+                        </TableCell>
+                        <TableCell className="h-9 px-3 text-right">
+                          {day.earned !== null ? (
+                            <span className={`text-sm font-medium ${day.earned > 0 ? "text-green-600" : day.earned < 0 ? "text-red-600" : "text-gray-400"}`}>
+                              {day.earned > 0 ? "+" : ""}{formatPrice(day.earned)}
+                            </span>
+                          ) : (
+                            <span className="text-sm text-gray-300">—</span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    <TableRow className="bg-gray-50 font-medium">
+                      <TableCell className="h-9 px-3 text-sm font-semibold text-gray-700">Total Earned</TableCell>
+                      <TableCell className={`h-9 px-3 text-right text-sm font-semibold ${studentTotalEarned > 0 ? "text-green-600" : studentTotalEarned < 0 ? "text-red-600" : "text-gray-400"}`}>
+                        {studentTotalEarned > 0 ? "+" : ""}{formatPrice(studentTotalEarned)}
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+
+            {/* Purchases Table */}
+            <div>
+              <h3 className="text-sm font-semibold text-gray-700 mb-2">Purchases</h3>
+              <div className="rounded-lg border overflow-hidden">
+                {studentPurchases.length === 0 ? (
+                  <div className="p-4 text-center text-sm text-gray-400">No purchases</div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-gray-50/30 hover:bg-gray-50/30">
+                        <TableHead className="h-9 px-3 text-xs font-semibold text-gray-600">Date</TableHead>
+                        <TableHead className="h-9 px-3 text-xs font-semibold text-gray-600">Item</TableHead>
+                        <TableHead className="h-9 px-3 text-xs font-semibold text-gray-600 text-right">Amount</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {studentPurchases.map((t) => {
+                        const storeItem = getStoreItemInfo(t.expeditions_store_id)
+                        return (
+                          <TableRow key={t.id} className="border-b last:border-0">
+                            <TableCell className="h-9 px-3">
+                              <span className="text-sm text-gray-700">{format(new Date(t.date), "MMM d")}</span>
+                            </TableCell>
+                            <TableCell className="h-9 px-3">
+                              <span className="text-sm text-gray-700 truncate">
+                                {storeItem?.product_name || "Unknown"}
+                                {t.quantity > 1 ? ` × ${t.quantity}` : ""}
+                              </span>
+                            </TableCell>
+                            <TableCell className="h-9 px-3 text-right">
+                              <span className="text-sm font-medium text-red-600">-{formatPrice(Math.abs(t.amount))}</span>
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })}
+                      <TableRow className="bg-gray-50 font-medium">
+                        <TableCell className="h-9 px-3 text-sm font-semibold text-gray-700" colSpan={2}>Total Spent</TableCell>
+                        <TableCell className="h-9 px-3 text-right text-sm font-semibold text-red-600">-{formatPrice(studentTotalSpent)}</TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                )}
+              </div>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

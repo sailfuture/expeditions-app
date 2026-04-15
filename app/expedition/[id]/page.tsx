@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, use, useState } from "react"
 import { useRouter } from "next/navigation"
-import { format } from "date-fns"
+import { format, formatDistanceToNow } from "date-fns"
 import useSWR, { mutate } from "swr"
 import { toast } from "sonner"
 import {
@@ -65,8 +65,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { 
-  Calendar, 
+import {
+  Calendar,
   FileText,
   ClipboardList,
   Map,
@@ -319,6 +319,8 @@ export default function ExpeditionDetailPage({ params }: PageProps) {
   const [allRecordsModalOpen, setAllRecordsModalOpen] = useState(false)
   const [selectedStudent, setSelectedStudent] = useState<any>(null)
   const [isUpdatingScores, setIsUpdatingScores] = useState(false)
+  const [lastScoresUpdate, setLastScoresUpdate] = useState<Date | null>(null)
+  const [, setTick] = useState(0) // force re-render for relative time
   
   // State for locations
   const [locationDialogOpen, setLocationDialogOpen] = useState(false)
@@ -383,6 +385,7 @@ export default function ExpeditionDetailPage({ params }: PageProps) {
         )
       )
       
+      setLastScoresUpdate(new Date())
       toast.success(`Updated scores for ${activeStudents.length} students`)
     } catch (error) {
       console.error("Error updating scores:", error)
@@ -391,7 +394,14 @@ export default function ExpeditionDetailPage({ params }: PageProps) {
       setIsUpdatingScores(false)
     }
   }
-  
+
+  // Tick every 30s to keep relative time fresh
+  useEffect(() => {
+    if (!lastScoresUpdate) return
+    const interval = setInterval(() => setTick(t => t + 1), 30000)
+    return () => clearInterval(interval)
+  }, [lastScoresUpdate])
+
   // Helper functions for score formatting and colors
   const formatDetailDate = (dateStr: string | null) => {
     if (!dateStr) return "—"
@@ -711,16 +721,23 @@ export default function ExpeditionDetailPage({ params }: PageProps) {
           <div className="px-6 py-4 border-b bg-gray-50/50 flex items-center justify-between">
             <h2 className="text-lg font-semibold">Student Evaluations</h2>
             {isAdmin && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleUpdateScores}
-                disabled={isUpdatingScores || !expeditionStudents || expeditionStudents.length === 0}
-                className="cursor-pointer"
-              >
-                <RefreshCw className={`h-4 w-4 mr-2 ${isUpdatingScores ? 'animate-spin' : ''}`} />
-                {isUpdatingScores ? 'Updating...' : 'Update Scores'}
-              </Button>
+              <div className="flex items-center gap-3">
+                {lastScoresUpdate && (
+                  <span className="text-xs text-muted-foreground">
+                    Updated {formatDistanceToNow(lastScoresUpdate, { addSuffix: true })}
+                  </span>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleUpdateScores}
+                  disabled={isUpdatingScores || !expeditionStudents || expeditionStudents.length === 0}
+                  className="cursor-pointer"
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${isUpdatingScores ? 'animate-spin' : ''}`} />
+                  {isUpdatingScores ? 'Updating...' : 'Update Scores'}
+                </Button>
+              </div>
             )}
           </div>
           {studentsLoading ? (
@@ -1265,6 +1282,7 @@ export default function ExpeditionDetailPage({ params }: PageProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
     </div>
   )
 }

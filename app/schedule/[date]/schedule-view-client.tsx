@@ -265,8 +265,11 @@ export function ScheduleViewClient({ date, expeditionId }: ScheduleViewClientPro
   }
 
   const handleMealPlanClick = (recipeId: number) => {
-    setSelectedRecipeId(recipeId)
-    setMealPlanSheetOpen(true)
+    setDialogOpen(false)
+    setTimeout(() => {
+      setSelectedRecipeId(recipeId)
+      setMealPlanSheetOpen(true)
+    }, 150)
   }
 
   const handleModalEdit = () => {

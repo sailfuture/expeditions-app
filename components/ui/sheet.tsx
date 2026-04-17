@@ -17,7 +17,6 @@ function Sheet({
     <SheetContext.Provider value={{ onOpenChange }}>
       <SheetPrimitive.Root
         data-slot="sheet"
-        modal={false}
         onOpenChange={onOpenChange}
         {...props}
       />

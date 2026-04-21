@@ -223,6 +223,7 @@ export default function MealPlanningPage() {
           expedition_cookbook_id: editRecipe.id,
           recipe_name: editForm.recipe_name,
           recipe_photo: photoData,
+          type: editForm.types[0] || "",
           types: editForm.types,
           summary: editForm.summary,
           duration_minutes: editForm.duration_minutes,
@@ -274,6 +275,7 @@ export default function MealPlanningPage() {
         body: JSON.stringify({
           recipe_name: addForm.recipe_name,
           recipe_photo: photoData,
+          type: addForm.types[0] || "",
           types: addForm.types,
           summary: addForm.summary,
           duration_minutes: addForm.duration_minutes,

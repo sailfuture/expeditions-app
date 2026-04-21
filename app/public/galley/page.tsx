@@ -324,9 +324,12 @@ function PublicGalleyPage() {
       Dinner: [],
     }
     cookbookItems.forEach((recipe: any) => {
-      if (groups[recipe.type]) {
-        groups[recipe.type].push(recipe)
-      }
+      const recipeTypes = Array.isArray(recipe.types) && recipe.types.length > 0
+        ? recipe.types
+        : recipe.type ? [recipe.type] : []
+      recipeTypes.forEach((t: string) => {
+        if (groups[t]) groups[t].push(recipe)
+      })
     })
     Object.keys(groups).forEach((key) => {
       groups[key].sort((a: any, b: any) => a.recipe_name.localeCompare(b.recipe_name))

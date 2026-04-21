@@ -26,7 +26,7 @@ import {
 import { Spinner } from "@/components/ui/spinner"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Check, ChevronDown, X, Trash2, ExternalLink, Search } from "lucide-react"
-import { createExpeditionScheduleItem, updateExpeditionScheduleItem, deleteExpeditionScheduleItem, getExpeditionCookbookByType } from "@/lib/xano"
+import { createExpeditionScheduleItem, updateExpeditionScheduleItem, deleteExpeditionScheduleItem, getExpeditionCookbook } from "@/lib/xano"
 import { useExpeditionScheduleItemTypes } from "@/lib/hooks/use-expeditions"
 import useSWR, { mutate } from "swr"
 import { toast } from "sonner"
@@ -751,12 +751,16 @@ function CookbookSelector({
   const dropdownRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  // Fetch cookbook recipes by type
-  const { data: recipes = [], isLoading } = useSWR(
-    mealTypeName ? `cookbook_by_type_${mealTypeName}` : null,
-    () => mealTypeName ? getExpeditionCookbookByType(mealTypeName) : Promise.resolve([]),
+  // Fetch all cookbook recipes and filter by type client-side (supports types[] array)
+  const { data: allRecipes = [], isLoading } = useSWR(
+    mealTypeName ? "expedition_cookbook_all" : null,
+    () => getExpeditionCookbook(),
     { revalidateOnFocus: false }
   )
+  const recipes = allRecipes.filter((r: any) => {
+    const types = Array.isArray(r.types) && r.types.length > 0 ? r.types : r.type ? [r.type] : []
+    return types.includes(mealTypeName || "")
+  })
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {

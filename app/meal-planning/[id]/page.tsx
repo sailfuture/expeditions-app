@@ -221,6 +221,7 @@ export default function RecipeDetailPage() {
           expedition_cookbook_id: recipe.id,
           recipe_name: editRecipeForm.recipe_name,
           recipe_photo: photoData,
+          type: editRecipeForm.types[0] || "",
           types: editRecipeForm.types,
           summary: editRecipeForm.summary,
           duration_minutes: editRecipeForm.duration_minutes,

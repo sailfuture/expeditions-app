@@ -60,7 +60,7 @@ import { useExpeditionContext } from "@/lib/contexts/expedition-context"
 import { cn, isDateWithinExpeditionRange, getExpeditionFirstDate, getPhotoUrl } from "@/lib/utils"
 import { AddScheduleItemSheet } from "@/components/add-schedule-item-sheet"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { deleteExpeditionScheduleItem, addExpeditionScheduleTemplate, getExpeditionDishDays, getExpeditionsGalleyTeam, updateExpeditionSchedule, updateExpeditionScheduleItem, getExpeditionCookbookByType, getGalleyEquipment } from "@/lib/xano"
+import { deleteExpeditionScheduleItem, addExpeditionScheduleTemplate, getExpeditionDishDays, getExpeditionsGalleyTeam, updateExpeditionSchedule, updateExpeditionScheduleItem, getExpeditionCookbook, getGalleyEquipment } from "@/lib/xano"
 import useSWR from "swr"
 import { mutate } from "swr"
 import { toast } from "sonner"
@@ -664,19 +664,18 @@ function PlannerPageContent() {
     }, 150)
   }
   
-  // Cookbook recipes for galley view
-  const { data: breakfastRecipes = [] } = useSWR(
-    plannerView === "galley" ? "cookbook_by_type_Breakfast" : null,
-    () => getExpeditionCookbookByType("Breakfast")
+  // Cookbook recipes for galley view - fetch all and filter client-side to support types[] array
+  const { data: allCookbookRecipes = [] } = useSWR(
+    plannerView === "galley" ? "expedition_cookbook_all" : null,
+    () => getExpeditionCookbook()
   )
-  const { data: lunchRecipes = [] } = useSWR(
-    plannerView === "galley" ? "cookbook_by_type_Lunch" : null,
-    () => getExpeditionCookbookByType("Lunch")
-  )
-  const { data: dinnerRecipes = [] } = useSWR(
-    plannerView === "galley" ? "cookbook_by_type_Dinner" : null,
-    () => getExpeditionCookbookByType("Dinner")
-  )
+
+  const getRecipesForType = (mealType: string) => {
+    return allCookbookRecipes.filter((r: any) => {
+      const types = Array.isArray(r.types) && r.types.length > 0 ? r.types : r.type ? [r.type] : []
+      return types.includes(mealType)
+    })
+  }
 
   const [updatingMealPlan, setUpdatingMealPlan] = useState<{ key: string; cookbookId: number } | null>(null)
   // Optimistic state: itemId -> cookbookId override
@@ -1179,9 +1178,7 @@ function PlannerPageContent() {
                         const mealItem = mealItems.find(
                           (item: any) => item._expedition_schedule_item_types?.name === mealType
                         )
-                        const recipesForType = mealType === "Breakfast" ? breakfastRecipes
-                          : mealType === "Lunch" ? lunchRecipes
-                          : dinnerRecipes
+                        const recipesForType = getRecipesForType(mealType)
                         const updatingKey = `${mealItem?.id}-${dateStrings[index]}`
                         const isUpdating = updatingMealPlan?.key === updatingKey
 

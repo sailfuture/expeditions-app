@@ -82,6 +82,7 @@ function MealPlanSheet({ open, onOpenChange, recipe, loading, recipeId }: {
   loading: boolean
   recipeId: number | null
 }) {
+  const recipeRouter = useRouter()
   const [editing, setEditing] = useState(false)
   const [savingId, setSavingId] = useState<number | null>(null)
 
@@ -280,15 +281,24 @@ function MealPlanSheet({ open, onOpenChange, recipe, loading, recipeId }: {
                   </div>
                 )}
                 <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-xs text-muted-foreground bg-gray-100 px-2 py-0.5 rounded">{recipe.type}</span>
+                  <div className="flex flex-wrap items-center gap-2 mb-2">
+                    {(Array.isArray(recipe.types) && recipe.types.length > 0 ? recipe.types : [recipe.type].filter(Boolean)).map((t: string) => (
+                      <span key={t} className="text-xs text-muted-foreground bg-gray-100 px-2 py-0.5 rounded">{t}</span>
+                    ))}
                   </div>
                   {recipe.summary && <p className="text-sm text-gray-600">{recipe.summary}</p>}
                   <div className="flex flex-wrap gap-3 mt-3">
-                    {recipe.duration_minutes && (
+                    {recipe.duration_minutes && parseInt(recipe.duration_minutes) > 0 && (
                       <div className="flex items-center gap-1.5 text-sm text-gray-600">
                         <Clock className="h-4 w-4 text-gray-400" />
-                        <span>{recipe.duration_minutes}</span>
+                        <span>
+                          {(() => {
+                            const total = parseInt(recipe.duration_minutes)
+                            const h = Math.floor(total / 60)
+                            const m = total % 60
+                            return h > 0 ? (m > 0 ? `${h}h ${m}m` : `${h}h`) : `${m}m`
+                          })()}
+                        </span>
                       </div>
                     )}
                     {(() => {
@@ -310,6 +320,20 @@ function MealPlanSheet({ open, onOpenChange, recipe, loading, recipeId }: {
                         </div>
                       ) : null
                     })()}
+                  </div>
+                  <div className="mt-3">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        onOpenChange(false)
+                        recipeRouter.push(`/meal-planning/${recipeId}`)
+                      }}
+                      className="cursor-pointer"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                      Edit in Cookbook
+                    </Button>
                   </div>
                 </div>
               </div>

@@ -1430,25 +1430,58 @@ export function ScheduleViewClient({ date, expeditionId }: ScheduleViewClientPro
                     </div>
                   )}
                   <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-xs text-muted-foreground bg-gray-100 px-2 py-0.5 rounded">{selectedRecipe.type}</span>
+                    <div className="flex flex-wrap items-center gap-2 mb-2">
+                      {(Array.isArray(selectedRecipe.types) && selectedRecipe.types.length > 0 ? selectedRecipe.types : [selectedRecipe.type].filter(Boolean)).map((t: string) => (
+                        <span key={t} className="text-xs text-muted-foreground bg-gray-100 px-2 py-0.5 rounded">{t}</span>
+                      ))}
                     </div>
                     {selectedRecipe.summary && (
                       <p className="text-sm text-gray-600">{selectedRecipe.summary}</p>
                     )}
                     <div className="flex flex-wrap gap-3 mt-3">
-                      {selectedRecipe.duration_minutes && (
+                      {selectedRecipe.duration_minutes && parseInt(selectedRecipe.duration_minutes) > 0 && (
                         <div className="flex items-center gap-1.5 text-sm text-gray-600">
                           <Clock className="h-4 w-4 text-gray-400" />
-                          <span>{selectedRecipe.duration_minutes}</span>
+                          <span>
+                            {(() => {
+                              const total = parseInt(selectedRecipe.duration_minutes)
+                              const h = Math.floor(total / 60)
+                              const m = total % 60
+                              return h > 0 ? (m > 0 ? `${h}h ${m}m` : `${h}h`) : `${m}m`
+                            })()}
+                          </span>
                         </div>
                       )}
-                      {selectedRecipe.equipment_required && (
-                        <div className="flex items-center gap-1.5 text-sm text-gray-600">
-                          <Wrench className="h-4 w-4 text-gray-400" />
-                          <span>{selectedRecipe.equipment_required}</span>
-                        </div>
-                      )}
+                      {(() => {
+                        const allEquipIds = new Set<number>()
+                        selectedRecipe.instructions?.forEach((inst: any) => {
+                          if (Array.isArray(inst.expedition_galley_equipment_id)) {
+                            inst.expedition_galley_equipment_id.forEach((id: number) => allEquipIds.add(id))
+                          }
+                        })
+                        // For now show count since we don't have equipment names loaded
+                        return allEquipIds.size > 0 ? (
+                          <div className="flex items-center gap-1.5 text-sm text-gray-600">
+                            <Wrench className="h-4 w-4 text-gray-400" />
+                            <span>{allEquipIds.size} equipment items</span>
+                          </div>
+                        ) : null
+                      })()}
+                    </div>
+                    <div className="mt-3">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const id = selectedRecipe.id
+                          setMealPlanSheetOpen(false)
+                          router.push(`/meal-planning/${id}`)
+                        }}
+                        className="cursor-pointer"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                        Edit in Cookbook
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -1476,10 +1509,10 @@ export function ScheduleViewClient({ date, expeditionId }: ScheduleViewClientPro
                                   <span>{instruction.duration} min</span>
                                 </div>
                               )}
-                              {instruction.equipment && (
+                              {Array.isArray(instruction.expedition_galley_equipment_id) && instruction.expedition_galley_equipment_id.length > 0 && (
                                 <div className="flex items-center gap-1 text-gray-600">
                                   <Wrench className="h-3 w-3 text-gray-400" />
-                                  <span>{instruction.equipment}</span>
+                                  <span>{instruction.expedition_galley_equipment_id.length} items</span>
                                 </div>
                               )}
                             </div>

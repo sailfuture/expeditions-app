@@ -55,7 +55,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
-import { Clock, User, MessageSquare, ChevronLeft, ChevronRight, Plus, Pencil, Trash2, X, Settings, MapPin, ClipboardList, Wrench } from "lucide-react"
+import { Clock, User, MessageSquare, ChevronLeft, ChevronRight, Plus, Pencil, Trash2, X, Settings, MapPin, ClipboardList, Wrench, ExternalLink } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { DateNavigation } from "@/components/date-navigation"
 import { AddScheduleItemSheet } from "@/components/add-schedule-item-sheet"

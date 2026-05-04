@@ -7,6 +7,7 @@ import { Navbar } from "@/components/navbar"
 import { Providers } from "@/components/providers"
 import { Toaster } from "sonner"
 import { PointerEventsFix } from "@/components/pointer-events-fix"
+import { Analytics } from "@vercel/analytics/next"
 
 const fontSans = Inter({ subsets: ["latin"], variable: "--font-sans" })
 
@@ -46,6 +47,7 @@ export default function RootLayout({
           <Toaster position="bottom-right" />
           <PointerEventsFix />
         </Providers>
+        <Analytics />
       </body>
     </html>
   )

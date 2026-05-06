@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
 
     const resend = new Resend(process.env.RESEND_API_KEY)
 
-    const { parentEmail, parentName, studentName, reportName, startDate, endDate, pdfBase64 } = await request.json()
+    const { parentEmail, parentName, studentName, reportName, startDate, endDate, pdfBase64, isFinal } = await request.json()
 
     if (!parentEmail || !studentName || !pdfBase64) {
       return NextResponse.json(
@@ -23,13 +23,26 @@ export async function POST(request: NextRequest) {
 
     // Convert base64 to buffer for attachment
     const pdfBuffer = Buffer.from(pdfBase64, "base64")
-    const fileName = `Performance_Review_${studentName.replace(/\s+/g, "_")}_${startDate || "report"}.pdf`
+    const filePrefix = isFinal ? "Final_Expedition_Evaluation" : "Performance_Review"
+    const fileName = `${filePrefix}_${studentName.replace(/\s+/g, "_")}_${startDate || "report"}.pdf`
+
+    const subject = isFinal
+      ? `Final Expedition Evaluation: ${studentName} — SailFuture Academy`
+      : `Performance Review: ${studentName} — ${reportName || "SailFuture Academy"}`
+
+    const introText = isFinal
+      ? `Please find attached the <strong>Final Expedition Evaluation</strong> for <strong>${studentName}</strong>${startDate && endDate ? ` covering the expedition from <strong>${startDate}</strong> to <strong>${endDate}</strong>` : ""}.`
+      : `Please find attached the performance review for <strong>${studentName}</strong>${startDate && endDate ? ` covering the period from <strong>${startDate}</strong> to <strong>${endDate}</strong>` : ""}.`
+
+    const detailsText = isFinal
+      ? `This final evaluation summarizes the student's overall performance across all six core domains: Academics, Citizenship, Job Duties, Crew Responsibilities, Service Learning, and Personal Reflection. Each domain is rated as Strong Sat, Sat, or Unsat based on the aggregated scores from the entire expedition.`
+      : `This review includes daily professionalism scores, evaluation summaries, and any additional notes from the reviewing staff member.`
 
     const { data, error } = await resend.emails.send({
       from: "SailFuture Academy <noreply@sailfutureacademy.org>",
       to: parentEmail,
       cc: ["dean@sailfuture.org", "hthompson@sailfuture.org"],
-      subject: `Performance Review: ${studentName} — ${reportName || "SailFuture Academy"}`,
+      subject,
       html: `
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
           <div style="background-color: #1e293b; padding: 20px 24px; border-radius: 8px 8px 0 0;">
@@ -40,13 +53,13 @@ export async function POST(request: NextRequest) {
               Dear ${parentName || "Parent/Guardian"},
             </p>
             <p style="color: #334155; font-size: 16px; line-height: 1.6;">
-              Please find attached the performance review for <strong>${studentName}</strong>${startDate && endDate ? ` covering the period from <strong>${startDate}</strong> to <strong>${endDate}</strong>` : ""}.
+              ${introText}
             </p>
             <p style="color: #334155; font-size: 16px; line-height: 1.6;">
-              This review includes daily professionalism scores, evaluation summaries, and any additional notes from the reviewing staff member.
+              ${detailsText}
             </p>
             <p style="color: #334155; font-size: 16px; line-height: 1.6;">
-              If you have any questions about this review, please don't hesitate to reach out to us.
+              If you have any questions about this ${isFinal ? "evaluation" : "review"}, please don't hesitate to reach out to us.
             </p>
             <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;" />
             <p style="color: #94a3b8; font-size: 13px; line-height: 1.5; margin-bottom: 0;">

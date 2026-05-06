@@ -16,7 +16,7 @@ import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ExpeditionHeader } from "@/components/expedition-header"
 import { useExpeditions, useExpeditionPerformanceReviews, useTeachersByExpedition } from "@/lib/hooks/use-expeditions"
-import { FileText, User, Download, ExternalLink, Plus, Calendar, Eye, Trash2, Mail } from "lucide-react"
+import { FileText, User, Download, ExternalLink, Plus, Calendar, Eye, Trash2, Mail, Award, CheckCircle2, AlertCircle } from "lucide-react"
 import { Textarea } from "@/components/ui/textarea"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -181,6 +181,7 @@ function PreviewModal({
           startDate: review.startDate ? formatDate(review.startDate) : null,
           endDate: review.endDate ? formatDate(review.endDate) : null,
           pdfBase64,
+          isFinal: !!review.is_final,
         }),
       })
 
@@ -259,6 +260,23 @@ function PreviewModal({
     if (score >= 1.1) return 'Needs Improvement'
     return 'Unsatisfactory'
   }
+
+  // Final Evaluation scoring: Strong Sat (>=3.21), Sat (>=2.75), Unsat (<2.75)
+  const getFinalEvaluationStatus = (score: number | null | undefined): { label: string; color: string; bg: string; isPassing: boolean } => {
+    if (score === null || score === undefined) return { label: 'Unsat', color: 'text-red-700', bg: 'bg-red-50', isPassing: false }
+    if (score >= 3.21) return { label: 'Strong Sat', color: 'text-blue-700', bg: 'bg-blue-50', isPassing: true }
+    if (score >= 2.75) return { label: 'Sat', color: 'text-green-700', bg: 'bg-green-50', isPassing: true }
+    return { label: 'Unsat', color: 'text-red-700', bg: 'bg-red-50', isPassing: false }
+  }
+
+  // Journaling thresholds (percentage 0-1 or 0-100)
+  const getFinalJournalingStatus = (pct: number | null | undefined): { label: string; color: string; bg: string; isPassing: boolean } => {
+    if (pct === null || pct === undefined) return { label: 'Unsat', color: 'text-red-700', bg: 'bg-red-50', isPassing: false }
+    const normalized = pct <= 1 ? pct * 100 : pct
+    if (normalized >= 90) return { label: 'Strong Sat', color: 'text-blue-700', bg: 'bg-blue-50', isPassing: true }
+    if (normalized >= 70) return { label: 'Sat', color: 'text-green-700', bg: 'bg-green-50', isPassing: true }
+    return { label: 'Unsat', color: 'text-red-700', bg: 'bg-red-50', isPassing: false }
+  }
   
   const getJournalingEvaluation = (pct: number | null | undefined) => {
     if (pct === null || pct === undefined) return '—'
@@ -318,10 +336,10 @@ function PreviewModal({
       >
         <DialogHeader>
           <DialogTitle>
-            {loadingReview 
-              ? 'Loading...' 
-              : review 
-                ? `${`${review._students?.firstName || ""} ${review._students?.lastName || ""}`.trim() || 'Student'} — ${review.report_name || 'Performance Review'}`
+            {loadingReview
+              ? 'Loading...'
+              : review
+                ? `${`${review._students?.firstName || ""} ${review._students?.lastName || ""}`.trim() || 'Student'} — ${review.is_final ? 'Final Expedition Evaluation' : (review.report_name || 'Performance Review')}`
                 : 'Performance Review'
             }
           </DialogTitle>
@@ -339,6 +357,86 @@ function PreviewModal({
           <>
             
             <div className="flex-1 overflow-y-auto space-y-6">
+          {/* Final Evaluation Banner & Table - only when is_final */}
+          {review?.is_final && !loadingReview && !loadingStudentEvaluation && (
+            <div>
+              <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                <Award className="h-4 w-4 text-amber-500" />
+                Final Evaluation Status
+              </h3>
+              <div className="border rounded-lg overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-b bg-gray-50 hover:bg-gray-50">
+                      <TableHead className="h-10 px-3 text-xs font-semibold text-gray-600">Domain</TableHead>
+                      <TableHead className="h-10 px-3 text-xs font-semibold text-gray-600 text-center w-20">Average</TableHead>
+                      <TableHead className="h-10 px-3 text-xs font-semibold text-gray-600 w-32">Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {[
+                      { key: "academics", label: "Academics", score: displayAverages.academics, isJournal: false },
+                      { key: "citizenship", label: "Citizenship", score: displayAverages.citizenship, isJournal: false },
+                      { key: "job", label: "Job Duties", score: displayAverages.job, isJournal: false },
+                      { key: "crew", label: "Crew Responsibilities", score: displayAverages.crew, isJournal: false },
+                      { key: "service", label: "Service Learning", score: displayAverages.service, isJournal: false },
+                      { key: "journaling", label: "Personal Reflection (Journaling)", score: displayAverages.journaling, isJournal: true },
+                    ].map((row) => {
+                      const status = row.isJournal
+                        ? getFinalJournalingStatus(row.score)
+                        : getFinalEvaluationStatus(row.score)
+                      const scoreDisplay = row.score === null || row.score === undefined
+                        ? "—"
+                        : row.isJournal
+                          ? `${(row.score <= 1 ? row.score * 100 : row.score).toFixed(1)}%`
+                          : row.score.toFixed(2)
+                      return (
+                        <TableRow key={row.key} className={`border-b ${status.bg}`}>
+                          <TableCell className="px-3 py-2 font-medium text-gray-700 text-sm">{row.label}</TableCell>
+                          <TableCell className="px-3 py-2 text-center text-gray-700 text-sm">{scoreDisplay}</TableCell>
+                          <TableCell className={`px-3 py-2 text-sm font-semibold ${status.color}`}>{status.label}</TableCell>
+                        </TableRow>
+                      )
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+              {(() => {
+                const domainStatuses = [
+                  { label: "Academics", status: getFinalEvaluationStatus(displayAverages.academics) },
+                  { label: "Citizenship", status: getFinalEvaluationStatus(displayAverages.citizenship) },
+                  { label: "Job Duties", status: getFinalEvaluationStatus(displayAverages.job) },
+                  { label: "Crew Responsibilities", status: getFinalEvaluationStatus(displayAverages.crew) },
+                  { label: "Service Learning", status: getFinalEvaluationStatus(displayAverages.service) },
+                  { label: "Personal Reflection", status: getFinalJournalingStatus(displayAverages.journaling) },
+                ]
+                const allPassing = domainStatuses.every(d => d.status.isPassing)
+                const failedDomains = domainStatuses.filter(d => !d.status.isPassing).map(d => d.label)
+                return allPassing ? (
+                  <div className="mt-3 rounded-lg border border-green-200 bg-green-50 p-4 flex items-start gap-3">
+                    <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-semibold text-green-800">Successfully Completed Expedition</p>
+                      <p className="text-xs text-green-700 mt-0.5">
+                        {`${review._students?.firstName || "Student"} `}has passed all six domains and successfully completed this expedition.
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-3 rounded-lg border border-red-200 bg-red-50 p-4 flex items-start gap-3">
+                    <AlertCircle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-semibold text-red-800">Did Not Pass All Domains</p>
+                      <p className="text-xs text-red-700 mt-0.5">
+                        Unsatisfactory in: {failedDomains.join(", ")}
+                      </p>
+                    </div>
+                  </div>
+                )
+              })()}
+            </div>
+          )}
+
           {/* Evaluation Summary Table - Same as Student Evaluations table */}
           <div>
             <h3 className="text-sm font-semibold text-gray-700 mb-3">Evaluation Summary <span className="text-xs font-normal text-gray-500">(All Days)</span></h3>
@@ -616,7 +714,7 @@ function PreviewModal({
                 Saving...
               </>
             ) : (
-              'Save Review'
+              review?.is_final ? 'Save Evaluation' : 'Save Review'
             )}
           </Button>
         </DialogFooter>
@@ -643,6 +741,14 @@ function PerformanceReviewsContent() {
   const [startDateOpen, setStartDateOpen] = useState(false)
   const [endDateOpen, setEndDateOpen] = useState(false)
   const [creating, setCreating] = useState(false)
+
+  // Final Evaluation creation
+  const [finalDialogOpen, setFinalDialogOpen] = useState(false)
+  const [finalStartDate, setFinalStartDate] = useState<Date | undefined>(undefined)
+  const [finalEndDate, setFinalEndDate] = useState<Date | undefined>(undefined)
+  const [finalStartDateOpen, setFinalStartDateOpen] = useState(false)
+  const [finalEndDateOpen, setFinalEndDateOpen] = useState(false)
+  const [creatingFinal, setCreatingFinal] = useState(false)
   
   const [previewModalOpen, setPreviewModalOpen] = useState(false)
   const [selectedReviewId, setSelectedReviewId] = useState<number | null>(null)
@@ -696,6 +802,56 @@ function PerformanceReviewsContent() {
     }
   }
   
+  const handleCreateFinalEvaluation = async () => {
+    if (!finalStartDate || !finalEndDate || !expeditionId) {
+      toast.error("Please fill in start and end dates")
+      return
+    }
+
+    setCreatingFinal(true)
+    try {
+      const formattedStartDate = format(finalStartDate, 'yyyy-MM-dd')
+      const formattedEndDate = format(finalEndDate, 'yyyy-MM-dd')
+
+      await createPerformanceReview({
+        expeditions_id: expeditionId,
+        report_name: "Final Expedition Evaluation",
+        startDate: formattedStartDate,
+        endDate: formattedEndDate,
+        is_final: true,
+      })
+
+      toast.success("Final Expedition Evaluation created")
+      setFinalDialogOpen(false)
+      setFinalStartDate(undefined)
+      setFinalEndDate(undefined)
+
+      await mutate(`expedition_performance_reviews_${expeditionId}`)
+    } catch (error) {
+      console.error("Error creating final evaluation:", error)
+      toast.error("Failed to create final evaluation")
+    } finally {
+      setCreatingFinal(false)
+    }
+  }
+
+  // Pre-fill final eval dates from expedition range when dialog opens
+  const openFinalDialog = () => {
+    if (displayExpedition) {
+      const start = displayExpedition.startDate || displayExpedition.start_date
+      const end = displayExpedition.endDate || displayExpedition.end_date
+      if (start && !finalStartDate) {
+        const [y, m, d] = start.split('-').map(Number)
+        setFinalStartDate(new Date(y, m - 1, d))
+      }
+      if (end && !finalEndDate) {
+        const [y, m, d] = end.split('-').map(Number)
+        setFinalEndDate(new Date(y, m - 1, d))
+      }
+    }
+    setFinalDialogOpen(true)
+  }
+
   const handlePreviewReview = async (reviewId: number, currentNotes: string, staffId?: number) => {
     setSelectedReviewId(reviewId)
     setEditedNotes(currentNotes || "")
@@ -745,25 +901,47 @@ function PerformanceReviewsContent() {
     }
   }
   
-  // Group reviews by student and sort students alphabetically
+  // Group reviews by student and sort students alphabetically (regular reviews only, not final evaluations)
   const groupedReviews = useMemo(() => {
     if (!performanceReviews) return {}
-    
+
     const grouped: Record<number, any[]> = {}
     performanceReviews.forEach((review: any) => {
+      if (review.is_final) return
       if (!grouped[review.students_id]) {
         grouped[review.students_id] = []
       }
       grouped[review.students_id].push(review)
     })
-    
-    // Convert to array, sort by student name, then back to object
+
     const sortedEntries = Object.entries(grouped).sort(([, reviewsA], [, reviewsB]) => {
       const nameA = `${reviewsA[0]?._students?.firstName || ""} ${reviewsA[0]?._students?.lastName || ""}`.trim()
       const nameB = `${reviewsB[0]?._students?.firstName || ""} ${reviewsB[0]?._students?.lastName || ""}`.trim()
       return nameA.localeCompare(nameB)
     })
-    
+
+    return Object.fromEntries(sortedEntries)
+  }, [performanceReviews])
+
+  // Group FINAL evaluations by student
+  const groupedFinalEvaluations = useMemo(() => {
+    if (!performanceReviews) return {}
+
+    const grouped: Record<number, any[]> = {}
+    performanceReviews.forEach((review: any) => {
+      if (!review.is_final) return
+      if (!grouped[review.students_id]) {
+        grouped[review.students_id] = []
+      }
+      grouped[review.students_id].push(review)
+    })
+
+    const sortedEntries = Object.entries(grouped).sort(([, reviewsA], [, reviewsB]) => {
+      const nameA = `${reviewsA[0]?._students?.firstName || ""} ${reviewsA[0]?._students?.lastName || ""}`.trim()
+      const nameB = `${reviewsB[0]?._students?.firstName || ""} ${reviewsB[0]?._students?.lastName || ""}`.trim()
+      return nameA.localeCompare(nameB)
+    })
+
     return Object.fromEntries(sortedEntries)
   }, [performanceReviews])
   
@@ -790,14 +968,21 @@ function PerformanceReviewsContent() {
       {expeditionId && (
         <div className="border-b bg-muted/30">
           <div className="container mx-auto px-4 py-4">
-            <div className="flex items-center justify-end">
-              <Button 
-                onClick={() => setCreateDialogOpen(true)} 
+            <div className="flex items-center justify-end gap-2">
+              <Button
+                onClick={() => setCreateDialogOpen(true)}
                 variant="outline"
                 className="cursor-pointer"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Create Review
+              </Button>
+              <Button
+                onClick={openFinalDialog}
+                className="cursor-pointer"
+              >
+                <Award className="h-4 w-4 mr-2" />
+                Create Final Evaluation
               </Button>
             </div>
           </div>
@@ -847,7 +1032,95 @@ function PerformanceReviewsContent() {
             </div>
           </div>
         ) : (
-          Object.entries(groupedReviews).map(([studentId, reviews]: [string, any[]]) => {
+          <>
+          {/* Final Evaluations Section */}
+          {Object.keys(groupedFinalEvaluations).length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 px-1">
+                <Award className="h-5 w-5 text-amber-500" />
+                <h2 className="text-base font-semibold text-gray-900">Final Expedition Evaluations</h2>
+              </div>
+              {Object.entries(groupedFinalEvaluations).map(([studentId, reviews]: [string, any[]]) => {
+                const sortedReviews = [...reviews].sort((a, b) => (a.created_at || 0) - (b.created_at || 0))
+                const student = sortedReviews[0]?._students
+                const studentName = `${student?.firstName || ""} ${student?.lastName || ""}`.trim() || `Student ${studentId}`
+                return (
+                  <div key={`final-${studentId}`} className="rounded-xl border-2 border-amber-200 bg-white shadow-sm overflow-hidden">
+                    <div className="px-6 py-4 border-b bg-amber-50/40">
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-10 w-10">
+                          {student?.profileImage ? <AvatarImage src={student.profileImage} alt={studentName} /> : null}
+                          <AvatarFallback className="text-sm bg-amber-100 text-amber-700">
+                            {studentName.split(" ").map((n: string) => n[0]).join("")}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <h2 className="text-lg font-semibold">{studentName}</h2>
+                          <p className="text-xs text-gray-500">{sortedReviews.length} Final Evaluation{sortedReviews.length === 1 ? '' : 's'}</p>
+                        </div>
+                      </div>
+                    </div>
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="border-b bg-gray-50/30 hover:bg-gray-50/30">
+                          <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 w-16">Created</TableHead>
+                          <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600">Report Name</TableHead>
+                          <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600">Start Date</TableHead>
+                          <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600">End Date</TableHead>
+                          <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600 text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {sortedReviews.map((review: any) => (
+                          <TableRow key={review.id} className="border-b last:border-0 hover:bg-gray-50/50">
+                            <TableCell className="h-14 px-4">
+                              <span className="text-xs text-gray-500">{formatRelativeTime(review.created_at)}</span>
+                            </TableCell>
+                            <TableCell className="h-14 px-6">
+                              <span className="text-sm font-medium text-gray-700">Final Expedition Evaluation</span>
+                            </TableCell>
+                            <TableCell className="h-14 px-6">
+                              <span className="text-sm text-gray-600">{formatDate(review.startDate)}</span>
+                            </TableCell>
+                            <TableCell className="h-14 px-6">
+                              <span className="text-sm text-gray-600">{formatDate(review.endDate)}</span>
+                            </TableCell>
+                            <TableCell className="h-14 px-6 text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                <Button variant="outline" size="icon" className="cursor-pointer h-9 w-9" onClick={() => handlePreviewReview(review.id, review.notes, review.expedition_staff_id)} title="Preview">
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                                <Button variant="outline" size="icon" className="cursor-pointer h-9 w-9" onClick={async () => {
+                                  try { await generatePerformanceReviewPDF(review.id); toast.success("PDF downloaded successfully") }
+                                  catch (error) { console.error(error); toast.error("Failed to generate PDF") }
+                                }} title="Download PDF">
+                                  <Download className="h-4 w-4" />
+                                </Button>
+                                <Button variant="outline" size="icon" className="cursor-pointer h-9 w-9 hover:bg-red-50 hover:border-red-200" onClick={() => handleDeleteClick(review)} title="Delete">
+                                  <Trash2 className="h-4 w-4 text-gray-500" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
+          {/* Performance Reviews Section */}
+          {Object.keys(groupedReviews).length > 0 && (
+            <div className="space-y-3">
+              {Object.keys(groupedFinalEvaluations).length > 0 && (
+                <div className="flex items-center gap-2 px-1 pt-2">
+                  <FileText className="h-5 w-5 text-gray-500" />
+                  <h2 className="text-base font-semibold text-gray-900">Performance Reviews</h2>
+                </div>
+              )}
+              {Object.entries(groupedReviews).map(([studentId, reviews]: [string, any[]]) => {
             // Sort reviews by creation date (oldest to newest)
             const sortedReviews = [...reviews].sort((a, b) => {
               if (!a.created_at || !b.created_at) return 0
@@ -955,7 +1228,10 @@ function PerformanceReviewsContent() {
                 </Table>
               </div>
             )
-          })
+          })}
+            </div>
+          )}
+          </>
         )}
       </main>
       
@@ -1084,7 +1360,87 @@ function PerformanceReviewsContent() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      
+
+      {/* Create Final Evaluation Dialog */}
+      <Dialog open={finalDialogOpen} onOpenChange={setFinalDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Award className="h-5 w-5 text-amber-500" />
+              Create Final Expedition Evaluation
+            </DialogTitle>
+            <DialogDescription>
+              Generate a final evaluation for all students using their aggregated scores across the expedition. Strong Sat (≥3.21), Sat (2.75–3.20), or Unsat (&lt;2.75) is determined per domain.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Start Date</Label>
+                <Popover open={finalStartDateOpen} onOpenChange={setFinalStartDateOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full justify-start text-left font-normal cursor-pointer">
+                      <Calendar className="mr-2 h-4 w-4" />
+                      {finalStartDate ? format(finalStartDate, 'MMM d, yyyy') : 'Select date'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarComponent
+                      mode="single"
+                      selected={finalStartDate}
+                      onSelect={(date) => { setFinalStartDate(date); setFinalStartDateOpen(false) }}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <div className="space-y-2">
+                <Label>End Date</Label>
+                <Popover open={finalEndDateOpen} onOpenChange={setFinalEndDateOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full justify-start text-left font-normal cursor-pointer">
+                      <Calendar className="mr-2 h-4 w-4" />
+                      {finalEndDate ? format(finalEndDate, 'MMM d, yyyy') : 'Select date'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarComponent
+                      mode="single"
+                      selected={finalEndDate}
+                      onSelect={(date) => { setFinalEndDate(date); setFinalEndDateOpen(false) }}
+                      initialFocus
+                      disabled={(date) => finalStartDate ? date < finalStartDate : false}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Defaults to the full expedition date range. Adjust if you want a narrower window.
+            </p>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setFinalDialogOpen(false)} disabled={creatingFinal} className="cursor-pointer">Cancel</Button>
+            <Button onClick={handleCreateFinalEvaluation} disabled={creatingFinal || !finalStartDate || !finalEndDate} className="cursor-pointer">
+              {creatingFinal ? (
+                <>
+                  <Spinner size="sm" className="h-4 w-4 mr-2" />
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <Award className="h-4 w-4 mr-2" />
+                  Create Final Evaluation
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <AlertDialogContent>

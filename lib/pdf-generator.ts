@@ -161,10 +161,11 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
   yPosition += 6
   
   // Title - left justified
+  const isFinalEval = !!review.is_final
   doc.setFontSize(18)
   doc.setFont('helvetica', 'bold')
   doc.setTextColor(30, 41, 59)
-  doc.text('Performance Review', leftMargin, yPosition)
+  doc.text(isFinalEval ? 'Final Expedition Evaluation' : 'Performance Review', leftMargin, yPosition)
   yPosition += 8
   
   // Expedition name (handle if not present) - left justified
@@ -207,11 +208,33 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
   // Performance Scores Section
   doc.setFontSize(14)
   doc.setFont('helvetica', 'bold')
-  doc.text('Performance Scores', 14, yPosition)
+  doc.text(isFinalEval ? 'Domain Evaluation' : 'Performance Scores', 14, yPosition)
   yPosition += 8
-  
+
+  // Final eval status helpers
+  const getFinalStatus = (score: number | null | undefined): string => {
+    if (score === null || score === undefined) return 'Unsat'
+    if (score >= 3.21) return 'Strong Sat'
+    if (score >= 2.75) return 'Sat'
+    return 'Unsat'
+  }
+  const getFinalJournalStatus = (pct: number | null | undefined): string => {
+    if (pct === null || pct === undefined) return 'Unsat'
+    const norm = pct <= 1 ? pct * 100 : pct
+    if (norm >= 90) return 'Strong Sat'
+    if (norm >= 70) return 'Sat'
+    return 'Unsat'
+  }
+
   // Create table data using evaluationData (from getEvaluationByStudent API)
-  const tableData = [
+  const tableData = isFinalEval ? [
+    ['Academics', formatScore(evaluationData.academics), getFinalStatus(evaluationData.academics)],
+    ['Citizenship', formatScore(evaluationData.citizenship), getFinalStatus(evaluationData.citizenship)],
+    ['Job Duties', formatScore(evaluationData.job), getFinalStatus(evaluationData.job)],
+    ['Crew Responsibilities', formatScore(evaluationData.crew), getFinalStatus(evaluationData.crew)],
+    ['Service Learning', formatScore(evaluationData.service), getFinalStatus(evaluationData.service)],
+    ['Personal Reflection (Journaling)', formatJournaling(evaluationData.journaling), getFinalJournalStatus(evaluationData.journaling)],
+  ] : [
     ['Academics', formatScore(evaluationData.academics), evaluationData.academics_evaluation || getEvaluationText(evaluationData.academics)],
     ['Citizenship', formatScore(evaluationData.citizenship), evaluationData.citizenship_evaluation || getEvaluationText(evaluationData.citizenship)],
     ['Job Duties', formatScore(evaluationData.job), evaluationData.job_evaluation || getEvaluationText(evaluationData.job)],
@@ -294,7 +317,55 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
   
   // Get the final Y position after the table
   yPosition = (doc as any).lastAutoTable.finalY + 15
-  
+
+  // Final Evaluation pass/fail summary
+  if (isFinalEval) {
+    const statuses = [
+      { label: 'Academics', isPassing: ['Sat', 'Strong Sat'].includes(getFinalStatus(evaluationData.academics)) },
+      { label: 'Citizenship', isPassing: ['Sat', 'Strong Sat'].includes(getFinalStatus(evaluationData.citizenship)) },
+      { label: 'Job Duties', isPassing: ['Sat', 'Strong Sat'].includes(getFinalStatus(evaluationData.job)) },
+      { label: 'Crew Responsibilities', isPassing: ['Sat', 'Strong Sat'].includes(getFinalStatus(evaluationData.crew)) },
+      { label: 'Service Learning', isPassing: ['Sat', 'Strong Sat'].includes(getFinalStatus(evaluationData.service)) },
+      { label: 'Personal Reflection', isPassing: ['Sat', 'Strong Sat'].includes(getFinalJournalStatus(evaluationData.journaling)) },
+    ]
+    const allPassing = statuses.every(s => s.isPassing)
+    const failedDomains = statuses.filter(s => !s.isPassing).map(s => s.label)
+
+    if (yPosition > 240) {
+      doc.addPage()
+      yPosition = 20
+    }
+
+    if (allPassing) {
+      doc.setFillColor(220, 252, 231) // green-100
+      doc.setDrawColor(134, 239, 172) // green-300
+      doc.roundedRect(leftMargin, yPosition, pageWidth - 28, 22, 2, 2, 'FD')
+      doc.setFontSize(12)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(22, 101, 52) // green-800
+      doc.text('Successfully Completed Expedition', leftMargin + 5, yPosition + 8)
+      doc.setFontSize(10)
+      doc.setFont('helvetica', 'normal')
+      doc.setTextColor(21, 128, 61) // green-700
+      doc.text(`${studentName} has passed all six domains and successfully completed this expedition.`, leftMargin + 5, yPosition + 16)
+      yPosition += 30
+    } else {
+      doc.setFillColor(254, 226, 226) // red-100
+      doc.setDrawColor(252, 165, 165) // red-300
+      doc.roundedRect(leftMargin, yPosition, pageWidth - 28, 22, 2, 2, 'FD')
+      doc.setFontSize(12)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(153, 27, 27) // red-800
+      doc.text('Did Not Pass All Domains', leftMargin + 5, yPosition + 8)
+      doc.setFontSize(10)
+      doc.setFont('helvetica', 'normal')
+      doc.setTextColor(185, 28, 28) // red-700
+      doc.text(`Unsatisfactory in: ${failedDomains.join(', ')}`, leftMargin + 5, yPosition + 16)
+      yPosition += 30
+    }
+    doc.setTextColor(0, 0, 0)
+  }
+
   // Daily Scores Section
   if (dailyScores.length > 0) {
     // Check if we need a new page
@@ -528,8 +599,10 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
   
   // Download the PDF
   const studentNameForFile = `${review._students?.firstName || ""} ${review._students?.lastName || ""}`.trim() || `Student_${review.students_id}`
-  const fileName = `${studentNameForFile.replace(/\s+/g, '_')}_Performance_Review_${review.id}.pdf`
+  const filePrefix = isFinalEval ? 'Final_Expedition_Evaluation' : 'Performance_Review'
+  const fileName = `${studentNameForFile.replace(/\s+/g, '_')}_${filePrefix}_${review.id}.pdf`
   doc.save(fileName)
+  return doc
 }
 
 function formatDate(dateStr: string | null): string {

@@ -271,6 +271,7 @@ export async function createPerformanceReview(data: {
   report_name: string
   startDate: string
   endDate: string
+  is_final?: boolean
 }) {
   return xanoFetch<any>("/calculate_student_evaluation_performance_evaluation", {
     method: "POST",
@@ -280,6 +281,7 @@ export async function createPerformanceReview(data: {
       report_name: data.report_name,
       startDate: data.startDate,
       endDate: data.endDate,
+      is_final: data.is_final ?? false,
     }),
   })
 }

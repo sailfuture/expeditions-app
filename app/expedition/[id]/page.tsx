@@ -126,25 +126,19 @@ const TIMEZONES = [
   { value: "UTC+12", label: "UTC+12 — Auckland" },
 ]
 
-// Helper function to get color class based on evaluation text
-function getEvaluationColorClass(evaluation: string | null | undefined) {
-  if (!evaluation) return "bg-gray-50"
-  if (evaluation.includes("Critical") || evaluation === "N/A") return "bg-gray-50"
-  if (evaluation.includes("Needs Improvement")) return "bg-red-50"
-  if (evaluation.includes("Developing")) return "bg-yellow-50"
-  if (evaluation.includes("Met Expectations")) return "bg-green-50"
-  if (evaluation.includes("Exceeded")) return "bg-blue-50"
-  return "bg-gray-50"
+// Helper function to get color class based on evaluation score (>= 2.75 green, < 2.75 yellow)
+function getEvaluationColorClass(score: number | null | undefined) {
+  if (score === null || score === undefined) return "bg-gray-50"
+  if (score >= 2.75) return "bg-green-50"
+  return "bg-yellow-50"
 }
 
-// Helper function to get color class based on journal percentage
+// Helper function to get color class based on journal percentage (>= 70% green, < 70% yellow)
 function getJournalColorClass(percentage: number | null | undefined) {
   if (percentage === null || percentage === undefined) return "bg-gray-50"
-  // Convert decimal to percentage if needed
   const pct = percentage <= 1 ? percentage * 100 : percentage
-  if (pct < 70) return "bg-red-50"
-  if (pct >= 90) return "bg-blue-50"
-  return "bg-green-50"
+  if (pct >= 70) return "bg-green-50"
+  return "bg-yellow-50"
 }
 
 // Helper function to get color class based on journaling string value
@@ -193,35 +187,35 @@ function StudentEvaluationRow({
           <span className="font-medium text-gray-900 truncate max-w-[180px]" title={`${student.firstName || ""} ${student.lastName || ""}`.trim()}>{`${student.firstName || ""} ${student.lastName || ""}`.trim()}</span>
         </div>
       </TableCell>
-      <TableCell className={`h-14 px-4 text-center ${getEvaluationColorClass(evaluation?.academics_evaluation)}`}>
+      <TableCell className={`h-14 px-4 text-center ${getEvaluationColorClass(evaluation?.academics)}`}>
         {formatScore(evaluation?.academics) ? (
           <span className="text-xs font-medium text-gray-700">{formatScore(evaluation.academics)}</span>
         ) : (
           <span className="text-xs text-gray-400">—</span>
         )}
       </TableCell>
-      <TableCell className={`h-14 px-4 text-center ${getEvaluationColorClass(evaluation?.citizenship_evaluation)}`}>
+      <TableCell className={`h-14 px-4 text-center ${getEvaluationColorClass(evaluation?.citizenship)}`}>
         {formatScore(evaluation?.citizenship) ? (
           <span className="text-xs font-medium text-gray-700">{formatScore(evaluation.citizenship)}</span>
         ) : (
           <span className="text-xs text-gray-400">—</span>
         )}
       </TableCell>
-      <TableCell className={`h-14 px-4 text-center ${getEvaluationColorClass(evaluation?.job_evaluation)}`}>
+      <TableCell className={`h-14 px-4 text-center ${getEvaluationColorClass(evaluation?.job)}`}>
         {formatScore(evaluation?.job) ? (
           <span className="text-xs font-medium text-gray-700">{formatScore(evaluation.job)}</span>
         ) : (
           <span className="text-xs text-gray-400">—</span>
         )}
       </TableCell>
-      <TableCell className={`h-14 px-4 text-center ${getEvaluationColorClass(evaluation?.crew_evaluation)}`}>
+      <TableCell className={`h-14 px-4 text-center ${getEvaluationColorClass(evaluation?.crew)}`}>
         {formatScore(evaluation?.crew) ? (
           <span className="text-xs font-medium text-gray-700">{formatScore(evaluation.crew)}</span>
         ) : (
           <span className="text-xs text-gray-400">—</span>
         )}
       </TableCell>
-      <TableCell className={`h-14 px-4 text-center ${getEvaluationColorClass(evaluation?.service_evaluation)}`}>
+      <TableCell className={`h-14 px-4 text-center ${getEvaluationColorClass(evaluation?.service)}`}>
         {formatScore(evaluation?.service) ? (
           <span className="text-xs font-medium text-gray-700">{formatScore(evaluation.service)}</span>
         ) : (

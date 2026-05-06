@@ -366,8 +366,8 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
     doc.setTextColor(0, 0, 0)
   }
 
-  // Daily Scores Section
-  if (dailyScores.length > 0) {
+  // Daily Scores Section - skipped for final evaluations
+  if (!isFinalEval && dailyScores.length > 0) {
     // Check if we need a new page
     if (yPosition > 200) {
       doc.addPage()
@@ -466,8 +466,8 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
     yPosition = (doc as any).lastAutoTable.finalY + 15
   }
   
-  // Daily Transaction History Section
-  if (bonuses.length > 0 || penalties.length > 0) {
+  // Daily Transaction History Section - skipped for final evaluations
+  if (!isFinalEval && (bonuses.length > 0 || penalties.length > 0)) {
     // Check if we need a new page
     if (yPosition > 200) {
       doc.addPage()

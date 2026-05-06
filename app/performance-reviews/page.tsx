@@ -15,7 +15,8 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ExpeditionHeader } from "@/components/expedition-header"
-import { useExpeditions, useExpeditionPerformanceReviews, useTeachersByExpedition } from "@/lib/hooks/use-expeditions"
+import { useExpeditions, useExpeditionPerformanceReviews, useTeachersByExpedition, useExpeditionSchedules, useExpeditionLocations } from "@/lib/hooks/use-expeditions"
+import { calculateRouteDistance } from "@/lib/haversine"
 import { FileText, User, Download, ExternalLink, Plus, Calendar, Eye, Trash2, Mail, Award, CheckCircle2, AlertCircle } from "lucide-react"
 import { Textarea } from "@/components/ui/textarea"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -203,6 +204,36 @@ function PreviewModal({
     }
   }
 
+  // For final evaluations: fetch expedition schedules and locations to compute summary stats
+  const { data: expeditionSchedules } = useExpeditionSchedules(
+    open && review?.is_final && review?.expeditions_id ? review.expeditions_id : undefined
+  )
+  const { data: expeditionLocations } = useExpeditionLocations(
+    open && review?.is_final && review?.expeditions_id ? review.expeditions_id : undefined
+  )
+
+  const expeditionStats = useMemo(() => {
+    if (!review?.is_final) return null
+    const schedules = Array.isArray(expeditionSchedules) ? expeditionSchedules : []
+    const totalDays = schedules.length
+    const offshoreDays = schedules.filter((s: any) => s.isOffshore).length
+    const serviceDays = schedules.filter((s: any) => s.isService).length
+    const anchoredDays = schedules.filter((s: any) => !s.isOffshore && !s.isService).length
+
+    let totalNauticalMiles = 0
+    if (expeditionLocations && expeditionLocations.length >= 2) {
+      try {
+        const sortedLocations = [...expeditionLocations].sort((a: any, b: any) => a.created_at - b.created_at)
+        const routeDistance = calculateRouteDistance(sortedLocations)
+        totalNauticalMiles = routeDistance.total_nm
+      } catch {
+        totalNauticalMiles = 0
+      }
+    }
+
+    return { totalDays, offshoreDays, serviceDays, anchoredDays, totalNauticalMiles }
+  }, [review?.is_final, expeditionSchedules, expeditionLocations])
+
   // Fetch daily scores for this student and date range (for Daily Scores table)
   const { data: dailyScores, isLoading: loadingDailyScores } = useSWR(
     open && review?.students_id && review?.expeditions_id && review?.startDate && review?.endDate
@@ -357,30 +388,74 @@ function PreviewModal({
           <>
             
             <div className="flex-1 overflow-y-auto space-y-6">
-          {/* Final Evaluation Banner & Table - only when is_final */}
-          {review?.is_final && !loadingReview && !loadingStudentEvaluation && (
+          {/* Expedition Summary - only for final evaluations */}
+          {review?.is_final && expeditionStats && (
             <div>
-              <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                <Award className="h-4 w-4 text-amber-500" />
-                Final Evaluation Status
-              </h3>
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">Expedition Overview</h3>
+              <div className="rounded-lg border bg-gray-50/50 p-4">
+                {review._expeditions?.name && (
+                  <p className="text-base font-semibold text-gray-900 mb-3">{review._expeditions.name}</p>
+                )}
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                  <div className="bg-white rounded-md border p-3">
+                    <div className="text-[10px] uppercase tracking-wide text-gray-500 font-medium">Total Days</div>
+                    <div className="text-xl font-bold text-gray-900 mt-1">{expeditionStats.totalDays}</div>
+                  </div>
+                  <div className="bg-white rounded-md border p-3">
+                    <div className="text-[10px] uppercase tracking-wide text-gray-500 font-medium">Offshore</div>
+                    <div className="text-xl font-bold text-gray-900 mt-1">{expeditionStats.offshoreDays}</div>
+                  </div>
+                  <div className="bg-white rounded-md border p-3">
+                    <div className="text-[10px] uppercase tracking-wide text-gray-500 font-medium">Anchored</div>
+                    <div className="text-xl font-bold text-gray-900 mt-1">{expeditionStats.anchoredDays}</div>
+                  </div>
+                  <div className="bg-white rounded-md border p-3">
+                    <div className="text-[10px] uppercase tracking-wide text-gray-500 font-medium">Service</div>
+                    <div className="text-xl font-bold text-gray-900 mt-1">{expeditionStats.serviceDays}</div>
+                  </div>
+                  <div className="bg-white rounded-md border p-3">
+                    <div className="text-[10px] uppercase tracking-wide text-gray-500 font-medium">Nautical Miles</div>
+                    <div className="text-xl font-bold text-gray-900 mt-1">{expeditionStats.totalNauticalMiles.toFixed(0)}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Final Evaluation Banner & Table - only when is_final */}
+          {review?.is_final && !loadingReview && !loadingStudentEvaluation && (() => {
+            const domainScores = [
+              { isPassing: getFinalEvaluationStatus(displayAverages.citizenship).isPassing },
+              { isPassing: getFinalEvaluationStatus(displayAverages.crew).isPassing },
+              { isPassing: getFinalEvaluationStatus(displayAverages.service).isPassing },
+              { isPassing: getFinalEvaluationStatus(displayAverages.academics).isPassing },
+              { isPassing: getFinalEvaluationStatus(displayAverages.job).isPassing },
+              { isPassing: getFinalJournalingStatus(displayAverages.journaling).isPassing },
+            ]
+            const passingCount = domainScores.filter(d => d.isPassing).length
+            return (
+            <div>
+              <div className="mb-3">
+                <h3 className="text-base font-semibold text-gray-900">International Rite of Passage Sailing Expeditions</h3>
+                <p className="text-sm text-gray-500 mt-0.5">{passingCount} of 6 satisfactory</p>
+              </div>
               <div className="border rounded-lg overflow-hidden">
                 <Table>
                   <TableHeader>
                     <TableRow className="border-b bg-gray-50 hover:bg-gray-50">
-                      <TableHead className="h-10 px-3 text-xs font-semibold text-gray-600">Domain</TableHead>
-                      <TableHead className="h-10 px-3 text-xs font-semibold text-gray-600 text-center w-20">Average</TableHead>
-                      <TableHead className="h-10 px-3 text-xs font-semibold text-gray-600 w-32">Status</TableHead>
+                      <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600">Requirement</TableHead>
+                      <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 text-center w-24">Score</TableHead>
+                      <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 w-32">Status</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {[
-                      { key: "academics", label: "Academics", score: displayAverages.academics, isJournal: false },
-                      { key: "citizenship", label: "Citizenship", score: displayAverages.citizenship, isJournal: false },
-                      { key: "job", label: "Job Duties", score: displayAverages.job, isJournal: false },
-                      { key: "crew", label: "Crew Responsibilities", score: displayAverages.crew, isJournal: false },
-                      { key: "service", label: "Service Learning", score: displayAverages.service, isJournal: false },
-                      { key: "journaling", label: "Personal Reflection (Journaling)", score: displayAverages.journaling, isJournal: true },
+                      { key: "citizenship", label: "Citizenship", description: "Demonstrates respect, responsibility, and positive contributions to the onboard community, including attitude, teamwork, and leadership.", score: displayAverages.citizenship, isJournal: false },
+                      { key: "crew", label: "Crew Responsibilities", description: "Performs assigned job duties essential to the operation and maintenance of the vessel, including reliability, follow-through, and teamwork.", score: displayAverages.crew, isJournal: false },
+                      { key: "service", label: "Service Learning", description: "Engages meaningfully in service projects or activities that support community, cultural, or environmental needs encountered during the expedition.", score: displayAverages.service, isJournal: false },
+                      { key: "academics", label: "Academics", description: "Shows understanding and application of sailing-related knowledge, including navigation, weather, maritime safety, and cultural awareness.", score: displayAverages.academics, isJournal: false },
+                      { key: "job", label: "Job Duties", description: "Reliably completes assigned tasks essential to the operation and maintenance of the vessel, including cleaning, upkeep, and daily duties.", score: displayAverages.job, isJournal: false },
+                      { key: "journaling", label: "Personal Reflection", description: "Completes a minimum of one journal page each night, reflecting on daily experiences, challenges, learning, and personal growth.", score: displayAverages.journaling, isJournal: true },
                     ].map((row) => {
                       const status = row.isJournal
                         ? getFinalJournalingStatus(row.score)
@@ -392,9 +467,12 @@ function PreviewModal({
                           : row.score.toFixed(2)
                       return (
                         <TableRow key={row.key} className={`border-b ${status.bg}`}>
-                          <TableCell className="px-3 py-2 font-medium text-gray-700 text-sm">{row.label}</TableCell>
-                          <TableCell className="px-3 py-2 text-center text-gray-700 text-sm">{scoreDisplay}</TableCell>
-                          <TableCell className={`px-3 py-2 text-sm font-semibold ${status.color}`}>{status.label}</TableCell>
+                          <TableCell className="px-4 py-3 align-top">
+                            <p className="font-medium text-gray-900 text-sm mb-1">{row.label}</p>
+                            <p className="text-xs text-gray-500 leading-relaxed">{row.description}</p>
+                          </TableCell>
+                          <TableCell className="px-4 py-3 text-center text-gray-700 text-sm align-top">{scoreDisplay}</TableCell>
+                          <TableCell className={`px-4 py-3 text-sm font-semibold align-top ${status.color}`}>{status.label}</TableCell>
                         </TableRow>
                       )
                     })}
@@ -435,9 +513,11 @@ function PreviewModal({
                 )
               })()}
             </div>
-          )}
+            )
+          })()}
 
-          {/* Evaluation Summary Table - Same as Student Evaluations table */}
+          {/* Evaluation Summary Table - hidden for final evaluation (replaced by Final Evaluation Status above) */}
+          {!review?.is_final && (
           <div>
             <h3 className="text-sm font-semibold text-gray-700 mb-3">Evaluation Summary <span className="text-xs font-normal text-gray-500">(All Days)</span></h3>
             {loadingReview || loadingStudentEvaluation ? (
@@ -516,8 +596,10 @@ function PreviewModal({
             </div>
             )}
           </div>
-          
-          {/* Daily Scores Table */}
+          )}
+
+          {/* Daily Scores Table - hidden for final evaluation */}
+          {!review?.is_final && (
           <div>
             <h3 className="text-sm font-semibold text-gray-700 mb-3">Daily Scores</h3>
             {loadingDailyScores ? (
@@ -586,8 +668,10 @@ function PreviewModal({
               <p className="text-sm text-gray-500 text-center py-4">No daily scores found for this period.</p>
             )}
           </div>
-          
-          {/* Daily Transaction History Table */}
+          )}
+
+          {/* Daily Transaction History Table - hidden for final evaluation */}
+          {!review?.is_final && (
           <div>
             <h3 className="text-sm font-semibold text-gray-700 mb-3">Daily Transaction History</h3>
             {loadingTransactions ? (
@@ -644,7 +728,8 @@ function PreviewModal({
               <p className="text-sm text-gray-500 text-center py-4">No transactions for this period.</p>
             )}
           </div>
-          
+          )}
+
           {/* Notes Section */}
           <div>
             <Label htmlFor="notes" className="text-sm font-semibold text-gray-700">Notes</Label>
@@ -981,7 +1066,7 @@ function PerformanceReviewsContent() {
                 onClick={openFinalDialog}
                 className="cursor-pointer"
               >
-                <Award className="h-4 w-4 mr-2" />
+                <Plus className="h-4 w-4 mr-2" />
                 Create Final Evaluation
               </Button>
             </div>
@@ -1036,8 +1121,7 @@ function PerformanceReviewsContent() {
           {/* Final Evaluations Section */}
           {Object.keys(groupedFinalEvaluations).length > 0 && (
             <div className="space-y-3">
-              <div className="flex items-center gap-2 px-1">
-                <Award className="h-5 w-5 text-amber-500" />
+              <div className="px-1">
                 <h2 className="text-base font-semibold text-gray-900">Final Expedition Evaluations</h2>
               </div>
               {Object.entries(groupedFinalEvaluations).map(([studentId, reviews]: [string, any[]]) => {
@@ -1045,12 +1129,12 @@ function PerformanceReviewsContent() {
                 const student = sortedReviews[0]?._students
                 const studentName = `${student?.firstName || ""} ${student?.lastName || ""}`.trim() || `Student ${studentId}`
                 return (
-                  <div key={`final-${studentId}`} className="rounded-xl border-2 border-amber-200 bg-white shadow-sm overflow-hidden">
-                    <div className="px-6 py-4 border-b bg-amber-50/40">
+                  <div key={`final-${studentId}`} className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+                    <div className="px-6 py-4 border-b bg-gray-50/50">
                       <div className="flex items-center gap-3">
                         <Avatar className="h-10 w-10">
                           {student?.profileImage ? <AvatarImage src={student.profileImage} alt={studentName} /> : null}
-                          <AvatarFallback className="text-sm bg-amber-100 text-amber-700">
+                          <AvatarFallback className="text-sm bg-gray-200 text-gray-600">
                             {studentName.split(" ").map((n: string) => n[0]).join("")}
                           </AvatarFallback>
                         </Avatar>
@@ -1365,10 +1449,7 @@ function PerformanceReviewsContent() {
       <Dialog open={finalDialogOpen} onOpenChange={setFinalDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Award className="h-5 w-5 text-amber-500" />
-              Create Final Expedition Evaluation
-            </DialogTitle>
+            <DialogTitle>Create Final Expedition Evaluation</DialogTitle>
             <DialogDescription>
               Generate a final evaluation for all students using their aggregated scores across the expedition. Strong Sat (≥3.21), Sat (2.75–3.20), or Unsat (&lt;2.75) is determined per domain.
             </DialogDescription>
@@ -1432,7 +1513,7 @@ function PerformanceReviewsContent() {
                 </>
               ) : (
                 <>
-                  <Award className="h-4 w-4 mr-2" />
+                  <Plus className="h-4 w-4 mr-2" />
                   Create Final Evaluation
                 </>
               )}

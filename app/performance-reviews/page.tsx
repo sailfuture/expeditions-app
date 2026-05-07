@@ -391,7 +391,7 @@ function PreviewModal({
           {/* Expedition Summary - only for final evaluations */}
           {review?.is_final && expeditionStats && (
             <div>
-              <h3 className="text-sm font-semibold text-gray-700 mb-3">Expedition Overview</h3>
+              <h3 className="text-base font-semibold text-gray-900 mb-3">Expedition Overview</h3>
               <div className="rounded-lg border bg-gray-50/50 p-4">
                 {review._expeditions?.name && (
                   <p className="text-base font-semibold text-gray-900 mb-3">{review._expeditions.name}</p>
@@ -492,19 +492,24 @@ function PreviewModal({
                 ]
                 const allPassing = domainStatuses.every(d => d.status.isPassing)
                 const failedDomains = domainStatuses.filter(d => !d.status.isPassing).map(d => d.label)
-                return allPassing ? (
-                  <div className="mt-3 rounded-lg border bg-white p-4">
-                    <p className="text-sm font-medium text-gray-900">Successfully Completed Expedition</p>
-                    <p className="text-sm text-gray-600 mt-1">
-                      {`${review._students?.firstName || "Student"} `}has passed all six domains and successfully completed this expedition.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="mt-3 rounded-lg border bg-white p-4">
-                    <p className="text-sm font-medium text-gray-900">Did Not Pass All Domains</p>
-                    <p className="text-sm text-gray-600 mt-1">
-                      Unsatisfactory in: {failedDomains.join(", ")}
-                    </p>
+                return (
+                  <div className="mt-6">
+                    <h3 className="text-base font-semibold text-gray-900 mb-3">Final Expedition Evaluation</h3>
+                    {allPassing ? (
+                      <div className="rounded-lg border bg-white p-4">
+                        <p className="text-sm font-medium text-gray-900">Successfully Completed Expedition</p>
+                        <p className="text-sm text-gray-600 mt-1">
+                          {`${review._students?.firstName || "Student"} `}has passed all six domains and successfully completed this expedition.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="rounded-lg border bg-white p-4">
+                        <p className="text-sm font-medium text-gray-900">Did Not Pass All Domains</p>
+                        <p className="text-sm text-gray-600 mt-1">
+                          Unsatisfactory in: {failedDomains.join(", ")}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )
               })()}

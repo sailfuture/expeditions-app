@@ -262,9 +262,13 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
 
   if (isFinalEval) {
     // Combined Expedition Overview: student info + expedition stats
+    const expeditionName = review._expeditions?.name || ""
+    const overviewHeading = expeditionName
+      ? `Expedition Overview  •  ${expeditionName}`
+      : 'Expedition Overview'
     doc.setFontSize(12)
     doc.setFont('helvetica', 'bold')
-    doc.text('Expedition Overview', 14, yPosition)
+    doc.text(overviewHeading, 14, yPosition)
     yPosition += 5
 
     doc.setFontSize(10)
@@ -281,12 +285,8 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
       yPosition += 5
     }
     doc.setTextColor(0, 0, 0)
-    // Horizontal divider with 2pt gap above and 2pt below
-    yPosition += 2
-    doc.setDrawColor(229, 231, 235) // gray-200
-    doc.setLineWidth(0.3)
-    doc.line(leftMargin, yPosition, pageWidth - leftMargin, yPosition)
-    yPosition += 2
+    // 4pt gap before the next section
+    yPosition += 4
   } else {
     doc.setFontSize(14)
     doc.setFont('helvetica', 'bold')
@@ -472,9 +472,9 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
     const allPassing = statuses.every(s => s.isPassing)
     const failedDomains = statuses.filter(s => !s.isPassing).map(s => s.label)
 
-    // Section spacing constants (consistent across final eval) — 2pt gaps
-    const HEADING_TO_CONTENT = 2
-    const SECTION_GAP = 2
+    // Section spacing constants (consistent across final eval) — 4pt gaps
+    const HEADING_TO_CONTENT = 4
+    const SECTION_GAP = 4
 
     yPosition += SECTION_GAP // gap from domain table
 

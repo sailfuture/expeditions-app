@@ -391,11 +391,13 @@ function PreviewModal({
           {/* Expedition Summary - only for final evaluations */}
           {review?.is_final && expeditionStats && (
             <div>
-              <h3 className="text-base font-semibold text-gray-900 mb-3">Expedition Overview</h3>
+              <h3 className="text-base font-semibold text-gray-900 mb-3">
+                Expedition Overview
+                {review._expeditions?.name ? (
+                  <span className="text-gray-500 font-normal"> &nbsp;•&nbsp; {review._expeditions.name}</span>
+                ) : null}
+              </h3>
               <div className="rounded-lg border bg-gray-50/50 p-4">
-                {review._expeditions?.name && (
-                  <p className="text-base font-semibold text-gray-900 mb-3">{review._expeditions.name}</p>
-                )}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="bg-white rounded-md border p-3">
                     <div className="text-[10px] uppercase tracking-wide text-gray-500 font-medium">Total Days</div>
@@ -407,7 +409,6 @@ function PreviewModal({
                   </div>
                 </div>
               </div>
-              <hr className="border-gray-200 mt-6" />
             </div>
           )}
 

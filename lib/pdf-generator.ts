@@ -478,23 +478,25 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
 
     yPosition += 4
 
-    // Build summary table values
+    // Job Responsibility section heading
+    doc.setFontSize(12)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(17, 24, 39)
+    doc.text('Job Responsibility', leftMargin, yPosition)
+    yPosition += 5
+
     const departmentValue = studentAssignmentInfo && studentAssignmentInfo.departments.length > 0
       ? studentAssignmentInfo.departments.join(', ')
       : 'Unassigned'
     const supervisorValue = studentAssignmentInfo && studentAssignmentInfo.supervisors.length > 0
       ? studentAssignmentInfo.supervisors.join(', ')
       : 'Unassigned'
-    const completionValue = allPassing
-      ? `Successfully Completed: ${studentName} has passed all six domains and successfully completed this expedition.`
-      : `Did Not Pass All Domains. Unsatisfactory in: ${failedDomains.join(', ')}`
 
     autoTable(doc, {
       startY: yPosition,
       body: [
         ['Job Department', departmentValue],
         ['Direct Supervisor', supervisorValue],
-        ['Completion Report', completionValue],
       ],
       theme: 'grid',
       styles: { cellPadding: 3, fontSize: 9, textColor: [55, 65, 81] },
@@ -503,7 +505,40 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
         1: { cellWidth: 137 },
       },
     })
-    yPosition = (doc as any).lastAutoTable.finalY + 6
+    yPosition = (doc as any).lastAutoTable.finalY + 8
+
+    // Expedition Completion Report section
+    doc.setFontSize(12)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(17, 24, 39)
+    doc.text('Expedition Completion Report', leftMargin, yPosition)
+    yPosition += 5
+
+    // Neutral bordered banner
+    doc.setFillColor(255, 255, 255)
+    doc.setDrawColor(229, 231, 235)
+    doc.roundedRect(leftMargin, yPosition, pageWidth - 28, 18, 2, 2, 'FD')
+
+    if (allPassing) {
+      doc.setFontSize(10)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(17, 24, 39)
+      doc.text('Successfully Completed Expedition', leftMargin + 5, yPosition + 7)
+      doc.setFontSize(9)
+      doc.setFont('helvetica', 'normal')
+      doc.setTextColor(75, 85, 99)
+      doc.text(`${studentName} has passed all six domains and successfully completed this expedition.`, leftMargin + 5, yPosition + 13)
+    } else {
+      doc.setFontSize(10)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(17, 24, 39)
+      doc.text('Did Not Pass All Domains', leftMargin + 5, yPosition + 7)
+      doc.setFontSize(9)
+      doc.setFont('helvetica', 'normal')
+      doc.setTextColor(75, 85, 99)
+      doc.text(`Unsatisfactory in: ${failedDomains.join(', ')}`, leftMargin + 5, yPosition + 13)
+    }
+    yPosition += 22
     doc.setTextColor(0, 0, 0)
   }
 

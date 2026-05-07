@@ -226,28 +226,33 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
   // Add school header
   let yPosition = await addPDFHeader(doc)
   
-  // Add top padding before title
-  yPosition += 6
-  
-  // Title - left justified
   const isFinalEval = isFinal
-  doc.setFontSize(18)
-  doc.setFont('helvetica', 'bold')
-  doc.setTextColor(30, 41, 59)
-  doc.text(isFinalEval ? 'Final Expedition Evaluation' : 'Performance Review', leftMargin, yPosition)
-  yPosition += 8
-  
-  // Expedition name (handle if not present) - left justified
-  if (review._expeditions?.name) {
-    doc.setFontSize(11)
-    doc.setFont('helvetica', 'normal')
-    doc.setTextColor(75, 85, 99)
-    doc.text(review._expeditions.name, leftMargin, yPosition)
-    yPosition += 10
+
+  // Add top padding before title (skipped for final evals to save space)
+  if (!isFinalEval) {
+    yPosition += 6
+
+    // Title - left justified
+    doc.setFontSize(18)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(30, 41, 59)
+    doc.text('Performance Review', leftMargin, yPosition)
+    yPosition += 8
+
+    // Expedition name (handle if not present) - left justified
+    if (review._expeditions?.name) {
+      doc.setFontSize(11)
+      doc.setFont('helvetica', 'normal')
+      doc.setTextColor(75, 85, 99)
+      doc.text(review._expeditions.name, leftMargin, yPosition)
+      yPosition += 10
+    } else {
+      yPosition += 5
+    }
   } else {
-    yPosition += 5
+    yPosition += 4
   }
-  
+
   // Reset text color
   doc.setTextColor(0, 0, 0)
   
@@ -260,7 +265,7 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
     doc.setFontSize(12)
     doc.setFont('helvetica', 'bold')
     doc.text('Student Information', 14, yPosition)
-    yPosition += 6
+    yPosition += 5
 
     doc.setFontSize(10)
     doc.setFont('helvetica', 'normal')
@@ -272,7 +277,7 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
       yPosition += 5
     }
     doc.setTextColor(0, 0, 0)
-    yPosition += 4
+    yPosition += 2
   } else {
     doc.setFontSize(14)
     doc.setFont('helvetica', 'bold')
@@ -299,7 +304,7 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
     doc.setFontSize(12)
     doc.setFont('helvetica', 'bold')
     doc.text('Expedition Overview', 14, yPosition)
-    yPosition += 7 // heading-to-content
+    yPosition += 5 // heading-to-content
 
     doc.setFontSize(10)
     doc.setFont('helvetica', 'normal')
@@ -310,14 +315,14 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
       yPosition
     )
     doc.setTextColor(0, 0, 0)
-    yPosition += 10 // section-gap
+    yPosition += 7 // section-gap
   }
 
   // Performance Scores / Domain Evaluation Section
   doc.setFontSize(isFinalEval ? 12 : 14)
   doc.setFont('helvetica', 'bold')
   doc.text(isFinalEval ? 'International Rite of Passage Sailing Expeditions' : 'Performance Scores', 14, yPosition)
-  yPosition += isFinalEval ? 7 : 8
+  yPosition += isFinalEval ? 5 : 8
 
   // Final eval status helpers
   const getFinalStatus = (score: number | null | undefined): string => {
@@ -461,7 +466,7 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
   })
   
   // Get the final Y position after the table
-  yPosition = (doc as any).lastAutoTable.finalY + (isFinalEval ? 8 : 15)
+  yPosition = (doc as any).lastAutoTable.finalY + (isFinalEval ? 5 : 15)
 
   // Final Evaluation pass/fail summary
   if (isFinalEval) {
@@ -477,10 +482,10 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
     const failedDomains = statuses.filter(s => !s.isPassing).map(s => s.label)
 
     // Section spacing constants (consistent across final eval)
-    const HEADING_TO_CONTENT = 7  // gap below heading before content starts
-    const SECTION_GAP = 10        // gap after content before next heading
+    const HEADING_TO_CONTENT = 5  // gap below heading before content starts
+    const SECTION_GAP = 7         // gap after content before next heading
 
-    yPosition += 6 // gap from domain table
+    yPosition += 3 // gap from domain table
 
     // Job Responsibility section heading
     doc.setFontSize(12)
@@ -751,7 +756,7 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
     doc.setFont('helvetica', 'bold')
     doc.setTextColor(17, 24, 39)
     doc.text('Notes', 14, yPosition)
-    yPosition += isFinalEval ? 7 : 8
+    yPosition += isFinalEval ? 5 : 8
 
     doc.setFontSize(isFinalEval ? 9 : 11)
     doc.setFont('helvetica', 'normal')

@@ -402,7 +402,7 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
   })
   
   // Get the final Y position after the table
-  yPosition = (doc as any).lastAutoTable.finalY + 15
+  yPosition = (doc as any).lastAutoTable.finalY + (isFinalEval ? 8 : 15)
 
   // Final Evaluation pass/fail summary
   if (isFinalEval) {
@@ -653,17 +653,23 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
     if (yPosition > 250) {
       doc.addPage()
       yPosition = 20
+    } else if (isFinalEval) {
+      // Add a tighter gap before Notes for final evals
+      yPosition += 4
     }
-    
-    doc.setFontSize(14)
+
+    doc.setFontSize(isFinalEval ? 12 : 14)
     doc.setFont('helvetica', 'bold')
+    doc.setTextColor(17, 24, 39)
     doc.text('Notes', 14, yPosition)
-    yPosition += 8
-    
-    doc.setFontSize(11)
+    yPosition += isFinalEval ? 5 : 8
+
+    doc.setFontSize(isFinalEval ? 9 : 11)
     doc.setFont('helvetica', 'normal')
+    doc.setTextColor(75, 85, 99)
     const splitNotes = doc.splitTextToSize(review.notes, pageWidth - 28)
     doc.text(splitNotes, 14, yPosition)
+    doc.setTextColor(0, 0, 0)
   }
   
   // Footer

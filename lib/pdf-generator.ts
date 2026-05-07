@@ -423,7 +423,7 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
     doc.setFontSize(12)
     doc.setFont('helvetica', 'bold')
     doc.setTextColor(17, 24, 39) // gray-900
-    doc.text('Final Expedition Evaluation', leftMargin, yPosition)
+    doc.text('Expedition Completion Report', leftMargin, yPosition)
     yPosition += 5
 
     // Neutral bordered banner

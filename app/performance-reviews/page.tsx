@@ -494,7 +494,7 @@ function PreviewModal({
                 const failedDomains = domainStatuses.filter(d => !d.status.isPassing).map(d => d.label)
                 return (
                   <div className="mt-6">
-                    <h3 className="text-base font-semibold text-gray-900 mb-3">Final Expedition Evaluation</h3>
+                    <h3 className="text-base font-semibold text-gray-900 mb-3">Expedition Completion Report</h3>
                     {allPassing ? (
                       <div className="rounded-lg border bg-white p-4">
                         <p className="text-sm font-medium text-gray-900">Successfully Completed Expedition</p>

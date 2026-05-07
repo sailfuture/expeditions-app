@@ -301,6 +301,13 @@ export async function updatePerformanceReviewNotes(id: number, notes: string, ex
   })
 }
 
+export async function setPerformanceReviewIsFinal(id: number, isFinal: boolean) {
+  return xanoFetch<any>(`/expedition_performance_reviews/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ is_final: isFinal }),
+  })
+}
+
 export async function deletePerformanceReview(id: number) {
   return xanoFetch<any>(`/expedition_performance_reviews/${id}`, {
     method: "DELETE",

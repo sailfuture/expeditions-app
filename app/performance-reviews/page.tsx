@@ -23,7 +23,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { generatePerformanceReviewPDF } from "@/lib/pdf-generator"
 import { toast } from "sonner"
-import { getProfessionalismByStudentAndDate, createPerformanceReview, updatePerformanceReviewNotes, getPerformanceReviewById, deletePerformanceReview, getExpeditionTransactionsByDateByStudent, getEvaluationByStudent, getStudentById } from "@/lib/xano"
+import { getProfessionalismByStudentAndDate, createPerformanceReview, updatePerformanceReviewNotes, getPerformanceReviewById, deletePerformanceReview, getExpeditionTransactionsByDateByStudent, getEvaluationByStudent, getStudentById, getExpeditionPerformanceReviews, setPerformanceReviewIsFinal } from "@/lib/xano"
 import { Spinner } from "@/components/ui/spinner"
 import { mutate } from "swr"
 import {
@@ -436,7 +436,9 @@ function PreviewModal({
             return (
             <div>
               <div className="mb-3">
-                <h3 className="text-base font-semibold text-gray-900">International Rite of Passage Sailing Expeditions</h3>
+                <h3 className="text-base font-semibold text-gray-900">
+                  {review._expeditions?.name ? `${review._expeditions.name} • ` : ""}International Rite of Passage Sailing Expeditions
+                </h3>
                 <p className="text-sm text-gray-500 mt-0.5">{passingCount} of 6 satisfactory</p>
               </div>
               <div className="border rounded-lg overflow-hidden">
@@ -897,6 +899,7 @@ function PerformanceReviewsContent() {
     try {
       const formattedStartDate = format(finalStartDate, 'yyyy-MM-dd')
       const formattedEndDate = format(finalEndDate, 'yyyy-MM-dd')
+      const beforeCreate = Date.now()
 
       await createPerformanceReview({
         expeditions_id: expeditionId,
@@ -905,6 +908,22 @@ function PerformanceReviewsContent() {
         endDate: formattedEndDate,
         is_final: true,
       })
+
+      // Workaround: the create endpoint ignores is_final, so PATCH the records ourselves.
+      // Fetch all reviews and patch the ones we just created (within last 60 seconds and matching name)
+      try {
+        const allReviews = await getExpeditionPerformanceReviews(expeditionId)
+        const justCreated = (allReviews || []).filter((r: any) =>
+          r.report_name === "Final Expedition Evaluation"
+          && r.is_final !== true
+          && r.created_at >= beforeCreate - 5000
+        )
+        if (justCreated.length > 0) {
+          await Promise.all(justCreated.map((r: any) => setPerformanceReviewIsFinal(r.id, true)))
+        }
+      } catch (patchErr) {
+        console.error("Failed to flag records as final:", patchErr)
+      }
 
       toast.success("Final Expedition Evaluation created")
       setFinalDialogOpen(false)
@@ -986,35 +1005,12 @@ function PerformanceReviewsContent() {
     }
   }
   
-  // Group reviews by student and sort students alphabetically (regular reviews only, not final evaluations)
+  // Group ALL reviews (regular + final) by student and sort students alphabetically
   const groupedReviews = useMemo(() => {
     if (!performanceReviews) return {}
 
     const grouped: Record<number, any[]> = {}
     performanceReviews.forEach((review: any) => {
-      if (review.is_final) return
-      if (!grouped[review.students_id]) {
-        grouped[review.students_id] = []
-      }
-      grouped[review.students_id].push(review)
-    })
-
-    const sortedEntries = Object.entries(grouped).sort(([, reviewsA], [, reviewsB]) => {
-      const nameA = `${reviewsA[0]?._students?.firstName || ""} ${reviewsA[0]?._students?.lastName || ""}`.trim()
-      const nameB = `${reviewsB[0]?._students?.firstName || ""} ${reviewsB[0]?._students?.lastName || ""}`.trim()
-      return nameA.localeCompare(nameB)
-    })
-
-    return Object.fromEntries(sortedEntries)
-  }, [performanceReviews])
-
-  // Group FINAL evaluations by student
-  const groupedFinalEvaluations = useMemo(() => {
-    if (!performanceReviews) return {}
-
-    const grouped: Record<number, any[]> = {}
-    performanceReviews.forEach((review: any) => {
-      if (!review.is_final) return
       if (!grouped[review.students_id]) {
         grouped[review.students_id] = []
       }
@@ -1118,93 +1114,7 @@ function PerformanceReviewsContent() {
           </div>
         ) : (
           <>
-          {/* Final Evaluations Section */}
-          {Object.keys(groupedFinalEvaluations).length > 0 && (
-            <div className="space-y-3">
-              <div className="px-1">
-                <h2 className="text-base font-semibold text-gray-900">Final Expedition Evaluations</h2>
-              </div>
-              {Object.entries(groupedFinalEvaluations).map(([studentId, reviews]: [string, any[]]) => {
-                const sortedReviews = [...reviews].sort((a, b) => (a.created_at || 0) - (b.created_at || 0))
-                const student = sortedReviews[0]?._students
-                const studentName = `${student?.firstName || ""} ${student?.lastName || ""}`.trim() || `Student ${studentId}`
-                return (
-                  <div key={`final-${studentId}`} className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-                    <div className="px-6 py-4 border-b bg-gray-50/50">
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-10 w-10">
-                          {student?.profileImage ? <AvatarImage src={student.profileImage} alt={studentName} /> : null}
-                          <AvatarFallback className="text-sm bg-gray-200 text-gray-600">
-                            {studentName.split(" ").map((n: string) => n[0]).join("")}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <h2 className="text-lg font-semibold">{studentName}</h2>
-                          <p className="text-xs text-gray-500">{sortedReviews.length} Final Evaluation{sortedReviews.length === 1 ? '' : 's'}</p>
-                        </div>
-                      </div>
-                    </div>
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="border-b bg-gray-50/30 hover:bg-gray-50/30">
-                          <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 w-16">Created</TableHead>
-                          <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600">Report Name</TableHead>
-                          <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600">Start Date</TableHead>
-                          <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600">End Date</TableHead>
-                          <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600 text-right">Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {sortedReviews.map((review: any) => (
-                          <TableRow key={review.id} className="border-b last:border-0 hover:bg-gray-50/50">
-                            <TableCell className="h-14 px-4">
-                              <span className="text-xs text-gray-500">{formatRelativeTime(review.created_at)}</span>
-                            </TableCell>
-                            <TableCell className="h-14 px-6">
-                              <span className="text-sm font-medium text-gray-700">Final Expedition Evaluation</span>
-                            </TableCell>
-                            <TableCell className="h-14 px-6">
-                              <span className="text-sm text-gray-600">{formatDate(review.startDate)}</span>
-                            </TableCell>
-                            <TableCell className="h-14 px-6">
-                              <span className="text-sm text-gray-600">{formatDate(review.endDate)}</span>
-                            </TableCell>
-                            <TableCell className="h-14 px-6 text-right">
-                              <div className="flex items-center justify-end gap-2">
-                                <Button variant="outline" size="icon" className="cursor-pointer h-9 w-9" onClick={() => handlePreviewReview(review.id, review.notes, review.expedition_staff_id)} title="Preview">
-                                  <Eye className="h-4 w-4" />
-                                </Button>
-                                <Button variant="outline" size="icon" className="cursor-pointer h-9 w-9" onClick={async () => {
-                                  try { await generatePerformanceReviewPDF(review.id); toast.success("PDF downloaded successfully") }
-                                  catch (error) { console.error(error); toast.error("Failed to generate PDF") }
-                                }} title="Download PDF">
-                                  <Download className="h-4 w-4" />
-                                </Button>
-                                <Button variant="outline" size="icon" className="cursor-pointer h-9 w-9 hover:bg-red-50 hover:border-red-200" onClick={() => handleDeleteClick(review)} title="Delete">
-                                  <Trash2 className="h-4 w-4 text-gray-500" />
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-
-          {/* Performance Reviews Section */}
-          {Object.keys(groupedReviews).length > 0 && (
-            <div className="space-y-3">
-              {Object.keys(groupedFinalEvaluations).length > 0 && (
-                <div className="flex items-center gap-2 px-1 pt-2">
-                  <FileText className="h-5 w-5 text-gray-500" />
-                  <h2 className="text-base font-semibold text-gray-900">Performance Reviews</h2>
-                </div>
-              )}
-              {Object.entries(groupedReviews).map(([studentId, reviews]: [string, any[]]) => {
+          {Object.entries(groupedReviews).map(([studentId, reviews]: [string, any[]]) => {
             // Sort reviews by creation date (oldest to newest)
             const sortedReviews = [...reviews].sort((a, b) => {
               if (!a.created_at || !b.created_at) return 0
@@ -1255,11 +1165,14 @@ function PerformanceReviewsContent() {
                           <span className="text-xs text-gray-500">{formatRelativeTime(review.created_at)}</span>
                         </TableCell>
                         <TableCell className="h-14 px-6">
-                          {review.report_name ? (
-                            <span className="text-sm font-medium text-gray-700">{review.report_name}</span>
-                          ) : (
-                            <span className="text-sm text-gray-400 italic">Untitled</span>
-                          )}
+                          <div className="flex items-center gap-2">
+                            {review.is_final && <Award className="h-4 w-4 text-green-600 shrink-0" />}
+                            {review.report_name ? (
+                              <span className="text-sm font-medium text-gray-700">{review.report_name}</span>
+                            ) : (
+                              <span className="text-sm text-gray-400 italic">Untitled</span>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell className="h-14 px-6">
                           <span className="text-sm text-gray-600">{formatDate(review.startDate)}</span>
@@ -1313,8 +1226,6 @@ function PerformanceReviewsContent() {
               </div>
             )
           })}
-            </div>
-          )}
           </>
         )}
       </main>

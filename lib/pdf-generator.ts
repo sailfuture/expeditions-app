@@ -281,12 +281,14 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
       yPosition += 5
     }
     doc.setTextColor(0, 0, 0)
-    // Horizontal divider centered between Expedition Overview content and next section heading
+    // Horizontal divider centered between Expedition Overview content and next section heading.
+    // Note: jsPDF text() draws by baseline — visible top of next heading sits ~8pt above its
+    // drawing y, so we compensate with more padding below the line than above.
     yPosition += 6
     doc.setDrawColor(229, 231, 235) // gray-200
     doc.setLineWidth(0.3)
     doc.line(leftMargin, yPosition, pageWidth - leftMargin, yPosition)
-    yPosition += 6
+    yPosition += 12
   } else {
     doc.setFontSize(14)
     doc.setFont('helvetica', 'bold')
@@ -473,8 +475,10 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
     const failedDomains = statuses.filter(s => !s.isPassing).map(s => s.label)
 
     // Section spacing constants (consistent across final eval)
+    // Note: jsPDF text() draws by baseline; the visible top of each heading is ~8pt
+    // above its yPosition, so SECTION_GAP needs to include that compensation to look balanced.
     const HEADING_TO_CONTENT = 5  // gap below heading before content starts
-    const SECTION_GAP = 8         // gap after content (table/card) before next heading
+    const SECTION_GAP = 14        // gap after content (table/card) before next heading
 
     yPosition += SECTION_GAP // gap from domain table
 

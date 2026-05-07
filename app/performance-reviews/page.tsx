@@ -407,6 +407,7 @@ function PreviewModal({
                   </div>
                 </div>
               </div>
+              <hr className="border-gray-200 mt-6" />
             </div>
           )}
 

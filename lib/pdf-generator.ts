@@ -281,7 +281,12 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
       yPosition += 5
     }
     doc.setTextColor(0, 0, 0)
-    yPosition += 2
+    // Horizontal divider between Expedition Overview and International Rite section
+    yPosition += 4
+    doc.setDrawColor(229, 231, 235) // gray-200
+    doc.setLineWidth(0.3)
+    doc.line(leftMargin, yPosition, pageWidth - leftMargin, yPosition)
+    yPosition += 5
   } else {
     doc.setFontSize(14)
     doc.setFont('helvetica', 'bold')

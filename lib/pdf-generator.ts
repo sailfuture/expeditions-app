@@ -281,12 +281,12 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
       yPosition += 5
     }
     doc.setTextColor(0, 0, 0)
-    // Horizontal divider between Expedition Overview and International Rite section
-    yPosition += 2
+    // Horizontal divider centered between Expedition Overview content and next section heading
+    yPosition += 6
     doc.setDrawColor(229, 231, 235) // gray-200
     doc.setLineWidth(0.3)
     doc.line(leftMargin, yPosition, pageWidth - leftMargin, yPosition)
-    yPosition += 4
+    yPosition += 6
   } else {
     doc.setFontSize(14)
     doc.setFont('helvetica', 'bold')
@@ -455,8 +455,9 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
     },
   })
   
-  // Get the final Y position after the table
-  yPosition = (doc as any).lastAutoTable.finalY + (isFinalEval ? 2 : 15)
+  // Get the final Y position after the table (no extra padding here for final evals;
+  // the SECTION_GAP added below provides the visual breathing room before the next heading)
+  yPosition = (doc as any).lastAutoTable.finalY + (isFinalEval ? 0 : 15)
 
   // Final Evaluation pass/fail summary
   if (isFinalEval) {
@@ -473,9 +474,9 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
 
     // Section spacing constants (consistent across final eval)
     const HEADING_TO_CONTENT = 5  // gap below heading before content starts
-    const SECTION_GAP = 4         // gap after content before next heading
+    const SECTION_GAP = 8         // gap after content (table/card) before next heading
 
-    yPosition += 2 // gap from domain table
+    yPosition += SECTION_GAP // gap from domain table
 
     // Job Responsibility section heading
     doc.setFontSize(12)
@@ -537,7 +538,7 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
       doc.setTextColor(75, 85, 99)
       doc.text(`Unsatisfactory in: ${failedDomains.join(', ')}`, leftMargin + 5, yPosition + 13)
     }
-    yPosition += 18 + 2 // banner height + small gap before Narrative Feedback
+    yPosition += 18 + SECTION_GAP // banner height + section gap before Narrative Feedback
     doc.setTextColor(0, 0, 0)
   }
 

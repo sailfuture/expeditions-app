@@ -472,9 +472,12 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
     const allPassing = statuses.every(s => s.isPassing)
     const failedDomains = statuses.filter(s => !s.isPassing).map(s => s.label)
 
-    // Section spacing constants (consistent across final eval) — 4pt gaps
+    // Section spacing constants (consistent across final eval).
+    // SECTION_GAP is applied to table/banner endings (which sit flush at their bottom edge),
+    // so we use a larger value to visually match the breathing room produced by text
+    // content (which already has ~5pt of line-advance built in).
     const HEADING_TO_CONTENT = 4
-    const SECTION_GAP = 4
+    const SECTION_GAP = 9
 
     yPosition += SECTION_GAP // gap from domain table
 

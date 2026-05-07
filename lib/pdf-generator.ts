@@ -299,7 +299,7 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
     doc.setFontSize(12)
     doc.setFont('helvetica', 'bold')
     doc.text('Expedition Overview', 14, yPosition)
-    yPosition += 6
+    yPosition += 7 // heading-to-content
 
     doc.setFontSize(10)
     doc.setFont('helvetica', 'normal')
@@ -310,14 +310,14 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
       yPosition
     )
     doc.setTextColor(0, 0, 0)
-    yPosition += 10
+    yPosition += 10 // section-gap
   }
 
   // Performance Scores / Domain Evaluation Section
   doc.setFontSize(isFinalEval ? 12 : 14)
   doc.setFont('helvetica', 'bold')
   doc.text(isFinalEval ? 'International Rite of Passage Sailing Expeditions' : 'Performance Scores', 14, yPosition)
-  yPosition += isFinalEval ? 6 : 8
+  yPosition += isFinalEval ? 7 : 8
 
   // Final eval status helpers
   const getFinalStatus = (score: number | null | undefined): string => {
@@ -476,14 +476,18 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
     const allPassing = statuses.every(s => s.isPassing)
     const failedDomains = statuses.filter(s => !s.isPassing).map(s => s.label)
 
-    yPosition += 4
+    // Section spacing constants (consistent across final eval)
+    const HEADING_TO_CONTENT = 7  // gap below heading before content starts
+    const SECTION_GAP = 10        // gap after content before next heading
+
+    yPosition += 6 // gap from domain table
 
     // Job Responsibility section heading
     doc.setFontSize(12)
     doc.setFont('helvetica', 'bold')
     doc.setTextColor(17, 24, 39)
     doc.text('Job Responsibility', leftMargin, yPosition)
-    yPosition += 5
+    yPosition += HEADING_TO_CONTENT
 
     const departmentValue = studentAssignmentInfo && studentAssignmentInfo.departments.length > 0
       ? studentAssignmentInfo.departments.join(', ')
@@ -505,14 +509,14 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
         1: { cellWidth: 137 },
       },
     })
-    yPosition = (doc as any).lastAutoTable.finalY + 8
+    yPosition = (doc as any).lastAutoTable.finalY + SECTION_GAP
 
     // Expedition Completion Report section
     doc.setFontSize(12)
     doc.setFont('helvetica', 'bold')
     doc.setTextColor(17, 24, 39)
     doc.text('Expedition Completion Report', leftMargin, yPosition)
-    yPosition += 5
+    yPosition += HEADING_TO_CONTENT
 
     // Neutral bordered banner
     doc.setFillColor(255, 255, 255)
@@ -538,7 +542,7 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
       doc.setTextColor(75, 85, 99)
       doc.text(`Unsatisfactory in: ${failedDomains.join(', ')}`, leftMargin + 5, yPosition + 13)
     }
-    yPosition += 22
+    yPosition += 18 + SECTION_GAP
     doc.setTextColor(0, 0, 0)
   }
 
@@ -741,16 +745,13 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
     if (yPosition > 250) {
       doc.addPage()
       yPosition = 20
-    } else if (isFinalEval) {
-      // Add a tighter gap before Notes for final evals
-      yPosition += 4
     }
 
     doc.setFontSize(isFinalEval ? 12 : 14)
     doc.setFont('helvetica', 'bold')
     doc.setTextColor(17, 24, 39)
     doc.text('Notes', 14, yPosition)
-    yPosition += isFinalEval ? 5 : 8
+    yPosition += isFinalEval ? 7 : 8
 
     doc.setFontSize(isFinalEval ? 9 : 11)
     doc.setFont('helvetica', 'normal')

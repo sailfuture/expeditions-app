@@ -211,56 +211,72 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
   doc.setTextColor(0, 0, 0)
   
   // Student Information Section
-  doc.setFontSize(14)
-  doc.setFont('helvetica', 'bold')
-  doc.text('Student Information', 14, yPosition)
-  yPosition += 8
-  
-  doc.setFontSize(11)
-  doc.setFont('helvetica', 'normal')
   const studentName = `${review._students?.firstName || ""} ${review._students?.lastName || ""}`.trim() || `Student ID: ${review.students_id}`
-  doc.text(`Student Name: ${studentName}`, 14, yPosition)
-  yPosition += 6
-  doc.text(`Report Name: ${review.report_name || 'Untitled'}`, 14, yPosition)
-  yPosition += 6
-  
-  // Add Reviewed By if staff is present
   const reviewedBy = review._expedition_staff?.name || null
-  if (reviewedBy) {
-    doc.text(`Reviewed By: ${reviewedBy}`, 14, yPosition)
-    yPosition += 6
-  }
-  doc.text(`Review Period: ${formatDate(review.startDate)} - ${formatDate(review.endDate)}`, 14, yPosition)
-  yPosition += 12
 
-  // Expedition Overview Section (final evals only)
-  if (isFinalEval && expeditionStats) {
+  if (isFinalEval) {
+    // Compact student info for final evals (single block, smaller spacing)
+    doc.setFontSize(12)
+    doc.setFont('helvetica', 'bold')
+    doc.text('Student Information', 14, yPosition)
+    yPosition += 6
+
+    doc.setFontSize(10)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(75, 85, 99)
+    doc.text(`Name: ${studentName}    Period: ${formatDate(review.startDate)} - ${formatDate(review.endDate)}`, 14, yPosition)
+    yPosition += 5
+    if (reviewedBy) {
+      doc.text(`Reviewed By: ${reviewedBy}`, 14, yPosition)
+      yPosition += 5
+    }
+    doc.setTextColor(0, 0, 0)
+    yPosition += 4
+  } else {
     doc.setFontSize(14)
     doc.setFont('helvetica', 'bold')
-    doc.text('Expedition Overview', 14, yPosition)
+    doc.text('Student Information', 14, yPosition)
     yPosition += 8
 
     doc.setFontSize(11)
     doc.setFont('helvetica', 'normal')
-    const stats = [
-      `Total Days: ${expeditionStats.totalDays}`,
-      `Offshore: ${expeditionStats.offshoreDays}`,
-      `Anchored: ${expeditionStats.anchoredDays}`,
-      `Service: ${expeditionStats.serviceDays}`,
-      `Nautical Miles: ${expeditionStats.totalNauticalMiles.toFixed(0)}`,
-    ]
-    stats.forEach((line) => {
-      doc.text(line, 14, yPosition)
-      yPosition += 6
-    })
+    doc.text(`Student Name: ${studentName}`, 14, yPosition)
     yPosition += 6
+    doc.text(`Report Name: ${review.report_name || 'Untitled'}`, 14, yPosition)
+    yPosition += 6
+
+    if (reviewedBy) {
+      doc.text(`Reviewed By: ${reviewedBy}`, 14, yPosition)
+      yPosition += 6
+    }
+    doc.text(`Review Period: ${formatDate(review.startDate)} - ${formatDate(review.endDate)}`, 14, yPosition)
+    yPosition += 12
+  }
+
+  // Expedition Overview Section (final evals only) - inline summary on one row
+  if (isFinalEval && expeditionStats) {
+    doc.setFontSize(12)
+    doc.setFont('helvetica', 'bold')
+    doc.text('Expedition Overview', 14, yPosition)
+    yPosition += 6
+
+    doc.setFontSize(10)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(75, 85, 99)
+    doc.text(
+      `Total Days: ${expeditionStats.totalDays}    Nautical Miles: ${expeditionStats.totalNauticalMiles.toFixed(0)}`,
+      14,
+      yPosition
+    )
+    doc.setTextColor(0, 0, 0)
+    yPosition += 10
   }
 
   // Performance Scores / Domain Evaluation Section
-  doc.setFontSize(14)
+  doc.setFontSize(isFinalEval ? 12 : 14)
   doc.setFont('helvetica', 'bold')
   doc.text(isFinalEval ? 'International Rite of Passage Sailing Expeditions' : 'Performance Scores', 14, yPosition)
-  yPosition += 8
+  yPosition += isFinalEval ? 6 : 8
 
   // Final eval status helpers
   const getFinalStatus = (score: number | null | undefined): string => {
@@ -326,14 +342,15 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
     head: [isFinalEval ? ['Requirement', 'Score', 'Status'] : ['Category', 'Score', 'Evaluation']],
     body: tableData,
     theme: 'grid',
+    styles: isFinalEval ? { cellPadding: 2 } : undefined,
     headStyles: {
       fillColor: [249, 250, 251],
       textColor: [55, 65, 81],
       fontStyle: 'bold',
-      fontSize: 10,
+      fontSize: isFinalEval ? 9 : 10,
     },
     bodyStyles: {
-      fontSize: 10,
+      fontSize: isFinalEval ? 9 : 10,
       textColor: [55, 65, 81],
     },
     alternateRowStyles: {
@@ -400,43 +417,40 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
     const allPassing = statuses.every(s => s.isPassing)
     const failedDomains = statuses.filter(s => !s.isPassing).map(s => s.label)
 
-    if (yPosition > 230) {
-      doc.addPage()
-      yPosition = 20
-    }
+    yPosition += 4
 
     // Section heading
-    doc.setFontSize(14)
+    doc.setFontSize(12)
     doc.setFont('helvetica', 'bold')
     doc.setTextColor(17, 24, 39) // gray-900
     doc.text('Final Expedition Evaluation', leftMargin, yPosition)
-    yPosition += 8
+    yPosition += 5
 
-    // Neutral bordered banner (no colored fills)
+    // Neutral bordered banner
     doc.setFillColor(255, 255, 255)
-    doc.setDrawColor(229, 231, 235) // gray-200
-    doc.roundedRect(leftMargin, yPosition, pageWidth - 28, 22, 2, 2, 'FD')
+    doc.setDrawColor(229, 231, 235)
+    doc.roundedRect(leftMargin, yPosition, pageWidth - 28, 18, 2, 2, 'FD')
 
     if (allPassing) {
-      doc.setFontSize(11)
+      doc.setFontSize(10)
       doc.setFont('helvetica', 'bold')
       doc.setTextColor(17, 24, 39)
-      doc.text('Successfully Completed Expedition', leftMargin + 5, yPosition + 8)
-      doc.setFontSize(10)
-      doc.setFont('helvetica', 'normal')
-      doc.setTextColor(75, 85, 99) // gray-600
-      doc.text(`${studentName} has passed all six domains and successfully completed this expedition.`, leftMargin + 5, yPosition + 16)
-    } else {
-      doc.setFontSize(11)
-      doc.setFont('helvetica', 'bold')
-      doc.setTextColor(17, 24, 39)
-      doc.text('Did Not Pass All Domains', leftMargin + 5, yPosition + 8)
-      doc.setFontSize(10)
+      doc.text('Successfully Completed Expedition', leftMargin + 5, yPosition + 7)
+      doc.setFontSize(9)
       doc.setFont('helvetica', 'normal')
       doc.setTextColor(75, 85, 99)
-      doc.text(`Unsatisfactory in: ${failedDomains.join(', ')}`, leftMargin + 5, yPosition + 16)
+      doc.text(`${studentName} has passed all six domains and successfully completed this expedition.`, leftMargin + 5, yPosition + 13)
+    } else {
+      doc.setFontSize(10)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(17, 24, 39)
+      doc.text('Did Not Pass All Domains', leftMargin + 5, yPosition + 7)
+      doc.setFontSize(9)
+      doc.setFont('helvetica', 'normal')
+      doc.setTextColor(75, 85, 99)
+      doc.text(`Unsatisfactory in: ${failedDomains.join(', ')}`, leftMargin + 5, yPosition + 13)
     }
-    yPosition += 30
+    yPosition += 22
     doc.setTextColor(0, 0, 0)
   }
 

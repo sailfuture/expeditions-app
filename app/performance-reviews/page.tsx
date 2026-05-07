@@ -1165,14 +1165,11 @@ function PerformanceReviewsContent() {
                           <span className="text-xs text-gray-500">{formatRelativeTime(review.created_at)}</span>
                         </TableCell>
                         <TableCell className="h-14 px-6">
-                          <div className="flex items-center gap-2">
-                            {review.is_final && <Award className="h-4 w-4 text-green-600 shrink-0" />}
-                            {review.report_name ? (
-                              <span className="text-sm font-medium text-gray-700">{review.report_name}</span>
-                            ) : (
-                              <span className="text-sm text-gray-400 italic">Untitled</span>
-                            )}
-                          </div>
+                          {review.report_name ? (
+                            <span className="text-sm font-medium text-gray-700">{review.report_name}</span>
+                          ) : (
+                            <span className="text-sm text-gray-400 italic">Untitled</span>
+                          )}
                         </TableCell>
                         <TableCell className="h-14 px-6">
                           <span className="text-sm text-gray-600">{formatDate(review.startDate)}</span>

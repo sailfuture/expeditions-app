@@ -370,7 +370,25 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
       if (isFinalEval && data.section === 'body' && data.column.index === 0) {
         data.cell.styles.fontSize = 9
       }
-      // Skip color coding for final evals (keep neutral)
+
+      // Final eval: color score and status columns based on Strong Sat / Sat / Unsat
+      if (isFinalEval && data.section === 'body' && (data.column.index === 1 || data.column.index === 2)) {
+        const row = finalDomainRows[data.row.index]
+        if (!row) return
+        const status = row.isJournal ? getFinalJournalStatus(row.score) : getFinalStatus(row.score)
+        // blue-100 for Strong Sat, green-100 for Sat, red-100 for Unsat
+        if (status === 'Strong Sat') {
+          data.cell.styles.fillColor = [219, 234, 254]
+          data.cell.styles.textColor = [30, 64, 175] // blue-800
+        } else if (status === 'Sat') {
+          data.cell.styles.fillColor = [220, 252, 231]
+          data.cell.styles.textColor = [22, 101, 52] // green-800
+        } else {
+          data.cell.styles.fillColor = [254, 226, 226]
+          data.cell.styles.textColor = [153, 27, 27] // red-800
+        }
+        return
+      }
       if (isFinalEval) return
 
       // Color code score cells based on evaluation ranges

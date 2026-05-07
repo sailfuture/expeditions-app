@@ -282,11 +282,11 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
     }
     doc.setTextColor(0, 0, 0)
     // Horizontal divider between Expedition Overview and International Rite section
-    yPosition += 4
+    yPosition += 2
     doc.setDrawColor(229, 231, 235) // gray-200
     doc.setLineWidth(0.3)
     doc.line(leftMargin, yPosition, pageWidth - leftMargin, yPosition)
-    yPosition += 5
+    yPosition += 4
   } else {
     doc.setFontSize(14)
     doc.setFont('helvetica', 'bold')
@@ -456,7 +456,7 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
   })
   
   // Get the final Y position after the table
-  yPosition = (doc as any).lastAutoTable.finalY + (isFinalEval ? 5 : 15)
+  yPosition = (doc as any).lastAutoTable.finalY + (isFinalEval ? 2 : 15)
 
   // Final Evaluation pass/fail summary
   if (isFinalEval) {
@@ -473,9 +473,9 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
 
     // Section spacing constants (consistent across final eval)
     const HEADING_TO_CONTENT = 5  // gap below heading before content starts
-    const SECTION_GAP = 7         // gap after content before next heading
+    const SECTION_GAP = 4         // gap after content before next heading
 
-    yPosition += 3 // gap from domain table
+    yPosition += 2 // gap from domain table
 
     // Job Responsibility section heading
     doc.setFontSize(12)
@@ -537,7 +537,7 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
       doc.setTextColor(75, 85, 99)
       doc.text(`Unsatisfactory in: ${failedDomains.join(', ')}`, leftMargin + 5, yPosition + 13)
     }
-    yPosition += 18 + SECTION_GAP
+    yPosition += 18 + 2 // banner height + small gap before Narrative Feedback
     doc.setTextColor(0, 0, 0)
   }
 

@@ -1,6 +1,6 @@
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import { getPerformanceReviewById, getProfessionalismByStudentAndDate, getExpeditionTransactionsByDateByStudent, getEvaluationByStudent, getExpeditionSchedules, getExpeditionLocations } from './xano'
+import { getPerformanceReviewById, getProfessionalismByStudentAndDate, getExpeditionTransactionsByDateByStudent, getEvaluationByStudent, getExpeditionSchedules, getExpeditionLocations, getExpeditionAssignmentsByExpedition, getExpeditionDepartments } from './xano'
 import { calculateRouteDistance } from './haversine'
 
 // School header information
@@ -162,6 +162,47 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
     }
   }
 
+  // For final evals: resolve student's department(s) and supervisor(s)
+  let studentAssignmentInfo: { departments: string[]; supervisors: string[] } | null = null
+  if (isFinal && review.students_id && review.expeditions_id) {
+    try {
+      const [assignments, departments] = await Promise.all([
+        getExpeditionAssignmentsByExpedition(review.expeditions_id),
+        getExpeditionDepartments(),
+      ])
+      const list = Array.isArray(assignments) ? assignments : []
+      const studentAssignment = list.find((a: any) => a.students_id === review.students_id && !a.isArchived)
+
+      if (studentAssignment) {
+        // Resolve department names (expedition_departments_id can be array of IDs or {id, name})
+        const deptIds: number[] = Array.isArray(studentAssignment.expedition_departments_id)
+          ? studentAssignment.expedition_departments_id.map((d: any) => (typeof d === 'object' ? d.id : d)).filter(Boolean)
+          : []
+        const deptNames = deptIds.map((id) => {
+          const dept = (departments || []).find((d: any) => d.id === id)
+          return dept?.name || ""
+        }).filter(Boolean)
+
+        // Find supervisors: staff assignments that share at least one department
+        const supervisorNames = list
+          .filter((a: any) =>
+            a.expedition_staff_id > 0
+            && a._expedition_staff?.name
+            && !a.isArchived
+            && Array.isArray(a.expedition_departments_id)
+            && a.expedition_departments_id.some((d: any) => deptIds.includes(typeof d === 'object' ? d.id : d))
+          )
+          .map((a: any) => a._expedition_staff.name as string)
+
+        // Dedupe supervisors
+        const uniqueSupervisors = [...new Set(supervisorNames)]
+        studentAssignmentInfo = { departments: deptNames, supervisors: uniqueSupervisors }
+      }
+    } catch (error) {
+      console.error('Error fetching student assignment:', error)
+    }
+  }
+
   // Use student evaluation if available, otherwise fall back to stored review values
   const evaluationData = {
     academics: studentEvaluation?.academics ?? review.academics,
@@ -226,6 +267,14 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
     doc.setTextColor(75, 85, 99)
     doc.text(`Name: ${studentName}    Period: ${formatDate(review.startDate)} - ${formatDate(review.endDate)}`, 14, yPosition)
     yPosition += 5
+    if (studentAssignmentInfo && studentAssignmentInfo.departments.length > 0) {
+      const deptText = studentAssignmentInfo.departments.join(', ')
+      const supText = studentAssignmentInfo.supervisors.length > 0
+        ? studentAssignmentInfo.supervisors.join(', ')
+        : 'Unassigned'
+      doc.text(`Department: ${deptText}    Supervisor: ${supText}`, 14, yPosition)
+      yPosition += 5
+    }
     if (reviewedBy) {
       doc.text(`Reviewed By: ${reviewedBy}`, 14, yPosition)
       yPosition += 5

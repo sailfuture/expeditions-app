@@ -396,22 +396,10 @@ function PreviewModal({
                 {review._expeditions?.name && (
                   <p className="text-base font-semibold text-gray-900 mb-3">{review._expeditions.name}</p>
                 )}
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                <div className="grid grid-cols-2 gap-3">
                   <div className="bg-white rounded-md border p-3">
                     <div className="text-[10px] uppercase tracking-wide text-gray-500 font-medium">Total Days</div>
                     <div className="text-xl font-bold text-gray-900 mt-1">{expeditionStats.totalDays}</div>
-                  </div>
-                  <div className="bg-white rounded-md border p-3">
-                    <div className="text-[10px] uppercase tracking-wide text-gray-500 font-medium">Offshore</div>
-                    <div className="text-xl font-bold text-gray-900 mt-1">{expeditionStats.offshoreDays}</div>
-                  </div>
-                  <div className="bg-white rounded-md border p-3">
-                    <div className="text-[10px] uppercase tracking-wide text-gray-500 font-medium">Anchored</div>
-                    <div className="text-xl font-bold text-gray-900 mt-1">{expeditionStats.anchoredDays}</div>
-                  </div>
-                  <div className="bg-white rounded-md border p-3">
-                    <div className="text-[10px] uppercase tracking-wide text-gray-500 font-medium">Service</div>
-                    <div className="text-xl font-bold text-gray-900 mt-1">{expeditionStats.serviceDays}</div>
                   </div>
                   <div className="bg-white rounded-md border p-3">
                     <div className="text-[10px] uppercase tracking-wide text-gray-500 font-medium">Nautical Miles</div>
@@ -733,7 +721,7 @@ function PreviewModal({
 
           {/* Notes Section */}
           <div>
-            <Label htmlFor="notes" className="text-sm font-semibold text-gray-700">Notes</Label>
+            <Label htmlFor="notes" className="text-sm font-semibold text-gray-700">{review?.is_final ? "Narrative Feedback" : "Notes"}</Label>
             <Textarea
               id="notes"
               placeholder="Add notes about this performance review..."

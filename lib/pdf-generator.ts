@@ -261,10 +261,10 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
   const reviewedBy = review._expedition_staff?.name || null
 
   if (isFinalEval) {
-    // Compact student info for final evals (single block, smaller spacing)
+    // Combined Expedition Overview: student info + expedition stats
     doc.setFontSize(12)
     doc.setFont('helvetica', 'bold')
-    doc.text('Student Information', 14, yPosition)
+    doc.text('Expedition Overview', 14, yPosition)
     yPosition += 5
 
     doc.setFontSize(10)
@@ -272,6 +272,10 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
     doc.setTextColor(75, 85, 99)
     doc.text(`Name: ${studentName}    Period: ${formatDate(review.startDate)} - ${formatDate(review.endDate)}`, 14, yPosition)
     yPosition += 5
+    if (expeditionStats) {
+      doc.text(`Total Days: ${expeditionStats.totalDays}    Nautical Miles: ${expeditionStats.totalNauticalMiles.toFixed(0)}`, 14, yPosition)
+      yPosition += 5
+    }
     if (reviewedBy) {
       doc.text(`Reviewed By: ${reviewedBy}`, 14, yPosition)
       yPosition += 5
@@ -297,25 +301,6 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
     }
     doc.text(`Review Period: ${formatDate(review.startDate)} - ${formatDate(review.endDate)}`, 14, yPosition)
     yPosition += 12
-  }
-
-  // Expedition Overview Section (final evals only) - inline summary on one row
-  if (isFinalEval && expeditionStats) {
-    doc.setFontSize(12)
-    doc.setFont('helvetica', 'bold')
-    doc.text('Expedition Overview', 14, yPosition)
-    yPosition += 5 // heading-to-content
-
-    doc.setFontSize(10)
-    doc.setFont('helvetica', 'normal')
-    doc.setTextColor(75, 85, 99)
-    doc.text(
-      `Total Days: ${expeditionStats.totalDays}    Nautical Miles: ${expeditionStats.totalNauticalMiles.toFixed(0)}`,
-      14,
-      yPosition
-    )
-    doc.setTextColor(0, 0, 0)
-    yPosition += 7 // section-gap
   }
 
   // Performance Scores / Domain Evaluation Section
@@ -755,7 +740,7 @@ export async function generatePerformanceReviewPDF(reviewId: number) {
     doc.setFontSize(isFinalEval ? 12 : 14)
     doc.setFont('helvetica', 'bold')
     doc.setTextColor(17, 24, 39)
-    doc.text('Notes', 14, yPosition)
+    doc.text(isFinalEval ? 'Narrative Feedback' : 'Notes', 14, yPosition)
     yPosition += isFinalEval ? 5 : 8
 
     doc.setFontSize(isFinalEval ? 9 : 11)

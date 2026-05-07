@@ -442,12 +442,12 @@ function PreviewModal({
                 <p className="text-sm text-gray-500 mt-0.5">{passingCount} of 6 satisfactory</p>
               </div>
               <div className="border rounded-lg overflow-hidden">
-                <Table>
+                <Table className="table-fixed w-full">
                   <TableHeader>
                     <TableRow className="border-b bg-gray-50 hover:bg-gray-50">
                       <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600">Requirement</TableHead>
-                      <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 text-center w-24">Score</TableHead>
-                      <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 w-32">Status</TableHead>
+                      <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 text-center w-20">Score</TableHead>
+                      <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 w-28">Status</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -471,10 +471,10 @@ function PreviewModal({
                         <TableRow key={row.key} className={`border-b ${status.bg}`}>
                           <TableCell className="px-4 py-3 align-top">
                             <p className="font-medium text-gray-900 text-sm mb-1">{row.label}</p>
-                            <p className="text-xs text-gray-500 leading-relaxed">{row.description}</p>
+                            <p className="text-xs text-gray-500 leading-relaxed line-clamp-2" title={row.description}>{row.description}</p>
                           </TableCell>
                           <TableCell className="px-4 py-3 text-center text-gray-700 text-sm align-top">{scoreDisplay}</TableCell>
-                          <TableCell className={`px-4 py-3 text-sm font-semibold align-top ${status.color}`}>{status.label}</TableCell>
+                          <TableCell className="px-4 py-3 text-sm align-top text-gray-700">{status.label}</TableCell>
                         </TableRow>
                       )
                     })}
@@ -493,24 +493,18 @@ function PreviewModal({
                 const allPassing = domainStatuses.every(d => d.status.isPassing)
                 const failedDomains = domainStatuses.filter(d => !d.status.isPassing).map(d => d.label)
                 return allPassing ? (
-                  <div className="mt-3 rounded-lg border border-green-200 bg-green-50 p-4 flex items-start gap-3">
-                    <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-semibold text-green-800">Successfully Completed Expedition</p>
-                      <p className="text-xs text-green-700 mt-0.5">
-                        {`${review._students?.firstName || "Student"} `}has passed all six domains and successfully completed this expedition.
-                      </p>
-                    </div>
+                  <div className="mt-3 rounded-lg border bg-white p-4">
+                    <p className="text-sm font-medium text-gray-900">Successfully Completed Expedition</p>
+                    <p className="text-sm text-gray-600 mt-1">
+                      {`${review._students?.firstName || "Student"} `}has passed all six domains and successfully completed this expedition.
+                    </p>
                   </div>
                 ) : (
-                  <div className="mt-3 rounded-lg border border-red-200 bg-red-50 p-4 flex items-start gap-3">
-                    <AlertCircle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-semibold text-red-800">Did Not Pass All Domains</p>
-                      <p className="text-xs text-red-700 mt-0.5">
-                        Unsatisfactory in: {failedDomains.join(", ")}
-                      </p>
-                    </div>
+                  <div className="mt-3 rounded-lg border bg-white p-4">
+                    <p className="text-sm font-medium text-gray-900">Did Not Pass All Domains</p>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Unsatisfactory in: {failedDomains.join(", ")}
+                    </p>
                   </div>
                 )
               })()}

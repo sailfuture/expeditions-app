@@ -510,7 +510,7 @@ function MealPlanSheet({ open, onOpenChange, recipe, loading, recipeId }: {
                       <TableHeader>
                         <TableRow className="bg-gray-50/80">
                           <TableHead className="h-9 px-3 text-xs font-semibold text-gray-600">Ingredient</TableHead>
-                          <TableHead className="h-9 px-3 text-xs font-semibold text-gray-600 w-20">Oz/Meal</TableHead>
+                          <TableHead className="h-9 px-3 text-xs font-semibold text-gray-600 w-20">Oz/Person</TableHead>
                           <TableHead className="h-9 px-3 text-xs font-semibold text-gray-600">Prep</TableHead>
                         </TableRow>
                       </TableHeader>

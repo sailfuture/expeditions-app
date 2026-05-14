@@ -126,11 +126,15 @@ const TIMEZONES = [
   { value: "UTC+12", label: "UTC+12 — Auckland" },
 ]
 
-// Helper function to get color class based on evaluation score (>= 2.75 green, < 2.75 yellow)
+// Helper function to get color class based on evaluation score
+// 5.0–3.21 blue, 3.20–2.751 green, 2.75–2.251 yellow, 2.25–1.1 red, <1.1 gray
 function getEvaluationColorClass(score: number | null | undefined) {
   if (score === null || score === undefined) return "bg-gray-50"
-  if (score >= 2.75) return "bg-green-50"
-  return "bg-yellow-50"
+  if (score >= 3.21) return "bg-blue-50"
+  if (score >= 2.751) return "bg-green-50"
+  if (score >= 2.251) return "bg-yellow-50"
+  if (score >= 1.1) return "bg-red-50"
+  return "bg-gray-50"
 }
 
 // Helper function to get color class based on journal percentage (>= 70% green, < 70% yellow)

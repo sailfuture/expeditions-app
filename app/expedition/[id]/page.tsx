@@ -137,12 +137,16 @@ function getEvaluationColorClass(score: number | null | undefined) {
   return "bg-gray-50"
 }
 
-// Helper function to get color class based on journal percentage (>= 70% green, < 70% yellow)
+// Helper function to get color class based on journal percentage
+// 100–90 blue, <90–70 green, <70–50 yellow, <50–20 red, <20 gray
 function getJournalColorClass(percentage: number | null | undefined) {
   if (percentage === null || percentage === undefined) return "bg-gray-50"
   const pct = percentage <= 1 ? percentage * 100 : percentage
+  if (pct >= 90) return "bg-blue-50"
   if (pct >= 70) return "bg-green-50"
-  return "bg-yellow-50"
+  if (pct >= 50) return "bg-yellow-50"
+  if (pct >= 20) return "bg-red-50"
+  return "bg-gray-50"
 }
 
 // Helper function to get color class based on journaling string value

@@ -642,12 +642,15 @@ export default function StudentDetailPage() {
   }
   
   // Get journal color class based on raw value from API
+  // 100–90 blue, <90–70 green, <70–50 yellow, <50–20 red, <20 gray
   const getJournalColorClass = (value: number | null | undefined): string => {
     if (value === null || value === undefined) return ''
     const pct = value <= 1 ? value * 100 : value
     if (pct >= 90) return 'bg-blue-50'
     if (pct >= 70) return 'bg-green-50'
-    return 'bg-red-50'
+    if (pct >= 50) return 'bg-yellow-50'
+    if (pct >= 20) return 'bg-red-50'
+    return 'bg-gray-50'
   }
   
   // Get journal color class based on string value (Completed, Incomplete, etc.)

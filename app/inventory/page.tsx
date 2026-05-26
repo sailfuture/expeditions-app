@@ -19,6 +19,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -32,7 +38,7 @@ import {
   ComboboxItem,
   ComboboxList,
 } from "@/components/ui/combobox"
-import { PlusCircle, Pencil, Trash2, Boxes, Eye, Minus, Plus, Search, MapPin, Check } from "lucide-react"
+import { PlusCircle, Pencil, Trash2, Boxes, Eye, Minus, Plus, Search, MapPin, Check, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
   getExpeditionsInventory,
@@ -208,8 +214,8 @@ export default function InventoryPage() {
   const [savingLocation, setSavingLocation] = useState(false)
   const [deletingLocationId, setDeletingLocationId] = useState<number | null>(null)
 
-  // Dialog state
-  const [dialogOpen, setDialogOpen] = useState(false)
+  // Sheet state (edit) + dialog state (view, delete, locations)
+  const [sheetOpen, setSheetOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
@@ -237,7 +243,7 @@ export default function InventoryPage() {
       isNotPackage: false,
       notes: "",
     })
-    setDialogOpen(true)
+    setSheetOpen(true)
   }
 
   const handleEditItem = (item: InventoryItem) => {
@@ -252,7 +258,7 @@ export default function InventoryPage() {
       isNotPackage: item.isNotPackage || false,
       notes: item.notes || "",
     })
-    setDialogOpen(true)
+    setSheetOpen(true)
   }
 
   const handleDeleteClick = (item: InventoryItem) => {
@@ -301,7 +307,7 @@ export default function InventoryPage() {
         toast.success("Item added successfully")
       }
       mutate(SWR_KEY)
-      setDialogOpen(false)
+      setSheetOpen(false)
     } catch (error) {
       console.error("Error saving item:", error)
       toast.error("Failed to save item")
@@ -817,27 +823,24 @@ export default function InventoryPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Add/Edit Dialog - modal={false} so base-ui Combobox portal can receive clicks */}
-      {dialogOpen && (
-        <div
-          className="fixed inset-0 z-50 bg-black/50 animate-in fade-in-0"
-          onClick={() => setDialogOpen(false)}
-        />
-      )}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen} modal={false}>
-        <DialogContent className="sm:max-w-[500px] [&>button]:cursor-pointer">
-          <DialogHeader>
-            <DialogTitle>
-              {editingItem ? "Edit Inventory Item" : "Add Inventory Item"}
-            </DialogTitle>
-            <DialogDescription>
-              {editingItem
-                ? "Update the details for this inventory item"
-                : "Add a new item to the inventory"}
-            </DialogDescription>
-          </DialogHeader>
+      {/* Add/Edit Sheet (modal={false} so base-ui Combobox portal can receive clicks) */}
+      <Sheet open={sheetOpen} onOpenChange={setSheetOpen} modal={false}>
+        <SheetContent className="w-full sm:w-[520px] sm:max-w-[90vw] p-0 flex flex-col h-full overflow-hidden">
+          <SheetHeader className="p-6 pb-4 border-b shrink-0">
+            <div className="flex items-center justify-between">
+              <SheetTitle className="text-xl">
+                {editingItem ? "Edit Inventory Item" : "Add Inventory Item"}
+              </SheetTitle>
+              <button
+                onClick={() => setSheetOpen(false)}
+                className="rounded-full p-1.5 hover:bg-gray-100 transition-colors cursor-pointer"
+              >
+                <X className="h-5 w-5 text-gray-500" />
+              </button>
+            </div>
+          </SheetHeader>
 
-          <div className="space-y-4 py-4">
+          <div className="flex-1 overflow-y-auto p-6 space-y-5">
             <div className="space-y-2">
               <Label htmlFor="name">Name *</Label>
               <Input
@@ -964,34 +967,51 @@ export default function InventoryPage() {
             </div>
           </div>
 
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setDialogOpen(false)}
-              disabled={isSubmitting}
-              className="cursor-pointer"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSubmit}
-              disabled={isSubmitting}
-              className="cursor-pointer"
-            >
-              {isSubmitting ? (
-                <>
-                  <Spinner className="h-4 w-4 mr-2" />
-                  Saving...
-                </>
-              ) : editingItem ? (
-                "Update Item"
-              ) : (
-                "Add Item"
+          <div className="border-t p-4 flex items-center justify-between shrink-0 bg-white">
+            <div>
+              {editingItem && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleDeleteClick(editingItem)}
+                  className="cursor-pointer text-red-600 hover:text-red-700 hover:bg-red-50"
+                >
+                  <Trash2 className="h-4 w-4 mr-1.5" />
+                  Delete
+                </Button>
               )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSheetOpen(false)}
+                disabled={isSubmitting}
+                className="cursor-pointer"
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleSubmit}
+                disabled={isSubmitting}
+                className="cursor-pointer"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Spinner className="h-4 w-4 mr-2" />
+                    Saving...
+                  </>
+                ) : editingItem ? (
+                  "Update"
+                ) : (
+                  "Add Item"
+                )}
+              </Button>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>

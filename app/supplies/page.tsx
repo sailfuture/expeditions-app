@@ -61,9 +61,6 @@ const TYPE_OPTIONS = [
   "School",
   "Deck",
   "Student",
-  "Galley",
-  "Engine",
-  "Safety",
   "Other",
 ]
 

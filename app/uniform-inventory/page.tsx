@@ -681,7 +681,7 @@ export default function UniformInventoryPage() {
               />
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
+            <div className="space-y-5">
               <div className="space-y-2">
                 <Label htmlFor="size">Size</Label>
                 <select

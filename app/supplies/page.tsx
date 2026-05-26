@@ -167,11 +167,6 @@ function StepperNumberCell({
   )
 }
 
-function formatCurrency(value: number | null | undefined) {
-  if (value === null || value === undefined || isNaN(value)) return "—"
-  return `$${value.toFixed(2)}`
-}
-
 export default function SuppliesPage() {
   const { currentUser } = useCurrentUser()
   const isAdmin = currentUser?.role === "Admin"
@@ -333,11 +328,11 @@ export default function SuppliesPage() {
 
   const renderTableHeaders = () => (
     <TableRow className="border-b bg-gray-50/30 hover:bg-gray-50/30">
-      <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[28%]">Name</TableHead>
-      <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden md:table-cell w-[14%]">Cost</TableHead>
-      <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden lg:table-cell w-[18%]">Link</TableHead>
-      <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 text-center w-[20%]">Quantity</TableHead>
-      <TableHead className="h-10 w-[20%]" />
+      <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[24%]">Name</TableHead>
+      <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden md:table-cell w-[28%]">Notes</TableHead>
+      <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden lg:table-cell w-[14%]">Link</TableHead>
+      <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 text-center w-[18%]">Quantity</TableHead>
+      <TableHead className="h-10 w-[16%]" />
     </TableRow>
   )
 
@@ -347,17 +342,16 @@ export default function SuppliesPage() {
       className="border-b last:border-0 hover:bg-gray-50/50 transition-all duration-300"
     >
       <TableCell className="h-12 px-4 sm:px-6 overflow-hidden">
-        <div className="flex flex-col">
-          <span className={`font-medium truncate ${muted ? "text-gray-400" : "text-gray-900"}`}>{item.name}</span>
-          {item.notes && (
-            <span className={`text-xs truncate ${muted ? "text-gray-300" : "text-gray-500"}`}>{item.notes}</span>
-          )}
-        </div>
+        <span className={`font-medium truncate block ${muted ? "text-gray-400" : "text-gray-900"}`}>{item.name}</span>
       </TableCell>
       <TableCell className="h-12 px-4 sm:px-6 hidden md:table-cell overflow-hidden">
-        <span className={`text-sm tabular-nums ${muted ? "text-gray-400" : "text-gray-600"}`}>
-          {item.type === "Student" ? formatCurrency(item.cost) : "—"}
-        </span>
+        {item.notes ? (
+          <span className={`text-sm truncate block ${muted ? "text-gray-400" : "text-gray-600"}`} title={item.notes}>
+            {item.notes}
+          </span>
+        ) : (
+          <span className="text-sm text-gray-400">—</span>
+        )}
       </TableCell>
       <TableCell className="h-12 px-4 sm:px-6 hidden lg:table-cell overflow-hidden">
         {item.url ? (
@@ -461,7 +455,7 @@ export default function SuppliesPage() {
                 {Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
                     <TableCell className="h-12 px-4 sm:px-6"><Skeleton className="h-4 w-32" /></TableCell>
-                    <TableCell className="h-12 px-4 sm:px-6 hidden md:table-cell"><Skeleton className="h-4 w-12" /></TableCell>
+                    <TableCell className="h-12 px-4 sm:px-6 hidden md:table-cell"><Skeleton className="h-4 w-48" /></TableCell>
                     <TableCell className="h-12 px-4 sm:px-6 hidden lg:table-cell"><Skeleton className="h-4 w-16" /></TableCell>
                     <TableCell className="h-12 px-4 sm:px-6"><Skeleton className="h-4 w-10 mx-auto" /></TableCell>
                     <TableCell className="h-12 px-2">

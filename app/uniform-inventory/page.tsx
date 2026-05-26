@@ -57,7 +57,7 @@ const SIZE_OPTIONS = ["XS", "S", "M", "L", "XL", "XXL", "XXXL"]
 
 const NAME_OPTIONS = ["Staff", "Student"]
 
-const COLOR_OPTIONS = ["Black", "White", "Navy", "Light Blue", "Gray", "Red", "Green", "Yellow", "Orange", "Khaki"]
+const COLOR_OPTIONS = ["Gray", "Black", "Navy", "Light Blue", "Red"]
 
 // Stepper number cell with +/- buttons and tap-to-edit
 function StepperNumberCell({

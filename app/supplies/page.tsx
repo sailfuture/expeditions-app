@@ -12,6 +12,12 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet"
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -22,33 +28,44 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
-import { PlusCircle, Pencil, Trash2, BedDouble, Eye, Minus, Plus } from "lucide-react"
+import { PlusCircle, Pencil, Trash2, Package, Eye, Minus, Plus, ExternalLink, X } from "lucide-react"
 import {
-  getExpeditionLinenInventory,
-  createExpeditionLinenInventoryItem,
-  updateExpeditionLinenInventoryItem,
-  deleteExpeditionLinenInventoryItem,
+  getExpeditionsSupplies,
+  createExpeditionsSuppliesItem,
+  updateExpeditionsSuppliesItem,
+  deleteExpeditionsSuppliesItem,
 } from "@/lib/xano"
 import { useCurrentUser } from "@/lib/contexts/user-context"
 
-const SWR_KEY = "expedition_linen_inventory"
+const SWR_KEY = "expeditions_supplies"
 
-interface LinenItem {
+interface SupplyItem {
   id: number
   created_at: number
   name: string
   type: string
-  size: string
-  color: string
+  isOutofStock: boolean
+  notes: string
   quantity: number
-  brand: string
+  isArchived: boolean
+  last_edited: number | null
+  cost: number
+  url: string
 }
 
-const TYPE_OPTIONS = ["Charter", "Student", "Staff", "Crew"]
-
-const SIZE_OPTIONS = ["Twin", "Full", "Queen", "King", "Standard", "One Size"]
+const TYPE_OPTIONS = [
+  "Medical",
+  "School",
+  "Deck",
+  "Student",
+  "Galley",
+  "Engine",
+  "Safety",
+  "Other",
+]
 
 // Stepper number cell with +/- buttons and tap-to-edit
 function StepperNumberCell({
@@ -73,14 +90,14 @@ function StepperNumberCell({
     setIsEditing(false)
     mutate(
       SWR_KEY,
-      (current: LinenItem[] | undefined) =>
+      (current: SupplyItem[] | undefined) =>
         current?.map((item) =>
           item.id === itemId ? { ...item, [field]: newValue } : item
         ),
       false
     )
     try {
-      await updateExpeditionLinenInventoryItem(itemId, { [field]: newValue })
+      await updateExpeditionsSuppliesItem(itemId, { [field]: newValue })
       mutate(SWR_KEY)
     } catch {
       toast.error("Failed to update")
@@ -153,55 +170,62 @@ function StepperNumberCell({
   )
 }
 
-export default function LinenInventoryPage() {
+function formatCurrency(value: number | null | undefined) {
+  if (value === null || value === undefined || isNaN(value)) return "—"
+  return `$${value.toFixed(2)}`
+}
+
+export default function SuppliesPage() {
   const { currentUser } = useCurrentUser()
   const isAdmin = currentUser?.role === "Admin"
 
-  const { data: linenItems, isLoading } = useSWR(
+  const { data: supplyItems, isLoading } = useSWR(
     SWR_KEY,
-    () => getExpeditionLinenInventory()
+    () => getExpeditionsSupplies()
   )
 
-  // Dialog state
-  const [dialogOpen, setDialogOpen] = useState(false)
-  const [editingItem, setEditingItem] = useState<LinenItem | null>(null)
+  // Sheet state
+  const [sheetOpen, setSheetOpen] = useState(false)
+  const [editingItem, setEditingItem] = useState<SupplyItem | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
-  const [itemToDelete, setItemToDelete] = useState<LinenItem | null>(null)
-  const [viewItem, setViewItem] = useState<LinenItem | null>(null)
+  const [itemToDelete, setItemToDelete] = useState<SupplyItem | null>(null)
 
   // Form state
-  const [formData, setFormData] = useState({
+  const emptyForm = {
     name: "",
     type: "",
-    size: "",
-    color: "",
+    notes: "",
     quantity: "" as string | number,
-    brand: "",
-  })
+    cost: "" as string | number,
+    url: "",
+    isOutofStock: false,
+    isArchived: false,
+  }
+  const [formData, setFormData] = useState(emptyForm)
 
   const handleAddItem = () => {
     setEditingItem(null)
-    setFormData({ name: "", type: "", size: "", color: "", quantity: "", brand: "" })
-    setDialogOpen(true)
+    setFormData(emptyForm)
+    setSheetOpen(true)
   }
 
-  const handleEditItem = (item: LinenItem) => {
-    setViewItem(null)
+  const handleEditItem = (item: SupplyItem) => {
     setEditingItem(item)
     setFormData({
       name: item.name || "",
       type: item.type || "",
-      size: item.size || "",
-      color: item.color || "",
+      notes: item.notes || "",
       quantity: item.quantity ?? "",
-      brand: item.brand || "",
+      cost: item.cost ?? "",
+      url: item.url || "",
+      isOutofStock: !!item.isOutofStock,
+      isArchived: !!item.isArchived,
     })
-    setDialogOpen(true)
+    setSheetOpen(true)
   }
 
-  const handleDeleteClick = (item: LinenItem) => {
-    setViewItem(null)
+  const handleDeleteClick = (item: SupplyItem) => {
     setItemToDelete(item)
     setDeleteConfirmOpen(true)
   }
@@ -209,11 +233,12 @@ export default function LinenInventoryPage() {
   const handleDeleteConfirm = async () => {
     if (!itemToDelete) return
     try {
-      await deleteExpeditionLinenInventoryItem(itemToDelete.id)
+      await deleteExpeditionsSuppliesItem(itemToDelete.id)
       mutate(SWR_KEY)
       toast.success("Item deleted successfully")
       setDeleteConfirmOpen(false)
       setItemToDelete(null)
+      setSheetOpen(false)
     } catch (error) {
       console.error("Error deleting item:", error)
       toast.error("Failed to delete item")
@@ -229,23 +254,25 @@ export default function LinenInventoryPage() {
     setIsSubmitting(true)
     try {
       const submitData = {
-        name: formData.name,
+        name: formData.name.trim(),
         type: formData.type,
-        size: formData.size,
-        color: formData.color,
+        notes: formData.notes,
         quantity: formData.quantity === "" ? 0 : Number(formData.quantity),
-        brand: formData.brand,
+        cost: formData.cost === "" ? 0 : Number(formData.cost),
+        url: formData.url.trim(),
+        isOutofStock: formData.isOutofStock,
+        isArchived: formData.isArchived,
       }
 
       if (editingItem) {
-        await updateExpeditionLinenInventoryItem(editingItem.id, submitData)
+        await updateExpeditionsSuppliesItem(editingItem.id, submitData)
         toast.success("Item updated successfully")
       } else {
-        await createExpeditionLinenInventoryItem(submitData)
+        await createExpeditionsSuppliesItem(submitData)
         toast.success("Item added successfully")
       }
       mutate(SWR_KEY)
-      setDialogOpen(false)
+      setSheetOpen(false)
     } catch (error) {
       console.error("Error saving item:", error)
       toast.error("Failed to save item")
@@ -254,10 +281,10 @@ export default function LinenInventoryPage() {
     }
   }
 
-  // Group items by type (Charter, Student, Staff, etc.)
+  // Filter out archived, group by type
   const groupedItems = useMemo(() => {
-    const items = (linenItems || []) as LinenItem[]
-    const groupMap = new Map<string, LinenItem[]>()
+    const items = ((supplyItems || []) as SupplyItem[]).filter((i) => !i.isArchived)
+    const groupMap = new Map<string, SupplyItem[]>()
 
     items.forEach((item) => {
       const key = item.type || "Uncategorized"
@@ -267,8 +294,7 @@ export default function LinenInventoryPage() {
       groupMap.get(key)!.push(item)
     })
 
-    const groups: { type: string; items: LinenItem[] }[] = []
-    // Sort by TYPE_OPTIONS order, then alphabetical for unknowns
+    const groups: { type: string; items: SupplyItem[] }[] = []
     const sortedKeys = [...groupMap.keys()].sort((a, b) => {
       const aIdx = TYPE_OPTIONS.indexOf(a)
       const bIdx = TYPE_OPTIONS.indexOf(b)
@@ -285,58 +311,73 @@ export default function LinenInventoryPage() {
     })
 
     return groups
-  }, [linenItems])
+  }, [supplyItems])
 
-  // Split into in-stock and out-of-stock groups
+  // Split into in-stock / out-of-stock
   const { inStockGroups, outOfStockGroups } = useMemo(() => {
     const inStock: typeof groupedItems = []
     const outOfStock: typeof groupedItems = []
 
     groupedItems.forEach((group) => {
-      const inStockItems = group.items.filter((item) => (item.quantity ?? 0) > 0)
-      const outOfStockItems = group.items.filter((item) => (item.quantity ?? 0) === 0)
-      if (inStockItems.length > 0) {
-        inStock.push({ ...group, items: inStockItems })
-      }
-      if (outOfStockItems.length > 0) {
-        outOfStock.push({ ...group, items: outOfStockItems })
-      }
+      const inStockItems = group.items.filter(
+        (item) => !item.isOutofStock && (item.quantity ?? 0) > 0
+      )
+      const outOfStockItems = group.items.filter(
+        (item) => item.isOutofStock || (item.quantity ?? 0) === 0
+      )
+      if (inStockItems.length > 0) inStock.push({ ...group, items: inStockItems })
+      if (outOfStockItems.length > 0) outOfStock.push({ ...group, items: outOfStockItems })
     })
 
     return { inStockGroups: inStock, outOfStockGroups: outOfStock }
   }, [groupedItems])
 
-  const items = (linenItems || []) as LinenItem[]
+  const items = ((supplyItems || []) as SupplyItem[]).filter((i) => !i.isArchived)
 
   const renderTableHeaders = () => (
     <TableRow className="border-b bg-gray-50/30 hover:bg-gray-50/30">
-      <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[22%]">Name</TableHead>
-      <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[12%]">Size</TableHead>
-      <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden md:table-cell w-[14%]">Color</TableHead>
-      <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden lg:table-cell w-[14%]">Brand</TableHead>
-      <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 text-center w-[18%]">Quantity</TableHead>
+      <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[28%]">Name</TableHead>
+      <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden md:table-cell w-[14%]">Cost</TableHead>
+      <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden lg:table-cell w-[18%]">Link</TableHead>
+      <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 text-center w-[20%]">Quantity</TableHead>
       <TableHead className="h-10 w-[20%]" />
     </TableRow>
   )
 
-  const renderItemRow = (item: LinenItem, muted: boolean) => (
+  const renderItemRow = (item: SupplyItem, muted: boolean) => (
     <TableRow
       key={item.id}
       className="border-b last:border-0 hover:bg-gray-50/50 transition-all duration-300"
     >
       <TableCell className="h-12 px-4 sm:px-6 overflow-hidden">
-        <span className={`font-medium truncate block ${muted ? "text-gray-400" : "text-gray-900"}`}>{item.name}</span>
-      </TableCell>
-      <TableCell className="h-12 px-4 sm:px-6 overflow-hidden">
-        <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-gray-100 ${muted ? "text-gray-400" : "text-gray-700"}`}>
-          {item.size || "\u2014"}
-        </span>
+        <div className="flex flex-col">
+          <span className={`font-medium truncate ${muted ? "text-gray-400" : "text-gray-900"}`}>{item.name}</span>
+          {item.notes && (
+            <span className={`text-xs truncate ${muted ? "text-gray-300" : "text-gray-500"}`}>{item.notes}</span>
+          )}
+        </div>
       </TableCell>
       <TableCell className="h-12 px-4 sm:px-6 hidden md:table-cell overflow-hidden">
-        <span className={`text-sm truncate block ${muted ? "text-gray-400" : "text-gray-600"}`}>{item.color || "\u2014"}</span>
+        <span className={`text-sm tabular-nums ${muted ? "text-gray-400" : "text-gray-600"}`}>
+          {item.type === "Student" ? formatCurrency(item.cost) : "—"}
+        </span>
       </TableCell>
       <TableCell className="h-12 px-4 sm:px-6 hidden lg:table-cell overflow-hidden">
-        <span className={`text-sm truncate block ${muted ? "text-gray-400" : "text-gray-600"}`}>{item.brand || "\u2014"}</span>
+        {item.url ? (
+          <a
+            href={item.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className={`inline-flex items-center gap-1 text-sm hover:underline ${muted ? "text-gray-400" : "text-blue-600"}`}
+            title={item.url}
+          >
+            <ExternalLink className="h-3 w-3" />
+            <span className="truncate max-w-[140px]">Link</span>
+          </a>
+        ) : (
+          <span className="text-sm text-gray-400">—</span>
+        )}
       </TableCell>
       <TableCell className="h-12 px-4 sm:px-6 text-center">
         <StepperNumberCell
@@ -348,9 +389,9 @@ export default function LinenInventoryPage() {
       <TableCell className="h-12 px-2 text-right">
         <div className="flex items-center justify-end gap-0.5">
           <button
-            onClick={() => setViewItem(item)}
+            onClick={() => handleEditItem(item)}
             className="h-7 w-7 flex items-center justify-center rounded hover:bg-gray-100 transition-colors cursor-pointer touch-manipulation"
-            title="View"
+            title="View / Edit"
           >
             <Eye className="h-3.5 w-3.5 text-gray-400" />
           </button>
@@ -379,9 +420,9 @@ export default function LinenInventoryPage() {
 
   const renderGroupHeader = (type: string, count: number) => (
     <TableRow className="bg-gray-50/80 hover:bg-gray-50/80 border-b">
-      <TableCell colSpan={6} className="h-9 px-4 sm:px-6 py-0">
+      <TableCell colSpan={5} className="h-9 px-4 sm:px-6 py-0">
         <div className="flex items-center gap-2">
-          <BedDouble className="h-3.5 w-3.5 text-gray-400" />
+          <Package className="h-3.5 w-3.5 text-gray-400" />
           <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
             {type}
           </span>
@@ -393,6 +434,8 @@ export default function LinenInventoryPage() {
     </TableRow>
   )
 
+  const isStudentType = formData.type === "Student"
+
   return (
     <div className="min-h-screen bg-gray-50">
       <main className="container mx-auto px-4 py-6 space-y-6">
@@ -400,9 +443,9 @@ export default function LinenInventoryPage() {
           {/* Header */}
           <div className="px-4 sm:px-6 py-4 border-b bg-gray-50/50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h2 className="text-lg font-semibold">Linen Inventory</h2>
+              <h2 className="text-lg font-semibold">Supplies Inventory</h2>
               <p className="text-sm text-gray-600 mt-1">
-                Manage sheets, comforters, pillows, and other linens
+                Track general supplies — medical, school, deck, student items, and more
               </p>
             </div>
             {isAdmin && (
@@ -420,9 +463,8 @@ export default function LinenInventoryPage() {
               <TableBody>
                 {Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                    <TableCell className="h-12 px-4 sm:px-6"><Skeleton className="h-4 w-24" /></TableCell>
-                    <TableCell className="h-12 px-4 sm:px-6"><Skeleton className="h-4 w-12" /></TableCell>
-                    <TableCell className="h-12 px-4 sm:px-6 hidden md:table-cell"><Skeleton className="h-4 w-16" /></TableCell>
+                    <TableCell className="h-12 px-4 sm:px-6"><Skeleton className="h-4 w-32" /></TableCell>
+                    <TableCell className="h-12 px-4 sm:px-6 hidden md:table-cell"><Skeleton className="h-4 w-12" /></TableCell>
                     <TableCell className="h-12 px-4 sm:px-6 hidden lg:table-cell"><Skeleton className="h-4 w-16" /></TableCell>
                     <TableCell className="h-12 px-4 sm:px-6"><Skeleton className="h-4 w-10 mx-auto" /></TableCell>
                     <TableCell className="h-12 px-2">
@@ -438,15 +480,15 @@ export default function LinenInventoryPage() {
             </Table>
           ) : items.length === 0 ? (
             <div className="p-12 text-center text-muted-foreground">
-              <BedDouble className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-              <p className="text-lg font-medium text-gray-600">No linen items yet</p>
+              <Package className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+              <p className="text-lg font-medium text-gray-600">No supplies yet</p>
               <p className="text-sm text-gray-500 mt-1">
-                Add items to track linen inventory for the vessel
+                Add items to track general supplies on the vessel
               </p>
             </div>
           ) : inStockGroups.length === 0 ? (
             <div className="p-12 text-center text-muted-foreground">
-              <BedDouble className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+              <Package className="h-12 w-12 mx-auto mb-3 text-gray-300" />
               <p className="text-lg font-medium text-gray-600">All items out of stock</p>
             </div>
           ) : (
@@ -487,90 +529,32 @@ export default function LinenInventoryPage() {
         )}
       </main>
 
-      {/* View Item Dialog */}
-      <Dialog open={!!viewItem} onOpenChange={(open) => !open && setViewItem(null)}>
-        <DialogContent className="sm:max-w-[420px] [&>button]:cursor-pointer">
-          <DialogHeader>
-            <DialogTitle>{viewItem?.name}</DialogTitle>
-            <DialogDescription>
-              {viewItem?.type && (
-                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-gray-100 text-gray-700">
-                  {viewItem.type}
-                </span>
-              )}
-            </DialogDescription>
-          </DialogHeader>
-
-          {viewItem && (
-            <div className="space-y-4 py-2">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Size</p>
-                  <p className="text-sm text-gray-900 mt-1">{viewItem.size || "\u2014"}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Color</p>
-                  <p className="text-sm text-gray-900 mt-1">{viewItem.color || "\u2014"}</p>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Brand</p>
-                  <p className="text-sm text-gray-900 mt-1">{viewItem.brand || "\u2014"}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</p>
-                  <p className="text-sm text-gray-900 mt-1">{viewItem.quantity ?? 0}</p>
-                </div>
-              </div>
+      {/* Add/Edit Sheet */}
+      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+        <SheetContent className="w-full sm:w-[520px] sm:max-w-[90vw] p-0 flex flex-col h-full overflow-hidden">
+          <SheetHeader className="p-6 pb-4 border-b shrink-0">
+            <div className="flex items-center justify-between">
+              <SheetTitle className="text-xl">
+                {editingItem ? "Edit Supply Item" : "Add Supply Item"}
+              </SheetTitle>
+              <button
+                onClick={() => setSheetOpen(false)}
+                className="rounded-full p-1.5 hover:bg-gray-100 transition-colors cursor-pointer"
+              >
+                <X className="h-5 w-5 text-gray-500" />
+              </button>
             </div>
-          )}
+          </SheetHeader>
 
-          {isAdmin && viewItem && (
-            <DialogFooter className="flex !justify-between">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => handleDeleteClick(viewItem)}
-                className="cursor-pointer h-8 w-8"
-              >
-                <Trash2 className="h-4 w-4 text-gray-500" />
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => handleEditItem(viewItem)}
-                className="cursor-pointer"
-              >
-                <Pencil className="h-4 w-4 mr-2" />
-                Edit
-              </Button>
-            </DialogFooter>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Add/Edit Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-[480px] [&>button]:cursor-pointer">
-          <DialogHeader>
-            <DialogTitle>
-              {editingItem ? "Edit Linen Item" : "Add Linen Item"}
-            </DialogTitle>
-            <DialogDescription>
-              {editingItem
-                ? "Update the details for this linen item"
-                : "Add a new item to the linen inventory"}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-4">
+          <div className="flex-1 overflow-y-auto p-6 space-y-5">
             <div className="space-y-2">
               <Label htmlFor="name">Name *</Label>
               <Input
                 id="name"
-                placeholder="e.g., Fitted Sheet, Comforter, Pillow Case"
+                placeholder="e.g., Bandages, Notebook, Sunscreen"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                disabled={!isAdmin}
               />
             </div>
 
@@ -581,50 +565,14 @@ export default function LinenInventoryPage() {
                   id="type"
                   value={formData.type}
                   onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer"
+                  disabled={!isAdmin}
+                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <option value="">Select type</option>
                   {TYPE_OPTIONS.map((t) => (
                     <option key={t} value={t}>{t}</option>
                   ))}
                 </select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="size">Size</Label>
-                <select
-                  id="size"
-                  value={formData.size}
-                  onChange={(e) => setFormData({ ...formData, size: e.target.value })}
-                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer"
-                >
-                  <option value="">Select size</option>
-                  {SIZE_OPTIONS.map((s) => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="color">Color</Label>
-                <Input
-                  id="color"
-                  placeholder="e.g., Navy"
-                  value={formData.color}
-                  onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="brand">Brand</Label>
-                <Input
-                  id="brand"
-                  placeholder="e.g., Walmart"
-                  value={formData.brand}
-                  onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
-                />
               </div>
 
               <div className="space-y-2">
@@ -638,39 +586,127 @@ export default function LinenInventoryPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, quantity: e.target.value })
                   }
+                  disabled={!isAdmin}
                 />
               </div>
             </div>
+
+            {isStudentType && (
+              <div className="space-y-2">
+                <Label htmlFor="cost">Cost (USD)</Label>
+                <Input
+                  id="cost"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={formData.cost}
+                  onChange={(e) =>
+                    setFormData({ ...formData, cost: e.target.value })
+                  }
+                  disabled={!isAdmin}
+                />
+                <p className="text-xs text-gray-500">
+                  Charged to students when issued
+                </p>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="url">Purchase URL (e.g., Amazon)</Label>
+              <Input
+                id="url"
+                type="url"
+                placeholder="https://www.amazon.com/..."
+                value={formData.url}
+                onChange={(e) => setFormData({ ...formData, url: e.target.value })}
+                disabled={!isAdmin}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="notes">Notes</Label>
+              <Textarea
+                id="notes"
+                placeholder="Additional details about this item..."
+                value={formData.notes}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                disabled={!isAdmin}
+                className="min-h-[88px]"
+              />
+            </div>
+
+            <div className="space-y-3 pt-2 border-t">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.isOutofStock}
+                  onChange={(e) => setFormData({ ...formData, isOutofStock: e.target.checked })}
+                  disabled={!isAdmin}
+                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer disabled:cursor-not-allowed"
+                />
+                <span className="text-sm text-gray-700">Mark as out of stock</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.isArchived}
+                  onChange={(e) => setFormData({ ...formData, isArchived: e.target.checked })}
+                  disabled={!isAdmin}
+                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer disabled:cursor-not-allowed"
+                />
+                <span className="text-sm text-gray-700">Archive this item</span>
+              </label>
+            </div>
           </div>
 
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setDialogOpen(false)}
-              disabled={isSubmitting}
-              className="cursor-pointer"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSubmit}
-              disabled={isSubmitting}
-              className="cursor-pointer"
-            >
-              {isSubmitting ? (
-                <>
-                  <Spinner className="h-4 w-4 mr-2" />
-                  Saving...
-                </>
-              ) : editingItem ? (
-                "Update Item"
-              ) : (
-                "Add Item"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          {isAdmin && (
+            <div className="border-t p-4 flex items-center justify-between shrink-0 bg-white">
+              <div>
+                {editingItem && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDeleteClick(editingItem)}
+                    className="cursor-pointer text-red-600 hover:text-red-700 hover:bg-red-50"
+                  >
+                    <Trash2 className="h-4 w-4 mr-1.5" />
+                    Delete
+                  </Button>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSheetOpen(false)}
+                  disabled={isSubmitting}
+                  className="cursor-pointer"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleSubmit}
+                  disabled={isSubmitting}
+                  className="cursor-pointer"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Spinner className="h-4 w-4 mr-2" />
+                      Saving...
+                    </>
+                  ) : editingItem ? (
+                    "Update"
+                  ) : (
+                    "Add Item"
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
@@ -678,7 +714,7 @@ export default function LinenInventoryPage() {
           <DialogHeader>
             <DialogTitle>Delete Item</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete &quot;{itemToDelete?.name}{itemToDelete?.size ? ` (${itemToDelete.size})` : ""}&quot;?
+              Are you sure you want to delete &quot;{itemToDelete?.name}&quot;?
               This action cannot be undone.
             </DialogDescription>
           </DialogHeader>

@@ -972,6 +972,40 @@ export async function deleteExpeditionLinenInventoryItem(id: number) {
   })
 }
 
+// ============ Expedition Supplies ============
+export async function getExpeditionsSupplies() {
+  return xanoFetch<any[]>("/expeditions_supplies")
+}
+
+export async function createExpeditionsSuppliesItem(data: {
+  name: string
+  type: string
+  isOutofStock?: boolean
+  notes?: string
+  quantity?: number
+  isArchived?: boolean
+  cost?: number
+  url?: string
+}) {
+  return xanoFetch<any>("/expeditions_supplies", {
+    method: "POST",
+    body: JSON.stringify(data),
+  })
+}
+
+export async function updateExpeditionsSuppliesItem(id: number, data: Record<string, any>) {
+  return xanoFetch<any>(`/expeditions_supplies/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  })
+}
+
+export async function deleteExpeditionsSuppliesItem(id: number) {
+  return xanoFetch<any>(`/expeditions_supplies/${id}`, {
+    method: "DELETE",
+  })
+}
+
 export async function createExpeditionTransaction(data: {
   date: string | null
   transaction: string

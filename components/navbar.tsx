@@ -20,7 +20,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { ChevronDown, LogOut, Menu, Ship, Users, UserCog, ClipboardList, FileText, Tv, Calendar, BookOpen, ExternalLink, UtensilsCrossed, Boxes, ShoppingBag, ChefHat, MapPin, Shirt, BedDouble } from "lucide-react"
+import { ChevronDown, LogOut, Menu, Ship, Users, UserCog, ClipboardList, FileText, Tv, Calendar, BookOpen, ExternalLink, UtensilsCrossed, Boxes, ShoppingBag, ChefHat, MapPin, Shirt, BedDouble, Package } from "lucide-react"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -224,7 +224,7 @@ export function Navbar() {
                       <DropdownMenuTrigger className={cn(
                         navigationMenuTriggerStyle(),
                         "cursor-pointer flex items-center gap-1",
-                        (pathname.startsWith("/meal-planning") || pathname === "/inventory" || pathname === "/uniform-inventory" || pathname === "/linen-inventory" || pathname === "/store") && "text-foreground",
+                        (pathname.startsWith("/meal-planning") || pathname === "/inventory" || pathname === "/uniform-inventory" || pathname === "/linen-inventory" || pathname === "/supplies" || pathname === "/store") && "text-foreground",
                       )}>
                         Ship Inventory
                         <ChevronDown className="h-3 w-3" />
@@ -253,6 +253,11 @@ export function Navbar() {
                         <Link href="/linen-inventory">
                           <DropdownMenuItem className="cursor-pointer whitespace-nowrap">
                             Linen Inventory
+                          </DropdownMenuItem>
+                        </Link>
+                        <Link href="/supplies">
+                          <DropdownMenuItem className="cursor-pointer whitespace-nowrap">
+                            Supplies
                           </DropdownMenuItem>
                         </Link>
                       </DropdownMenuContent>
@@ -455,6 +460,13 @@ export function Navbar() {
                     >
                       <BedDouble className="h-4 w-4 text-muted-foreground" />
                       Linen Inventory
+                    </Link>
+                    <Link
+                      href="/supplies"
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors"
+                    >
+                      <Package className="h-4 w-4 text-muted-foreground" />
+                      Supplies
                     </Link>
                   </nav>
                 </SheetContent>

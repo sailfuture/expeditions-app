@@ -21,7 +21,10 @@ import {
 } from "@/components/ui/dialog"
 import {
   Sheet,
+  SheetClose,
   SheetContent,
+  SheetDescription,
+  SheetFooter,
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet"
@@ -823,20 +826,37 @@ export default function InventoryPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Add/Edit Sheet (modal={false} so base-ui Combobox portal can receive clicks) */}
+      {/* Add/Edit Sheet — modal={false} so the base-ui Combobox portal can receive
+          clicks, with a manual overlay since Radix skips its overlay in non-modal mode. */}
+      {sheetOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm animate-in fade-in-0"
+          onClick={() => setSheetOpen(false)}
+          aria-hidden="true"
+        />
+      )}
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen} modal={false}>
         <SheetContent className="w-full sm:w-[520px] sm:max-w-[90vw] p-0 flex flex-col h-full overflow-hidden">
           <SheetHeader className="p-6 pb-4 border-b shrink-0">
             <div className="flex items-center justify-between">
-              <SheetTitle className="text-xl">
-                {editingItem ? "Edit Inventory Item" : "Add Inventory Item"}
-              </SheetTitle>
-              <button
-                onClick={() => setSheetOpen(false)}
-                className="rounded-full p-1.5 hover:bg-gray-100 transition-colors cursor-pointer"
-              >
-                <X className="h-5 w-5 text-gray-500" />
-              </button>
+              <div>
+                <SheetTitle className="text-xl">
+                  {editingItem ? "Edit Inventory Item" : "Add Inventory Item"}
+                </SheetTitle>
+                <SheetDescription>
+                  {editingItem
+                    ? "Update the details for this inventory item"
+                    : "Add a new item to the inventory"}
+                </SheetDescription>
+              </div>
+              <SheetClose asChild>
+                <button
+                  className="rounded-full p-1.5 hover:bg-gray-100 transition-colors cursor-pointer"
+                  aria-label="Close"
+                >
+                  <X className="h-5 w-5 text-gray-500" />
+                </button>
+              </SheetClose>
             </div>
           </SheetHeader>
 
@@ -967,7 +987,7 @@ export default function InventoryPage() {
             </div>
           </div>
 
-          <div className="border-t p-4 flex items-center justify-between shrink-0 bg-white">
+          <SheetFooter className="border-t p-4 flex-row items-center justify-between gap-2 shrink-0 bg-white">
             <div>
               {editingItem && (
                 <Button
@@ -982,15 +1002,16 @@ export default function InventoryPage() {
               )}
             </div>
             <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setSheetOpen(false)}
-                disabled={isSubmitting}
-                className="cursor-pointer"
-              >
-                Cancel
-              </Button>
+              <SheetClose asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={isSubmitting}
+                  className="cursor-pointer"
+                >
+                  Cancel
+                </Button>
+              </SheetClose>
               <Button
                 size="sm"
                 onClick={handleSubmit}
@@ -1009,7 +1030,7 @@ export default function InventoryPage() {
                 )}
               </Button>
             </div>
-          </div>
+          </SheetFooter>
         </SheetContent>
       </Sheet>
 

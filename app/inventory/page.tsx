@@ -871,59 +871,57 @@ export default function InventoryPage() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              {/* Type Combobox */}
-              <div className="space-y-2">
-                <Label>Type</Label>
-                <Combobox
-                  items={typeNames}
-                  value={formData.type || null}
-                  onValueChange={(val: string | null) => {
-                    setFormData({ ...formData, type: val || "" })
-                  }}
-                >
-                  <ComboboxInput placeholder="Select type..." showClear className="truncate" />
-                  <ComboboxContent>
-                    <ComboboxEmpty>No type found.</ComboboxEmpty>
-                    <ComboboxList>
-                      {(typeName: string) => {
-                        const color = typeColorLookup[typeName] || "gray"
-                        const bulletClass = typeBulletColorMap[color] || "bg-gray-400"
-                        return (
-                          <ComboboxItem key={typeName} value={typeName} className="cursor-pointer">
-                            <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${bulletClass}`} />
-                            {typeName}
-                          </ComboboxItem>
-                        )
-                      }}
-                    </ComboboxList>
-                  </ComboboxContent>
-                </Combobox>
-              </div>
-
-              {/* Location Combobox */}
-              <div className="space-y-2">
-                <Label>Location</Label>
-                <Combobox
-                  items={locationNames}
-                  value={formData.location || null}
-                  onValueChange={(val: string | null) => {
-                    setFormData({ ...formData, location: val || "" })
-                  }}
-                >
-                  <ComboboxInput placeholder="Select location..." showClear className="truncate" />
-                  <ComboboxContent>
-                    <ComboboxEmpty>No location found.</ComboboxEmpty>
-                    <ComboboxList>
-                      {(locName: string) => (
-                        <ComboboxItem key={locName} value={locName} className="cursor-pointer">
-                          {locName}
+            {/* Type Combobox */}
+            <div className="space-y-2">
+              <Label>Type</Label>
+              <Combobox
+                items={typeNames}
+                value={formData.type || null}
+                onValueChange={(val: string | null) => {
+                  setFormData({ ...formData, type: val || "" })
+                }}
+              >
+                <ComboboxInput placeholder="Select type..." showClear className="truncate" />
+                <ComboboxContent>
+                  <ComboboxEmpty>No type found.</ComboboxEmpty>
+                  <ComboboxList>
+                    {(typeName: string) => {
+                      const color = typeColorLookup[typeName] || "gray"
+                      const bulletClass = typeBulletColorMap[color] || "bg-gray-400"
+                      return (
+                        <ComboboxItem key={typeName} value={typeName} className="cursor-pointer">
+                          <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${bulletClass}`} />
+                          {typeName}
                         </ComboboxItem>
-                      )}
-                    </ComboboxList>
-                  </ComboboxContent>
-                </Combobox>
-              </div>
+                      )
+                    }}
+                  </ComboboxList>
+                </ComboboxContent>
+              </Combobox>
+            </div>
+
+            {/* Location Combobox */}
+            <div className="space-y-2">
+              <Label>Location</Label>
+              <Combobox
+                items={locationNames}
+                value={formData.location || null}
+                onValueChange={(val: string | null) => {
+                  setFormData({ ...formData, location: val || "" })
+                }}
+              >
+                <ComboboxInput placeholder="Select location..." showClear className="truncate" />
+                <ComboboxContent>
+                  <ComboboxEmpty>No location found.</ComboboxEmpty>
+                  <ComboboxList>
+                    {(locName: string) => (
+                      <ComboboxItem key={locName} value={locName} className="cursor-pointer">
+                        {locName}
+                      </ComboboxItem>
+                    )}
+                  </ComboboxList>
+                </ComboboxContent>
+              </Combobox>
             </div>
 
             <div className="flex items-center gap-2">
@@ -944,37 +942,35 @@ export default function InventoryPage() {
               </Label>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="packages">{formData.isNotPackage ? "Quantity" : "Packages"}</Label>
+              <Input
+                id="packages"
+                type="number"
+                min="0"
+                placeholder="0"
+                value={formData.packages}
+                onChange={(e) =>
+                  setFormData({ ...formData, packages: e.target.value })
+                }
+              />
+            </div>
+
+            {!formData.isNotPackage && (
               <div className="space-y-2">
-                <Label htmlFor="packages">{formData.isNotPackage ? "Quantity" : "Packages"}</Label>
+                <Label htmlFor="oz_per_package">Oz / Package</Label>
                 <Input
-                  id="packages"
+                  id="oz_per_package"
                   type="number"
                   min="0"
                   placeholder="0"
-                  value={formData.packages}
+                  value={formData.oz_per_package}
                   onChange={(e) =>
-                    setFormData({ ...formData, packages: e.target.value })
+                    setFormData({ ...formData, oz_per_package: e.target.value })
                   }
                 />
               </div>
-
-              {!formData.isNotPackage && (
-                <div className="space-y-2">
-                  <Label htmlFor="oz_per_package">Oz / Package</Label>
-                  <Input
-                    id="oz_per_package"
-                    type="number"
-                    min="0"
-                    placeholder="0"
-                    value={formData.oz_per_package}
-                    onChange={(e) =>
-                      setFormData({ ...formData, oz_per_package: e.target.value })
-                    }
-                  />
-                </div>
-              )}
-            </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="notes">Notes</Label>

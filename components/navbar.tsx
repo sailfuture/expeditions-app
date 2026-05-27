@@ -229,7 +229,7 @@ export function Navbar() {
                         Ship Inventory
                         <ChevronDown className="h-3 w-3" />
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="start">
+                      <DropdownMenuContent align="start" className="min-w-[160px]">
                         <Link href="/inventory">
                           <DropdownMenuItem className="cursor-pointer whitespace-nowrap">
                             Galley
@@ -253,7 +253,7 @@ export function Navbar() {
                         <div className="h-px bg-gray-200 my-1" />
                         <Link href="/locations">
                           <DropdownMenuItem className="cursor-pointer whitespace-nowrap">
-                            Manage Locations
+                            Locations
                           </DropdownMenuItem>
                         </Link>
                       </DropdownMenuContent>
@@ -455,7 +455,7 @@ export function Navbar() {
                       className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors"
                     >
                       <MapPin className="h-4 w-4 text-muted-foreground" />
-                      Manage Locations
+                      Locations
                     </Link>
                   </nav>
                 </SheetContent>

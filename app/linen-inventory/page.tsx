@@ -376,7 +376,7 @@ export default function LinenInventoryPage() {
         {item.location ? (
           <span className={`text-sm truncate block ${muted ? "text-gray-400" : "text-gray-600"}`} title={item.location}>{item.location}</span>
         ) : (
-          <span className="text-sm text-gray-400">\u2014</span>
+          <span className="text-sm text-gray-400">{"\u2014"}</span>
         )}
       </TableCell>
       <TableCell className="h-12 px-2 text-right">

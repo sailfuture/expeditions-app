@@ -20,7 +20,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { ChevronDown, LogOut, Menu, Ship, Users, UserCog, ClipboardList, FileText, Tv, Calendar, BookOpen, ExternalLink, UtensilsCrossed, Boxes, ShoppingBag, ChefHat, MapPin, Shirt, BedDouble, Package } from "lucide-react"
+import { ChevronDown, LogOut, Menu, Ship, Users, UserCog, ClipboardList, FileText, Tv, Calendar, BookOpen, ExternalLink, Boxes, ChefHat, MapPin, Shirt, BedDouble, Package } from "lucide-react"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -224,35 +224,25 @@ export function Navbar() {
                       <DropdownMenuTrigger className={cn(
                         navigationMenuTriggerStyle(),
                         "cursor-pointer flex items-center gap-1",
-                        (pathname.startsWith("/meal-planning") || pathname === "/inventory" || pathname === "/uniform-inventory" || pathname === "/linen-inventory" || pathname === "/supplies" || pathname === "/store") && "text-foreground",
+                        (pathname === "/inventory" || pathname === "/uniform-inventory" || pathname === "/linen-inventory" || pathname === "/supplies") && "text-foreground",
                       )}>
                         Ship Inventory
                         <ChevronDown className="h-3 w-3" />
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="start">
-                        <Link href="/meal-planning">
-                          <DropdownMenuItem className="cursor-pointer whitespace-nowrap">
-                            Cookbook
-                          </DropdownMenuItem>
-                        </Link>
-                        <Link href="/store">
-                          <DropdownMenuItem className="cursor-pointer whitespace-nowrap">
-                            Store
-                          </DropdownMenuItem>
-                        </Link>
                         <Link href="/inventory">
                           <DropdownMenuItem className="cursor-pointer whitespace-nowrap">
-                            Galley Inventory
+                            Galley
                           </DropdownMenuItem>
                         </Link>
                         <Link href="/uniform-inventory">
                           <DropdownMenuItem className="cursor-pointer whitespace-nowrap">
-                            Uniform Inventory
+                            Uniforms
                           </DropdownMenuItem>
                         </Link>
                         <Link href="/linen-inventory">
                           <DropdownMenuItem className="cursor-pointer whitespace-nowrap">
-                            Linen Inventory
+                            Linens
                           </DropdownMenuItem>
                         </Link>
                         <Link href="/supplies">
@@ -427,39 +417,25 @@ export function Navbar() {
                       <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Ship Inventory</p>
                     </div>
                     <Link
-                      href="/meal-planning"
-                      className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors"
-                    >
-                      <UtensilsCrossed className="h-4 w-4 text-muted-foreground" />
-                      Cookbook
-                    </Link>
-                    <Link
-                      href="/store"
-                      className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors"
-                    >
-                      <ShoppingBag className="h-4 w-4 text-muted-foreground" />
-                      Store
-                    </Link>
-                    <Link
                       href="/inventory"
                       className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors"
                     >
                       <Boxes className="h-4 w-4 text-muted-foreground" />
-                      Galley Inventory
+                      Galley
                     </Link>
                     <Link
                       href="/uniform-inventory"
                       className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors"
                     >
                       <Shirt className="h-4 w-4 text-muted-foreground" />
-                      Uniform Inventory
+                      Uniforms
                     </Link>
                     <Link
                       href="/linen-inventory"
                       className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors"
                     >
                       <BedDouble className="h-4 w-4 text-muted-foreground" />
-                      Linen Inventory
+                      Linens
                     </Link>
                     <Link
                       href="/supplies"

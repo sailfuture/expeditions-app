@@ -40,6 +40,7 @@ import {
   createExpeditionsSuppliesItem,
   updateExpeditionsSuppliesItem,
   deleteExpeditionsSuppliesItem,
+  getExpeditionSupplyInventoryLocations,
 } from "@/lib/xano"
 import { useCurrentUser } from "@/lib/contexts/user-context"
 
@@ -180,6 +181,18 @@ export default function SuppliesPage() {
     SWR_KEY,
     () => getExpeditionsSupplies()
   )
+
+  const { data: locationData } = useSWR(
+    "expedition_supply_inventory_locations",
+    () => getExpeditionSupplyInventoryLocations()
+  )
+  const locationOptions = useMemo(() => {
+    const list = (locationData || []) as Array<{ id: number; name: string }>
+    return list
+      .map((l) => l.name)
+      .filter((name): name is string => !!name)
+      .sort((a, b) => a.localeCompare(b))
+  }, [locationData])
 
   // Sheet state
   const [sheetOpen, setSheetOpen] = useState(false)
@@ -614,13 +627,22 @@ export default function SuppliesPage() {
 
             <div className="space-y-2">
               <Label htmlFor="location">Location</Label>
-              <Input
+              <select
                 id="location"
-                placeholder="e.g., Forepeak, Aft Locker"
                 value={formData.location}
                 onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                 disabled={!isAdmin}
-              />
+                className="flex h-9 w-full rounded-md border border-input bg-transparent pl-3 pr-8 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <option value="">No location</option>
+                {locationOptions.map((name) => (
+                  <option key={name} value={name}>{name}</option>
+                ))}
+                {/* Preserve legacy free-text values that no longer match a managed location */}
+                {formData.location && !locationOptions.includes(formData.location) && (
+                  <option value={formData.location}>{formData.location} (legacy)</option>
+                )}
+              </select>
             </div>
 
             <div className="space-y-2">

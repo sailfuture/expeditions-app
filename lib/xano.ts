@@ -986,6 +986,8 @@ export async function createExpeditionsSuppliesItem(data: {
   isArchived?: boolean
   cost?: number
   url?: string
+  location?: string
+  size?: string
 }) {
   return xanoFetch<any>("/expeditions_supplies", {
     method: "POST",

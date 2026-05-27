@@ -57,6 +57,8 @@ interface SupplyItem {
   last_edited: number | null
   cost: number
   url: string
+  location: string | null
+  size: string | null
 }
 
 const TYPE_OPTIONS = [
@@ -190,6 +192,8 @@ export default function SuppliesPage() {
   const emptyForm = {
     name: "",
     type: "",
+    size: "",
+    location: "",
     notes: "",
     quantity: "" as string | number,
     cost: "" as string | number,
@@ -210,6 +214,8 @@ export default function SuppliesPage() {
     setFormData({
       name: item.name || "",
       type: item.type || "",
+      size: item.size || "",
+      location: item.location || "",
       notes: item.notes || "",
       quantity: item.quantity ?? "",
       cost: item.cost ?? "",
@@ -251,6 +257,8 @@ export default function SuppliesPage() {
       const submitData = {
         name: formData.name.trim(),
         type: formData.type,
+        size: formData.size.trim(),
+        location: formData.location.trim(),
         notes: formData.notes,
         quantity: formData.quantity === "" ? 0 : Number(formData.quantity),
         cost: formData.cost === "" ? 0 : Number(formData.cost),
@@ -331,11 +339,13 @@ export default function SuppliesPage() {
 
   const renderTableHeaders = () => (
     <TableRow className="border-b bg-gray-50/30 hover:bg-gray-50/30">
-      <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[24%]">Name</TableHead>
-      <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden md:table-cell w-[28%]">Notes</TableHead>
-      <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden lg:table-cell w-[14%]">Link</TableHead>
-      <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 text-center w-[18%]">Quantity</TableHead>
-      <TableHead className="h-10 w-[16%]" />
+      <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[20%]">Name</TableHead>
+      <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[10%]">Size</TableHead>
+      <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden md:table-cell w-[14%]">Location</TableHead>
+      <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden md:table-cell w-[20%]">Notes</TableHead>
+      <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden lg:table-cell w-[12%]">Link</TableHead>
+      <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 text-center w-[14%]">Quantity</TableHead>
+      <TableHead className="h-10 w-[10%]" />
     </TableRow>
   )
 
@@ -346,6 +356,24 @@ export default function SuppliesPage() {
     >
       <TableCell className="h-12 px-4 sm:px-6 overflow-hidden">
         <span className={`font-medium truncate block ${muted ? "text-gray-400" : "text-gray-900"}`}>{item.name}</span>
+      </TableCell>
+      <TableCell className="h-12 px-4 sm:px-6 overflow-hidden">
+        {item.size ? (
+          <span className={`text-sm truncate block ${muted ? "text-gray-400" : "text-gray-600"}`} title={item.size}>
+            {item.size}
+          </span>
+        ) : (
+          <span className="text-sm text-gray-400">—</span>
+        )}
+      </TableCell>
+      <TableCell className="h-12 px-4 sm:px-6 hidden md:table-cell overflow-hidden">
+        {item.location ? (
+          <span className={`text-sm truncate block ${muted ? "text-gray-400" : "text-gray-600"}`} title={item.location}>
+            {item.location}
+          </span>
+        ) : (
+          <span className="text-sm text-gray-400">—</span>
+        )}
       </TableCell>
       <TableCell className="h-12 px-4 sm:px-6 hidden md:table-cell overflow-hidden">
         {item.notes ? (
@@ -414,7 +442,7 @@ export default function SuppliesPage() {
 
   const renderGroupHeader = (type: string, count: number) => (
     <TableRow className="bg-gray-50/80 hover:bg-gray-50/80 border-b">
-      <TableCell colSpan={5} className="h-9 px-4 sm:px-6 py-0">
+      <TableCell colSpan={7} className="h-9 px-4 sm:px-6 py-0">
         <div className="flex items-center gap-2">
           <Package className="h-3.5 w-3.5 text-gray-400" />
           <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
@@ -458,6 +486,8 @@ export default function SuppliesPage() {
                 {Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
                     <TableCell className="h-12 px-4 sm:px-6"><Skeleton className="h-4 w-32" /></TableCell>
+                    <TableCell className="h-12 px-4 sm:px-6"><Skeleton className="h-4 w-12" /></TableCell>
+                    <TableCell className="h-12 px-4 sm:px-6 hidden md:table-cell"><Skeleton className="h-4 w-24" /></TableCell>
                     <TableCell className="h-12 px-4 sm:px-6 hidden md:table-cell"><Skeleton className="h-4 w-48" /></TableCell>
                     <TableCell className="h-12 px-4 sm:px-6 hidden lg:table-cell"><Skeleton className="h-4 w-16" /></TableCell>
                     <TableCell className="h-12 px-4 sm:px-6"><Skeleton className="h-4 w-10 mx-auto" /></TableCell>
@@ -575,6 +605,28 @@ export default function SuppliesPage() {
                   <option key={t} value={t}>{t}</option>
                 ))}
               </select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="size">Size</Label>
+              <Input
+                id="size"
+                placeholder="e.g., Large, 16oz, One Size"
+                value={formData.size}
+                onChange={(e) => setFormData({ ...formData, size: e.target.value })}
+                disabled={!isAdmin}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="location">Location</Label>
+              <Input
+                id="location"
+                placeholder="e.g., Forepeak, Aft Locker"
+                value={formData.location}
+                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                disabled={!isAdmin}
+              />
             </div>
 
             <div className="space-y-2">

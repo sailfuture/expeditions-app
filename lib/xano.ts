@@ -920,6 +920,7 @@ export async function createExpeditionUniformInventoryItem(data: {
   size: string
   color: string
   quantity: number
+  location?: string
 }) {
   return xanoFetch<any>("/expedition_uniform_inventory", {
     method: "POST",
@@ -952,6 +953,7 @@ export async function createExpeditionLinenInventoryItem(data: {
   color: string
   quantity: number
   brand: string
+  location?: string
 }) {
   return xanoFetch<any>("/expedition_linen_inventory", {
     method: "POST",
@@ -1010,6 +1012,52 @@ export async function deleteExpeditionsSuppliesItem(id: number) {
 
 export async function getExpeditionSupplyInventoryLocations() {
   return xanoFetch<any[]>("/expedition_supply_inventory_locations")
+}
+
+export async function createExpeditionSupplyInventoryLocation(data: { name: string; description?: string }) {
+  return xanoFetch<any>("/expedition_supply_inventory_locations", {
+    method: "POST",
+    body: JSON.stringify(data),
+  })
+}
+
+export async function updateExpeditionSupplyInventoryLocation(id: number, data: Record<string, any>) {
+  return xanoFetch<any>(`/expedition_supply_inventory_locations/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  })
+}
+
+export async function deleteExpeditionSupplyInventoryLocation(id: number) {
+  return xanoFetch<any>(`/expedition_supply_inventory_locations/${id}`, {
+    method: "DELETE",
+  })
+}
+
+// ============ Expedition Linen/Uniform Inventory Locations ============
+// Shared between linen-inventory and uniform-inventory.
+export async function getExpeditionLinenInventoryLocations() {
+  return xanoFetch<any[]>("/expedition_linen_inventory_locations")
+}
+
+export async function createExpeditionLinenInventoryLocation(data: { name: string; description?: string }) {
+  return xanoFetch<any>("/expedition_linen_inventory_locations", {
+    method: "POST",
+    body: JSON.stringify(data),
+  })
+}
+
+export async function updateExpeditionLinenInventoryLocation(id: number, data: Record<string, any>) {
+  return xanoFetch<any>(`/expedition_linen_inventory_locations/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  })
+}
+
+export async function deleteExpeditionLinenInventoryLocation(id: number) {
+  return xanoFetch<any>(`/expedition_linen_inventory_locations/${id}`, {
+    method: "DELETE",
+  })
 }
 
 export async function createExpeditionTransaction(data: {

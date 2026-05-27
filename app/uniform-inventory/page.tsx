@@ -39,6 +39,7 @@ import {
   createExpeditionUniformInventoryItem,
   updateExpeditionUniformInventoryItem,
   deleteExpeditionUniformInventoryItem,
+  getExpeditionLinenInventoryLocations,
 } from "@/lib/xano"
 import { useCurrentUser } from "@/lib/contexts/user-context"
 
@@ -52,6 +53,7 @@ interface UniformItem {
   size: string
   color: string
   quantity: number
+  location: string | null
 }
 
 const SIZE_ORDER = ["XS", "S", "M", "L", "XL", "XXL", "XXXL"]
@@ -175,6 +177,18 @@ export default function UniformInventoryPage() {
     () => getExpeditionUniformInventory()
   )
 
+  const { data: locationData } = useSWR(
+    "expedition_linen_inventory_locations",
+    () => getExpeditionLinenInventoryLocations()
+  )
+  const locationOptions = useMemo(() => {
+    const list = (locationData || []) as Array<{ id: number; name: string }>
+    return list
+      .map((l) => l.name)
+      .filter((name): name is string => !!name)
+      .sort((a, b) => a.localeCompare(b))
+  }, [locationData])
+
   // Sheet state (edit) + dialog state (view, delete)
   const [sheetOpen, setSheetOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<UniformItem | null>(null)
@@ -190,11 +204,12 @@ export default function UniformInventoryPage() {
     size: "",
     color: "",
     quantity: "" as string | number,
+    location: "",
   })
 
   const handleAddItem = () => {
     setEditingItem(null)
-    setFormData({ name: "", type: "", size: "", color: "", quantity: "" })
+    setFormData({ name: "", type: "", size: "", color: "", quantity: "", location: "" })
     setSheetOpen(true)
   }
 
@@ -207,6 +222,7 @@ export default function UniformInventoryPage() {
       size: item.size || "",
       color: item.color || "",
       quantity: item.quantity ?? "",
+      location: item.location || "",
     })
     setSheetOpen(true)
   }
@@ -245,6 +261,7 @@ export default function UniformInventoryPage() {
         size: formData.size,
         color: formData.color,
         quantity: formData.quantity === "" ? 0 : Number(formData.quantity),
+        location: formData.location,
       }
 
       if (editingItem) {
@@ -343,11 +360,12 @@ export default function UniformInventoryPage() {
             <Table className="w-full table-fixed">
               <TableHeader>
                 <TableRow className="border-b bg-gray-50/30 hover:bg-gray-50/30">
-                  <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[25%]">Type</TableHead>
-                  <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[15%]">Size</TableHead>
-                  <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden md:table-cell w-[20%]">Color</TableHead>
-                  <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 text-center w-[20%]">Quantity</TableHead>
-                  <TableHead className="h-10 w-[20%]" />
+                  <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[20%]">Type</TableHead>
+                  <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[12%]">Size</TableHead>
+                  <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden md:table-cell w-[14%]">Color</TableHead>
+                  <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden md:table-cell w-[18%]">Location</TableHead>
+                  <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 text-center w-[18%]">Quantity</TableHead>
+                  <TableHead className="h-10 w-[18%]" />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -356,6 +374,7 @@ export default function UniformInventoryPage() {
                     <TableCell className="h-12 px-4 sm:px-6"><Skeleton className="h-4 w-24" /></TableCell>
                     <TableCell className="h-12 px-4 sm:px-6"><Skeleton className="h-4 w-12" /></TableCell>
                     <TableCell className="h-12 px-4 sm:px-6 hidden md:table-cell"><Skeleton className="h-4 w-16" /></TableCell>
+                    <TableCell className="h-12 px-4 sm:px-6 hidden md:table-cell"><Skeleton className="h-4 w-24" /></TableCell>
                     <TableCell className="h-12 px-4 sm:px-6"><Skeleton className="h-4 w-10 mx-auto" /></TableCell>
                     <TableCell className="h-12 px-2">
                       <div className="flex items-center justify-end gap-0.5">
@@ -385,11 +404,12 @@ export default function UniformInventoryPage() {
             <Table className="w-full table-fixed">
               <TableHeader>
                 <TableRow className="border-b bg-gray-50/30 hover:bg-gray-50/30">
-                  <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[25%]">Type</TableHead>
-                  <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[15%]">Size</TableHead>
-                  <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden md:table-cell w-[20%]">Color</TableHead>
-                  <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 text-center w-[20%]">Quantity</TableHead>
-                  <TableHead className="h-10 w-[20%]" />
+                  <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[20%]">Type</TableHead>
+                  <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[12%]">Size</TableHead>
+                  <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden md:table-cell w-[14%]">Color</TableHead>
+                  <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden md:table-cell w-[18%]">Location</TableHead>
+                  <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 text-center w-[18%]">Quantity</TableHead>
+                  <TableHead className="h-10 w-[18%]" />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -397,7 +417,7 @@ export default function UniformInventoryPage() {
                   <React.Fragment key={group.name}>
                     {/* Group header row */}
                     <TableRow className="bg-gray-50/80 hover:bg-gray-50/80 border-b">
-                      <TableCell colSpan={5} className="h-9 px-4 sm:px-6 py-0">
+                      <TableCell colSpan={6} className="h-9 px-4 sm:px-6 py-0">
                         <div className="flex items-center gap-2">
                           <Shirt className="h-3.5 w-3.5 text-gray-400" />
                           <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
@@ -425,6 +445,13 @@ export default function UniformInventoryPage() {
                         </TableCell>
                         <TableCell className="h-12 px-4 sm:px-6 hidden md:table-cell overflow-hidden">
                           <span className="text-sm text-gray-600 truncate block">{item.color || "—"}</span>
+                        </TableCell>
+                        <TableCell className="h-12 px-4 sm:px-6 hidden md:table-cell overflow-hidden">
+                          {item.location ? (
+                            <span className="text-sm text-gray-600 truncate block" title={item.location}>{item.location}</span>
+                          ) : (
+                            <span className="text-sm text-gray-400">—</span>
+                          )}
                         </TableCell>
                         <TableCell className="h-12 px-4 sm:px-6 text-center">
                           <StepperNumberCell
@@ -482,18 +509,19 @@ export default function UniformInventoryPage() {
             <Table className="w-full table-fixed">
               <TableHeader>
                 <TableRow className="border-b bg-gray-50/30 hover:bg-gray-50/30">
-                  <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[25%]">Type</TableHead>
-                  <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[15%]">Size</TableHead>
-                  <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden md:table-cell w-[20%]">Color</TableHead>
-                  <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 text-center w-[20%]">Quantity</TableHead>
-                  <TableHead className="h-10 w-[20%]" />
+                  <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[20%]">Type</TableHead>
+                  <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[12%]">Size</TableHead>
+                  <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden md:table-cell w-[14%]">Color</TableHead>
+                  <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden md:table-cell w-[18%]">Location</TableHead>
+                  <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 text-center w-[18%]">Quantity</TableHead>
+                  <TableHead className="h-10 w-[18%]" />
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {outOfStockGroups.map((group) => (
                   <React.Fragment key={`oos_${group.name}`}>
                     <TableRow className="bg-gray-50/80 hover:bg-gray-50/80 border-b">
-                      <TableCell colSpan={5} className="h-9 px-4 sm:px-6 py-0">
+                      <TableCell colSpan={6} className="h-9 px-4 sm:px-6 py-0">
                         <div className="flex items-center gap-2">
                           <Shirt className="h-3.5 w-3.5 text-gray-400" />
                           <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
@@ -520,6 +548,13 @@ export default function UniformInventoryPage() {
                         </TableCell>
                         <TableCell className="h-12 px-4 sm:px-6 hidden md:table-cell overflow-hidden">
                           <span className="text-sm text-gray-400 truncate block">{item.color || "—"}</span>
+                        </TableCell>
+                        <TableCell className="h-12 px-4 sm:px-6 hidden md:table-cell overflow-hidden">
+                          {item.location ? (
+                            <span className="text-sm text-gray-400 truncate block" title={item.location}>{item.location}</span>
+                          ) : (
+                            <span className="text-sm text-gray-400">—</span>
+                          )}
                         </TableCell>
                         <TableCell className="h-12 px-4 sm:px-6 text-center">
                           <StepperNumberCell
@@ -602,6 +637,10 @@ export default function UniformInventoryPage() {
                   <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</p>
                   <p className="text-sm text-gray-900 mt-1">{viewItem.quantity ?? 0}</p>
                 </div>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Location</p>
+                <p className="text-sm text-gray-900 mt-1">{viewItem.location || "—"}</p>
               </div>
             </div>
           )}
@@ -725,6 +764,24 @@ export default function UniformInventoryPage() {
                   }
                 />
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="location">Location</Label>
+              <select
+                id="location"
+                value={formData.location}
+                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                className="flex h-9 w-full rounded-md border border-input bg-transparent pl-3 pr-8 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer"
+              >
+                <option value="">No location</option>
+                {locationOptions.map((name) => (
+                  <option key={name} value={name}>{name}</option>
+                ))}
+                {formData.location && !locationOptions.includes(formData.location) && (
+                  <option value={formData.location}>{formData.location} (legacy)</option>
+                )}
+              </select>
             </div>
           </div>
 

@@ -1008,6 +1008,10 @@ export async function deleteExpeditionsSuppliesItem(id: number) {
   })
 }
 
+export async function getExpeditionSupplyInventoryLocations() {
+  return xanoFetch<any[]>("/expedition_supply_inventory_locations")
+}
+
 export async function createExpeditionTransaction(data: {
   date: string | null
   transaction: string

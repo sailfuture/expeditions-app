@@ -224,7 +224,7 @@ export function Navbar() {
                       <DropdownMenuTrigger className={cn(
                         navigationMenuTriggerStyle(),
                         "cursor-pointer flex items-center gap-1",
-                        (pathname === "/inventory" || pathname === "/uniform-inventory" || pathname === "/linen-inventory" || pathname === "/supplies") && "text-foreground",
+                        (pathname === "/inventory" || pathname === "/uniform-inventory" || pathname === "/linen-inventory" || pathname === "/supplies" || pathname === "/locations") && "text-foreground",
                       )}>
                         Ship Inventory
                         <ChevronDown className="h-3 w-3" />
@@ -248,6 +248,12 @@ export function Navbar() {
                         <Link href="/supplies">
                           <DropdownMenuItem className="cursor-pointer whitespace-nowrap">
                             Supplies
+                          </DropdownMenuItem>
+                        </Link>
+                        <div className="h-px bg-gray-200 my-1" />
+                        <Link href="/locations">
+                          <DropdownMenuItem className="cursor-pointer whitespace-nowrap">
+                            Manage Locations
                           </DropdownMenuItem>
                         </Link>
                       </DropdownMenuContent>
@@ -443,6 +449,13 @@ export function Navbar() {
                     >
                       <Package className="h-4 w-4 text-muted-foreground" />
                       Supplies
+                    </Link>
+                    <Link
+                      href="/locations"
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors"
+                    >
+                      <MapPin className="h-4 w-4 text-muted-foreground" />
+                      Manage Locations
                     </Link>
                   </nav>
                 </SheetContent>

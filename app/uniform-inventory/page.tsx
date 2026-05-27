@@ -363,8 +363,8 @@ export default function UniformInventoryPage() {
                   <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[20%]">Type</TableHead>
                   <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[12%]">Size</TableHead>
                   <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden md:table-cell w-[14%]">Color</TableHead>
-                  <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden md:table-cell w-[18%]">Location</TableHead>
-                  <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 text-center w-[18%]">Quantity</TableHead>
+                  <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 text-center w-[16%]">Quantity</TableHead>
+                  <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden md:table-cell w-[20%]">Location</TableHead>
                   <TableHead className="h-10 w-[18%]" />
                 </TableRow>
               </TableHeader>
@@ -374,8 +374,8 @@ export default function UniformInventoryPage() {
                     <TableCell className="h-12 px-4 sm:px-6"><Skeleton className="h-4 w-24" /></TableCell>
                     <TableCell className="h-12 px-4 sm:px-6"><Skeleton className="h-4 w-12" /></TableCell>
                     <TableCell className="h-12 px-4 sm:px-6 hidden md:table-cell"><Skeleton className="h-4 w-16" /></TableCell>
-                    <TableCell className="h-12 px-4 sm:px-6 hidden md:table-cell"><Skeleton className="h-4 w-24" /></TableCell>
                     <TableCell className="h-12 px-4 sm:px-6"><Skeleton className="h-4 w-10 mx-auto" /></TableCell>
+                    <TableCell className="h-12 px-4 sm:px-6 hidden md:table-cell"><Skeleton className="h-4 w-24" /></TableCell>
                     <TableCell className="h-12 px-2">
                       <div className="flex items-center justify-end gap-0.5">
                         <Skeleton className="h-5 w-5 rounded" />
@@ -407,8 +407,8 @@ export default function UniformInventoryPage() {
                   <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[20%]">Type</TableHead>
                   <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[12%]">Size</TableHead>
                   <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden md:table-cell w-[14%]">Color</TableHead>
-                  <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden md:table-cell w-[18%]">Location</TableHead>
-                  <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 text-center w-[18%]">Quantity</TableHead>
+                  <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 text-center w-[16%]">Quantity</TableHead>
+                  <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden md:table-cell w-[20%]">Location</TableHead>
                   <TableHead className="h-10 w-[18%]" />
                 </TableRow>
               </TableHeader>
@@ -446,19 +446,19 @@ export default function UniformInventoryPage() {
                         <TableCell className="h-12 px-4 sm:px-6 hidden md:table-cell overflow-hidden">
                           <span className="text-sm text-gray-600 truncate block">{item.color || "—"}</span>
                         </TableCell>
-                        <TableCell className="h-12 px-4 sm:px-6 hidden md:table-cell overflow-hidden">
-                          {item.location ? (
-                            <span className="text-sm text-gray-600 truncate block" title={item.location}>{item.location}</span>
-                          ) : (
-                            <span className="text-sm text-gray-400">—</span>
-                          )}
-                        </TableCell>
                         <TableCell className="h-12 px-4 sm:px-6 text-center">
                           <StepperNumberCell
                             value={item.quantity ?? 0}
                             itemId={item.id}
                             field="quantity"
                           />
+                        </TableCell>
+                        <TableCell className="h-12 px-4 sm:px-6 hidden md:table-cell overflow-hidden">
+                          {item.location ? (
+                            <span className="text-sm text-gray-600 truncate block" title={item.location}>{item.location}</span>
+                          ) : (
+                            <span className="text-sm text-gray-400">—</span>
+                          )}
                         </TableCell>
                         <TableCell className="h-12 px-2 text-right">
                           <div className="flex items-center justify-end gap-0.5">
@@ -512,8 +512,8 @@ export default function UniformInventoryPage() {
                   <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[20%]">Type</TableHead>
                   <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[12%]">Size</TableHead>
                   <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden md:table-cell w-[14%]">Color</TableHead>
-                  <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden md:table-cell w-[18%]">Location</TableHead>
-                  <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 text-center w-[18%]">Quantity</TableHead>
+                  <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 text-center w-[16%]">Quantity</TableHead>
+                  <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden md:table-cell w-[20%]">Location</TableHead>
                   <TableHead className="h-10 w-[18%]" />
                 </TableRow>
               </TableHeader>
@@ -549,19 +549,19 @@ export default function UniformInventoryPage() {
                         <TableCell className="h-12 px-4 sm:px-6 hidden md:table-cell overflow-hidden">
                           <span className="text-sm text-gray-400 truncate block">{item.color || "—"}</span>
                         </TableCell>
-                        <TableCell className="h-12 px-4 sm:px-6 hidden md:table-cell overflow-hidden">
-                          {item.location ? (
-                            <span className="text-sm text-gray-400 truncate block" title={item.location}>{item.location}</span>
-                          ) : (
-                            <span className="text-sm text-gray-400">—</span>
-                          )}
-                        </TableCell>
                         <TableCell className="h-12 px-4 sm:px-6 text-center">
                           <StepperNumberCell
                             value={item.quantity ?? 0}
                             itemId={item.id}
                             field="quantity"
                           />
+                        </TableCell>
+                        <TableCell className="h-12 px-4 sm:px-6 hidden md:table-cell overflow-hidden">
+                          {item.location ? (
+                            <span className="text-sm text-gray-400 truncate block" title={item.location}>{item.location}</span>
+                          ) : (
+                            <span className="text-sm text-gray-400">—</span>
+                          )}
                         </TableCell>
                         <TableCell className="h-12 px-2 text-right">
                           <div className="flex items-center justify-end gap-0.5">

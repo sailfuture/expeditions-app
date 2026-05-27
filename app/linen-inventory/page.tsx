@@ -339,9 +339,9 @@ export default function LinenInventoryPage() {
       <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[20%]">Name</TableHead>
       <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[10%]">Size</TableHead>
       <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden md:table-cell w-[12%]">Color</TableHead>
-      <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden md:table-cell w-[16%]">Location</TableHead>
       <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden lg:table-cell w-[12%]">Brand</TableHead>
-      <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 text-center w-[16%]">Quantity</TableHead>
+      <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 text-center w-[14%]">Quantity</TableHead>
+      <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden md:table-cell w-[18%]">Location</TableHead>
       <TableHead className="h-10 w-[14%]" />
     </TableRow>
   )
@@ -362,13 +362,6 @@ export default function LinenInventoryPage() {
       <TableCell className="h-12 px-4 sm:px-6 hidden md:table-cell overflow-hidden">
         <span className={`text-sm truncate block ${muted ? "text-gray-400" : "text-gray-600"}`}>{item.color || "\u2014"}</span>
       </TableCell>
-      <TableCell className="h-12 px-4 sm:px-6 hidden md:table-cell overflow-hidden">
-        {item.location ? (
-          <span className={`text-sm truncate block ${muted ? "text-gray-400" : "text-gray-600"}`} title={item.location}>{item.location}</span>
-        ) : (
-          <span className="text-sm text-gray-400">\u2014</span>
-        )}
-      </TableCell>
       <TableCell className="h-12 px-4 sm:px-6 hidden lg:table-cell overflow-hidden">
         <span className={`text-sm truncate block ${muted ? "text-gray-400" : "text-gray-600"}`}>{item.brand || "\u2014"}</span>
       </TableCell>
@@ -378,6 +371,13 @@ export default function LinenInventoryPage() {
           itemId={item.id}
           field="quantity"
         />
+      </TableCell>
+      <TableCell className="h-12 px-4 sm:px-6 hidden md:table-cell overflow-hidden">
+        {item.location ? (
+          <span className={`text-sm truncate block ${muted ? "text-gray-400" : "text-gray-600"}`} title={item.location}>{item.location}</span>
+        ) : (
+          <span className="text-sm text-gray-400">\u2014</span>
+        )}
       </TableCell>
       <TableCell className="h-12 px-2 text-right">
         <div className="flex items-center justify-end gap-0.5">
@@ -457,9 +457,9 @@ export default function LinenInventoryPage() {
                     <TableCell className="h-12 px-4 sm:px-6"><Skeleton className="h-4 w-24" /></TableCell>
                     <TableCell className="h-12 px-4 sm:px-6"><Skeleton className="h-4 w-12" /></TableCell>
                     <TableCell className="h-12 px-4 sm:px-6 hidden md:table-cell"><Skeleton className="h-4 w-16" /></TableCell>
-                    <TableCell className="h-12 px-4 sm:px-6 hidden md:table-cell"><Skeleton className="h-4 w-24" /></TableCell>
                     <TableCell className="h-12 px-4 sm:px-6 hidden lg:table-cell"><Skeleton className="h-4 w-16" /></TableCell>
                     <TableCell className="h-12 px-4 sm:px-6"><Skeleton className="h-4 w-10 mx-auto" /></TableCell>
+                    <TableCell className="h-12 px-4 sm:px-6 hidden md:table-cell"><Skeleton className="h-4 w-24" /></TableCell>
                     <TableCell className="h-12 px-2">
                       <div className="flex items-center justify-end gap-0.5">
                         <Skeleton className="h-5 w-5 rounded" />

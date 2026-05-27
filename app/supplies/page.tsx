@@ -354,9 +354,9 @@ export default function SuppliesPage() {
     <TableRow className="border-b bg-gray-50/30 hover:bg-gray-50/30">
       <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[22%]">Name</TableHead>
       <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[10%]">Size</TableHead>
+      <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 text-center w-[14%]">Quantity</TableHead>
       <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden md:table-cell w-[14%]">Location</TableHead>
-      <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden md:table-cell w-[22%]">Notes</TableHead>
-      <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 text-center w-[16%]">Quantity</TableHead>
+      <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden md:table-cell w-[24%]">Notes</TableHead>
       <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600 text-right w-[16%]">Actions</TableHead>
     </TableRow>
   )
@@ -378,6 +378,13 @@ export default function SuppliesPage() {
           <span className="text-sm text-gray-400">—</span>
         )}
       </TableCell>
+      <TableCell className="h-12 px-4 sm:px-6 text-center">
+        <StepperNumberCell
+          value={item.quantity ?? 0}
+          itemId={item.id}
+          field="quantity"
+        />
+      </TableCell>
       <TableCell className="h-12 px-4 sm:px-6 hidden md:table-cell overflow-hidden">
         {item.location ? (
           <span className={`text-sm truncate block ${muted ? "text-gray-400" : "text-gray-600"}`} title={item.location}>
@@ -395,13 +402,6 @@ export default function SuppliesPage() {
         ) : (
           <span className="text-sm text-gray-400">—</span>
         )}
-      </TableCell>
-      <TableCell className="h-12 px-4 sm:px-6 text-center">
-        <StepperNumberCell
-          value={item.quantity ?? 0}
-          itemId={item.id}
-          field="quantity"
-        />
       </TableCell>
       <TableCell className="h-12 px-2 text-right">
         <div className="flex items-center justify-end gap-0.5">
@@ -494,9 +494,9 @@ export default function SuppliesPage() {
                   <TableRow key={i}>
                     <TableCell className="h-12 px-4 sm:px-6"><Skeleton className="h-4 w-32" /></TableCell>
                     <TableCell className="h-12 px-4 sm:px-6"><Skeleton className="h-4 w-12" /></TableCell>
+                    <TableCell className="h-12 px-4 sm:px-6"><Skeleton className="h-4 w-10 mx-auto" /></TableCell>
                     <TableCell className="h-12 px-4 sm:px-6 hidden md:table-cell"><Skeleton className="h-4 w-24" /></TableCell>
                     <TableCell className="h-12 px-4 sm:px-6 hidden md:table-cell"><Skeleton className="h-4 w-48" /></TableCell>
-                    <TableCell className="h-12 px-4 sm:px-6"><Skeleton className="h-4 w-10 mx-auto" /></TableCell>
                     <TableCell className="h-12 px-2">
                       <div className="flex items-center justify-end gap-0.5">
                         <Skeleton className="h-5 w-5 rounded" />
@@ -683,14 +683,32 @@ export default function SuppliesPage() {
 
             <div className="space-y-2">
               <Label htmlFor="url">Purchase URL (e.g., Amazon)</Label>
-              <Input
-                id="url"
-                type="url"
-                placeholder="https://www.amazon.com/..."
-                value={formData.url}
-                onChange={(e) => setFormData({ ...formData, url: e.target.value })}
-                disabled={!isAdmin}
-              />
+              <div className="flex items-center gap-2">
+                <Input
+                  id="url"
+                  type="url"
+                  placeholder="https://www.amazon.com/..."
+                  value={formData.url}
+                  onChange={(e) => setFormData({ ...formData, url: e.target.value })}
+                  disabled={!isAdmin}
+                  className="flex-1"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={!formData.url.trim()}
+                  onClick={() => {
+                    const url = formData.url.trim()
+                    if (url) window.open(url, "_blank", "noopener,noreferrer")
+                  }}
+                  className="cursor-pointer shrink-0 h-9"
+                  title={formData.url.trim() ? `Open ${formData.url.trim()}` : "Enter a URL to enable"}
+                >
+                  <ExternalLink className="h-4 w-4 mr-1.5" />
+                  Open
+                </Button>
+              </div>
             </div>
 
             <div className="space-y-2">

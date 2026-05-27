@@ -339,13 +339,12 @@ export default function SuppliesPage() {
 
   const renderTableHeaders = () => (
     <TableRow className="border-b bg-gray-50/30 hover:bg-gray-50/30">
-      <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[20%]">Name</TableHead>
+      <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[22%]">Name</TableHead>
       <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[10%]">Size</TableHead>
       <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden md:table-cell w-[14%]">Location</TableHead>
-      <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden md:table-cell w-[20%]">Notes</TableHead>
-      <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden lg:table-cell w-[12%]">Link</TableHead>
-      <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 text-center w-[14%]">Quantity</TableHead>
-      <TableHead className="h-10 w-[10%]" />
+      <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden md:table-cell w-[22%]">Notes</TableHead>
+      <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 text-center w-[16%]">Quantity</TableHead>
+      <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600 text-right w-[16%]">Actions</TableHead>
     </TableRow>
   )
 
@@ -384,23 +383,6 @@ export default function SuppliesPage() {
           <span className="text-sm text-gray-400">—</span>
         )}
       </TableCell>
-      <TableCell className="h-12 px-4 sm:px-6 hidden lg:table-cell overflow-hidden">
-        {item.url ? (
-          <a
-            href={item.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={(e) => e.stopPropagation()}
-            className={`inline-flex items-center gap-1 text-sm hover:underline ${muted ? "text-gray-400" : "text-blue-600"}`}
-            title={item.url}
-          >
-            <ExternalLink className="h-3 w-3" />
-            <span className="truncate max-w-[140px]">Link</span>
-          </a>
-        ) : (
-          <span className="text-sm text-gray-400">—</span>
-        )}
-      </TableCell>
       <TableCell className="h-12 px-4 sm:px-6 text-center">
         <StepperNumberCell
           value={item.quantity ?? 0}
@@ -410,6 +392,18 @@ export default function SuppliesPage() {
       </TableCell>
       <TableCell className="h-12 px-2 text-right">
         <div className="flex items-center justify-end gap-0.5">
+          {item.url && (
+            <a
+              href={item.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className={`h-7 w-7 flex items-center justify-center rounded hover:bg-gray-100 transition-colors cursor-pointer touch-manipulation ${muted ? "text-gray-300" : "text-blue-600"}`}
+              title={`Open link: ${item.url}`}
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+            </a>
+          )}
           <button
             onClick={() => handleEditItem(item)}
             className="h-7 w-7 flex items-center justify-center rounded hover:bg-gray-100 transition-colors cursor-pointer touch-manipulation"
@@ -442,7 +436,7 @@ export default function SuppliesPage() {
 
   const renderGroupHeader = (type: string, count: number) => (
     <TableRow className="bg-gray-50/80 hover:bg-gray-50/80 border-b">
-      <TableCell colSpan={7} className="h-9 px-4 sm:px-6 py-0">
+      <TableCell colSpan={6} className="h-9 px-4 sm:px-6 py-0">
         <div className="flex items-center gap-2">
           <Package className="h-3.5 w-3.5 text-gray-400" />
           <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
@@ -489,10 +483,10 @@ export default function SuppliesPage() {
                     <TableCell className="h-12 px-4 sm:px-6"><Skeleton className="h-4 w-12" /></TableCell>
                     <TableCell className="h-12 px-4 sm:px-6 hidden md:table-cell"><Skeleton className="h-4 w-24" /></TableCell>
                     <TableCell className="h-12 px-4 sm:px-6 hidden md:table-cell"><Skeleton className="h-4 w-48" /></TableCell>
-                    <TableCell className="h-12 px-4 sm:px-6 hidden lg:table-cell"><Skeleton className="h-4 w-16" /></TableCell>
                     <TableCell className="h-12 px-4 sm:px-6"><Skeleton className="h-4 w-10 mx-auto" /></TableCell>
                     <TableCell className="h-12 px-2">
                       <div className="flex items-center justify-end gap-0.5">
+                        <Skeleton className="h-5 w-5 rounded" />
                         <Skeleton className="h-5 w-5 rounded" />
                         <Skeleton className="h-5 w-5 rounded" />
                         <Skeleton className="h-5 w-5 rounded" />

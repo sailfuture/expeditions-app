@@ -225,11 +225,11 @@ export default function IntakeFormPage() {
           <div className="flex flex-col gap-3">
             <div className="h-12 w-12 rounded-full overflow-hidden flex-shrink-0">
               <Image
-                src="/sailfuture-square (8).webp"
-                alt="SailFuture Logo"
+                src="/30m-Yacht-JUPITER_-9883-21.webp"
+                alt="Whatever It Takes Expeditions Yacht"
                 width={48}
                 height={48}
-                className="object-cover"
+                className="object-cover h-full w-full"
               />
             </div>
             <div>

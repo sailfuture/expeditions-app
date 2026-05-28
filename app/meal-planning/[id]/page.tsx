@@ -639,18 +639,18 @@ export default function RecipeDetailPage() {
 
             {recipe.ingredients && recipe.ingredients.length > 0 ? (
               <div className="border rounded-lg overflow-hidden bg-white">
-                <div>
+                <div className="w-full overflow-x-hidden">
                   <Table className="table-fixed w-full">
                     <TableHeader>
                       <TableRow className="bg-gray-50/80">
-                        <TableHead className="h-10 px-3 sm:px-4 text-xs font-semibold text-gray-600 w-[25%]">Ingredient</TableHead>
-                        <TableHead className="h-10 px-3 sm:px-4 text-xs font-semibold text-gray-600 w-[10%]">Oz/Person</TableHead>
-                        <TableHead className="h-10 px-3 sm:px-4 text-xs font-semibold text-gray-600 w-[10%]">Oz/Meal</TableHead>
-                        <TableHead className="h-10 px-3 sm:px-4 text-xs font-semibold text-gray-600 w-[10%]">Lb/Meal</TableHead>
-                        <TableHead className="h-10 px-3 sm:px-4 text-xs font-semibold text-gray-600 hidden sm:table-cell w-[10%]">Type</TableHead>
-                        <TableHead className="h-10 px-3 sm:px-4 text-xs font-semibold text-gray-600 w-[20%]">Prep Notes</TableHead>
-                        <TableHead className="h-10 px-3 sm:px-4 text-xs font-semibold text-gray-600 w-[10%]">Participants</TableHead>
-                        <TableHead className="h-10 px-3 sm:px-4 text-xs font-semibold text-gray-600 w-[5%]">Edit</TableHead>
+                        <TableHead className="h-10 px-2 md:px-4 text-xs font-semibold text-gray-600 w-[40%] md:w-[25%]">Ingredient</TableHead>
+                        <TableHead className="h-10 px-2 md:px-4 text-xs font-semibold text-gray-600 hidden md:table-cell md:w-[10%]">Oz/Person</TableHead>
+                        <TableHead className="h-10 px-2 md:px-4 text-xs font-semibold text-gray-600 w-[25%] md:w-[10%]">Oz/Meal</TableHead>
+                        <TableHead className="h-10 px-2 md:px-4 text-xs font-semibold text-gray-600 hidden md:table-cell md:w-[10%]">Lb/Meal</TableHead>
+                        <TableHead className="h-10 px-2 md:px-4 text-xs font-semibold text-gray-600 hidden sm:table-cell sm:w-[10%]">Type</TableHead>
+                        <TableHead className="h-10 px-2 md:px-4 text-xs font-semibold text-gray-600 hidden lg:table-cell lg:w-[20%]">Prep Notes</TableHead>
+                        <TableHead className="h-10 px-2 md:px-4 text-xs font-semibold text-gray-600 w-[20%] md:w-[10%]">Participants</TableHead>
+                        <TableHead className="h-10 px-2 md:px-4 text-xs font-semibold text-gray-600 text-right w-[15%] md:w-[5%]">Edit</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -658,7 +658,7 @@ export default function RecipeDetailPage() {
                         <React.Fragment key={type}>
                           {/* Type header row */}
                           <TableRow className="bg-gray-50/50">
-                            <TableCell colSpan={8} className="py-2 px-3 sm:px-4">
+                            <TableCell colSpan={8} className="py-2 px-2 md:px-4">
                               <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
                                 {type}
                               </span>
@@ -666,46 +666,54 @@ export default function RecipeDetailPage() {
                           </TableRow>
                           {/* Ingredient rows for this type */}
                           {groupedIngredients[type].map((ingredient) => (
-                            <TableRow key={ingredient.id} className="hover:bg-gray-50 transition-colors">
-                              <TableCell className="h-12 px-3 sm:px-4">
+                            <TableRow
+                              key={ingredient.id}
+                              onClick={() => handleEditIngredient(ingredient)}
+                              className="hover:bg-gray-50 transition-colors cursor-pointer"
+                            >
+                              <TableCell className="h-12 px-2 md:px-4 overflow-hidden">
                                 <div className="flex items-center gap-2 min-w-0">
                                   <div className={`w-2 h-2 rounded-full ${getIngredientTypeColor(ingredient.type)} shrink-0`} />
-                                  <span className="font-medium text-gray-900 text-sm truncate">{ingredient.ingredient}</span>
+                                  <span className="font-medium text-gray-900 text-sm truncate" title={ingredient.ingredient}>{ingredient.ingredient}</span>
                                 </div>
                               </TableCell>
-                              <TableCell className="h-12 px-3 sm:px-4">
-                                <span className="text-sm text-gray-600">{ingredient.oz_per_meal} <span className="text-xs text-gray-400">oz</span></span>
+                              <TableCell className="h-12 px-2 md:px-4 hidden md:table-cell overflow-hidden">
+                                <span className="text-sm text-gray-600 truncate block">{ingredient.oz_per_meal} <span className="text-xs text-gray-400">oz</span></span>
                               </TableCell>
-                              <TableCell className="h-12 px-3 sm:px-4">
-                                <span className="text-sm text-gray-600">
+                              <TableCell className="h-12 px-2 md:px-4 overflow-hidden">
+                                <span className="text-sm text-gray-600 truncate block">
                                   {numberOfParticipants > 0
                                     ? <>{(ingredient.oz_per_meal * numberOfParticipants).toFixed(1)} <span className="text-xs text-gray-400">oz</span></>
                                     : "—"}
                                 </span>
                               </TableCell>
-                              <TableCell className="h-12 px-3 sm:px-4">
-                                <span className="text-sm text-gray-600">
+                              <TableCell className="h-12 px-2 md:px-4 hidden md:table-cell overflow-hidden">
+                                <span className="text-sm text-gray-600 truncate block">
                                   {numberOfParticipants > 0
                                     ? <>{((ingredient.oz_per_meal * numberOfParticipants) / 16).toFixed(2)} <span className="text-xs text-gray-400">lb</span></>
                                     : "—"}
                                 </span>
                               </TableCell>
-                              <TableCell className="h-12 px-3 sm:px-4 hidden sm:table-cell">
-                                <span className="text-sm text-gray-600">{ingredient.type}</span>
+                              <TableCell className="h-12 px-2 md:px-4 hidden sm:table-cell overflow-hidden">
+                                <span className="text-sm text-gray-600 truncate block">{ingredient.type}</span>
                               </TableCell>
-                              <TableCell className="h-12 px-3 sm:px-4">
-                                <span className="text-sm text-gray-500 truncate block">
+                              <TableCell className="h-12 px-2 md:px-4 hidden lg:table-cell overflow-hidden">
+                                <span className="text-sm text-gray-500 truncate block" title={ingredient.prep_notes || undefined}>
                                   {ingredient.prep_notes || "—"}
                                 </span>
                               </TableCell>
-                              <TableCell className="h-12 px-3 sm:px-4">
-                                <span className="text-sm text-gray-600">{numberOfParticipants || "—"}</span>
+                              <TableCell className="h-12 px-2 md:px-4 overflow-hidden">
+                                <span className="text-sm text-gray-600 truncate block">{numberOfParticipants || "—"}</span>
                               </TableCell>
-                              <TableCell className="h-12 px-3 sm:px-4">
+                              <TableCell
+                                className="h-12 px-2 md:px-4 text-right"
+                                onClick={(e) => e.stopPropagation()}
+                              >
                                 <button
                                   type="button"
                                   onClick={() => handleEditIngredient(ingredient)}
-                                  className="h-8 w-8 rounded-md border border-gray-300 flex items-center justify-center cursor-pointer hover:bg-gray-100 transition-colors"
+                                  aria-label="Edit ingredient"
+                                  className="h-8 w-8 rounded-md border border-gray-300 inline-flex items-center justify-center cursor-pointer hover:bg-gray-100 transition-colors"
                                 >
                                   <Pencil className="h-3.5 w-3.5 text-gray-500" />
                                 </button>

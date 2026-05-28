@@ -218,36 +218,40 @@ export default function GalleyEquipmentPage() {
 
   const renderTableHeaders = () => (
     <TableRow className="border-b bg-gray-50/30 hover:bg-gray-50/30">
-      <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[34%]">Name</TableHead>
-      <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[26%]">Category</TableHead>
-      <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[24%]">Location</TableHead>
-      <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600 text-right w-[16%]">Actions</TableHead>
+      <TableHead className="h-10 px-2 md:px-6 text-xs font-semibold text-gray-600 w-1/2 md:w-[34%]">Name</TableHead>
+      <TableHead className="h-10 px-2 md:px-6 text-xs font-semibold text-gray-600 w-1/2 md:w-[26%]">Category</TableHead>
+      <TableHead className="h-10 px-4 md:px-6 text-xs font-semibold text-gray-600 hidden md:table-cell md:w-[24%]">Location</TableHead>
+      <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600 text-right hidden md:table-cell md:w-[16%]">Actions</TableHead>
     </TableRow>
   )
 
   const renderItemRow = (item: EquipmentItem) => (
     <TableRow
       key={item.id}
-      className="border-b last:border-0 hover:bg-gray-50/50 transition-all duration-300"
+      onClick={() => handleEditItem(item)}
+      className="border-b last:border-0 hover:bg-gray-50/50 transition-all duration-300 cursor-pointer"
     >
-      <TableCell className="h-12 px-4 sm:px-6 overflow-hidden">
-        <span className="font-medium text-gray-900 truncate block">{item.name}</span>
+      <TableCell className="h-12 px-2 md:px-6 overflow-hidden">
+        <span className="font-medium text-gray-900 truncate block" title={item.name}>{item.name}</span>
       </TableCell>
-      <TableCell className="h-12 px-4 sm:px-6 overflow-hidden">
+      <TableCell className="h-12 px-2 md:px-6 overflow-hidden">
         {item.category ? (
-          <span className="text-sm text-gray-600 truncate block">{item.category}</span>
+          <span className="text-sm text-gray-600 truncate block" title={item.category}>{item.category}</span>
         ) : (
           <span className="text-sm text-gray-400">—</span>
         )}
       </TableCell>
-      <TableCell className="h-12 px-4 sm:px-6 overflow-hidden">
+      <TableCell className="h-12 px-4 md:px-6 hidden md:table-cell overflow-hidden">
         {item.location ? (
           <span className="text-sm text-gray-600 truncate block">{item.location}</span>
         ) : (
           <span className="text-sm text-gray-400">—</span>
         )}
       </TableCell>
-      <TableCell className="h-12 px-2 text-right">
+      <TableCell
+        className="h-12 px-2 text-right hidden md:table-cell"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-end gap-0.5">
           <button
             onClick={() => handleEditItem(item)}
@@ -300,42 +304,43 @@ export default function GalleyEquipmentPage() {
       <main className="container mx-auto px-4 py-6 space-y-6">
         <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
           {/* Header */}
-          <div className="px-4 sm:px-6 py-4 border-b bg-gray-50/50 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="px-4 sm:px-6 py-4 border-b bg-gray-50/50 flex flex-col gap-3">
             <div>
               <h2 className="text-lg font-semibold">Galley Equipment</h2>
               <p className="text-sm text-gray-600 mt-1">
                 Pots, pans, prep tools, and other galley equipment — and where they live
               </p>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="flex items-center gap-1 text-xs text-gray-500">
-                <span className="hidden sm:inline">Sort</span>
-                <select
-                  value={sortMode}
-                  onChange={(e) => setSortMode(e.target.value as SortMode)}
-                  className="h-8 rounded-md border border-input bg-transparent pl-2 pr-6 text-xs shadow-sm cursor-pointer"
-                  aria-label="Sort items by"
-                >
-                  <option value="name">Name</option>
-                  <option value="location">Location</option>
-                </select>
-              </div>
-              <div className="flex items-center gap-1 text-xs text-gray-500">
-                <span className="hidden sm:inline">Group</span>
-                <select
-                  value={groupMode}
-                  onChange={(e) => setGroupMode(e.target.value as GroupMode)}
-                  className="h-8 rounded-md border border-input bg-transparent pl-2 pr-6 text-xs shadow-sm cursor-pointer"
-                  aria-label="Group items by"
-                >
-                  <option value="category">By Category</option>
-                  <option value="none">None</option>
-                </select>
-              </div>
+            <div className="flex items-center gap-2 w-full">
+              <select
+                value={sortMode}
+                onChange={(e) => setSortMode(e.target.value as SortMode)}
+                className="h-8 flex-1 min-w-0 rounded-md border border-input bg-transparent pl-2 pr-6 text-xs shadow-sm cursor-pointer truncate"
+                aria-label="Sort items by"
+                title="Sort"
+              >
+                <option value="name">Sort: Name</option>
+                <option value="location">Sort: Location</option>
+              </select>
+              <select
+                value={groupMode}
+                onChange={(e) => setGroupMode(e.target.value as GroupMode)}
+                className="h-8 flex-1 min-w-0 rounded-md border border-input bg-transparent pl-2 pr-6 text-xs shadow-sm cursor-pointer truncate"
+                aria-label="Group items by"
+                title="Group"
+              >
+                <option value="category">Group: Category</option>
+                <option value="none">Group: None</option>
+              </select>
               {isAdmin && (
-                <Button size="sm" onClick={handleAddItem} className="cursor-pointer">
-                  <PlusCircle className="h-4 w-4 mr-2" />
-                  Add Equipment
+                <Button
+                  size="sm"
+                  onClick={handleAddItem}
+                  className="cursor-pointer flex-1 min-w-0 shrink"
+                  title="Add equipment"
+                >
+                  <PlusCircle className="h-4 w-4" />
+                  <span className="truncate">Add Equipment</span>
                 </Button>
               )}
             </div>
@@ -348,10 +353,10 @@ export default function GalleyEquipmentPage() {
               <TableBody>
                 {Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                    <TableCell className="h-12 px-4 sm:px-6"><Skeleton className="h-4 w-32" /></TableCell>
-                    <TableCell className="h-12 px-4 sm:px-6"><Skeleton className="h-4 w-24" /></TableCell>
-                    <TableCell className="h-12 px-4 sm:px-6"><Skeleton className="h-4 w-24" /></TableCell>
-                    <TableCell className="h-12 px-2">
+                    <TableCell className="h-12 px-2 md:px-6"><Skeleton className="h-4 w-32" /></TableCell>
+                    <TableCell className="h-12 px-2 md:px-6"><Skeleton className="h-4 w-24" /></TableCell>
+                    <TableCell className="h-12 px-4 md:px-6 hidden md:table-cell"><Skeleton className="h-4 w-24" /></TableCell>
+                    <TableCell className="h-12 px-2 hidden md:table-cell">
                       <div className="flex items-center justify-end gap-0.5">
                         <Skeleton className="h-5 w-5 rounded" />
                         <Skeleton className="h-5 w-5 rounded" />

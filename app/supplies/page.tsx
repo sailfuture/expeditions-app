@@ -1,6 +1,7 @@
 "use client"
 
-import React, { useState, useMemo } from "react"
+import React, { useState, useMemo, useRef } from "react"
+import Image from "next/image"
 import useSWR, { mutate } from "swr"
 import { toast } from "sonner"
 import {
@@ -34,17 +35,38 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
-import { PlusCircle, Pencil, Trash2, Package, Eye, Minus, Plus, ExternalLink, X } from "lucide-react"
+import {
+  PlusCircle,
+  Pencil,
+  Trash2,
+  Package,
+  Eye,
+  Minus,
+  Plus,
+  ExternalLink,
+  X,
+  Camera,
+  ImagePlus,
+  Tags,
+  MapPin,
+} from "lucide-react"
 import {
   getExpeditionsSupplies,
   createExpeditionsSuppliesItem,
   updateExpeditionsSuppliesItem,
   deleteExpeditionsSuppliesItem,
   getExpeditionSupplyInventoryLocations,
+  getExpeditionSupplyTypes,
+  createExpeditionSupplyType,
+  deleteExpeditionSupplyType,
+  uploadImageToXano,
 } from "@/lib/xano"
+import { getPhotoUrl } from "@/lib/utils"
 import { useCurrentUser } from "@/lib/contexts/user-context"
 
 const SWR_KEY = "expeditions_supplies"
+const TYPES_SWR_KEY = "expedition_supply_types"
+const LOCATIONS_SWR_KEY = "expedition_supply_inventory_locations"
 
 interface SupplyItem {
   id: number
@@ -60,15 +82,17 @@ interface SupplyItem {
   url: string
   location: string | null
   size: string | null
+  image: any
 }
 
-const TYPE_OPTIONS = [
-  "Medical",
-  "School",
-  "Deck",
-  "Student",
-  "Other",
-]
+interface SupplyType {
+  id: number
+  created_at: number
+  name: string
+}
+
+type SortMode = "name" | "location"
+type GroupMode = "type" | "none"
 
 // Stepper number cell with +/- buttons and tap-to-edit
 function StepperNumberCell({
@@ -173,6 +197,54 @@ function StepperNumberCell({
   )
 }
 
+// Image thumbnail cell — tap to view (when photo exists) or tap to open camera (when empty)
+function ImageThumb({
+  image,
+  name,
+  isUploading,
+  onClick,
+}: {
+  image: any
+  name: string
+  isUploading?: boolean
+  onClick: () => void
+}) {
+  const url = getPhotoUrl(image)
+  const hasPhoto = !!url
+  return (
+    <button
+      onClick={onClick}
+      disabled={isUploading}
+      className={`w-10 h-10 rounded-md overflow-hidden relative transition-colors cursor-pointer touch-manipulation shrink-0 ${
+        hasPhoto
+          ? "bg-gray-100 border border-gray-200 hover:border-gray-300"
+          : "bg-gray-50 border-2 border-dashed border-gray-300 hover:bg-gray-100 hover:border-gray-400"
+      } disabled:cursor-wait`}
+      title={hasPhoto ? "View image" : "Tap to take photo"}
+      aria-label={hasPhoto ? `View image of ${name}` : `Take photo of ${name}`}
+    >
+      {url ? (
+        <Image
+          src={url}
+          alt={name}
+          width={40}
+          height={40}
+          className="object-cover w-full h-full"
+        />
+      ) : (
+        <div className="w-full h-full flex items-center justify-center text-gray-400">
+          <Camera className="h-4 w-4" />
+        </div>
+      )}
+      {isUploading && (
+        <div className="absolute inset-0 bg-white/70 flex items-center justify-center">
+          <Spinner className="h-4 w-4" />
+        </div>
+      )}
+    </button>
+  )
+}
+
 export default function SuppliesPage() {
   const { currentUser } = useCurrentUser()
   const isAdmin = currentUser?.role === "Admin"
@@ -183,7 +255,7 @@ export default function SuppliesPage() {
   )
 
   const { data: locationData } = useSWR(
-    "expedition_supply_inventory_locations",
+    LOCATIONS_SWR_KEY,
     () => getExpeditionSupplyInventoryLocations()
   )
   const locationOptions = useMemo(() => {
@@ -194,12 +266,49 @@ export default function SuppliesPage() {
       .sort((a, b) => a.localeCompare(b))
   }, [locationData])
 
+  const { data: typesData } = useSWR(
+    TYPES_SWR_KEY,
+    () => getExpeditionSupplyTypes()
+  )
+  const typeOptions = useMemo(() => {
+    const list = (typesData || []) as SupplyType[]
+    return list
+      .map((t) => t.name)
+      .filter((name): name is string => !!name)
+      .sort((a, b) => a.localeCompare(b))
+  }, [typesData])
+
+  // Sort + group controls
+  const [sortMode, setSortMode] = useState<SortMode>("name")
+  const [groupMode, setGroupMode] = useState<GroupMode>("type")
+
   // Sheet state
   const [sheetOpen, setSheetOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<SupplyItem | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [itemToDelete, setItemToDelete] = useState<SupplyItem | null>(null)
+
+  // Image upload state for the edit sheet
+  const [photoFile, setPhotoFile] = useState<File | null>(null)
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null)
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const cameraInputRef = useRef<HTMLInputElement>(null)
+
+  // Lightbox state
+  const [lightboxItem, setLightboxItem] = useState<SupplyItem | null>(null)
+
+  // Inline thumbnail-tap upload state
+  const [inlineUploadingId, setInlineUploadingId] = useState<number | null>(null)
+  const inlineCameraInputRef = useRef<HTMLInputElement>(null)
+  const pendingInlineItemRef = useRef<SupplyItem | null>(null)
+
+  // Types manager state
+  const [typesDialogOpen, setTypesDialogOpen] = useState(false)
+  const [newTypeName, setNewTypeName] = useState("")
+  const [savingType, setSavingType] = useState(false)
+  const [deletingTypeId, setDeletingTypeId] = useState<number | null>(null)
 
   // Form state
   const emptyForm = {
@@ -213,12 +322,22 @@ export default function SuppliesPage() {
     url: "",
     isOutofStock: false,
     isArchived: false,
+    image: null as any,
   }
   const [formData, setFormData] = useState(emptyForm)
+
+  const resetPhotoState = () => {
+    setPhotoFile(null)
+    setPhotoPreview(null)
+    setIsUploadingPhoto(false)
+    if (fileInputRef.current) fileInputRef.current.value = ""
+    if (cameraInputRef.current) cameraInputRef.current.value = ""
+  }
 
   const handleAddItem = () => {
     setEditingItem(null)
     setFormData(emptyForm)
+    resetPhotoState()
     setSheetOpen(true)
   }
 
@@ -235,13 +354,76 @@ export default function SuppliesPage() {
       url: item.url || "",
       isOutofStock: !!item.isOutofStock,
       isArchived: !!item.isArchived,
+      image: item.image || null,
     })
+    resetPhotoState()
+    setPhotoPreview(getPhotoUrl(item.image))
     setSheetOpen(true)
   }
 
   const handleDeleteClick = (item: SupplyItem) => {
     setItemToDelete(item)
     setDeleteConfirmOpen(true)
+  }
+
+  // Smart thumbnail tap: preview if photo exists, otherwise open camera directly
+  const handleThumbTap = (item: SupplyItem) => {
+    if (inlineUploadingId === item.id) return
+    if (getPhotoUrl(item.image)) {
+      setLightboxItem(item)
+    } else {
+      if (!isAdmin) {
+        toast.error("Only admins can add photos")
+        return
+      }
+      pendingInlineItemRef.current = item
+      // Reset to allow re-selecting the same file
+      if (inlineCameraInputRef.current) {
+        inlineCameraInputRef.current.value = ""
+        inlineCameraInputRef.current.click()
+      }
+    }
+  }
+
+  const handleInlineCameraChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    const targetItem = pendingInlineItemRef.current
+    pendingInlineItemRef.current = null
+    if (e.target) e.target.value = ""
+    if (!file || !targetItem) return
+
+    setInlineUploadingId(targetItem.id)
+
+    // Optimistic preview from data URL
+    const optimisticUrl = await new Promise<string | null>((resolve) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result as string)
+      reader.onerror = () => resolve(null)
+      reader.readAsDataURL(file)
+    })
+    if (optimisticUrl) {
+      mutate(
+        SWR_KEY,
+        (current: SupplyItem[] | undefined) =>
+          current?.map((it) =>
+            it.id === targetItem.id ? { ...it, image: { url: optimisticUrl } } : it
+          ),
+        false
+      )
+    }
+
+    try {
+      const uploaded = await uploadImageToXano(file)
+      await updateExpeditionsSuppliesItem(targetItem.id, { image: uploaded })
+      mutate(SWR_KEY)
+      toast.success("Photo added")
+    } catch (error) {
+      console.error("Inline photo upload failed:", error)
+      toast.error("Failed to upload photo")
+      mutate(SWR_KEY)
+    } finally {
+      setInlineUploadingId(null)
+    }
   }
 
   const handleDeleteConfirm = async () => {
@@ -259,6 +441,22 @@ export default function SuppliesPage() {
     }
   }
 
+  const handlePhotoSelected = (file: File | null) => {
+    if (!file) return
+    setPhotoFile(file)
+    const reader = new FileReader()
+    reader.onload = (e) => setPhotoPreview(e.target?.result as string)
+    reader.readAsDataURL(file)
+  }
+
+  const handleClearPhoto = () => {
+    setPhotoFile(null)
+    setPhotoPreview(null)
+    setFormData((prev) => ({ ...prev, image: null }))
+    if (fileInputRef.current) fileInputRef.current.value = ""
+    if (cameraInputRef.current) cameraInputRef.current.value = ""
+  }
+
   const handleSubmit = async () => {
     if (!formData.name.trim()) {
       toast.error("Item name is required")
@@ -267,17 +465,28 @@ export default function SuppliesPage() {
 
     setIsSubmitting(true)
     try {
+      let imageData = formData.image
+      if (photoFile) {
+        setIsUploadingPhoto(true)
+        try {
+          imageData = await uploadImageToXano(photoFile)
+        } finally {
+          setIsUploadingPhoto(false)
+        }
+      }
+
       const submitData = {
         name: formData.name.trim(),
         type: formData.type,
-        size: formData.size.trim(),
-        location: formData.location.trim(),
+        size: (formData.size || "").trim(),
+        location: (formData.location || "").trim(),
         notes: formData.notes,
         quantity: formData.quantity === "" ? 0 : Number(formData.quantity),
         cost: formData.cost === "" ? 0 : Number(formData.cost),
-        url: formData.url.trim(),
+        url: (formData.url || "").trim(),
         isOutofStock: formData.isOutofStock,
         isArchived: formData.isArchived,
+        image: imageData,
       }
 
       if (editingItem) {
@@ -297,23 +506,40 @@ export default function SuppliesPage() {
     }
   }
 
-  // Filter out archived, group by type
+  // Comparators
+  const compareByLocation = (a: SupplyItem, b: SupplyItem) => {
+    const al = (a.location || "").toLowerCase()
+    const bl = (b.location || "").toLowerCase()
+    // Items without a location sort last
+    if (!al && bl) return 1
+    if (al && !bl) return -1
+    if (al !== bl) return al.localeCompare(bl)
+    return (a.name || "").localeCompare(b.name || "")
+  }
+  const compareByName = (a: SupplyItem, b: SupplyItem) =>
+    (a.name || "").localeCompare(b.name || "")
+  const comparator = sortMode === "location" ? compareByLocation : compareByName
+
+  // Build groups: either by type, or a single flat "All" group
   const groupedItems = useMemo(() => {
     const items = ((supplyItems || []) as SupplyItem[]).filter((i) => !i.isArchived)
-    const groupMap = new Map<string, SupplyItem[]>()
 
+    if (groupMode === "none") {
+      const sorted = [...items].sort(comparator)
+      return [{ type: "All Items", items: sorted }]
+    }
+
+    const groupMap = new Map<string, SupplyItem[]>()
     items.forEach((item) => {
       const key = item.type || "Uncategorized"
-      if (!groupMap.has(key)) {
-        groupMap.set(key, [])
-      }
+      if (!groupMap.has(key)) groupMap.set(key, [])
       groupMap.get(key)!.push(item)
     })
 
     const groups: { type: string; items: SupplyItem[] }[] = []
     const sortedKeys = [...groupMap.keys()].sort((a, b) => {
-      const aIdx = TYPE_OPTIONS.indexOf(a)
-      const bIdx = TYPE_OPTIONS.indexOf(b)
+      const aIdx = typeOptions.indexOf(a)
+      const bIdx = typeOptions.indexOf(b)
       if (aIdx === -1 && bIdx === -1) return a.localeCompare(b)
       if (aIdx === -1) return 1
       if (bIdx === -1) return -1
@@ -321,13 +547,12 @@ export default function SuppliesPage() {
     })
 
     sortedKeys.forEach((key) => {
-      const groupItems = groupMap.get(key)!
-      groupItems.sort((a, b) => a.name.localeCompare(b.name))
+      const groupItems = groupMap.get(key)!.slice().sort(comparator)
       groups.push({ type: key, items: groupItems })
     })
 
     return groups
-  }, [supplyItems])
+  }, [supplyItems, groupMode, comparator, typeOptions])
 
   // Split into in-stock / out-of-stock
   const { inStockGroups, outOfStockGroups } = useMemo(() => {
@@ -350,11 +575,46 @@ export default function SuppliesPage() {
 
   const items = ((supplyItems || []) as SupplyItem[]).filter((i) => !i.isArchived)
 
+  // Types manager handlers
+  const handleAddType = async () => {
+    const name = newTypeName.trim()
+    if (!name) return
+    if (typeOptions.includes(name)) {
+      toast.error("That type already exists")
+      return
+    }
+    setSavingType(true)
+    try {
+      await createExpeditionSupplyType({ name })
+      mutate(TYPES_SWR_KEY)
+      setNewTypeName("")
+      toast.success("Type added")
+    } catch {
+      toast.error("Failed to add type")
+    } finally {
+      setSavingType(false)
+    }
+  }
+
+  const handleDeleteType = async (id: number) => {
+    setDeletingTypeId(id)
+    try {
+      await deleteExpeditionSupplyType(id)
+      mutate(TYPES_SWR_KEY)
+      toast.success("Type deleted")
+    } catch {
+      toast.error("Failed to delete type")
+    } finally {
+      setDeletingTypeId(null)
+    }
+  }
+
   const renderTableHeaders = () => (
     <TableRow className="border-b bg-gray-50/30 hover:bg-gray-50/30">
-      <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[22%]">Name</TableHead>
-      <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[10%]">Size</TableHead>
-      <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 text-center w-[14%]">Quantity</TableHead>
+      <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[8%]">Photo</TableHead>
+      <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[18%]">Name</TableHead>
+      <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[8%]">Size</TableHead>
+      <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 text-center w-[12%]">Quantity</TableHead>
       <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden md:table-cell w-[14%]">Location</TableHead>
       <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden md:table-cell w-[24%]">Notes</TableHead>
       <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600 text-right w-[16%]">Actions</TableHead>
@@ -366,10 +626,18 @@ export default function SuppliesPage() {
       key={item.id}
       className="border-b last:border-0 hover:bg-gray-50/50 transition-all duration-300"
     >
-      <TableCell className="h-12 px-4 sm:px-6 overflow-hidden">
+      <TableCell className="h-14 px-4 sm:px-6">
+        <ImageThumb
+          image={item.image}
+          name={item.name}
+          isUploading={inlineUploadingId === item.id}
+          onClick={() => handleThumbTap(item)}
+        />
+      </TableCell>
+      <TableCell className="h-14 px-4 sm:px-6 overflow-hidden">
         <span className={`font-medium truncate block ${muted ? "text-gray-400" : "text-gray-900"}`}>{item.name}</span>
       </TableCell>
-      <TableCell className="h-12 px-4 sm:px-6 overflow-hidden">
+      <TableCell className="h-14 px-4 sm:px-6 overflow-hidden">
         {item.size ? (
           <span className={`text-sm truncate block ${muted ? "text-gray-400" : "text-gray-600"}`} title={item.size}>
             {item.size}
@@ -378,14 +646,14 @@ export default function SuppliesPage() {
           <span className="text-sm text-gray-400">—</span>
         )}
       </TableCell>
-      <TableCell className="h-12 px-4 sm:px-6 text-center">
+      <TableCell className="h-14 px-4 sm:px-6 text-center">
         <StepperNumberCell
           value={item.quantity ?? 0}
           itemId={item.id}
           field="quantity"
         />
       </TableCell>
-      <TableCell className="h-12 px-4 sm:px-6 hidden md:table-cell overflow-hidden">
+      <TableCell className="h-14 px-4 sm:px-6 hidden md:table-cell overflow-hidden">
         {item.location ? (
           <span className={`text-sm truncate block ${muted ? "text-gray-400" : "text-gray-600"}`} title={item.location}>
             {item.location}
@@ -394,7 +662,7 @@ export default function SuppliesPage() {
           <span className="text-sm text-gray-400">—</span>
         )}
       </TableCell>
-      <TableCell className="h-12 px-4 sm:px-6 hidden md:table-cell overflow-hidden">
+      <TableCell className="h-14 px-4 sm:px-6 hidden md:table-cell overflow-hidden">
         {item.notes ? (
           <span className={`text-sm truncate block ${muted ? "text-gray-400" : "text-gray-600"}`} title={item.notes}>
             {item.notes}
@@ -403,7 +671,7 @@ export default function SuppliesPage() {
           <span className="text-sm text-gray-400">—</span>
         )}
       </TableCell>
-      <TableCell className="h-12 px-2 text-right">
+      <TableCell className="h-14 px-2 text-right">
         <div className="flex items-center justify-end gap-0.5">
           {item.url && (
             <a
@@ -449,7 +717,7 @@ export default function SuppliesPage() {
 
   const renderGroupHeader = (type: string, count: number) => (
     <TableRow className="bg-gray-50/80 hover:bg-gray-50/80 border-b">
-      <TableCell colSpan={6} className="h-9 px-4 sm:px-6 py-0">
+      <TableCell colSpan={7} className="h-9 px-4 sm:px-6 py-0">
         <div className="flex items-center gap-2">
           <Package className="h-3.5 w-3.5 text-gray-400" />
           <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
@@ -463,26 +731,83 @@ export default function SuppliesPage() {
     </TableRow>
   )
 
-  const isStudentType = formData.type === "Student"
+  const isStudentType = formData.type === "Student" || formData.type === "Students"
+  const lightboxUrl = lightboxItem ? getPhotoUrl(lightboxItem.image) : null
+
+  // Preserve legacy type values not present in the API list (so existing items aren't reassigned blindly)
+  const typeSelectOptions = useMemo(() => {
+    if (formData.type && !typeOptions.includes(formData.type)) {
+      return [...typeOptions, formData.type]
+    }
+    return typeOptions
+  }, [typeOptions, formData.type])
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Hidden input driven by tap-on-empty-thumbnail. capture="environment" opens the rear camera on mobile. */}
+      <input
+        ref={inlineCameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={handleInlineCameraChange}
+      />
       <main className="container mx-auto px-4 py-6 space-y-6">
         <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
           {/* Header */}
-          <div className="px-4 sm:px-6 py-4 border-b bg-gray-50/50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="px-4 sm:px-6 py-4 border-b bg-gray-50/50 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="text-lg font-semibold">Supplies Inventory</h2>
               <p className="text-sm text-gray-600 mt-1">
-                Track general supplies — medical, school, deck, student items, and more
+                Track general supplies — medical, school, deck, kitchen, cleaning, and more
               </p>
             </div>
-            {isAdmin && (
-              <Button size="sm" onClick={handleAddItem} className="cursor-pointer">
-                <PlusCircle className="h-4 w-4 mr-2" />
-                Add Item
-              </Button>
-            )}
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Sort + Group controls */}
+              <div className="flex items-center gap-1 text-xs text-gray-500">
+                <span className="hidden sm:inline">Sort</span>
+                <select
+                  value={sortMode}
+                  onChange={(e) => setSortMode(e.target.value as SortMode)}
+                  className="h-8 rounded-md border border-input bg-transparent pl-2 pr-6 text-xs shadow-sm cursor-pointer"
+                  aria-label="Sort items by"
+                >
+                  <option value="name">Name</option>
+                  <option value="location">Location</option>
+                </select>
+              </div>
+              <div className="flex items-center gap-1 text-xs text-gray-500">
+                <span className="hidden sm:inline">Group</span>
+                <select
+                  value={groupMode}
+                  onChange={(e) => setGroupMode(e.target.value as GroupMode)}
+                  className="h-8 rounded-md border border-input bg-transparent pl-2 pr-6 text-xs shadow-sm cursor-pointer"
+                  aria-label="Group items by"
+                >
+                  <option value="type">By Type</option>
+                  <option value="none">None</option>
+                </select>
+              </div>
+              {isAdmin && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setTypesDialogOpen(true)}
+                  className="cursor-pointer"
+                  title="Manage supply types"
+                >
+                  <Tags className="h-4 w-4 mr-2" />
+                  Types
+                </Button>
+              )}
+              {isAdmin && (
+                <Button size="sm" onClick={handleAddItem} className="cursor-pointer">
+                  <PlusCircle className="h-4 w-4 mr-2" />
+                  Add Item
+                </Button>
+              )}
+            </div>
           </div>
 
           {/* Table */}
@@ -492,12 +817,13 @@ export default function SuppliesPage() {
               <TableBody>
                 {Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                    <TableCell className="h-12 px-4 sm:px-6"><Skeleton className="h-4 w-32" /></TableCell>
-                    <TableCell className="h-12 px-4 sm:px-6"><Skeleton className="h-4 w-12" /></TableCell>
-                    <TableCell className="h-12 px-4 sm:px-6"><Skeleton className="h-4 w-10 mx-auto" /></TableCell>
-                    <TableCell className="h-12 px-4 sm:px-6 hidden md:table-cell"><Skeleton className="h-4 w-24" /></TableCell>
-                    <TableCell className="h-12 px-4 sm:px-6 hidden md:table-cell"><Skeleton className="h-4 w-48" /></TableCell>
-                    <TableCell className="h-12 px-2">
+                    <TableCell className="h-14 px-4 sm:px-6"><Skeleton className="h-10 w-10 rounded-md" /></TableCell>
+                    <TableCell className="h-14 px-4 sm:px-6"><Skeleton className="h-4 w-32" /></TableCell>
+                    <TableCell className="h-14 px-4 sm:px-6"><Skeleton className="h-4 w-12" /></TableCell>
+                    <TableCell className="h-14 px-4 sm:px-6"><Skeleton className="h-4 w-10 mx-auto" /></TableCell>
+                    <TableCell className="h-14 px-4 sm:px-6 hidden md:table-cell"><Skeleton className="h-4 w-24" /></TableCell>
+                    <TableCell className="h-14 px-4 sm:px-6 hidden md:table-cell"><Skeleton className="h-4 w-48" /></TableCell>
+                    <TableCell className="h-14 px-2">
                       <div className="flex items-center justify-end gap-0.5">
                         <Skeleton className="h-5 w-5 rounded" />
                         <Skeleton className="h-5 w-5 rounded" />
@@ -528,7 +854,7 @@ export default function SuppliesPage() {
               <TableBody>
                 {inStockGroups.map((group) => (
                   <React.Fragment key={group.type}>
-                    {renderGroupHeader(group.type, group.items.length)}
+                    {groupMode === "type" && renderGroupHeader(group.type, group.items.length)}
                     {group.items.map((item) => renderItemRow(item, false))}
                   </React.Fragment>
                 ))}
@@ -550,7 +876,7 @@ export default function SuppliesPage() {
               <TableBody>
                 {outOfStockGroups.map((group) => (
                   <React.Fragment key={`oos_${group.type}`}>
-                    {renderGroupHeader(group.type, group.items.length)}
+                    {groupMode === "type" && renderGroupHeader(group.type, group.items.length)}
                     {group.items.map((item) => renderItemRow(item, true))}
                   </React.Fragment>
                 ))}
@@ -587,6 +913,87 @@ export default function SuppliesPage() {
           </SheetHeader>
 
           <div className="flex-1 overflow-y-auto p-6 space-y-5">
+            {/* Photo */}
+            <div className="space-y-2">
+              <Label>Photo</Label>
+              <input
+                ref={cameraInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="hidden"
+                onChange={(e) => handlePhotoSelected(e.target.files?.[0] || null)}
+              />
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => handlePhotoSelected(e.target.files?.[0] || null)}
+              />
+              {/* Full-width preview */}
+              <div className="w-full aspect-[4/3] rounded-lg overflow-hidden bg-gray-100 border border-gray-200 relative">
+                {photoPreview ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={photoPreview}
+                    alt={formData.name || "Item photo"}
+                    className="object-cover w-full h-full"
+                  />
+                ) : (
+                  <div className="w-full h-full flex flex-col items-center justify-center text-gray-300 gap-1">
+                    <ImagePlus className="h-10 w-10" />
+                    <span className="text-xs">No photo yet</span>
+                  </div>
+                )}
+                {isUploadingPhoto && (
+                  <div className="absolute inset-0 bg-white/70 flex items-center justify-center">
+                    <Spinner className="h-6 w-6" />
+                  </div>
+                )}
+              </div>
+              {/* Inline action buttons */}
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => cameraInputRef.current?.click()}
+                  disabled={!isAdmin}
+                  className="cursor-pointer w-full"
+                >
+                  <Camera className="h-4 w-4 mr-2" />
+                  Take photo
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={!isAdmin}
+                  className="cursor-pointer w-full"
+                >
+                  <ImagePlus className="h-4 w-4 mr-2" />
+                  Choose file
+                </Button>
+              </div>
+              {(photoPreview || formData.image) && isAdmin && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleClearPhoto}
+                  className="cursor-pointer w-full text-red-600 hover:text-red-700 hover:bg-red-50"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Remove photo
+                </Button>
+              )}
+              <p className="text-xs text-gray-500">
+                Tap “Take photo” on mobile to open the camera, or “Choose file” to upload from your device.
+              </p>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="name">Name *</Label>
               <Input
@@ -608,10 +1015,19 @@ export default function SuppliesPage() {
                 className="flex h-9 w-full rounded-md border border-input bg-transparent pl-3 pr-8 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <option value="">Select type</option>
-                {TYPE_OPTIONS.map((t) => (
+                {typeSelectOptions.map((t) => (
                   <option key={t} value={t}>{t}</option>
                 ))}
               </select>
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => setTypesDialogOpen(true)}
+                  className="text-xs text-blue-600 hover:underline cursor-pointer"
+                >
+                  Manage types…
+                </button>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -776,13 +1192,13 @@ export default function SuppliesPage() {
                 <Button
                   size="sm"
                   onClick={handleSubmit}
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || isUploadingPhoto}
                   className="cursor-pointer"
                 >
-                  {isSubmitting ? (
+                  {isSubmitting || isUploadingPhoto ? (
                     <>
                       <Spinner className="h-4 w-4 mr-2" />
-                      Saving...
+                      {isUploadingPhoto ? "Uploading…" : "Saving..."}
                     </>
                   ) : editingItem ? (
                     "Update"
@@ -822,6 +1238,105 @@ export default function SuppliesPage() {
               Delete
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Types Manager Dialog */}
+      <Dialog open={typesDialogOpen} onOpenChange={setTypesDialogOpen}>
+        <DialogContent className="sm:max-w-md [&>button]:cursor-pointer">
+          <DialogHeader>
+            <DialogTitle>Supply Types</DialogTitle>
+            <DialogDescription>
+              Manage the type categories used across the supplies inventory.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {isAdmin && (
+              <div className="flex gap-2">
+                <Input
+                  placeholder="New type name (e.g., Kitchen Utensils)"
+                  value={newTypeName}
+                  onChange={(e) => setNewTypeName(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleAddType()}
+                  className="flex-1"
+                />
+                <Button
+                  onClick={handleAddType}
+                  disabled={savingType || !newTypeName.trim()}
+                  className="cursor-pointer"
+                >
+                  {savingType ? <Spinner className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+                </Button>
+              </div>
+            )}
+            <div className="border rounded-lg divide-y max-h-[320px] overflow-y-auto">
+              {((typesData || []) as SupplyType[]).length === 0 ? (
+                <div className="p-4 text-center text-sm text-gray-400">No types yet</div>
+              ) : (
+                (typesData as SupplyType[]).map((t) => (
+                  <div key={t.id} className="flex items-center justify-between px-3 py-2.5">
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-3.5 w-3.5 text-gray-400" />
+                      <span className="text-sm text-gray-900">{t.name}</span>
+                    </div>
+                    {isAdmin && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 cursor-pointer text-gray-400 hover:text-red-600"
+                        onClick={() => handleDeleteType(t.id)}
+                        disabled={deletingTypeId === t.id}
+                      >
+                        {deletingTypeId === t.id ? <Spinner className="h-3 w-3" /> : <Trash2 className="h-3.5 w-3.5" />}
+                      </Button>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Lightbox */}
+      <Dialog open={!!lightboxItem} onOpenChange={(open) => !open && setLightboxItem(null)}>
+        <DialogContent className="sm:max-w-2xl p-0 overflow-hidden [&>button]:cursor-pointer">
+          <DialogHeader className="p-4 border-b">
+            <DialogTitle>{lightboxItem?.name}</DialogTitle>
+            <DialogDescription>
+              {[lightboxItem?.type, lightboxItem?.location].filter(Boolean).join(" • ") || "Supply item"}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="bg-black flex items-center justify-center max-h-[70vh]">
+            {lightboxUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={lightboxUrl}
+                alt={lightboxItem?.name || "Supply item"}
+                className="object-contain max-h-[70vh] w-auto"
+              />
+            ) : (
+              <div className="p-12 text-gray-400 flex flex-col items-center gap-2">
+                <ImagePlus className="h-10 w-10" />
+                <p className="text-sm">No image yet</p>
+                {isAdmin && lightboxItem && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      const item = lightboxItem
+                      setLightboxItem(null)
+                      handleEditItem(item)
+                    }}
+                    className="cursor-pointer mt-2"
+                  >
+                    <Camera className="h-4 w-4 mr-2" />
+                    Add photo
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>

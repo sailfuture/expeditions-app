@@ -20,7 +20,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { ChevronDown, LogOut, Menu, Ship, Users, UserCog, ClipboardList, FileText, Tv, Calendar, BookOpen, ExternalLink, Boxes, ChefHat, MapPin, Shirt, BedDouble, Package } from "lucide-react"
+import { ChevronDown, LogOut, Menu, Ship, Users, UserCog, ClipboardList, FileText, Tv, Calendar, BookOpen, ExternalLink, Boxes, ChefHat, MapPin, Shirt, BedDouble, Package, Utensils } from "lucide-react"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -224,17 +224,42 @@ export function Navbar() {
                       <DropdownMenuTrigger className={cn(
                         navigationMenuTriggerStyle(),
                         "cursor-pointer flex items-center gap-1",
-                        (pathname === "/inventory" || pathname === "/uniform-inventory" || pathname === "/linen-inventory" || pathname === "/supplies" || pathname === "/locations") && "text-foreground",
+                        (pathname === "/meal-planning" || pathname.startsWith("/meal-planning/") || pathname === "/inventory" || pathname === "/galley-equipment") && "text-foreground",
+                      )}>
+                        Galley
+                        <ChevronDown className="h-3 w-3" />
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start" className="min-w-[160px]">
+                        <Link href="/meal-planning">
+                          <DropdownMenuItem className="cursor-pointer whitespace-nowrap">
+                            Cookbook
+                          </DropdownMenuItem>
+                        </Link>
+                        <Link href="/inventory">
+                          <DropdownMenuItem className="cursor-pointer whitespace-nowrap">
+                            Inventory
+                          </DropdownMenuItem>
+                        </Link>
+                        <Link href="/galley-equipment">
+                          <DropdownMenuItem className="cursor-pointer whitespace-nowrap">
+                            Equipment
+                          </DropdownMenuItem>
+                        </Link>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </NavigationMenuItem>
+
+                  <NavigationMenuItem>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger className={cn(
+                        navigationMenuTriggerStyle(),
+                        "cursor-pointer flex items-center gap-1",
+                        (pathname === "/uniform-inventory" || pathname === "/linen-inventory" || pathname === "/supplies" || pathname === "/locations") && "text-foreground",
                       )}>
                         Ship Inventory
                         <ChevronDown className="h-3 w-3" />
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="start" className="min-w-[160px]">
-                        <Link href="/inventory">
-                          <DropdownMenuItem className="cursor-pointer whitespace-nowrap">
-                            Galley
-                          </DropdownMenuItem>
-                        </Link>
                         <Link href="/uniform-inventory">
                           <DropdownMenuItem className="cursor-pointer whitespace-nowrap">
                             Uniforms
@@ -420,15 +445,33 @@ export function Navbar() {
                     </Link>
 
                     <div className="px-4 py-2 mt-2">
-                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Ship Inventory</p>
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Galley</p>
                     </div>
+                    <Link
+                      href="/meal-planning"
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors"
+                    >
+                      <BookOpen className="h-4 w-4 text-muted-foreground" />
+                      Cookbook
+                    </Link>
                     <Link
                       href="/inventory"
                       className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors"
                     >
                       <Boxes className="h-4 w-4 text-muted-foreground" />
-                      Galley
+                      Inventory
                     </Link>
+                    <Link
+                      href="/galley-equipment"
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors"
+                    >
+                      <Utensils className="h-4 w-4 text-muted-foreground" />
+                      Equipment
+                    </Link>
+
+                    <div className="px-4 py-2 mt-2">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Ship Inventory</p>
+                    </div>
                     <Link
                       href="/uniform-inventory"
                       className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors"

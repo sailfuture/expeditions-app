@@ -719,6 +719,30 @@ export async function getGalleyEquipment() {
   return xanoFetch<any[]>("/expedition_galley_equipment")
 }
 
+export async function createGalleyEquipment(data: {
+  name: string
+  category?: string
+  location?: string
+}) {
+  return xanoFetch<any>("/expedition_galley_equipment", {
+    method: "POST",
+    body: JSON.stringify(data),
+  })
+}
+
+export async function updateGalleyEquipment(id: number, data: Record<string, any>) {
+  return xanoFetch<any>(`/expedition_galley_equipment/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  })
+}
+
+export async function deleteGalleyEquipment(id: number) {
+  return xanoFetch<any>(`/expedition_galley_equipment/${id}`, {
+    method: "DELETE",
+  })
+}
+
 // ============ Expedition Inventory Locations ============
 export async function getExpeditionInventoryLocations() {
   return xanoFetch<any[]>("/expedition_inventory_locations")
@@ -1032,6 +1056,36 @@ export async function deleteExpeditionSupplyInventoryLocation(id: number) {
   return xanoFetch<any>(`/expedition_supply_inventory_locations/${id}`, {
     method: "DELETE",
   })
+}
+
+// ============ Expedition Supply Types ============
+export async function getExpeditionSupplyTypes() {
+  return xanoFetch<any[]>("/expedition_supply_types")
+}
+
+export async function createExpeditionSupplyType(data: { name: string }) {
+  return xanoFetch<any>("/expedition_supply_types", {
+    method: "POST",
+    body: JSON.stringify(data),
+  })
+}
+
+export async function deleteExpeditionSupplyType(id: number) {
+  return xanoFetch<any>(`/expedition_supply_types/${id}`, {
+    method: "DELETE",
+  })
+}
+
+// ============ Image upload ============
+export async function uploadImageToXano(file: File): Promise<any> {
+  const formData = new FormData()
+  formData.append("content", file)
+  const res = await fetch(`${XANO_BASE_URL}/upload/image`, {
+    method: "POST",
+    body: formData,
+  })
+  if (!res.ok) throw new Error(`Image upload failed: ${res.status}`)
+  return res.json()
 }
 
 // ============ Expedition Linen/Uniform Inventory Locations ============

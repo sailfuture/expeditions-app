@@ -341,11 +341,11 @@ export function Navbar() {
                     <Menu className="h-5 w-5" />
                   </Button>
                 </SheetTrigger>
-                <SheetContent side="right" className="w-72 p-0">
-                  <SheetHeader className="px-4 py-4 border-b">
+                <SheetContent side="right" className="w-72 p-0 gap-0">
+                  <SheetHeader className="px-4 py-4 border-b shrink-0">
                     <SheetTitle className="text-left">Navigation</SheetTitle>
                   </SheetHeader>
-                  <nav className="flex flex-col py-2">
+                  <nav className="flex flex-col py-2 flex-1 overflow-y-auto min-h-0 overscroll-contain">
                     <Link
                       href="/expeditions"
                       className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium hover:bg-accent transition-colors"

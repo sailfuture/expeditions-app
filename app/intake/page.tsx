@@ -233,7 +233,7 @@ export default function IntakeFormPage() {
               />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">SailFuture Expedition Student Information Form</h1>
+              <h1 className="text-2xl font-bold text-gray-900">Whatever It Takes Expeditions Inc. Student Information Form</h1>
               <p className="text-gray-500 text-sm mt-1">Complete all fields to ensure your student's health, safety, and support during international sailing expeditions. All information is kept confidential.</p>
             </div>
           </div>

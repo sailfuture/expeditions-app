@@ -33,7 +33,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
-import { PlusCircle, Pencil, Trash2, Shirt, Eye, Minus, Plus, X } from "lucide-react"
+import { PlusCircle, Trash2, Shirt, Minus, Plus, X } from "lucide-react"
 import {
   getExpeditionUniformInventory,
   createExpeditionUniformInventoryItem,
@@ -198,7 +198,6 @@ export default function UniformInventoryPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [itemToDelete, setItemToDelete] = useState<UniformItem | null>(null)
-  const [viewItem, setViewItem] = useState<UniformItem | null>(null)
 
   // Form state
   const [formData, setFormData] = useState({
@@ -217,7 +216,6 @@ export default function UniformInventoryPage() {
   }
 
   const handleEditItem = (item: UniformItem) => {
-    setViewItem(null)
     setEditingItem(item)
     setFormData({
       name: item.name || "",
@@ -231,7 +229,6 @@ export default function UniformInventoryPage() {
   }
 
   const handleDeleteClick = (item: UniformItem) => {
-    setViewItem(null)
     setItemToDelete(item)
     setDeleteConfirmOpen(true)
   }
@@ -443,7 +440,7 @@ export default function UniformInventoryPage() {
                     {group.items.map((item) => (
                       <TableRow
                         key={item.id}
-                        onClick={() => setViewItem(item)}
+                        onClick={() => handleEditItem(item)}
                         className="border-b last:border-0 hover:bg-gray-50/50 transition-all duration-300 cursor-pointer"
                       >
                         <TableCell className="h-12 px-2 md:px-6 overflow-hidden">
@@ -471,38 +468,22 @@ export default function UniformInventoryPage() {
                             <span className="text-sm text-gray-400">—</span>
                           )}
                         </TableCell>
-                        <TableCell
-                          className="h-12 px-2 text-right hidden md:table-cell"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <div className="flex items-center justify-end gap-0.5">
-                            <button
-                              onClick={() => setViewItem(item)}
-                              className="h-7 w-7 flex items-center justify-center rounded hover:bg-gray-100 transition-colors cursor-pointer touch-manipulation"
-                              title="View"
-                            >
-                              <Eye className="h-3.5 w-3.5 text-gray-400" />
-                            </button>
-                            {isAdmin && (
-                              <>
-                                <button
-                                  onClick={() => handleEditItem(item)}
-                                  className="h-7 w-7 flex items-center justify-center rounded hover:bg-gray-100 transition-colors cursor-pointer touch-manipulation"
-                                  title="Edit"
-                                >
-                                  <Pencil className="h-3.5 w-3.5 text-gray-400" />
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteClick(item)}
-                                  className="h-7 w-7 flex items-center justify-center rounded hover:bg-gray-100 transition-colors cursor-pointer touch-manipulation"
-                                  title="Delete"
-                                >
-                                  <Trash2 className="h-3.5 w-3.5 text-gray-400" />
-                                </button>
-                              </>
-                            )}
-                          </div>
-                        </TableCell>
+                        {isAdmin && (
+                          <TableCell
+                            className="h-12 px-2 text-right hidden md:table-cell"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <div className="flex items-center justify-end gap-0.5">
+                              <button
+                                onClick={() => handleDeleteClick(item)}
+                                className="h-7 w-7 flex items-center justify-center rounded hover:bg-gray-100 transition-colors cursor-pointer touch-manipulation"
+                                title="Delete"
+                              >
+                                <Trash2 className="h-3.5 w-3.5 text-gray-400" />
+                              </button>
+                            </div>
+                          </TableCell>
+                        )}
                       </TableRow>
                     ))}
                   </React.Fragment>
@@ -550,7 +531,7 @@ export default function UniformInventoryPage() {
                     {group.items.map((item) => (
                       <TableRow
                         key={item.id}
-                        onClick={() => setViewItem(item)}
+                        onClick={() => handleEditItem(item)}
                         className="border-b last:border-0 hover:bg-gray-50/50 transition-all duration-300 cursor-pointer"
                       >
                         <TableCell className="h-12 px-2 md:px-6 overflow-hidden">
@@ -578,38 +559,22 @@ export default function UniformInventoryPage() {
                             <span className="text-sm text-gray-400">—</span>
                           )}
                         </TableCell>
-                        <TableCell
-                          className="h-12 px-2 text-right hidden md:table-cell"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <div className="flex items-center justify-end gap-0.5">
-                            <button
-                              onClick={() => setViewItem(item)}
-                              className="h-7 w-7 flex items-center justify-center rounded hover:bg-gray-100 transition-colors cursor-pointer touch-manipulation"
-                              title="View"
-                            >
-                              <Eye className="h-3.5 w-3.5 text-gray-400" />
-                            </button>
-                            {isAdmin && (
-                              <>
-                                <button
-                                  onClick={() => handleEditItem(item)}
-                                  className="h-7 w-7 flex items-center justify-center rounded hover:bg-gray-100 transition-colors cursor-pointer touch-manipulation"
-                                  title="Edit"
-                                >
-                                  <Pencil className="h-3.5 w-3.5 text-gray-400" />
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteClick(item)}
-                                  className="h-7 w-7 flex items-center justify-center rounded hover:bg-gray-100 transition-colors cursor-pointer touch-manipulation"
-                                  title="Delete"
-                                >
-                                  <Trash2 className="h-3.5 w-3.5 text-gray-400" />
-                                </button>
-                              </>
-                            )}
-                          </div>
-                        </TableCell>
+                        {isAdmin && (
+                          <TableCell
+                            className="h-12 px-2 text-right hidden md:table-cell"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <div className="flex items-center justify-end gap-0.5">
+                              <button
+                                onClick={() => handleDeleteClick(item)}
+                                className="h-7 w-7 flex items-center justify-center rounded hover:bg-gray-100 transition-colors cursor-pointer touch-manipulation"
+                                title="Delete"
+                              >
+                                <Trash2 className="h-3.5 w-3.5 text-gray-400" />
+                              </button>
+                            </div>
+                          </TableCell>
+                        )}
                       </TableRow>
                     ))}
                   </React.Fragment>
@@ -620,63 +585,6 @@ export default function UniformInventoryPage() {
         )}
       </main>
 
-      {/* View Item Dialog */}
-      <Dialog open={!!viewItem} onOpenChange={(open) => !open && setViewItem(null)}>
-        <DialogContent className="sm:max-w-[420px] [&>button]:cursor-pointer">
-          <DialogHeader>
-            <div className="flex items-center gap-2 flex-wrap pr-6">
-              <DialogTitle className="text-left">{viewItem?.type || viewItem?.name || "Item"}</DialogTitle>
-              {viewItem?.size && (
-                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-gray-100 text-gray-700">
-                  {viewItem.size}
-                </span>
-              )}
-            </div>
-            {viewItem?.name && viewItem.name !== viewItem.type && (
-              <DialogDescription className="text-left">{viewItem.name}</DialogDescription>
-            )}
-          </DialogHeader>
-
-          {viewItem && (
-            <div className="grid grid-cols-2 gap-4 py-1">
-              <div>
-                <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Color</p>
-                <p className="text-sm text-gray-900 mt-1 break-words">{viewItem.color || "—"}</p>
-              </div>
-              <div>
-                <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</p>
-                <p className="text-sm font-semibold text-gray-900 mt-1">{viewItem.quantity ?? 0}</p>
-              </div>
-              <div className="col-span-2">
-                <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Location</p>
-                <p className="text-sm text-gray-900 mt-1 break-words">{viewItem.location || "—"}</p>
-              </div>
-            </div>
-          )}
-
-          {isAdmin && viewItem && (
-            <DialogFooter className="!flex-row items-center !justify-between gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleDeleteClick(viewItem)}
-                className="cursor-pointer text-red-600 hover:text-red-700 hover:bg-red-50"
-              >
-                <Trash2 className="h-4 w-4 mr-1.5" />
-                Delete
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => handleEditItem(viewItem)}
-                className="cursor-pointer"
-              >
-                <Pencil className="h-4 w-4 mr-2" />
-                Edit
-              </Button>
-            </DialogFooter>
-          )}
-        </DialogContent>
-      </Dialog>
 
       {/* Add/Edit Sheet */}
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>

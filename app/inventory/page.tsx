@@ -41,7 +41,7 @@ import {
   ComboboxItem,
   ComboboxList,
 } from "@/components/ui/combobox"
-import { PlusCircle, Pencil, Trash2, Boxes, Eye, Minus, Plus, Search, MapPin, Check, X } from "lucide-react"
+import { PlusCircle, Trash2, Boxes, Minus, Plus, Search, MapPin, Check, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
   getExpeditionsInventory,
@@ -226,7 +226,6 @@ export default function InventoryPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [itemToDelete, setItemToDelete] = useState<InventoryItem | null>(null)
-  const [viewItem, setViewItem] = useState<InventoryItem | null>(null)
 
   // Bulk selection + bulk action dialogs
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
@@ -260,7 +259,6 @@ export default function InventoryPage() {
   }
 
   const handleEditItem = (item: InventoryItem) => {
-    setViewItem(null)
     setEditingItem(item)
     setFormData({
       name: item.name || "",
@@ -275,7 +273,6 @@ export default function InventoryPage() {
   }
 
   const handleDeleteClick = (item: InventoryItem) => {
-    setViewItem(null)
     setItemToDelete(item)
     setDeleteConfirmOpen(true)
   }
@@ -519,53 +516,58 @@ export default function InventoryPage() {
     }
   }
 
-  // Get bullet class for view dialog
-  const viewItemBulletClass = viewItem
-    ? typeBulletColorMap[typeColorLookup[viewItem.type] || "gray"] || "bg-gray-400"
-    : "bg-gray-400"
-
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Bulk action bar — sticky, only visible when something is selected */}
-      {isAdmin && selectedIds.size > 0 && (
-        <div className="sticky top-14 z-30 border-b bg-blue-600 text-white shadow-md">
-          <div className="container mx-auto px-4 py-2 flex items-center gap-2">
-            <span className="text-sm font-medium shrink-0">
-              {selectedIds.size} selected
-            </span>
-            <div className="flex-1" />
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() => setBulkMarkOosConfirmOpen(true)}
-              disabled={isBulkProcessing}
-              className="cursor-pointer h-8"
-              title="Mark selected as out of stock"
-            >
-              <Boxes className="h-4 w-4 md:mr-1.5" />
-              <span className="hidden md:inline">Mark Out of Stock</span>
-            </Button>
-            <Button
-              size="sm"
-              variant="destructive"
-              onClick={() => setBulkDeleteConfirmOpen(true)}
-              disabled={isBulkProcessing}
-              className="cursor-pointer h-8"
-              title="Delete selected"
-            >
-              <Trash2 className="h-4 w-4 md:mr-1.5" />
-              <span className="hidden md:inline">Delete</span>
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={clearSelection}
-              disabled={isBulkProcessing}
-              className="cursor-pointer h-8 text-white hover:bg-white/10 hover:text-white"
-              title="Clear selection"
-            >
-              <X className="h-4 w-4" />
-            </Button>
+      {/* Bulk action bar — sticky, slides in/out when items are selected */}
+      {isAdmin && (
+        <div
+          aria-hidden={selectedIds.size === 0}
+          className={cn(
+            "sticky top-14 z-30 overflow-hidden transition-all duration-200 ease-out",
+            selectedIds.size > 0
+              ? "max-h-16 opacity-100"
+              : "max-h-0 opacity-0 pointer-events-none"
+          )}
+        >
+          <div className="border-b bg-gray-800 text-white shadow-md">
+            <div className="container mx-auto px-4 py-2 flex items-center gap-2">
+              <span className="text-sm font-medium shrink-0">
+                {selectedIds.size} selected
+              </span>
+              <div className="flex-1" />
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => setBulkMarkOosConfirmOpen(true)}
+                disabled={isBulkProcessing}
+                className="cursor-pointer h-8"
+                title="Mark selected as out of stock"
+              >
+                <Boxes className="h-4 w-4 md:mr-1.5" />
+                <span className="hidden md:inline">Mark Out of Stock</span>
+              </Button>
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={() => setBulkDeleteConfirmOpen(true)}
+                disabled={isBulkProcessing}
+                className="cursor-pointer h-8"
+                title="Delete selected"
+              >
+                <Trash2 className="h-4 w-4 md:mr-1.5" />
+                <span className="hidden md:inline">Delete</span>
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={clearSelection}
+                disabled={isBulkProcessing}
+                className="cursor-pointer h-8 text-white hover:bg-white/10 hover:text-white"
+                title="Clear selection"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </div>
       )}
@@ -702,7 +704,7 @@ export default function InventoryPage() {
                       {group.items.map((item) => (
                         <TableRow
                           key={item.id}
-                          onClick={() => setViewItem(item)}
+                          onClick={() => handleEditItem(item)}
                           data-selected={selectedIds.has(item.id) ? "true" : undefined}
                           className="border-b last:border-0 hover:bg-gray-50/50 transition-all duration-300 cursor-pointer data-[selected=true]:bg-blue-50/60 data-[selected=true]:hover:bg-blue-50"
                         >
@@ -716,7 +718,7 @@ export default function InventoryPage() {
                                 checked={selectedIds.has(item.id)}
                                 onChange={() => toggleSelected(item.id)}
                                 aria-label={`Select ${item.name}`}
-                                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer touch-manipulation"
+                                className="h-4 w-4 rounded border-gray-300 accent-blue-600 cursor-pointer touch-manipulation"
                               />
                             </TableCell>
                           )}
@@ -763,33 +765,17 @@ export default function InventoryPage() {
                             className="h-12 px-2 text-right hidden md:table-cell"
                             onClick={(e) => e.stopPropagation()}
                           >
-                            <div className="flex items-center justify-end gap-0.5">
-                              <button
-                                onClick={() => setViewItem(item)}
-                                className="h-7 w-7 flex items-center justify-center rounded hover:bg-gray-100 transition-colors cursor-pointer touch-manipulation"
-                                title="View"
-                              >
-                                <Eye className="h-3.5 w-3.5 text-gray-400" />
-                              </button>
-                              {isAdmin && (
-                                <>
-                                  <button
-                                    onClick={() => handleEditItem(item)}
-                                    className="h-7 w-7 flex items-center justify-center rounded hover:bg-gray-100 transition-colors cursor-pointer touch-manipulation"
-                                    title="Edit"
-                                  >
-                                    <Pencil className="h-3.5 w-3.5 text-gray-400" />
-                                  </button>
-                                  <button
-                                    onClick={() => handleDeleteClick(item)}
-                                    className="h-7 w-7 flex items-center justify-center rounded hover:bg-gray-100 transition-colors cursor-pointer touch-manipulation"
-                                    title="Delete"
-                                  >
-                                    <Trash2 className="h-3.5 w-3.5 text-gray-400" />
-                                  </button>
-                                </>
-                              )}
-                            </div>
+                            {isAdmin && (
+                              <div className="flex items-center justify-end gap-0.5">
+                                <button
+                                  onClick={() => handleDeleteClick(item)}
+                                  className="h-7 w-7 flex items-center justify-center rounded hover:bg-gray-100 transition-colors cursor-pointer touch-manipulation"
+                                  title="Delete"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5 text-gray-400" />
+                                </button>
+                              </div>
+                            )}
                           </TableCell>
                         </TableRow>
                       ))}
@@ -858,7 +844,7 @@ export default function InventoryPage() {
                       {group.items.map((item) => (
                         <TableRow
                           key={item.id}
-                          onClick={() => setViewItem(item)}
+                          onClick={() => handleEditItem(item)}
                           data-selected={selectedIds.has(item.id) ? "true" : undefined}
                           className="border-b last:border-0 hover:bg-gray-50/50 transition-all duration-300 cursor-pointer data-[selected=true]:bg-blue-50/60 data-[selected=true]:hover:bg-blue-50"
                         >
@@ -872,7 +858,7 @@ export default function InventoryPage() {
                                 checked={selectedIds.has(item.id)}
                                 onChange={() => toggleSelected(item.id)}
                                 aria-label={`Select ${item.name}`}
-                                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer touch-manipulation"
+                                className="h-4 w-4 rounded border-gray-300 accent-blue-600 cursor-pointer touch-manipulation"
                               />
                             </TableCell>
                           )}
@@ -905,33 +891,17 @@ export default function InventoryPage() {
                             className="h-12 px-2 text-right hidden md:table-cell"
                             onClick={(e) => e.stopPropagation()}
                           >
-                            <div className="flex items-center justify-end gap-0.5">
-                              <button
-                                onClick={() => setViewItem(item)}
-                                className="h-7 w-7 flex items-center justify-center rounded hover:bg-gray-100 transition-colors cursor-pointer touch-manipulation"
-                                title="View"
-                              >
-                                <Eye className="h-3.5 w-3.5 text-gray-400" />
-                              </button>
-                              {isAdmin && (
-                                <>
-                                  <button
-                                    onClick={() => handleEditItem(item)}
-                                    className="h-7 w-7 flex items-center justify-center rounded hover:bg-gray-100 transition-colors cursor-pointer touch-manipulation"
-                                    title="Edit"
-                                  >
-                                    <Pencil className="h-3.5 w-3.5 text-gray-400" />
-                                  </button>
-                                  <button
-                                    onClick={() => handleDeleteClick(item)}
-                                    className="h-7 w-7 flex items-center justify-center rounded hover:bg-gray-100 transition-colors cursor-pointer touch-manipulation"
-                                    title="Delete"
-                                  >
-                                    <Trash2 className="h-3.5 w-3.5 text-gray-400" />
-                                  </button>
-                                </>
-                              )}
-                            </div>
+                            {isAdmin && (
+                              <div className="flex items-center justify-end gap-0.5">
+                                <button
+                                  onClick={() => handleDeleteClick(item)}
+                                  className="h-7 w-7 flex items-center justify-center rounded hover:bg-gray-100 transition-colors cursor-pointer touch-manipulation"
+                                  title="Delete"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5 text-gray-400" />
+                                </button>
+                              </div>
+                            )}
                           </TableCell>
                         </TableRow>
                       ))}
@@ -943,84 +913,6 @@ export default function InventoryPage() {
           </div>
         )}
       </main>
-
-      {/* View Item Dialog */}
-      <Dialog open={!!viewItem} onOpenChange={(open) => !open && setViewItem(null)}>
-        <DialogContent className="sm:max-w-[480px] [&>button]:cursor-pointer">
-          <DialogHeader>
-            <DialogTitle>{viewItem?.name}</DialogTitle>
-            <DialogDescription>
-              {viewItem?.type && (
-                <span className="inline-flex items-center gap-1.5">
-                  <span className={`w-2 h-2 rounded-full shrink-0 ${viewItemBulletClass}`} />
-                  {viewItem.type}
-                </span>
-              )}
-            </DialogDescription>
-          </DialogHeader>
-
-          {viewItem && (
-            <div className="space-y-4 py-2">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Location</p>
-                  <p className="text-sm text-gray-900 mt-1 break-words">{viewItem.location || "—"}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">{viewItem.isNotPackage ? "Quantity" : "Packages"}</p>
-                  <p className="text-sm text-gray-900 mt-1">{viewItem.packages ?? 0}</p>
-                </div>
-              </div>
-              {!viewItem.isNotPackage && (
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Oz / Package</p>
-                    <p className="text-sm text-gray-900 mt-1">{viewItem.oz_per_package ?? 0}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Total Weight</p>
-                    <p className="text-sm font-semibold text-gray-900 mt-1">
-                      {(viewItem.packages ?? 0) * (viewItem.oz_per_package ?? 0)}
-                      <span className="text-xs text-gray-400 ml-1">oz</span>
-                      <span className="text-gray-300 mx-1.5">/</span>
-                      {(((viewItem.packages ?? 0) * (viewItem.oz_per_package ?? 0)) / 16).toFixed(1)}
-                      <span className="text-xs text-gray-400 ml-1">lb</span>
-                    </p>
-                  </div>
-                </div>
-              )}
-              {viewItem.notes && (
-                <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Notes</p>
-                  <p className="text-sm text-gray-700 mt-1 whitespace-pre-wrap break-words">{viewItem.notes}</p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {isAdmin && viewItem && (
-            <DialogFooter className="!flex-row items-center !justify-between gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleDeleteClick(viewItem)}
-                className="cursor-pointer text-red-600 hover:text-red-700 hover:bg-red-50"
-              >
-                <Trash2 className="h-4 w-4 mr-1.5" />
-                Delete
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => handleEditItem(viewItem)}
-                className="cursor-pointer"
-              >
-                <Pencil className="h-4 w-4 mr-2" />
-                Edit
-              </Button>
-            </DialogFooter>
-          )}
-        </DialogContent>
-      </Dialog>
 
       {/* Add/Edit Sheet — modal={false} so the base-ui Combobox portal can receive
           clicks, with a manual overlay since Radix skips its overlay in non-modal mode. */}

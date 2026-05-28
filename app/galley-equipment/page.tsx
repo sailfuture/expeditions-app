@@ -35,10 +35,8 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
 import {
   PlusCircle,
-  Pencil,
   Trash2,
   ChefHat,
-  Eye,
   X,
 } from "lucide-react"
 import {
@@ -248,38 +246,22 @@ export default function GalleyEquipmentPage() {
           <span className="text-sm text-gray-400">—</span>
         )}
       </TableCell>
-      <TableCell
-        className="h-12 px-2 text-right hidden md:table-cell"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-end gap-0.5">
-          <button
-            onClick={() => handleEditItem(item)}
-            className="h-7 w-7 flex items-center justify-center rounded hover:bg-gray-100 transition-colors cursor-pointer touch-manipulation"
-            title="View / Edit"
-          >
-            <Eye className="h-3.5 w-3.5 text-gray-400" />
-          </button>
-          {isAdmin && (
-            <>
-              <button
-                onClick={() => handleEditItem(item)}
-                className="h-7 w-7 flex items-center justify-center rounded hover:bg-gray-100 transition-colors cursor-pointer touch-manipulation"
-                title="Edit"
-              >
-                <Pencil className="h-3.5 w-3.5 text-gray-400" />
-              </button>
-              <button
-                onClick={() => handleDeleteClick(item)}
-                className="h-7 w-7 flex items-center justify-center rounded hover:bg-gray-100 transition-colors cursor-pointer touch-manipulation"
-                title="Delete"
-              >
-                <Trash2 className="h-3.5 w-3.5 text-gray-400" />
-              </button>
-            </>
-          )}
-        </div>
-      </TableCell>
+      {isAdmin && (
+        <TableCell
+          className="h-12 px-2 text-right hidden md:table-cell"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center justify-end gap-0.5">
+            <button
+              onClick={() => handleDeleteClick(item)}
+              className="h-7 w-7 flex items-center justify-center rounded hover:bg-gray-100 transition-colors cursor-pointer touch-manipulation"
+              title="Delete"
+            >
+              <Trash2 className="h-3.5 w-3.5 text-gray-400" />
+            </button>
+          </div>
+        </TableCell>
+      )}
     </TableRow>
   )
 

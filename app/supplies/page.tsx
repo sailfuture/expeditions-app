@@ -37,10 +37,8 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
 import {
   PlusCircle,
-  Pencil,
   Trash2,
   Package,
-  Eye,
   Minus,
   Plus,
   ExternalLink,
@@ -695,30 +693,14 @@ export default function SuppliesPage() {
               <ExternalLink className="h-3.5 w-3.5" />
             </a>
           )}
-          <button
-            onClick={() => handleEditItem(item)}
-            className="h-7 w-7 flex items-center justify-center rounded hover:bg-gray-100 transition-colors cursor-pointer touch-manipulation"
-            title="View / Edit"
-          >
-            <Eye className="h-3.5 w-3.5 text-gray-400" />
-          </button>
           {isAdmin && (
-            <>
-              <button
-                onClick={() => handleEditItem(item)}
-                className="h-7 w-7 flex items-center justify-center rounded hover:bg-gray-100 transition-colors cursor-pointer touch-manipulation"
-                title="Edit"
-              >
-                <Pencil className="h-3.5 w-3.5 text-gray-400" />
-              </button>
-              <button
-                onClick={() => handleDeleteClick(item)}
-                className="h-7 w-7 flex items-center justify-center rounded hover:bg-gray-100 transition-colors cursor-pointer touch-manipulation"
-                title="Delete"
-              >
-                <Trash2 className="h-3.5 w-3.5 text-gray-400" />
-              </button>
-            </>
+            <button
+              onClick={() => handleDeleteClick(item)}
+              className="h-7 w-7 flex items-center justify-center rounded hover:bg-gray-100 transition-colors cursor-pointer touch-manipulation"
+              title="Delete"
+            >
+              <Trash2 className="h-3.5 w-3.5 text-gray-400" />
+            </button>
           )}
         </div>
       </TableCell>

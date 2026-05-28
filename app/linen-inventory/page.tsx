@@ -125,7 +125,10 @@ function StepperNumberCell({
   }
 
   return (
-    <div className="inline-flex items-center gap-1">
+    <div
+      className="inline-flex items-center gap-1"
+      onClick={(e) => e.stopPropagation()}
+    >
       <button
         onClick={() => handleStep(-1)}
         className="h-6 w-6 flex items-center justify-center rounded border border-gray-300 hover:bg-gray-100 transition-colors cursor-pointer touch-manipulation"
@@ -336,50 +339,54 @@ export default function LinenInventoryPage() {
 
   const renderTableHeaders = () => (
     <TableRow className="border-b bg-gray-50/30 hover:bg-gray-50/30">
-      <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[20%]">Name</TableHead>
-      <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[10%]">Size</TableHead>
-      <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden md:table-cell w-[12%]">Color</TableHead>
-      <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden lg:table-cell w-[12%]">Brand</TableHead>
-      <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 text-center w-[14%]">Quantity</TableHead>
-      <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden md:table-cell w-[18%]">Location</TableHead>
-      <TableHead className="h-10 w-[14%]" />
+      <TableHead className="h-10 px-2 md:px-6 text-xs font-semibold text-gray-600 w-1/3 md:w-[20%]">Name</TableHead>
+      <TableHead className="h-10 px-2 md:px-6 text-xs font-semibold text-gray-600 w-1/3 md:w-[10%]">Size</TableHead>
+      <TableHead className="h-10 px-4 md:px-6 text-xs font-semibold text-gray-600 hidden md:table-cell md:w-[12%]">Color</TableHead>
+      <TableHead className="h-10 px-4 md:px-6 text-xs font-semibold text-gray-600 hidden lg:table-cell lg:w-[12%]">Brand</TableHead>
+      <TableHead className="h-10 px-2 md:px-6 text-xs font-semibold text-gray-600 text-center w-1/3 md:w-[14%]">Quantity</TableHead>
+      <TableHead className="h-10 px-4 md:px-6 text-xs font-semibold text-gray-600 hidden md:table-cell md:w-[18%]">Location</TableHead>
+      <TableHead className="h-10 w-[14%] hidden md:table-cell" />
     </TableRow>
   )
 
   const renderItemRow = (item: LinenItem, muted: boolean) => (
     <TableRow
       key={item.id}
-      className="border-b last:border-0 hover:bg-gray-50/50 transition-all duration-300"
+      onClick={() => setViewItem(item)}
+      className="border-b last:border-0 hover:bg-gray-50/50 transition-all duration-300 cursor-pointer"
     >
-      <TableCell className="h-12 px-4 sm:px-6 overflow-hidden">
-        <span className={`font-medium truncate block ${muted ? "text-gray-400" : "text-gray-900"}`}>{item.name}</span>
+      <TableCell className="h-12 px-2 md:px-6 overflow-hidden">
+        <span className={`font-medium truncate block ${muted ? "text-gray-400" : "text-gray-900"}`} title={item.name}>{item.name}</span>
       </TableCell>
-      <TableCell className="h-12 px-4 sm:px-6 overflow-hidden">
-        <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-gray-100 ${muted ? "text-gray-400" : "text-gray-700"}`}>
+      <TableCell className="h-12 px-2 md:px-6 overflow-hidden">
+        <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-gray-100 max-w-full truncate ${muted ? "text-gray-400" : "text-gray-700"}`} title={item.size || undefined}>
           {item.size || "\u2014"}
         </span>
       </TableCell>
-      <TableCell className="h-12 px-4 sm:px-6 hidden md:table-cell overflow-hidden">
+      <TableCell className="h-12 px-4 md:px-6 hidden md:table-cell overflow-hidden">
         <span className={`text-sm truncate block ${muted ? "text-gray-400" : "text-gray-600"}`}>{item.color || "\u2014"}</span>
       </TableCell>
-      <TableCell className="h-12 px-4 sm:px-6 hidden lg:table-cell overflow-hidden">
+      <TableCell className="h-12 px-4 md:px-6 hidden lg:table-cell overflow-hidden">
         <span className={`text-sm truncate block ${muted ? "text-gray-400" : "text-gray-600"}`}>{item.brand || "\u2014"}</span>
       </TableCell>
-      <TableCell className="h-12 px-4 sm:px-6 text-center">
+      <TableCell className="h-12 px-2 md:px-6 text-center">
         <StepperNumberCell
           value={item.quantity ?? 0}
           itemId={item.id}
           field="quantity"
         />
       </TableCell>
-      <TableCell className="h-12 px-4 sm:px-6 hidden md:table-cell overflow-hidden">
+      <TableCell className="h-12 px-4 md:px-6 hidden md:table-cell overflow-hidden">
         {item.location ? (
           <span className={`text-sm truncate block ${muted ? "text-gray-400" : "text-gray-600"}`} title={item.location}>{item.location}</span>
         ) : (
           <span className="text-sm text-gray-400">{"\u2014"}</span>
         )}
       </TableCell>
-      <TableCell className="h-12 px-2 text-right">
+      <TableCell
+        className="h-12 px-2 text-right hidden md:table-cell"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-end gap-0.5">
           <button
             onClick={() => setViewItem(item)}
@@ -432,7 +439,7 @@ export default function LinenInventoryPage() {
       <main className="container mx-auto px-4 py-6 space-y-6">
         <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
           {/* Header */}
-          <div className="px-4 sm:px-6 py-4 border-b bg-gray-50/50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="px-4 sm:px-6 py-4 border-b bg-gray-50/50 flex flex-col gap-3">
             <div>
               <h2 className="text-lg font-semibold">Linen Inventory</h2>
               <p className="text-sm text-gray-600 mt-1">
@@ -440,10 +447,17 @@ export default function LinenInventoryPage() {
               </p>
             </div>
             {isAdmin && (
-              <Button size="sm" onClick={handleAddItem} className="cursor-pointer">
-                <PlusCircle className="h-4 w-4 mr-2" />
-                Add Item
-              </Button>
+              <div className="flex items-center gap-2 w-full">
+                <Button
+                  size="sm"
+                  onClick={handleAddItem}
+                  className="cursor-pointer flex-1 min-w-0 shrink"
+                  title="Add item"
+                >
+                  <PlusCircle className="h-4 w-4" />
+                  <span className="truncate">Add Item</span>
+                </Button>
+              </div>
             )}
           </div>
 
@@ -454,13 +468,13 @@ export default function LinenInventoryPage() {
               <TableBody>
                 {Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                    <TableCell className="h-12 px-4 sm:px-6"><Skeleton className="h-4 w-24" /></TableCell>
-                    <TableCell className="h-12 px-4 sm:px-6"><Skeleton className="h-4 w-12" /></TableCell>
-                    <TableCell className="h-12 px-4 sm:px-6 hidden md:table-cell"><Skeleton className="h-4 w-16" /></TableCell>
-                    <TableCell className="h-12 px-4 sm:px-6 hidden lg:table-cell"><Skeleton className="h-4 w-16" /></TableCell>
-                    <TableCell className="h-12 px-4 sm:px-6"><Skeleton className="h-4 w-10 mx-auto" /></TableCell>
-                    <TableCell className="h-12 px-4 sm:px-6 hidden md:table-cell"><Skeleton className="h-4 w-24" /></TableCell>
-                    <TableCell className="h-12 px-2">
+                    <TableCell className="h-12 px-2 md:px-6"><Skeleton className="h-4 w-24" /></TableCell>
+                    <TableCell className="h-12 px-2 md:px-6"><Skeleton className="h-4 w-12" /></TableCell>
+                    <TableCell className="h-12 px-4 md:px-6 hidden md:table-cell"><Skeleton className="h-4 w-16" /></TableCell>
+                    <TableCell className="h-12 px-4 md:px-6 hidden lg:table-cell"><Skeleton className="h-4 w-16" /></TableCell>
+                    <TableCell className="h-12 px-2 md:px-6"><Skeleton className="h-4 w-10 mx-auto" /></TableCell>
+                    <TableCell className="h-12 px-4 md:px-6 hidden md:table-cell"><Skeleton className="h-4 w-24" /></TableCell>
+                    <TableCell className="h-12 px-2 hidden md:table-cell">
                       <div className="flex items-center justify-end gap-0.5">
                         <Skeleton className="h-5 w-5 rounded" />
                         <Skeleton className="h-5 w-5 rounded" />

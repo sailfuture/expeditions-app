@@ -765,55 +765,57 @@ export default function SuppliesPage() {
       <main className="container mx-auto px-4 py-6 space-y-6">
         <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
           {/* Header */}
-          <div className="px-4 sm:px-6 py-4 border-b bg-gray-50/50 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="px-4 sm:px-6 py-4 border-b bg-gray-50/50 flex flex-col gap-3">
             <div>
               <h2 className="text-lg font-semibold">Supplies Inventory</h2>
               <p className="text-sm text-gray-600 mt-1">
                 Track general supplies — medical, school, deck, kitchen, cleaning, and more
               </p>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              {/* Sort + Group controls */}
-              <div className="flex items-center gap-1 text-xs text-gray-500">
-                <span className="hidden sm:inline">Sort</span>
-                <select
-                  value={sortMode}
-                  onChange={(e) => setSortMode(e.target.value as SortMode)}
-                  className="h-8 rounded-md border border-input bg-transparent pl-2 pr-6 text-xs shadow-sm cursor-pointer"
-                  aria-label="Sort items by"
-                >
-                  <option value="name">Name</option>
-                  <option value="location">Location</option>
-                </select>
-              </div>
-              <div className="flex items-center gap-1 text-xs text-gray-500">
-                <span className="hidden sm:inline">Group</span>
-                <select
-                  value={groupMode}
-                  onChange={(e) => setGroupMode(e.target.value as GroupMode)}
-                  className="h-8 rounded-md border border-input bg-transparent pl-2 pr-6 text-xs shadow-sm cursor-pointer"
-                  aria-label="Group items by"
-                >
-                  <option value="type">By Type</option>
-                  <option value="none">None</option>
-                </select>
-              </div>
+            <div className="flex items-center gap-2 w-full">
+              {/* Sort */}
+              <select
+                value={sortMode}
+                onChange={(e) => setSortMode(e.target.value as SortMode)}
+                className="h-8 flex-1 min-w-0 rounded-md border border-input bg-transparent pl-2 pr-6 text-xs shadow-sm cursor-pointer truncate"
+                aria-label="Sort items by"
+                title="Sort"
+              >
+                <option value="name">Sort: Name</option>
+                <option value="location">Sort: Location</option>
+              </select>
+              {/* Group */}
+              <select
+                value={groupMode}
+                onChange={(e) => setGroupMode(e.target.value as GroupMode)}
+                className="h-8 flex-1 min-w-0 rounded-md border border-input bg-transparent pl-2 pr-6 text-xs shadow-sm cursor-pointer truncate"
+                aria-label="Group items by"
+                title="Group"
+              >
+                <option value="type">Group: Type</option>
+                <option value="none">Group: None</option>
+              </select>
               {isAdmin && (
                 <Button
                   size="sm"
                   variant="outline"
                   onClick={() => setTypesDialogOpen(true)}
-                  className="cursor-pointer"
+                  className="cursor-pointer flex-1 min-w-0 shrink"
                   title="Manage supply types"
                 >
-                  <Tags className="h-4 w-4 mr-2" />
-                  Types
+                  <Tags className="h-4 w-4" />
+                  <span className="truncate">Types</span>
                 </Button>
               )}
               {isAdmin && (
-                <Button size="sm" onClick={handleAddItem} className="cursor-pointer">
-                  <PlusCircle className="h-4 w-4 mr-2" />
-                  Add Item
+                <Button
+                  size="sm"
+                  onClick={handleAddItem}
+                  className="cursor-pointer flex-1 min-w-0 shrink"
+                  title="Add item"
+                >
+                  <PlusCircle className="h-4 w-4" />
+                  <span className="truncate">Add Item</span>
                 </Button>
               )}
             </div>

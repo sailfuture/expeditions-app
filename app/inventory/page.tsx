@@ -452,40 +452,38 @@ export default function InventoryPage() {
                 Manage food and supply inventory on the boat
               </p>
             </div>
-            <div className="flex items-center gap-2 w-full">
-              <div className="relative flex-1 min-w-0">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Search inventory..."
-                  value={inventorySearch}
-                  onChange={(e) => setInventorySearch(e.target.value)}
-                  className="pl-9 h-9 w-full"
-                />
-              </div>
-              {isAdmin && (
-                <>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setLocationsDialogOpen(true)}
-                    className="cursor-pointer flex-1 min-w-0 shrink"
-                    title="Manage locations"
-                  >
-                    <MapPin className="h-4 w-4" />
-                    <span className="truncate">Locations</span>
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={handleAddItem}
-                    className="cursor-pointer flex-1 min-w-0 shrink"
-                    title="Add item"
-                  >
-                    <PlusCircle className="h-4 w-4" />
-                    <span className="truncate">Add Item</span>
-                  </Button>
-                </>
-              )}
+            <div className="relative w-full">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Search inventory..."
+                value={inventorySearch}
+                onChange={(e) => setInventorySearch(e.target.value)}
+                className="pl-9 h-9 w-full"
+              />
             </div>
+            {isAdmin && (
+              <div className="flex items-center gap-2 w-full">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setLocationsDialogOpen(true)}
+                  className="cursor-pointer flex-1 min-w-0 shrink"
+                  title="Manage locations"
+                >
+                  <MapPin className="h-4 w-4" />
+                  <span className="truncate">Locations</span>
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleAddItem}
+                  className="cursor-pointer flex-1 min-w-0 shrink"
+                  title="Add item"
+                >
+                  <PlusCircle className="h-4 w-4" />
+                  <span className="truncate">Add Item</span>
+                </Button>
+              </div>
+            )}
           </div>
 
           {/* Table */}

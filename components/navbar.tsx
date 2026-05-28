@@ -127,7 +127,7 @@ export function Navbar() {
                 href="/expeditions"
                 className={cn(
                   navigationMenuTriggerStyle(),
-                  "cursor-pointer flex-shrink-0",
+                  "cursor-pointer flex-shrink-0 bg-gray-100 hover:bg-gray-200",
                   pathname === "/expeditions" && "text-foreground",
                 )}
               >
@@ -138,7 +138,7 @@ export function Navbar() {
                 href="/my-expeditions"
                 className={cn(
                   navigationMenuTriggerStyle(),
-                  "cursor-pointer flex-shrink-0",
+                  "cursor-pointer flex-shrink-0 bg-gray-100 hover:bg-gray-200",
                   pathname === "/my-expeditions" && "text-foreground",
                 )}
               >
@@ -336,7 +336,11 @@ export function Navbar() {
             {hasMounted && currentUser?.role === "Admin" && (
               <Sheet>
                 <SheetTrigger asChild>
-                  <Button variant="ghost" size="icon" className="md:hidden h-9 w-9 cursor-pointer">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="md:hidden h-9 w-9 cursor-pointer bg-gray-100 hover:bg-gray-200"
+                  >
                     <Menu className="h-5 w-5" />
                   </Button>
                 </SheetTrigger>

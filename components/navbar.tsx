@@ -40,6 +40,9 @@ export function Navbar() {
     setHasMounted(true)
   }, [])
 
+  // Mobile nav sheet open state — controlled so we can close it on link tap
+  const [navOpen, setNavOpen] = useState(false)
+
   // Get expedition ID from URL - either from query param or path param
   const expeditionIdFromUrl = useMemo(() => {
     // Check query parameter first
@@ -334,7 +337,7 @@ export function Navbar() {
 
             {/* Mobile Menu Button - before profile image */}
             {hasMounted && currentUser?.role === "Admin" && (
-              <Sheet>
+              <Sheet open={navOpen} onOpenChange={setNavOpen}>
                 <SheetTrigger asChild>
                   <Button
                     variant="ghost"
@@ -351,7 +354,15 @@ export function Navbar() {
                   <SheetHeader className="px-4 py-4 border-b sticky top-0 bg-background z-10">
                     <SheetTitle className="text-left">Navigation</SheetTitle>
                   </SheetHeader>
-                  <nav className="flex flex-col py-2">
+                  {/* Close the sheet on any link tap (event bubbles from <Link>) */}
+                  <nav
+                    className="flex flex-col py-2"
+                    onClick={(e) => {
+                      if ((e.target as HTMLElement).closest("a")) {
+                        setNavOpen(false)
+                      }
+                    }}
+                  >
                     <Link
                       href="/expeditions"
                       className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium hover:bg-accent transition-colors"

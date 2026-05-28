@@ -1311,20 +1311,20 @@ export default function SuppliesPage() {
 
       {/* Lightbox */}
       <Dialog open={!!lightboxItem} onOpenChange={(open) => !open && setLightboxItem(null)}>
-        <DialogContent className="sm:max-w-2xl p-0 overflow-hidden [&>button]:cursor-pointer">
+        <DialogContent className="sm:max-w-2xl p-0 gap-0 overflow-hidden [&>button]:cursor-pointer">
           <DialogHeader className="p-4 border-b">
             <DialogTitle>{lightboxItem?.name}</DialogTitle>
             <DialogDescription>
               {[lightboxItem?.type, lightboxItem?.location].filter(Boolean).join(" • ") || "Supply item"}
             </DialogDescription>
           </DialogHeader>
-          <div className="bg-black flex items-center justify-center max-h-[70vh]">
+          <div className="bg-black flex items-start justify-center max-h-[70vh] overflow-hidden">
             {lightboxUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={lightboxUrl}
                 alt={lightboxItem?.name || "Supply item"}
-                className="object-contain max-h-[70vh] w-auto"
+                className="object-contain max-h-[70vh] w-full"
               />
             ) : (
               <div className="p-12 text-gray-400 flex flex-col items-center gap-2">
@@ -1348,6 +1348,27 @@ export default function SuppliesPage() {
               </div>
             )}
           </div>
+          {isAdmin && lightboxItem && lightboxUrl && (
+            <div className="border-t p-3 flex items-center justify-end bg-background">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  if (!lightboxItem) return
+                  pendingInlineItemRef.current = lightboxItem
+                  setLightboxItem(null)
+                  if (inlineCameraInputRef.current) {
+                    inlineCameraInputRef.current.value = ""
+                    inlineCameraInputRef.current.click()
+                  }
+                }}
+                className="cursor-pointer"
+              >
+                <Camera className="h-4 w-4 mr-2" />
+                Retake
+              </Button>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

@@ -296,6 +296,7 @@ export default function SuppliesPage() {
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false)
+  const [removePhotoConfirmOpen, setRemovePhotoConfirmOpen] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const cameraInputRef = useRef<HTMLInputElement>(null)
 
@@ -964,17 +965,30 @@ export default function SuppliesPage() {
                 )}
               </div>
               {/* Inline action buttons */}
-              <div className="grid grid-cols-2 gap-2">
+              <div className="flex items-center gap-2">
+                {(photoPreview || formData.image) && isAdmin && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setRemovePhotoConfirmOpen(true)}
+                    aria-label="Remove photo"
+                    title="Remove photo"
+                    className="cursor-pointer shrink-0 h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 hover:border-red-200"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
                   onClick={() => cameraInputRef.current?.click()}
                   disabled={!isAdmin}
-                  className="cursor-pointer w-full"
+                  className="cursor-pointer flex-1 min-w-0"
                 >
                   <Camera className="h-4 w-4 mr-2" />
-                  Take photo
+                  <span className="truncate">Take photo</span>
                 </Button>
                 <Button
                   type="button"
@@ -982,24 +996,12 @@ export default function SuppliesPage() {
                   size="sm"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={!isAdmin}
-                  className="cursor-pointer w-full"
+                  className="cursor-pointer flex-1 min-w-0"
                 >
                   <ImagePlus className="h-4 w-4 mr-2" />
-                  Choose file
+                  <span className="truncate">Choose file</span>
                 </Button>
               </div>
-              {(photoPreview || formData.image) && isAdmin && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleClearPhoto}
-                  className="cursor-pointer w-full text-red-600 hover:text-red-700 hover:bg-red-50"
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Remove photo
-                </Button>
-              )}
               <p className="text-xs text-gray-500">
                 Tap “Take photo” on mobile to open the camera, or “Choose file” to upload from your device.
               </p>
@@ -1222,6 +1224,40 @@ export default function SuppliesPage() {
           )}
         </SheetContent>
       </Sheet>
+
+      {/* Remove Photo Confirmation Dialog */}
+      <Dialog open={removePhotoConfirmOpen} onOpenChange={setRemovePhotoConfirmOpen}>
+        <DialogContent className="sm:max-w-[400px] [&>button]:cursor-pointer">
+          <DialogHeader>
+            <DialogTitle>Remove photo?</DialogTitle>
+            <DialogDescription>
+              This will clear the photo on this item. You can take or upload a new one anytime.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="!flex-row items-center !justify-end gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setRemovePhotoConfirmOpen(false)}
+              className="cursor-pointer"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => {
+                handleClearPhoto()
+                setRemovePhotoConfirmOpen(false)
+              }}
+              className="cursor-pointer"
+            >
+              <Trash2 className="h-4 w-4 mr-1.5" />
+              Remove
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>

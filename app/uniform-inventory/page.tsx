@@ -622,56 +622,48 @@ export default function UniformInventoryPage() {
 
       {/* View Item Dialog */}
       <Dialog open={!!viewItem} onOpenChange={(open) => !open && setViewItem(null)}>
-        <DialogContent className="sm:max-w-[400px] [&>button]:cursor-pointer">
+        <DialogContent className="sm:max-w-[420px] [&>button]:cursor-pointer">
           <DialogHeader>
-            <DialogTitle>{viewItem?.name}</DialogTitle>
-            <DialogDescription>
+            <div className="flex items-center gap-2 flex-wrap pr-6">
+              <DialogTitle className="text-left">{viewItem?.type || viewItem?.name || "Item"}</DialogTitle>
               {viewItem?.size && (
                 <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-gray-100 text-gray-700">
-                  Size: {viewItem.size}
+                  {viewItem.size}
                 </span>
               )}
-            </DialogDescription>
+            </div>
+            {viewItem?.name && viewItem.name !== viewItem.type && (
+              <DialogDescription className="text-left">{viewItem.name}</DialogDescription>
+            )}
           </DialogHeader>
 
           {viewItem && (
-            <div className="space-y-4 py-2">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Type</p>
-                  <p className="text-sm text-gray-900 mt-1">{viewItem.type || "—"}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Size</p>
-                  <p className="text-sm text-gray-900 mt-1">{viewItem.size || "—"}</p>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Color</p>
-                  <p className="text-sm text-gray-900 mt-1">{viewItem.color || "—"}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</p>
-                  <p className="text-sm text-gray-900 mt-1">{viewItem.quantity ?? 0}</p>
-                </div>
+            <div className="grid grid-cols-2 gap-4 py-1">
+              <div>
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Color</p>
+                <p className="text-sm text-gray-900 mt-1 break-words">{viewItem.color || "—"}</p>
               </div>
               <div>
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</p>
+                <p className="text-sm font-semibold text-gray-900 mt-1">{viewItem.quantity ?? 0}</p>
+              </div>
+              <div className="col-span-2">
                 <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Location</p>
-                <p className="text-sm text-gray-900 mt-1">{viewItem.location || "—"}</p>
+                <p className="text-sm text-gray-900 mt-1 break-words">{viewItem.location || "—"}</p>
               </div>
             </div>
           )}
 
           {isAdmin && viewItem && (
-            <DialogFooter className="flex !justify-between">
+            <DialogFooter className="!flex-row items-center !justify-between gap-2">
               <Button
-                variant="ghost"
-                size="icon"
+                variant="outline"
+                size="sm"
                 onClick={() => handleDeleteClick(viewItem)}
-                className="cursor-pointer h-8 w-8"
+                className="cursor-pointer text-red-600 hover:text-red-700 hover:bg-red-50"
               >
-                <Trash2 className="h-4 w-4 text-gray-500" />
+                <Trash2 className="h-4 w-4 mr-1.5" />
+                Delete
               </Button>
               <Button
                 size="sm"

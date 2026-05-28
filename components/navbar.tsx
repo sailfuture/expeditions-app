@@ -120,37 +120,36 @@ export function Navbar() {
             </div>
           </Link>
 
+          {/* Primary expeditions link — always visible, sits next to the logo */}
+          {hasMounted && (
+            currentUser?.role === "Admin" ? (
+              <Link
+                href="/expeditions"
+                className={cn(
+                  navigationMenuTriggerStyle(),
+                  "cursor-pointer flex-shrink-0",
+                  pathname === "/expeditions" && "text-foreground",
+                )}
+              >
+                All Expeditions
+              </Link>
+            ) : (
+              <Link
+                href="/my-expeditions"
+                className={cn(
+                  navigationMenuTriggerStyle(),
+                  "cursor-pointer flex-shrink-0",
+                  pathname === "/my-expeditions" && "text-foreground",
+                )}
+              >
+                My Expeditions
+              </Link>
+            )
+          )}
+
           {/* Desktop Navigation */}
           <NavigationMenu className="hidden md:flex">
             <NavigationMenuList className="gap-2">
-              {hasMounted && currentUser?.role === "Admin" ? (
-                <NavigationMenuItem>
-                  <Link
-                    href="/expeditions"
-                    className={cn(
-                      navigationMenuTriggerStyle(),
-                      "cursor-pointer",
-                      pathname === "/expeditions" && "text-foreground",
-                    )}
-                  >
-                    All Expeditions
-                  </Link>
-                </NavigationMenuItem>
-              ) : (
-                <NavigationMenuItem>
-                  <Link
-                    href="/my-expeditions"
-                    className={cn(
-                      navigationMenuTriggerStyle(),
-                      "cursor-pointer",
-                      pathname === "/my-expeditions" && "text-foreground",
-                    )}
-                  >
-                    My Expeditions
-                  </Link>
-                </NavigationMenuItem>
-              )}
-
               {hasMounted && currentUser?.role === "Admin" && (
                 <>
                   <NavigationMenuItem>
@@ -508,8 +507,7 @@ export function Navbar() {
             {/* User Menu */}
             {hasMounted && (
               <DropdownMenu>
-                <DropdownMenuTrigger className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity min-w-0">
-                  <span className="hidden sm:block text-sm font-medium truncate max-w-[150px]">{currentUser?.name || "User"}</span>
+                <DropdownMenuTrigger className="flex items-center cursor-pointer hover:opacity-80 transition-opacity">
                   <Avatar className="h-8 w-8">
                     <AvatarImage src={currentUser?.photo_url || "/diverse-user-avatars.png"} />
                     <AvatarFallback>

@@ -482,27 +482,27 @@ export default function InventoryPage() {
             <Table className="w-full table-fixed">
               <TableHeader>
                 <TableRow className="border-b bg-gray-50/30 hover:bg-gray-50/30">
-                  <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[45%] sm:w-[20%]">Name</TableHead>
-                  <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden md:table-cell md:w-[15%]">Location</TableHead>
-                  <TableHead className="h-10 px-2 sm:px-6 text-xs font-semibold text-gray-600 text-center w-[25%] sm:w-[10%]">Pkg / Qty</TableHead>
-                  <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 text-center hidden sm:table-cell sm:w-[10%]">Oz/Pkg</TableHead>
-                  <TableHead className="h-10 px-2 sm:px-6 text-xs font-semibold text-gray-600 text-center w-[30%] sm:w-[12%]">Total Oz</TableHead>
-                  <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 text-center hidden sm:table-cell sm:w-[12%]">Total Lbs</TableHead>
-                  <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden lg:table-cell lg:w-[21%]">Notes</TableHead>
-                  <TableHead className="h-10 w-[100px] hidden sm:table-cell" />
+                  <TableHead className="h-10 px-2 md:px-6 text-xs font-semibold text-gray-600 w-1/3 md:w-[20%]">Name</TableHead>
+                  <TableHead className="h-10 px-4 md:px-6 text-xs font-semibold text-gray-600 hidden md:table-cell md:w-[15%]">Location</TableHead>
+                  <TableHead className="h-10 px-2 md:px-6 text-xs font-semibold text-gray-600 text-center w-1/3 md:w-[10%]">Pkg / Qty</TableHead>
+                  <TableHead className="h-10 px-4 md:px-6 text-xs font-semibold text-gray-600 text-center hidden md:table-cell md:w-[10%]">Oz/Pkg</TableHead>
+                  <TableHead className="h-10 px-2 md:px-6 text-xs font-semibold text-gray-600 text-center w-1/3 md:w-[12%]">Total Oz</TableHead>
+                  <TableHead className="h-10 px-4 md:px-6 text-xs font-semibold text-gray-600 text-center hidden md:table-cell md:w-[12%]">Total Lbs</TableHead>
+                  <TableHead className="h-10 px-4 md:px-6 text-xs font-semibold text-gray-600 hidden lg:table-cell lg:w-[21%]">Notes</TableHead>
+                  <TableHead className="h-10 w-[100px] hidden md:table-cell" />
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                    <TableCell className="h-12 px-4 sm:px-6"><Skeleton className="h-4 w-24" /></TableCell>
-                    <TableCell className="h-12 px-4 sm:px-6 hidden md:table-cell"><Skeleton className="h-4 w-24" /></TableCell>
-                    <TableCell className="h-12 px-2 sm:px-6"><Skeleton className="h-4 w-10 mx-auto" /></TableCell>
-                    <TableCell className="h-12 px-4 sm:px-6 hidden sm:table-cell"><Skeleton className="h-4 w-10 mx-auto" /></TableCell>
-                    <TableCell className="h-12 px-2 sm:px-6"><Skeleton className="h-4 w-10 mx-auto" /></TableCell>
-                    <TableCell className="h-12 px-4 sm:px-6 hidden sm:table-cell"><Skeleton className="h-4 w-10 mx-auto" /></TableCell>
-                    <TableCell className="h-12 px-4 sm:px-6 hidden lg:table-cell"><Skeleton className="h-4 w-20" /></TableCell>
-                    <TableCell className="h-12 px-2 hidden sm:table-cell">
+                    <TableCell className="h-12 px-2 md:px-6"><Skeleton className="h-4 w-24" /></TableCell>
+                    <TableCell className="h-12 px-4 md:px-6 hidden md:table-cell"><Skeleton className="h-4 w-24" /></TableCell>
+                    <TableCell className="h-12 px-2 md:px-6"><Skeleton className="h-4 w-10 mx-auto" /></TableCell>
+                    <TableCell className="h-12 px-4 md:px-6 hidden md:table-cell"><Skeleton className="h-4 w-10 mx-auto" /></TableCell>
+                    <TableCell className="h-12 px-2 md:px-6"><Skeleton className="h-4 w-10 mx-auto" /></TableCell>
+                    <TableCell className="h-12 px-4 md:px-6 hidden md:table-cell"><Skeleton className="h-4 w-10 mx-auto" /></TableCell>
+                    <TableCell className="h-12 px-4 md:px-6 hidden lg:table-cell"><Skeleton className="h-4 w-20" /></TableCell>
+                    <TableCell className="h-12 px-2 hidden md:table-cell">
                       <div className="flex items-center justify-end gap-0.5">
                         <Skeleton className="h-5 w-5 rounded" />
                         <Skeleton className="h-5 w-5 rounded" />
@@ -530,14 +530,14 @@ export default function InventoryPage() {
             <Table className="w-full table-fixed">
               <TableHeader>
                 <TableRow className="border-b bg-gray-50/30 hover:bg-gray-50/30">
-                  <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[45%] sm:w-[20%]">Name</TableHead>
-                  <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden md:table-cell md:w-[15%]">Location</TableHead>
-                  <TableHead className="h-10 px-2 sm:px-6 text-xs font-semibold text-gray-600 text-center w-[25%] sm:w-[10%]">Pkg / Qty</TableHead>
-                  <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 text-center hidden sm:table-cell sm:w-[10%]">Oz/Pkg</TableHead>
-                  <TableHead className="h-10 px-2 sm:px-6 text-xs font-semibold text-gray-600 text-center w-[30%] sm:w-[12%]">Total Oz</TableHead>
-                  <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 text-center hidden sm:table-cell sm:w-[12%]">Total Lbs</TableHead>
-                  <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden lg:table-cell lg:w-[21%]">Notes</TableHead>
-                  <TableHead className="h-10 w-[100px] hidden sm:table-cell" />
+                  <TableHead className="h-10 px-2 md:px-6 text-xs font-semibold text-gray-600 w-1/3 md:w-[20%]">Name</TableHead>
+                  <TableHead className="h-10 px-4 md:px-6 text-xs font-semibold text-gray-600 hidden md:table-cell md:w-[15%]">Location</TableHead>
+                  <TableHead className="h-10 px-2 md:px-6 text-xs font-semibold text-gray-600 text-center w-1/3 md:w-[10%]">Pkg / Qty</TableHead>
+                  <TableHead className="h-10 px-4 md:px-6 text-xs font-semibold text-gray-600 text-center hidden md:table-cell md:w-[10%]">Oz/Pkg</TableHead>
+                  <TableHead className="h-10 px-2 md:px-6 text-xs font-semibold text-gray-600 text-center w-1/3 md:w-[12%]">Total Oz</TableHead>
+                  <TableHead className="h-10 px-4 md:px-6 text-xs font-semibold text-gray-600 text-center hidden md:table-cell md:w-[12%]">Total Lbs</TableHead>
+                  <TableHead className="h-10 px-4 md:px-6 text-xs font-semibold text-gray-600 hidden lg:table-cell lg:w-[21%]">Notes</TableHead>
+                  <TableHead className="h-10 w-[100px] hidden md:table-cell" />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -566,23 +566,23 @@ export default function InventoryPage() {
                           onClick={() => setViewItem(item)}
                           className="border-b last:border-0 hover:bg-gray-50/50 transition-all duration-300 cursor-pointer"
                         >
-                          <TableCell className="h-12 px-4 sm:px-6 overflow-hidden">
+                          <TableCell className="h-12 px-2 md:px-6 overflow-hidden">
                             <span className="font-medium text-gray-900 truncate block">{item.name}</span>
                           </TableCell>
-                          <TableCell className="h-12 px-4 sm:px-6 hidden md:table-cell overflow-hidden">
+                          <TableCell className="h-12 px-4 md:px-6 hidden md:table-cell overflow-hidden">
                             <span className="text-sm text-gray-600 truncate block">{item.location || "—"}</span>
                           </TableCell>
-                          <TableCell className="h-12 px-2 sm:px-6 text-center">
+                          <TableCell className="h-12 px-2 md:px-6 text-center">
                             <StepperNumberCell
                               value={item.packages ?? 0}
                               itemId={item.id}
                               field="packages"
                             />
                           </TableCell>
-                          <TableCell className="h-12 px-4 sm:px-6 text-center hidden sm:table-cell">
+                          <TableCell className="h-12 px-4 md:px-6 text-center hidden md:table-cell">
                             <span className="text-sm text-gray-700">{item.isNotPackage ? "—" : (item.oz_per_package ?? 0)}</span>
                           </TableCell>
-                          <TableCell className="h-12 px-2 sm:px-6 text-center">
+                          <TableCell className="h-12 px-2 md:px-6 text-center">
                             {item.isNotPackage ? (
                               <span className="text-sm text-gray-400">—</span>
                             ) : (
@@ -592,7 +592,7 @@ export default function InventoryPage() {
                               </span>
                             )}
                           </TableCell>
-                          <TableCell className="h-12 px-4 sm:px-6 text-center hidden sm:table-cell">
+                          <TableCell className="h-12 px-4 md:px-6 text-center hidden md:table-cell">
                             {item.isNotPackage ? (
                               <span className="text-sm text-gray-400">—</span>
                             ) : (
@@ -602,11 +602,11 @@ export default function InventoryPage() {
                               </span>
                             )}
                           </TableCell>
-                          <TableCell className="h-12 px-4 sm:px-6 hidden lg:table-cell overflow-hidden">
+                          <TableCell className="h-12 px-4 md:px-6 hidden lg:table-cell overflow-hidden">
                             <span className="text-sm text-gray-500 truncate block">{item.notes || "—"}</span>
                           </TableCell>
                           <TableCell
-                            className="h-12 px-2 text-right hidden sm:table-cell"
+                            className="h-12 px-2 text-right hidden md:table-cell"
                             onClick={(e) => e.stopPropagation()}
                           >
                             <div className="flex items-center justify-end gap-0.5">
@@ -658,14 +658,14 @@ export default function InventoryPage() {
             <Table className="w-full table-fixed">
               <TableHeader>
                 <TableRow className="border-b bg-gray-50/30 hover:bg-gray-50/30">
-                  <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 w-[45%] sm:w-[20%]">Name</TableHead>
-                  <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden md:table-cell md:w-[15%]">Location</TableHead>
-                  <TableHead className="h-10 px-2 sm:px-6 text-xs font-semibold text-gray-600 text-center w-[25%] sm:w-[10%]">Pkg / Qty</TableHead>
-                  <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 text-center hidden sm:table-cell sm:w-[10%]">Oz/Pkg</TableHead>
-                  <TableHead className="h-10 px-2 sm:px-6 text-xs font-semibold text-gray-600 text-center w-[30%] sm:w-[12%]">Total Oz</TableHead>
-                  <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 text-center hidden sm:table-cell sm:w-[12%]">Total Lbs</TableHead>
-                  <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden lg:table-cell lg:w-[21%]">Notes</TableHead>
-                  <TableHead className="h-10 w-[100px] hidden sm:table-cell" />
+                  <TableHead className="h-10 px-2 md:px-6 text-xs font-semibold text-gray-600 w-1/3 md:w-[20%]">Name</TableHead>
+                  <TableHead className="h-10 px-4 md:px-6 text-xs font-semibold text-gray-600 hidden md:table-cell md:w-[15%]">Location</TableHead>
+                  <TableHead className="h-10 px-2 md:px-6 text-xs font-semibold text-gray-600 text-center w-1/3 md:w-[10%]">Pkg / Qty</TableHead>
+                  <TableHead className="h-10 px-4 md:px-6 text-xs font-semibold text-gray-600 text-center hidden md:table-cell md:w-[10%]">Oz/Pkg</TableHead>
+                  <TableHead className="h-10 px-2 md:px-6 text-xs font-semibold text-gray-600 text-center w-1/3 md:w-[12%]">Total Oz</TableHead>
+                  <TableHead className="h-10 px-4 md:px-6 text-xs font-semibold text-gray-600 text-center hidden md:table-cell md:w-[12%]">Total Lbs</TableHead>
+                  <TableHead className="h-10 px-4 md:px-6 text-xs font-semibold text-gray-600 hidden lg:table-cell lg:w-[21%]">Notes</TableHead>
+                  <TableHead className="h-10 w-[100px] hidden md:table-cell" />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -692,33 +692,33 @@ export default function InventoryPage() {
                           onClick={() => setViewItem(item)}
                           className="border-b last:border-0 hover:bg-gray-50/50 transition-all duration-300 cursor-pointer"
                         >
-                          <TableCell className="h-12 px-4 sm:px-6 overflow-hidden">
+                          <TableCell className="h-12 px-2 md:px-6 overflow-hidden">
                             <span className="font-medium text-gray-400 truncate block">{item.name}</span>
                           </TableCell>
-                          <TableCell className="h-12 px-4 sm:px-6 hidden md:table-cell overflow-hidden">
+                          <TableCell className="h-12 px-4 md:px-6 hidden md:table-cell overflow-hidden">
                             <span className="text-sm text-gray-400 truncate block">{item.location || "—"}</span>
                           </TableCell>
-                          <TableCell className="h-12 px-2 sm:px-6 text-center">
+                          <TableCell className="h-12 px-2 md:px-6 text-center">
                             <StepperNumberCell
                               value={item.packages ?? 0}
                               itemId={item.id}
                               field="packages"
                             />
                           </TableCell>
-                          <TableCell className="h-12 px-4 sm:px-6 text-center hidden sm:table-cell">
+                          <TableCell className="h-12 px-4 md:px-6 text-center hidden md:table-cell">
                             <span className="text-sm text-gray-400">{item.isNotPackage ? "—" : (item.oz_per_package ?? 0)}</span>
                           </TableCell>
-                          <TableCell className="h-12 px-2 sm:px-6 text-center">
+                          <TableCell className="h-12 px-2 md:px-6 text-center">
                             <span className="text-sm text-gray-400">{item.isNotPackage ? "—" : `${(item.packages ?? 0) * (item.oz_per_package ?? 0)} oz`}</span>
                           </TableCell>
-                          <TableCell className="h-12 px-4 sm:px-6 text-center hidden sm:table-cell">
+                          <TableCell className="h-12 px-4 md:px-6 text-center hidden md:table-cell">
                             <span className="text-sm text-gray-400">{item.isNotPackage ? "—" : `${(((item.packages ?? 0) * (item.oz_per_package ?? 0)) / 16).toFixed(1)} lb`}</span>
                           </TableCell>
-                          <TableCell className="h-12 px-4 sm:px-6 hidden lg:table-cell overflow-hidden">
+                          <TableCell className="h-12 px-4 md:px-6 hidden lg:table-cell overflow-hidden">
                             <span className="text-sm text-gray-400 truncate block">{item.notes || "—"}</span>
                           </TableCell>
                           <TableCell
-                            className="h-12 px-2 text-right hidden sm:table-cell"
+                            className="h-12 px-2 text-right hidden md:table-cell"
                             onClick={(e) => e.stopPropagation()}
                           >
                             <div className="flex items-center justify-end gap-0.5">

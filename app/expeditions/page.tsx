@@ -213,8 +213,13 @@ export default function ExpeditionsPage() {
                   id="show-past"
                   checked={showPastExpeditions}
                   onCheckedChange={setShowPastExpeditions}
+                  className="shrink-0"
                 />
-                <Label htmlFor="show-past" className="text-sm cursor-pointer truncate">
+                <Label
+                  htmlFor="show-past"
+                  title="Show past expeditions"
+                  className="text-sm cursor-pointer truncate block min-w-0 flex-1"
+                >
                   Show past expeditions
                 </Label>
               </div>

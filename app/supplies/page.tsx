@@ -614,13 +614,13 @@ export default function SuppliesPage() {
 
   const renderTableHeaders = () => (
     <TableRow className="border-b bg-gray-50/30 hover:bg-gray-50/30">
-      <TableHead className="h-10 px-2 sm:px-6 text-xs font-semibold text-gray-600 w-[15%] sm:w-[8%]">Photo</TableHead>
-      <TableHead className="h-10 px-2 sm:px-6 text-xs font-semibold text-gray-600 w-[30%] sm:w-[18%]">Name</TableHead>
-      <TableHead className="h-10 px-2 sm:px-6 text-xs font-semibold text-gray-600 w-[25%] sm:w-[8%]">Size</TableHead>
-      <TableHead className="h-10 px-2 sm:px-6 text-xs font-semibold text-gray-600 text-center w-[30%] sm:w-[12%]">Quantity</TableHead>
-      <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden md:table-cell md:w-[14%]">Location</TableHead>
-      <TableHead className="h-10 px-4 sm:px-6 text-xs font-semibold text-gray-600 hidden md:table-cell md:w-[24%]">Notes</TableHead>
-      <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600 text-right hidden sm:table-cell sm:w-[16%]">Actions</TableHead>
+      <TableHead className="h-10 px-2 md:px-6 text-xs font-semibold text-gray-600 w-[15%] md:w-[8%]">Photo</TableHead>
+      <TableHead className="h-10 px-2 md:px-6 text-xs font-semibold text-gray-600 w-[30%] md:w-[18%]">Name</TableHead>
+      <TableHead className="h-10 px-2 md:px-6 text-xs font-semibold text-gray-600 w-[25%] md:w-[8%]">Size</TableHead>
+      <TableHead className="h-10 px-2 md:px-6 text-xs font-semibold text-gray-600 text-center w-[30%] md:w-[12%]">Quantity</TableHead>
+      <TableHead className="h-10 px-4 md:px-6 text-xs font-semibold text-gray-600 hidden lg:table-cell lg:w-[14%]">Location</TableHead>
+      <TableHead className="h-10 px-4 md:px-6 text-xs font-semibold text-gray-600 hidden lg:table-cell lg:w-[24%]">Notes</TableHead>
+      <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600 text-right hidden md:table-cell md:w-[16%]">Actions</TableHead>
     </TableRow>
   )
 
@@ -631,7 +631,7 @@ export default function SuppliesPage() {
       className="border-b last:border-0 hover:bg-gray-50/50 transition-all duration-300 cursor-pointer"
     >
       <TableCell
-        className="h-14 px-2 sm:px-6"
+        className="h-14 px-2 md:px-6"
         onClick={(e) => e.stopPropagation()}
       >
         <ImageThumb
@@ -641,10 +641,10 @@ export default function SuppliesPage() {
           onClick={() => handleThumbTap(item)}
         />
       </TableCell>
-      <TableCell className="h-14 px-2 sm:px-6 overflow-hidden">
+      <TableCell className="h-14 px-2 md:px-6 overflow-hidden">
         <span className={`font-medium truncate block ${muted ? "text-gray-400" : "text-gray-900"}`} title={item.name}>{item.name}</span>
       </TableCell>
-      <TableCell className="h-14 px-2 sm:px-6 overflow-hidden">
+      <TableCell className="h-14 px-2 md:px-6 overflow-hidden">
         {item.size ? (
           <span className={`text-sm truncate block ${muted ? "text-gray-400" : "text-gray-600"}`} title={item.size}>
             {item.size}
@@ -653,14 +653,14 @@ export default function SuppliesPage() {
           <span className="text-sm text-gray-400">—</span>
         )}
       </TableCell>
-      <TableCell className="h-14 px-2 sm:px-6 text-center">
+      <TableCell className="h-14 px-2 md:px-6 text-center">
         <StepperNumberCell
           value={item.quantity ?? 0}
           itemId={item.id}
           field="quantity"
         />
       </TableCell>
-      <TableCell className="h-14 px-4 sm:px-6 hidden md:table-cell overflow-hidden">
+      <TableCell className="h-14 px-4 md:px-6 hidden lg:table-cell overflow-hidden">
         {item.location ? (
           <span className={`text-sm truncate block ${muted ? "text-gray-400" : "text-gray-600"}`} title={item.location}>
             {item.location}
@@ -669,7 +669,7 @@ export default function SuppliesPage() {
           <span className="text-sm text-gray-400">—</span>
         )}
       </TableCell>
-      <TableCell className="h-14 px-4 sm:px-6 hidden md:table-cell overflow-hidden">
+      <TableCell className="h-14 px-4 md:px-6 hidden lg:table-cell overflow-hidden">
         {item.notes ? (
           <span className={`text-sm truncate block ${muted ? "text-gray-400" : "text-gray-600"}`} title={item.notes}>
             {item.notes}
@@ -679,7 +679,7 @@ export default function SuppliesPage() {
         )}
       </TableCell>
       <TableCell
-        className="h-14 px-2 text-right hidden sm:table-cell"
+        className="h-14 px-2 text-right hidden md:table-cell"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-end gap-0.5">
@@ -826,13 +826,13 @@ export default function SuppliesPage() {
               <TableBody>
                 {Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                    <TableCell className="h-14 px-2 sm:px-6"><Skeleton className="h-10 w-10 rounded-md" /></TableCell>
-                    <TableCell className="h-14 px-2 sm:px-6"><Skeleton className="h-4 w-32" /></TableCell>
-                    <TableCell className="h-14 px-2 sm:px-6"><Skeleton className="h-4 w-12" /></TableCell>
-                    <TableCell className="h-14 px-2 sm:px-6"><Skeleton className="h-4 w-10 mx-auto" /></TableCell>
-                    <TableCell className="h-14 px-4 sm:px-6 hidden md:table-cell"><Skeleton className="h-4 w-24" /></TableCell>
-                    <TableCell className="h-14 px-4 sm:px-6 hidden md:table-cell"><Skeleton className="h-4 w-48" /></TableCell>
-                    <TableCell className="h-14 px-2 hidden sm:table-cell">
+                    <TableCell className="h-14 px-2 md:px-6"><Skeleton className="h-10 w-10 rounded-md" /></TableCell>
+                    <TableCell className="h-14 px-2 md:px-6"><Skeleton className="h-4 w-32" /></TableCell>
+                    <TableCell className="h-14 px-2 md:px-6"><Skeleton className="h-4 w-12" /></TableCell>
+                    <TableCell className="h-14 px-2 md:px-6"><Skeleton className="h-4 w-10 mx-auto" /></TableCell>
+                    <TableCell className="h-14 px-4 md:px-6 hidden lg:table-cell"><Skeleton className="h-4 w-24" /></TableCell>
+                    <TableCell className="h-14 px-4 md:px-6 hidden lg:table-cell"><Skeleton className="h-4 w-48" /></TableCell>
+                    <TableCell className="h-14 px-2 hidden md:table-cell">
                       <div className="flex items-center justify-end gap-0.5">
                         <Skeleton className="h-5 w-5 rounded" />
                         <Skeleton className="h-5 w-5 rounded" />

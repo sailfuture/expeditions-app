@@ -227,6 +227,13 @@ export default function InventoryPage() {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [itemToDelete, setItemToDelete] = useState<InventoryItem | null>(null)
   const [viewItem, setViewItem] = useState<InventoryItem | null>(null)
+
+  // Bulk selection + bulk action dialogs
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
+  const [bulkMarkOosConfirmOpen, setBulkMarkOosConfirmOpen] = useState(false)
+  const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState(false)
+  const [deleteAllOosConfirmOpen, setDeleteAllOosConfirmOpen] = useState(false)
+  const [isBulkProcessing, setIsBulkProcessing] = useState(false)
   // Form state
   const [formData, setFormData] = useState({
     name: "",
@@ -284,6 +291,83 @@ export default function InventoryPage() {
     } catch (error) {
       console.error("Error deleting item:", error)
       toast.error("Failed to delete item")
+    }
+  }
+
+  // Bulk selection helpers
+  const toggleSelected = (id: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+  const clearSelection = () => setSelectedIds(new Set())
+
+  const handleBulkMarkOos = async () => {
+    if (selectedIds.size === 0) return
+    const ids = Array.from(selectedIds)
+    setIsBulkProcessing(true)
+    try {
+      await Promise.all(
+        ids.map((id) => updateExpeditionsInventoryItem(id, { packages: 0 }))
+      )
+      mutate(SWR_KEY)
+      toast.success(`${ids.length} item${ids.length === 1 ? "" : "s"} marked out of stock`)
+      clearSelection()
+      setBulkMarkOosConfirmOpen(false)
+    } catch (error) {
+      console.error("Bulk mark-out-of-stock failed:", error)
+      toast.error("Failed to update items")
+    } finally {
+      setIsBulkProcessing(false)
+    }
+  }
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return
+    const ids = Array.from(selectedIds)
+    setIsBulkProcessing(true)
+    try {
+      await Promise.all(ids.map((id) => deleteExpeditionsInventoryItem(id)))
+      mutate(SWR_KEY)
+      toast.success(`${ids.length} item${ids.length === 1 ? "" : "s"} deleted`)
+      clearSelection()
+      setBulkDeleteConfirmOpen(false)
+    } catch (error) {
+      console.error("Bulk delete failed:", error)
+      toast.error("Failed to delete items")
+    } finally {
+      setIsBulkProcessing(false)
+    }
+  }
+
+  const handleDeleteAllOutOfStock = async () => {
+    const allOosIds = (inventoryItems || [])
+      .filter((it: InventoryItem) => (it.packages ?? 0) === 0)
+      .map((it: InventoryItem) => it.id)
+    if (allOosIds.length === 0) {
+      setDeleteAllOosConfirmOpen(false)
+      return
+    }
+    setIsBulkProcessing(true)
+    try {
+      await Promise.all(allOosIds.map((id: number) => deleteExpeditionsInventoryItem(id)))
+      mutate(SWR_KEY)
+      toast.success(`${allOosIds.length} out-of-stock item${allOosIds.length === 1 ? "" : "s"} deleted`)
+      // Clear any selection of items that were just deleted
+      setSelectedIds((prev) => {
+        const next = new Set(prev)
+        allOosIds.forEach((id: number) => next.delete(id))
+        return next
+      })
+      setDeleteAllOosConfirmOpen(false)
+    } catch (error) {
+      console.error("Delete-all-out-of-stock failed:", error)
+      toast.error("Failed to delete items")
+    } finally {
+      setIsBulkProcessing(false)
     }
   }
 
@@ -442,12 +526,55 @@ export default function InventoryPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Bulk action bar — sticky, only visible when something is selected */}
+      {isAdmin && selectedIds.size > 0 && (
+        <div className="sticky top-14 z-30 border-b bg-blue-600 text-white shadow-md">
+          <div className="container mx-auto px-4 py-2 flex items-center gap-2">
+            <span className="text-sm font-medium shrink-0">
+              {selectedIds.size} selected
+            </span>
+            <div className="flex-1" />
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => setBulkMarkOosConfirmOpen(true)}
+              disabled={isBulkProcessing}
+              className="cursor-pointer h-8"
+              title="Mark selected as out of stock"
+            >
+              <Boxes className="h-4 w-4 md:mr-1.5" />
+              <span className="hidden md:inline">Mark Out of Stock</span>
+            </Button>
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={() => setBulkDeleteConfirmOpen(true)}
+              disabled={isBulkProcessing}
+              className="cursor-pointer h-8"
+              title="Delete selected"
+            >
+              <Trash2 className="h-4 w-4 md:mr-1.5" />
+              <span className="hidden md:inline">Delete</span>
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={clearSelection}
+              disabled={isBulkProcessing}
+              className="cursor-pointer h-8 text-white hover:bg-white/10 hover:text-white"
+              title="Clear selection"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
       <main className="container mx-auto px-4 py-6 space-y-6">
         <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
           {/* Header */}
           <div className="px-4 sm:px-6 py-4 border-b bg-gray-50/50 flex flex-col gap-3">
             <div>
-              <h2 className="text-lg font-semibold">Inventory</h2>
+              <h2 className="text-lg font-semibold">Galley Inventory</h2>
               <p className="text-sm text-gray-600 mt-1">
                 Manage food and supply inventory on the boat
               </p>
@@ -491,19 +618,21 @@ export default function InventoryPage() {
             <Table className="w-full table-fixed">
               <TableHeader>
                 <TableRow className="border-b bg-gray-50/30 hover:bg-gray-50/30">
-                  <TableHead className="h-10 px-2 md:px-6 text-xs font-semibold text-gray-600 w-1/3 md:w-[20%]">Name</TableHead>
-                  <TableHead className="h-10 px-4 md:px-6 text-xs font-semibold text-gray-600 hidden md:table-cell md:w-[15%]">Location</TableHead>
-                  <TableHead className="h-10 px-2 md:px-6 text-xs font-semibold text-gray-600 text-center w-1/3 md:w-[10%]">Pkg / Qty</TableHead>
-                  <TableHead className="h-10 px-4 md:px-6 text-xs font-semibold text-gray-600 text-center hidden md:table-cell md:w-[10%]">Oz/Pkg</TableHead>
-                  <TableHead className="h-10 px-2 md:px-6 text-xs font-semibold text-gray-600 text-center w-1/3 md:w-[12%]">Total Oz</TableHead>
-                  <TableHead className="h-10 px-4 md:px-6 text-xs font-semibold text-gray-600 text-center hidden md:table-cell md:w-[12%]">Total Lbs</TableHead>
-                  <TableHead className="h-10 px-4 md:px-6 text-xs font-semibold text-gray-600 hidden lg:table-cell lg:w-[21%]">Notes</TableHead>
+                  {isAdmin && <TableHead className="h-10 px-2 md:px-3 w-[12%] md:w-[5%]" />}
+                  <TableHead className="h-10 px-2 md:px-6 text-xs font-semibold text-gray-600 w-[30%] md:w-[18%]">Name</TableHead>
+                  <TableHead className="h-10 px-4 md:px-6 text-xs font-semibold text-gray-600 hidden md:table-cell md:w-[14%]">Location</TableHead>
+                  <TableHead className="h-10 px-2 md:px-6 text-xs font-semibold text-gray-600 text-center w-[28%] md:w-[10%]">Pkg / Qty</TableHead>
+                  <TableHead className="h-10 px-4 md:px-6 text-xs font-semibold text-gray-600 text-center hidden md:table-cell md:w-[9%]">Oz/Pkg</TableHead>
+                  <TableHead className="h-10 px-2 md:px-6 text-xs font-semibold text-gray-600 text-center w-[30%] md:w-[11%]">Total Oz</TableHead>
+                  <TableHead className="h-10 px-4 md:px-6 text-xs font-semibold text-gray-600 text-center hidden md:table-cell md:w-[11%]">Total Lbs</TableHead>
+                  <TableHead className="h-10 px-4 md:px-6 text-xs font-semibold text-gray-600 hidden lg:table-cell lg:w-[14%]">Notes</TableHead>
                   <TableHead className="h-10 w-[100px] hidden md:table-cell" />
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
+                    {isAdmin && <TableCell className="h-12 px-2 md:px-3"><Skeleton className="h-4 w-4 rounded" /></TableCell>}
                     <TableCell className="h-12 px-2 md:px-6"><Skeleton className="h-4 w-24" /></TableCell>
                     <TableCell className="h-12 px-4 md:px-6 hidden md:table-cell"><Skeleton className="h-4 w-24" /></TableCell>
                     <TableCell className="h-12 px-2 md:px-6"><Skeleton className="h-4 w-10 mx-auto" /></TableCell>
@@ -539,13 +668,14 @@ export default function InventoryPage() {
             <Table className="w-full table-fixed">
               <TableHeader>
                 <TableRow className="border-b bg-gray-50/30 hover:bg-gray-50/30">
-                  <TableHead className="h-10 px-2 md:px-6 text-xs font-semibold text-gray-600 w-1/3 md:w-[20%]">Name</TableHead>
-                  <TableHead className="h-10 px-4 md:px-6 text-xs font-semibold text-gray-600 hidden md:table-cell md:w-[15%]">Location</TableHead>
-                  <TableHead className="h-10 px-2 md:px-6 text-xs font-semibold text-gray-600 text-center w-1/3 md:w-[10%]">Pkg / Qty</TableHead>
-                  <TableHead className="h-10 px-4 md:px-6 text-xs font-semibold text-gray-600 text-center hidden md:table-cell md:w-[10%]">Oz/Pkg</TableHead>
-                  <TableHead className="h-10 px-2 md:px-6 text-xs font-semibold text-gray-600 text-center w-1/3 md:w-[12%]">Total Oz</TableHead>
-                  <TableHead className="h-10 px-4 md:px-6 text-xs font-semibold text-gray-600 text-center hidden md:table-cell md:w-[12%]">Total Lbs</TableHead>
-                  <TableHead className="h-10 px-4 md:px-6 text-xs font-semibold text-gray-600 hidden lg:table-cell lg:w-[21%]">Notes</TableHead>
+                  {isAdmin && <TableHead className="h-10 px-2 md:px-3 w-[12%] md:w-[5%]" />}
+                  <TableHead className="h-10 px-2 md:px-6 text-xs font-semibold text-gray-600 w-[30%] md:w-[18%]">Name</TableHead>
+                  <TableHead className="h-10 px-4 md:px-6 text-xs font-semibold text-gray-600 hidden md:table-cell md:w-[14%]">Location</TableHead>
+                  <TableHead className="h-10 px-2 md:px-6 text-xs font-semibold text-gray-600 text-center w-[28%] md:w-[10%]">Pkg / Qty</TableHead>
+                  <TableHead className="h-10 px-4 md:px-6 text-xs font-semibold text-gray-600 text-center hidden md:table-cell md:w-[9%]">Oz/Pkg</TableHead>
+                  <TableHead className="h-10 px-2 md:px-6 text-xs font-semibold text-gray-600 text-center w-[30%] md:w-[11%]">Total Oz</TableHead>
+                  <TableHead className="h-10 px-4 md:px-6 text-xs font-semibold text-gray-600 text-center hidden md:table-cell md:w-[11%]">Total Lbs</TableHead>
+                  <TableHead className="h-10 px-4 md:px-6 text-xs font-semibold text-gray-600 hidden lg:table-cell lg:w-[14%]">Notes</TableHead>
                   <TableHead className="h-10 w-[100px] hidden md:table-cell" />
                 </TableRow>
               </TableHeader>
@@ -556,7 +686,7 @@ export default function InventoryPage() {
                     <React.Fragment key={group.type || "__uncategorized"}>
                       {/* Group header row */}
                       <TableRow className="bg-gray-50/80 hover:bg-gray-50/80 border-b">
-                        <TableCell colSpan={8} className="h-9 px-4 sm:px-6 py-0">
+                        <TableCell colSpan={isAdmin ? 9 : 8} className="h-9 px-4 sm:px-6 py-0">
                           <div className="flex items-center gap-2">
                             <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${bulletClass}`} />
                             <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
@@ -573,8 +703,23 @@ export default function InventoryPage() {
                         <TableRow
                           key={item.id}
                           onClick={() => setViewItem(item)}
-                          className="border-b last:border-0 hover:bg-gray-50/50 transition-all duration-300 cursor-pointer"
+                          data-selected={selectedIds.has(item.id) ? "true" : undefined}
+                          className="border-b last:border-0 hover:bg-gray-50/50 transition-all duration-300 cursor-pointer data-[selected=true]:bg-blue-50/60 data-[selected=true]:hover:bg-blue-50"
                         >
+                          {isAdmin && (
+                            <TableCell
+                              className="h-12 px-2 md:px-3"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={selectedIds.has(item.id)}
+                                onChange={() => toggleSelected(item.id)}
+                                aria-label={`Select ${item.name}`}
+                                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer touch-manipulation"
+                              />
+                            </TableCell>
+                          )}
                           <TableCell className="h-12 px-2 md:px-6 overflow-hidden">
                             <span className="font-medium text-gray-900 truncate block">{item.name}</span>
                           </TableCell>
@@ -659,21 +804,36 @@ export default function InventoryPage() {
         {/* Out of Stock Table */}
         {!inventoryLoading && outOfStockGroups.length > 0 && (
           <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden opacity-75 transition-all duration-300">
-            <div className="px-4 sm:px-6 py-3 border-b bg-gray-50/50 flex items-center justify-between">
-              <h2 className="text-base font-semibold text-gray-500">Out of Stock</h2>
-              <span className="text-xs text-gray-400">{outOfStockGroups.reduce((sum, g) => sum + g.items.length, 0)} items</span>
+            <div className="px-4 sm:px-6 py-3 border-b bg-gray-50/50 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2 min-w-0">
+                <h2 className="text-base font-semibold text-gray-500">Out of Stock</h2>
+                <span className="text-xs text-gray-400">{outOfStockGroups.reduce((sum, g) => sum + g.items.length, 0)} items</span>
+              </div>
+              {isAdmin && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setDeleteAllOosConfirmOpen(true)}
+                  className="cursor-pointer shrink-0 text-red-600 hover:text-red-700 hover:bg-red-50 hover:border-red-200"
+                  title="Delete every out-of-stock item"
+                >
+                  <Trash2 className="h-4 w-4 md:mr-1.5" />
+                  <span className="hidden md:inline">Delete All</span>
+                </Button>
+              )}
             </div>
 
             <Table className="w-full table-fixed">
               <TableHeader>
                 <TableRow className="border-b bg-gray-50/30 hover:bg-gray-50/30">
-                  <TableHead className="h-10 px-2 md:px-6 text-xs font-semibold text-gray-600 w-1/3 md:w-[20%]">Name</TableHead>
-                  <TableHead className="h-10 px-4 md:px-6 text-xs font-semibold text-gray-600 hidden md:table-cell md:w-[15%]">Location</TableHead>
-                  <TableHead className="h-10 px-2 md:px-6 text-xs font-semibold text-gray-600 text-center w-1/3 md:w-[10%]">Pkg / Qty</TableHead>
-                  <TableHead className="h-10 px-4 md:px-6 text-xs font-semibold text-gray-600 text-center hidden md:table-cell md:w-[10%]">Oz/Pkg</TableHead>
-                  <TableHead className="h-10 px-2 md:px-6 text-xs font-semibold text-gray-600 text-center w-1/3 md:w-[12%]">Total Oz</TableHead>
-                  <TableHead className="h-10 px-4 md:px-6 text-xs font-semibold text-gray-600 text-center hidden md:table-cell md:w-[12%]">Total Lbs</TableHead>
-                  <TableHead className="h-10 px-4 md:px-6 text-xs font-semibold text-gray-600 hidden lg:table-cell lg:w-[21%]">Notes</TableHead>
+                  {isAdmin && <TableHead className="h-10 px-2 md:px-3 w-[12%] md:w-[5%]" />}
+                  <TableHead className="h-10 px-2 md:px-6 text-xs font-semibold text-gray-600 w-[30%] md:w-[18%]">Name</TableHead>
+                  <TableHead className="h-10 px-4 md:px-6 text-xs font-semibold text-gray-600 hidden md:table-cell md:w-[14%]">Location</TableHead>
+                  <TableHead className="h-10 px-2 md:px-6 text-xs font-semibold text-gray-600 text-center w-[28%] md:w-[10%]">Pkg / Qty</TableHead>
+                  <TableHead className="h-10 px-4 md:px-6 text-xs font-semibold text-gray-600 text-center hidden md:table-cell md:w-[9%]">Oz/Pkg</TableHead>
+                  <TableHead className="h-10 px-2 md:px-6 text-xs font-semibold text-gray-600 text-center w-[30%] md:w-[11%]">Total Oz</TableHead>
+                  <TableHead className="h-10 px-4 md:px-6 text-xs font-semibold text-gray-600 text-center hidden md:table-cell md:w-[11%]">Total Lbs</TableHead>
+                  <TableHead className="h-10 px-4 md:px-6 text-xs font-semibold text-gray-600 hidden lg:table-cell lg:w-[14%]">Notes</TableHead>
                   <TableHead className="h-10 w-[100px] hidden md:table-cell" />
                 </TableRow>
               </TableHeader>
@@ -683,7 +843,7 @@ export default function InventoryPage() {
                   return (
                     <React.Fragment key={`oos_${group.type || "__uncategorized"}`}>
                       <TableRow className="bg-gray-50/80 hover:bg-gray-50/80 border-b">
-                        <TableCell colSpan={8} className="h-9 px-4 sm:px-6 py-0">
+                        <TableCell colSpan={isAdmin ? 9 : 8} className="h-9 px-4 sm:px-6 py-0">
                           <div className="flex items-center gap-2">
                             <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${bulletClass}`} />
                             <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
@@ -699,8 +859,23 @@ export default function InventoryPage() {
                         <TableRow
                           key={item.id}
                           onClick={() => setViewItem(item)}
-                          className="border-b last:border-0 hover:bg-gray-50/50 transition-all duration-300 cursor-pointer"
+                          data-selected={selectedIds.has(item.id) ? "true" : undefined}
+                          className="border-b last:border-0 hover:bg-gray-50/50 transition-all duration-300 cursor-pointer data-[selected=true]:bg-blue-50/60 data-[selected=true]:hover:bg-blue-50"
                         >
+                          {isAdmin && (
+                            <TableCell
+                              className="h-12 px-2 md:px-3"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={selectedIds.has(item.id)}
+                                onChange={() => toggleSelected(item.id)}
+                                aria-label={`Select ${item.name}`}
+                                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer touch-manipulation"
+                              />
+                            </TableCell>
+                          )}
                           <TableCell className="h-12 px-2 md:px-6 overflow-hidden">
                             <span className="font-medium text-gray-400 truncate block">{item.name}</span>
                           </TableCell>
@@ -1050,6 +1225,105 @@ export default function InventoryPage() {
           </SheetFooter>
         </SheetContent>
       </Sheet>
+
+      {/* Bulk: mark selected as out of stock confirmation */}
+      <Dialog open={bulkMarkOosConfirmOpen} onOpenChange={setBulkMarkOosConfirmOpen}>
+        <DialogContent className="sm:max-w-[420px] [&>button]:cursor-pointer">
+          <DialogHeader>
+            <DialogTitle>Mark {selectedIds.size} item{selectedIds.size === 1 ? "" : "s"} out of stock?</DialogTitle>
+            <DialogDescription>
+              This sets Pkg / Qty to 0 on the selected items. They&apos;ll move to the Out of Stock list and you can restock them later.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="!flex-row items-center !justify-end gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setBulkMarkOosConfirmOpen(false)}
+              disabled={isBulkProcessing}
+              className="cursor-pointer"
+            >
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleBulkMarkOos}
+              disabled={isBulkProcessing}
+              className="cursor-pointer"
+            >
+              {isBulkProcessing ? <><Spinner className="h-4 w-4 mr-2" />Updating…</> : "Mark Out of Stock"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk: delete selected confirmation */}
+      <Dialog open={bulkDeleteConfirmOpen} onOpenChange={setBulkDeleteConfirmOpen}>
+        <DialogContent className="sm:max-w-[420px] [&>button]:cursor-pointer">
+          <DialogHeader>
+            <DialogTitle>Delete {selectedIds.size} item{selectedIds.size === 1 ? "" : "s"}?</DialogTitle>
+            <DialogDescription>
+              This permanently removes the selected items from inventory. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="!flex-row items-center !justify-end gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setBulkDeleteConfirmOpen(false)}
+              disabled={isBulkProcessing}
+              className="cursor-pointer"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleBulkDelete}
+              disabled={isBulkProcessing}
+              className="cursor-pointer"
+            >
+              {isBulkProcessing ? <><Spinner className="h-4 w-4 mr-2" />Deleting…</> : <><Trash2 className="h-4 w-4 mr-1.5" />Delete</>}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete all out-of-stock confirmation */}
+      <Dialog open={deleteAllOosConfirmOpen} onOpenChange={setDeleteAllOosConfirmOpen}>
+        <DialogContent className="sm:max-w-[440px] [&>button]:cursor-pointer">
+          <DialogHeader>
+            <DialogTitle>Delete all out-of-stock items?</DialogTitle>
+            <DialogDescription>
+              This permanently removes every item with Pkg / Qty at 0
+              {outOfStockGroups.length > 0 && (
+                <> — {outOfStockGroups.reduce((sum, g) => sum + g.items.length, 0)} item{outOfStockGroups.reduce((sum, g) => sum + g.items.length, 0) === 1 ? "" : "s"} total</>
+              )}
+              . This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="!flex-row items-center !justify-end gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setDeleteAllOosConfirmOpen(false)}
+              disabled={isBulkProcessing}
+              className="cursor-pointer"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleDeleteAllOutOfStock}
+              disabled={isBulkProcessing}
+              className="cursor-pointer"
+            >
+              {isBulkProcessing ? <><Spinner className="h-4 w-4 mr-2" />Deleting…</> : <><Trash2 className="h-4 w-4 mr-1.5" />Delete All</>}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>

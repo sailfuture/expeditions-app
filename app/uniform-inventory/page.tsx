@@ -343,7 +343,7 @@ export default function UniformInventoryPage() {
       <main className="container mx-auto px-4 py-6 space-y-6">
         <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
           {/* Header */}
-          <div className="px-4 sm:px-6 py-4 border-b bg-gray-50/50 flex flex-col gap-3">
+          <div className="px-4 sm:px-6 py-4 border-b bg-gray-50/50 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
               <h2 className="text-lg font-semibold">Uniform Inventory</h2>
               <p className="text-sm text-gray-600 mt-1">
@@ -351,11 +351,11 @@ export default function UniformInventoryPage() {
               </p>
             </div>
             {isAdmin && (
-              <div className="flex items-center gap-2 w-full">
+              <div className="flex items-center gap-2 w-full md:w-auto">
                 <Button
                   size="sm"
                   onClick={handleAddItem}
-                  className="cursor-pointer flex-1 min-w-0 shrink"
+                  className="cursor-pointer flex-1 min-w-0 shrink md:flex-none"
                   title="Add item"
                 >
                   <PlusCircle className="h-4 w-4" />

@@ -200,28 +200,32 @@ export default function ExpeditionsPage() {
       {/* Header */}
       <div className="border-b bg-white">
         <div className="container mx-auto px-4 py-6">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
               <h1 className="text-3xl font-bold">All Expeditions</h1>
               <p className="text-muted-foreground mt-2">
                 View and manage all expeditions
               </p>
             </div>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 w-full md:w-auto md:gap-4">
+              <div className="flex items-center gap-2 flex-1 min-w-0 md:flex-none">
                 <Switch
                   id="show-past"
                   checked={showPastExpeditions}
                   onCheckedChange={setShowPastExpeditions}
                 />
-                <Label htmlFor="show-past" className="text-sm cursor-pointer">
+                <Label htmlFor="show-past" className="text-sm cursor-pointer truncate">
                   Show past expeditions
                 </Label>
               </div>
               {isAdmin && (
-                <Button onClick={openCreateDialog} className="cursor-pointer">
-                  <Plus className="h-4 w-4 mr-2" />
-                  New Expedition
+                <Button
+                  onClick={openCreateDialog}
+                  className="cursor-pointer flex-1 min-w-0 shrink md:flex-none"
+                  title="Create a new expedition"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span className="truncate">New Expedition</span>
                 </Button>
               )}
             </div>

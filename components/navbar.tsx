@@ -346,12 +346,12 @@ export function Navbar() {
                 </SheetTrigger>
                 <SheetContent
                   side="right"
-                  className="w-72 p-0 gap-0 grid grid-rows-[auto_minmax(0,1fr)] max-h-[100dvh]"
+                  className="w-72 p-0 gap-0 max-h-[100dvh] overflow-y-auto overscroll-contain"
                 >
-                  <SheetHeader className="px-4 py-4 border-b">
+                  <SheetHeader className="px-4 py-4 border-b sticky top-0 bg-background z-10">
                     <SheetTitle className="text-left">Navigation</SheetTitle>
                   </SheetHeader>
-                  <nav className="flex flex-col py-2 overflow-y-auto overscroll-contain">
+                  <nav className="flex flex-col py-2">
                     <Link
                       href="/expeditions"
                       className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium hover:bg-accent transition-colors"

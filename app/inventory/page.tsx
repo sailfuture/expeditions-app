@@ -529,7 +529,7 @@ export default function InventoryPage() {
               : "max-h-0 opacity-0 pointer-events-none"
           )}
         >
-          <div className="border-b bg-gray-800 text-white shadow-md">
+          <div className="border-b bg-gray-100 text-gray-900 shadow-md">
             <div className="container mx-auto px-4 py-2 flex items-center gap-2">
               <span className="text-sm font-medium shrink-0">
                 {selectedIds.size} selected
@@ -543,8 +543,8 @@ export default function InventoryPage() {
                 className="cursor-pointer h-8"
                 title="Mark selected as out of stock"
               >
-                <Boxes className="h-4 w-4 md:mr-1.5" />
-                <span className="hidden md:inline">Mark Out of Stock</span>
+                <Boxes className="h-4 w-4 mr-1.5" />
+                <span>Mark Out of Stock</span>
               </Button>
               <Button
                 size="sm"
@@ -562,7 +562,7 @@ export default function InventoryPage() {
                 variant="ghost"
                 onClick={clearSelection}
                 disabled={isBulkProcessing}
-                className="cursor-pointer h-8 text-white hover:bg-white/10 hover:text-white"
+                className="cursor-pointer h-8 text-gray-700 hover:bg-gray-200 hover:text-gray-900"
                 title="Clear selection"
               >
                 <X className="h-4 w-4" />
@@ -620,7 +620,7 @@ export default function InventoryPage() {
             <Table className="w-full table-fixed">
               <TableHeader>
                 <TableRow className="border-b bg-gray-50/30 hover:bg-gray-50/30">
-                  {isAdmin && <TableHead className="h-10 px-2 md:px-3 w-[12%] md:w-[5%]" />}
+                  {isAdmin && <TableHead className="h-10 px-2 md:px-3 w-[12%] md:w-[5%] border-r border-gray-200" />}
                   <TableHead className="h-10 px-2 md:px-6 text-xs font-semibold text-gray-600 w-[30%] md:w-[18%]">Name</TableHead>
                   <TableHead className="h-10 px-4 md:px-6 text-xs font-semibold text-gray-600 hidden md:table-cell md:w-[14%]">Location</TableHead>
                   <TableHead className="h-10 px-2 md:px-6 text-xs font-semibold text-gray-600 text-center w-[28%] md:w-[10%]">Pkg / Qty</TableHead>
@@ -670,7 +670,7 @@ export default function InventoryPage() {
             <Table className="w-full table-fixed">
               <TableHeader>
                 <TableRow className="border-b bg-gray-50/30 hover:bg-gray-50/30">
-                  {isAdmin && <TableHead className="h-10 px-2 md:px-3 w-[12%] md:w-[5%]" />}
+                  {isAdmin && <TableHead className="h-10 px-2 md:px-3 w-[12%] md:w-[5%] border-r border-gray-200" />}
                   <TableHead className="h-10 px-2 md:px-6 text-xs font-semibold text-gray-600 w-[30%] md:w-[18%]">Name</TableHead>
                   <TableHead className="h-10 px-4 md:px-6 text-xs font-semibold text-gray-600 hidden md:table-cell md:w-[14%]">Location</TableHead>
                   <TableHead className="h-10 px-2 md:px-6 text-xs font-semibold text-gray-600 text-center w-[28%] md:w-[10%]">Pkg / Qty</TableHead>
@@ -710,7 +710,7 @@ export default function InventoryPage() {
                         >
                           {isAdmin && (
                             <TableCell
-                              className="h-12 px-2 md:px-3"
+                              className="h-12 px-2 md:px-3 border-r border-gray-200"
                               onClick={(e) => e.stopPropagation()}
                             >
                               <input
@@ -812,7 +812,7 @@ export default function InventoryPage() {
             <Table className="w-full table-fixed">
               <TableHeader>
                 <TableRow className="border-b bg-gray-50/30 hover:bg-gray-50/30">
-                  {isAdmin && <TableHead className="h-10 px-2 md:px-3 w-[12%] md:w-[5%]" />}
+                  {isAdmin && <TableHead className="h-10 px-2 md:px-3 w-[12%] md:w-[5%] border-r border-gray-200" />}
                   <TableHead className="h-10 px-2 md:px-6 text-xs font-semibold text-gray-600 w-[30%] md:w-[18%]">Name</TableHead>
                   <TableHead className="h-10 px-4 md:px-6 text-xs font-semibold text-gray-600 hidden md:table-cell md:w-[14%]">Location</TableHead>
                   <TableHead className="h-10 px-2 md:px-6 text-xs font-semibold text-gray-600 text-center w-[28%] md:w-[10%]">Pkg / Qty</TableHead>
@@ -850,7 +850,7 @@ export default function InventoryPage() {
                         >
                           {isAdmin && (
                             <TableCell
-                              className="h-12 px-2 md:px-3"
+                              className="h-12 px-2 md:px-3 border-r border-gray-200"
                               onClick={(e) => e.stopPropagation()}
                             >
                               <input

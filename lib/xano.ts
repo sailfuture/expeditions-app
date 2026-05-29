@@ -913,6 +913,7 @@ export async function createExpeditionsInventoryItem(data: {
   packages: number
   oz_per_package: number
   notes?: string
+  fullness?: number
 }) {
   return xanoFetch<any>("/expeditions_inventory", {
     method: "POST",

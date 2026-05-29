@@ -67,7 +67,11 @@ interface InventoryItem {
   oz_per_package: number
   isNotPackage?: boolean
   notes: string
+  fullness?: number
 }
+
+// Allowed fullness values in 25% increments
+const FULLNESS_STEPS = [0, 25, 50, 75, 100] as const
 
 interface IngredientType {
   id: number
@@ -202,6 +206,116 @@ function StepperNumberCell({
   )
 }
 
+// Inline fullness picker for the table — 5 small segments in 25% steps.
+// Click any segment to set the value; the active step is highlighted blue.
+function FullnessInline({
+  value,
+  itemId,
+}: {
+  value: number
+  itemId: number
+}) {
+  const current = Math.max(0, Math.min(100, value || 0))
+  const setFullness = async (next: number) => {
+    if (next === current) return
+    mutate(
+      SWR_KEY,
+      (items: InventoryItem[] | undefined) =>
+        items?.map((it) => (it.id === itemId ? { ...it, fullness: next } : it)),
+      false
+    )
+    try {
+      await updateExpeditionsInventoryItem(itemId, { fullness: next })
+      mutate(SWR_KEY)
+    } catch {
+      toast.error("Failed to update fullness")
+      mutate(SWR_KEY)
+    }
+  }
+  return (
+    <div
+      className="inline-flex items-center gap-1.5"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="flex items-center gap-0.5">
+        {FULLNESS_STEPS.map((step) => {
+          const filled = current >= step && step > 0
+          // step 0 is a small "empty" dot for resetting
+          if (step === 0) {
+            return (
+              <button
+                key={step}
+                type="button"
+                onClick={() => setFullness(0)}
+                className={cn(
+                  "h-3 w-3 rounded-full border transition-colors cursor-pointer touch-manipulation",
+                  current === 0
+                    ? "bg-gray-400 border-gray-400"
+                    : "bg-white border-gray-300 hover:border-gray-400"
+                )}
+                title="0%"
+                aria-label="Set fullness to 0%"
+              />
+            )
+          }
+          return (
+            <button
+              key={step}
+              type="button"
+              onClick={() => setFullness(step)}
+              className={cn(
+                "h-3 w-4 rounded-sm transition-colors cursor-pointer touch-manipulation",
+                filled
+                  ? "bg-blue-500 hover:bg-blue-600"
+                  : "bg-gray-200 hover:bg-gray-300"
+              )}
+              title={`${step}%`}
+              aria-label={`Set fullness to ${step}%`}
+            />
+          )
+        })}
+      </div>
+      <span className="text-xs font-medium text-gray-600 tabular-nums w-8">
+        {current}%
+      </span>
+    </div>
+  )
+}
+
+// Pill-button fullness picker for the edit sheet — 5 labeled buttons.
+function FullnessPills({
+  value,
+  onChange,
+}: {
+  value: number
+  onChange: (next: number) => void
+}) {
+  const current = Math.max(0, Math.min(100, value || 0))
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {FULLNESS_STEPS.map((step) => {
+        const active = current === step
+        return (
+          <button
+            key={step}
+            type="button"
+            onClick={() => onChange(step)}
+            className={cn(
+              "h-9 min-w-[56px] px-3 rounded-md border text-sm font-medium transition-colors cursor-pointer",
+              active
+                ? "bg-blue-600 border-blue-600 text-white shadow-sm"
+                : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+            )}
+            aria-pressed={active}
+          >
+            {step}%
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
 export default function InventoryPage() {
   const { currentUser } = useCurrentUser()
   const isAdmin = currentUser?.role === "Admin"
@@ -242,6 +356,7 @@ export default function InventoryPage() {
     oz_per_package: "" as string | number,
     isNotPackage: false,
     notes: "",
+    fullness: 100 as number,
   })
 
   const handleAddItem = () => {
@@ -254,6 +369,7 @@ export default function InventoryPage() {
       oz_per_package: "",
       isNotPackage: false,
       notes: "",
+      fullness: 100,
     })
     setSheetOpen(true)
   }
@@ -268,6 +384,7 @@ export default function InventoryPage() {
       oz_per_package: item.oz_per_package || "",
       isNotPackage: item.isNotPackage || false,
       notes: item.notes || "",
+      fullness: typeof item.fullness === "number" ? item.fullness : 100,
     })
     setSheetOpen(true)
   }
@@ -384,6 +501,7 @@ export default function InventoryPage() {
         oz_per_package: formData.isNotPackage ? 0 : (formData.oz_per_package === "" ? 0 : Number(formData.oz_per_package)),
         isNotPackage: formData.isNotPackage,
         notes: formData.notes,
+        fullness: formData.fullness,
       }
 
       if (editingItem) {
@@ -627,7 +745,8 @@ export default function InventoryPage() {
                   <TableHead className="h-10 px-4 md:px-6 text-xs font-semibold text-gray-600 text-center hidden md:table-cell md:w-[9%]">Oz/Pkg</TableHead>
                   <TableHead className="h-10 px-2 md:px-6 text-xs font-semibold text-gray-600 text-center w-[30%] md:w-[11%]">Total Oz</TableHead>
                   <TableHead className="h-10 px-4 md:px-6 text-xs font-semibold text-gray-600 text-center hidden md:table-cell md:w-[11%]">Total Lbs</TableHead>
-                  <TableHead className="h-10 px-4 md:px-6 text-xs font-semibold text-gray-600 hidden lg:table-cell lg:w-[14%]">Notes</TableHead>
+                  <TableHead className="h-10 px-2 md:px-3 text-xs font-semibold text-gray-600 hidden md:table-cell md:w-[14%]">Fullness</TableHead>
+                  <TableHead className="h-10 px-4 md:px-6 text-xs font-semibold text-gray-600 hidden lg:table-cell lg:w-[10%]">Notes</TableHead>
                   <TableHead className="h-10 w-[100px] hidden md:table-cell" />
                 </TableRow>
               </TableHeader>
@@ -641,6 +760,7 @@ export default function InventoryPage() {
                     <TableCell className="h-12 px-4 md:px-6 hidden md:table-cell"><Skeleton className="h-4 w-10 mx-auto" /></TableCell>
                     <TableCell className="h-12 px-2 md:px-6"><Skeleton className="h-4 w-10 mx-auto" /></TableCell>
                     <TableCell className="h-12 px-4 md:px-6 hidden md:table-cell"><Skeleton className="h-4 w-10 mx-auto" /></TableCell>
+                    <TableCell className="h-12 px-2 md:px-3 hidden md:table-cell"><Skeleton className="h-3 w-20" /></TableCell>
                     <TableCell className="h-12 px-4 md:px-6 hidden lg:table-cell"><Skeleton className="h-4 w-20" /></TableCell>
                     <TableCell className="h-12 px-2 hidden md:table-cell">
                       <div className="flex items-center justify-end gap-0.5">
@@ -677,7 +797,8 @@ export default function InventoryPage() {
                   <TableHead className="h-10 px-4 md:px-6 text-xs font-semibold text-gray-600 text-center hidden md:table-cell md:w-[9%]">Oz/Pkg</TableHead>
                   <TableHead className="h-10 px-2 md:px-6 text-xs font-semibold text-gray-600 text-center w-[30%] md:w-[11%]">Total Oz</TableHead>
                   <TableHead className="h-10 px-4 md:px-6 text-xs font-semibold text-gray-600 text-center hidden md:table-cell md:w-[11%]">Total Lbs</TableHead>
-                  <TableHead className="h-10 px-4 md:px-6 text-xs font-semibold text-gray-600 hidden lg:table-cell lg:w-[14%]">Notes</TableHead>
+                  <TableHead className="h-10 px-2 md:px-3 text-xs font-semibold text-gray-600 hidden md:table-cell md:w-[14%]">Fullness</TableHead>
+                  <TableHead className="h-10 px-4 md:px-6 text-xs font-semibold text-gray-600 hidden lg:table-cell lg:w-[10%]">Notes</TableHead>
                   <TableHead className="h-10 w-[100px] hidden md:table-cell" />
                 </TableRow>
               </TableHeader>
@@ -688,7 +809,7 @@ export default function InventoryPage() {
                     <React.Fragment key={group.type || "__uncategorized"}>
                       {/* Group header row */}
                       <TableRow className="bg-gray-50/80 hover:bg-gray-50/80 border-b">
-                        <TableCell colSpan={isAdmin ? 9 : 8} className="h-9 px-4 sm:px-6 py-0">
+                        <TableCell colSpan={isAdmin ? 10 : 9} className="h-9 px-4 sm:px-6 py-0">
                           <div className="flex items-center gap-2">
                             <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${bulletClass}`} />
                             <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
@@ -758,6 +879,15 @@ export default function InventoryPage() {
                               </span>
                             )}
                           </TableCell>
+                          <TableCell
+                            className="h-12 px-2 md:px-3 hidden md:table-cell"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <FullnessInline
+                              value={item.fullness ?? 100}
+                              itemId={item.id}
+                            />
+                          </TableCell>
                           <TableCell className="h-12 px-4 md:px-6 hidden lg:table-cell overflow-hidden">
                             <span className="text-sm text-gray-500 truncate block">{item.notes || "—"}</span>
                           </TableCell>
@@ -819,7 +949,8 @@ export default function InventoryPage() {
                   <TableHead className="h-10 px-4 md:px-6 text-xs font-semibold text-gray-600 text-center hidden md:table-cell md:w-[9%]">Oz/Pkg</TableHead>
                   <TableHead className="h-10 px-2 md:px-6 text-xs font-semibold text-gray-600 text-center w-[30%] md:w-[11%]">Total Oz</TableHead>
                   <TableHead className="h-10 px-4 md:px-6 text-xs font-semibold text-gray-600 text-center hidden md:table-cell md:w-[11%]">Total Lbs</TableHead>
-                  <TableHead className="h-10 px-4 md:px-6 text-xs font-semibold text-gray-600 hidden lg:table-cell lg:w-[14%]">Notes</TableHead>
+                  <TableHead className="h-10 px-2 md:px-3 text-xs font-semibold text-gray-600 hidden md:table-cell md:w-[14%]">Fullness</TableHead>
+                  <TableHead className="h-10 px-4 md:px-6 text-xs font-semibold text-gray-600 hidden lg:table-cell lg:w-[10%]">Notes</TableHead>
                   <TableHead className="h-10 w-[100px] hidden md:table-cell" />
                 </TableRow>
               </TableHeader>
@@ -829,7 +960,7 @@ export default function InventoryPage() {
                   return (
                     <React.Fragment key={`oos_${group.type || "__uncategorized"}`}>
                       <TableRow className="bg-gray-50/80 hover:bg-gray-50/80 border-b">
-                        <TableCell colSpan={isAdmin ? 9 : 8} className="h-9 px-4 sm:px-6 py-0">
+                        <TableCell colSpan={isAdmin ? 10 : 9} className="h-9 px-4 sm:px-6 py-0">
                           <div className="flex items-center gap-2">
                             <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${bulletClass}`} />
                             <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
@@ -883,6 +1014,15 @@ export default function InventoryPage() {
                           </TableCell>
                           <TableCell className="h-12 px-4 md:px-6 text-center hidden md:table-cell">
                             <span className="text-sm text-gray-400">{item.isNotPackage ? "—" : `${(((item.packages ?? 0) * (item.oz_per_package ?? 0)) / 16).toFixed(1)} lb`}</span>
+                          </TableCell>
+                          <TableCell
+                            className="h-12 px-2 md:px-3 hidden md:table-cell"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <FullnessInline
+                              value={item.fullness ?? 0}
+                              itemId={item.id}
+                            />
                           </TableCell>
                           <TableCell className="h-12 px-4 md:px-6 hidden lg:table-cell overflow-hidden">
                             <span className="text-sm text-gray-400 truncate block">{item.notes || "—"}</span>
@@ -1059,6 +1199,17 @@ export default function InventoryPage() {
                 />
               </div>
             )}
+
+            <div className="space-y-2">
+              <Label>Fullness</Label>
+              <FullnessPills
+                value={formData.fullness}
+                onChange={(next) => setFormData({ ...formData, fullness: next })}
+              />
+              <p className="text-xs text-gray-500">
+                How full the current package/item is.
+              </p>
+            </div>
 
             <div className="space-y-2">
               <Label htmlFor="notes">Notes</Label>

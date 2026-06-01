@@ -57,6 +57,7 @@ import {
   getExpeditionInventoryLocations,
   createExpeditionInventoryLocation,
   deleteExpeditionInventoryLocation,
+  getExpeditionRecipeIngredients,
 } from "@/lib/xano"
 import { useCurrentUser } from "@/lib/contexts/user-context"
 
@@ -78,6 +79,15 @@ interface InventoryItem {
 
 // Allowed fullness values in 25% increments
 const FULLNESS_STEPS = [0, 25, 50, 75, 100] as const
+
+// Cookbook ingredient types line up 1:1 with inventory types except for a few
+// spelling differences. Map those so a picked ingredient prefills the right type.
+const INGREDIENT_TYPE_ALIASES: Record<string, string> = {
+  veg: "Veggie",
+  vegetable: "Veggie",
+  vegetables: "Veggie",
+  condiment: "Condiments",
+}
 
 interface IngredientType {
   id: number
@@ -333,6 +343,7 @@ export default function InventoryPage() {
 
   const { data: ingredientTypes } = useSWR("ingredient_types", getExpeditionsIngredientTypes)
   const { data: inventoryLocations } = useSWR("inventory_locations", getExpeditionInventoryLocations)
+  const { data: recipeIngredients } = useSWR("recipe_ingredients", getExpeditionRecipeIngredients)
 
   const [inventorySearch, setInventorySearch] = useState("")
   const [locationsDialogOpen, setLocationsDialogOpen] = useState(false)
@@ -344,6 +355,8 @@ export default function InventoryPage() {
   const [sheetOpen, setSheetOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  // Whether the "find or create" name suggestions dropdown is showing (add mode).
+  const [nameResultsOpen, setNameResultsOpen] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [itemToDelete, setItemToDelete] = useState<InventoryItem | null>(null)
 
@@ -368,6 +381,7 @@ export default function InventoryPage() {
 
   const handleAddItem = () => {
     setEditingItem(null)
+    setNameResultsOpen(false)
     setFormData({
       name: "",
       type: "",
@@ -384,6 +398,7 @@ export default function InventoryPage() {
 
   const handleEditItem = (item: InventoryItem) => {
     setEditingItem(item)
+    setNameResultsOpen(false)
     setFormData({
       name: item.name || "",
       type: item.type || "",
@@ -554,6 +569,92 @@ export default function InventoryPage() {
   const locationNames = useMemo(() => {
     return activeLocations.map((loc: InventoryLocation) => loc.name)
   }, [activeLocations])
+
+  // Map a cookbook ingredient's type onto one of our canonical inventory types.
+  // Returns "" when there's no clean match so we never guess wrong.
+  const resolveInventoryType = (ingredientType?: string) => {
+    const target = (ingredientType || "").trim().toLowerCase()
+    if (!target) return ""
+    const exact = typeNames.find((t: string) => t.toLowerCase() === target)
+    if (exact) return exact
+    const alias = INGREDIENT_TYPE_ALIASES[target]
+    if (alias && typeNames.includes(alias)) return alias
+    return ""
+  }
+
+  // Deduped list of every ingredient name used across the cookbook, with the
+  // type we'd assign if picked. This is the "search the cookbook" source.
+  const cookbookIngredients = useMemo(() => {
+    const rows = (recipeIngredients || []) as { ingredient?: string; type?: string }[]
+    const byName = new Map<string, { name: string; type: string }>()
+    rows.forEach((r) => {
+      const name = (r.ingredient || "").trim()
+      if (!name) return
+      const key = name.toLowerCase()
+      const existing = byName.get(key)
+      if (!existing) {
+        byName.set(key, { name, type: (r.type || "").trim() })
+      } else if (!existing.type && (r.type || "").trim()) {
+        existing.type = (r.type || "").trim()
+      }
+    })
+    return [...byName.values()].sort((a, b) => a.name.localeCompare(b.name))
+  }, [recipeIngredients])
+
+  // Suggestions for the name field, split into existing-inventory matches
+  // (restock or avoid duplicates) and cookbook matches (known names).
+  const nameQuery = formData.name.trim()
+  const nameSuggestions = useMemo(() => {
+    const q = nameQuery.toLowerCase()
+    if (!q) return { inventory: [] as InventoryItem[], cookbook: [] as { name: string; type: string }[], exactInventory: false }
+
+    const allItems = (inventoryItems || []) as InventoryItem[]
+    const invMatches = allItems
+      .filter((it) => (it.name || "").toLowerCase().includes(q))
+      .sort((a, b) => {
+        // Out-of-stock first — those are the restock candidates the user wants.
+        const aOos = (a.packages ?? 0) === 0 ? 0 : 1
+        const bOos = (b.packages ?? 0) === 0 ? 0 : 1
+        if (aOos !== bOos) return aOos - bOos
+        return (a.name || "").localeCompare(b.name || "")
+      })
+      .slice(0, 8)
+
+    const invNames = new Set(allItems.map((it) => (it.name || "").trim().toLowerCase()))
+    const exactInventory = invNames.has(q)
+
+    // Skip cookbook names that already exist as an inventory item — the item
+    // itself shows under "Already in inventory", so we don't list it twice.
+    const cbMatches = cookbookIngredients
+      .filter((ing) => ing.name.toLowerCase().includes(q) && !invNames.has(ing.name.toLowerCase()))
+      .slice(0, 8)
+
+    return { inventory: invMatches, cookbook: cbMatches, exactInventory }
+  }, [nameQuery, inventoryItems, cookbookIngredients])
+
+  const canCreateNew = nameQuery.length > 0 && !nameSuggestions.exactInventory
+  const showNameResults =
+    nameResultsOpen &&
+    !editingItem &&
+    nameQuery.length > 0 &&
+    (nameSuggestions.inventory.length > 0 || nameSuggestions.cookbook.length > 0 || canCreateNew)
+
+  // Picking a known cookbook ingredient: fill the name and (if it maps cleanly) the type.
+  const handlePickCookbookIngredient = (ing: { name: string; type: string }) => {
+    const mappedType = resolveInventoryType(ing.type)
+    setFormData((prev) => ({
+      ...prev,
+      name: ing.name,
+      type: mappedType || prev.type,
+    }))
+    setNameResultsOpen(false)
+  }
+
+  // Picking an existing item switches the sheet to edit/restock it (no duplicate).
+  const handlePickExistingItem = (item: InventoryItem) => {
+    setNameResultsOpen(false)
+    handleEditItem(item)
+  }
 
   // Group items by type, preserving ingredient type order
   const groupedItems = useMemo(() => {
@@ -1157,12 +1258,115 @@ export default function InventoryPage() {
           <div className="flex-1 overflow-y-auto p-6 space-y-5">
             <div className="space-y-2">
               <Label htmlFor="name">Name *</Label>
-              <Input
-                id="name"
-                placeholder="e.g., Rice, Pasta, Chicken"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              />
+              {editingItem ? (
+                <Input
+                  id="name"
+                  placeholder="e.g., Rice, Pasta, Chicken"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                />
+              ) : (
+                <div className="relative">
+                  <Input
+                    id="name"
+                    autoComplete="off"
+                    placeholder="Search the cookbook or type a new item…"
+                    value={formData.name}
+                    onChange={(e) => {
+                      setFormData({ ...formData, name: e.target.value })
+                      setNameResultsOpen(true)
+                    }}
+                    onFocus={() => setNameResultsOpen(true)}
+                    onBlur={() => setTimeout(() => setNameResultsOpen(false), 150)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Escape") setNameResultsOpen(false)
+                    }}
+                  />
+                  {showNameResults && (
+                    <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-72 overflow-y-auto rounded-md border border-gray-200 bg-white py-1 shadow-lg">
+                      {/* Existing inventory matches — restock or avoid duplicates */}
+                      {nameSuggestions.inventory.length > 0 && (
+                        <div className="py-1">
+                          <p className="px-3 py-1 text-xs font-semibold uppercase tracking-wider text-gray-400">
+                            Already in inventory
+                          </p>
+                          {nameSuggestions.inventory.map((item) => {
+                            const oos = (item.packages ?? 0) === 0
+                            return (
+                              <button
+                                key={item.id}
+                                type="button"
+                                onMouseDown={(e) => e.preventDefault()}
+                                onClick={() => handlePickExistingItem(item)}
+                                className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left hover:bg-gray-50 cursor-pointer"
+                              >
+                                <span className="flex min-w-0 items-center gap-2">
+                                  <span className="truncate text-sm font-medium text-gray-900">{item.name}</span>
+                                  {item.type && (
+                                    <span className="shrink-0 text-xs text-gray-400">{item.type}</span>
+                                  )}
+                                </span>
+                                {oos ? (
+                                  <span className="shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700">
+                                    Out of stock · Restock
+                                  </span>
+                                ) : (
+                                  <span className="shrink-0 rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700">
+                                    In stock · {item.packages}
+                                  </span>
+                                )}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      )}
+
+                      {/* Cookbook ingredient matches — known names */}
+                      {nameSuggestions.cookbook.length > 0 && (
+                        <div className="py-1">
+                          <p className="px-3 py-1 text-xs font-semibold uppercase tracking-wider text-gray-400">
+                            In the cookbook
+                          </p>
+                          {nameSuggestions.cookbook.map((ing) => {
+                            const mappedType = resolveInventoryType(ing.type)
+                            return (
+                              <button
+                                key={ing.name}
+                                type="button"
+                                onMouseDown={(e) => e.preventDefault()}
+                                onClick={() => handlePickCookbookIngredient(ing)}
+                                className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left hover:bg-gray-50 cursor-pointer"
+                              >
+                                <span className="truncate text-sm text-gray-900">{ing.name}</span>
+                                {mappedType && (
+                                  <span className="shrink-0 text-xs text-gray-400">{mappedType}</span>
+                                )}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      )}
+
+                      {/* Always allow creating a brand-new item */}
+                      {canCreateNew && (
+                        <div className="border-t border-gray-100 py-1">
+                          <button
+                            type="button"
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={() => setNameResultsOpen(false)}
+                            className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-gray-50 cursor-pointer"
+                          >
+                            <PlusCircle className="h-4 w-4 text-gray-500 shrink-0" />
+                            <span className="text-sm text-gray-700">
+                              Add new item “<span className="font-medium text-gray-900">{formData.name.trim()}</span>”
+                            </span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Type Combobox */}

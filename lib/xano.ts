@@ -709,6 +709,12 @@ export async function getIndividualRecipe(cookbookId: number) {
   return xanoFetch<any[]>(`/individual_recipe?expedition_cookbook_id=${cookbookId}`)
 }
 
+// Every recipe-ingredient row across the whole cookbook. Used to suggest
+// known ingredient names (and their type) when adding a galley inventory item.
+export async function getExpeditionRecipeIngredients() {
+  return xanoFetch<any[]>("/expeditions_recipes")
+}
+
 // ============ Expedition Ingredient Types ============
 export async function getExpeditionsIngredientTypes() {
   return xanoFetch<any[]>("/expeditions_ingredient_types")

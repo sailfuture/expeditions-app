@@ -41,7 +41,12 @@ import {
   ComboboxItem,
   ComboboxList,
 } from "@/components/ui/combobox"
-import { PlusCircle, Trash2, Boxes, Minus, Plus, Search, MapPin, Check, X } from "lucide-react"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import { PlusCircle, Trash2, Boxes, Minus, Plus, Search, MapPin, Check, X, HelpCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
   getExpeditionsInventory,
@@ -66,6 +71,7 @@ interface InventoryItem {
   packages: number
   oz_per_package: number
   isNotPackage?: boolean
+  isContainer?: boolean
   notes: string
   fullness?: number
 }
@@ -355,6 +361,7 @@ export default function InventoryPage() {
     packages: "" as string | number,
     oz_per_package: "" as string | number,
     isNotPackage: false,
+    isContainer: false,
     notes: "",
     fullness: 100 as number,
   })
@@ -368,6 +375,7 @@ export default function InventoryPage() {
       packages: "",
       oz_per_package: "",
       isNotPackage: false,
+      isContainer: false,
       notes: "",
       fullness: 100,
     })
@@ -383,6 +391,7 @@ export default function InventoryPage() {
       packages: item.packages || "",
       oz_per_package: item.oz_per_package || "",
       isNotPackage: item.isNotPackage || false,
+      isContainer: item.isContainer || false,
       notes: item.notes || "",
       fullness: typeof item.fullness === "number" ? item.fullness : 100,
     })
@@ -498,10 +507,12 @@ export default function InventoryPage() {
         type: formData.type,
         location: formData.location,
         packages: formData.packages === "" ? 0 : Number(formData.packages),
-        oz_per_package: formData.isNotPackage ? 0 : (formData.oz_per_package === "" ? 0 : Number(formData.oz_per_package)),
+        oz_per_package: (formData.isNotPackage || formData.isContainer) ? 0 : (formData.oz_per_package === "" ? 0 : Number(formData.oz_per_package)),
         isNotPackage: formData.isNotPackage,
+        isContainer: formData.isContainer,
         notes: formData.notes,
-        fullness: formData.fullness,
+        // Only containers track fullness; everything else stores 0.
+        fullness: formData.isContainer ? formData.fullness : 0,
       }
 
       if (editingItem) {
@@ -693,11 +704,58 @@ export default function InventoryPage() {
         <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
           {/* Header */}
           <div className="px-4 sm:px-6 py-4 border-b bg-gray-50/50 flex flex-col gap-3">
-            <div>
-              <h2 className="text-lg font-semibold">Galley Inventory</h2>
-              <p className="text-sm text-gray-600 mt-1">
-                Manage food and supply inventory on the boat
-              </p>
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <h2 className="text-lg font-semibold">Galley Inventory</h2>
+                <p className="text-sm text-gray-600 mt-1">
+                  Manage food and supply inventory on the boat
+                </p>
+              </div>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label="Inventory type guide"
+                    className="shrink-0 h-7 w-7 flex items-center justify-center rounded-full text-gray-400 hover:bg-gray-200 hover:text-gray-600 transition-colors cursor-pointer"
+                  >
+                    <HelpCircle className="h-5 w-5" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-80 p-0">
+                  <div className="px-4 py-3 border-b">
+                    <p className="text-sm font-semibold text-gray-900">Inventory types</p>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      Pick the type that matches how you'll measure the item.
+                    </p>
+                  </div>
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="border-b bg-gray-50/60 text-gray-600">
+                        <th className="text-left font-semibold px-3 py-2">Type</th>
+                        <th className="text-left font-semibold px-3 py-2">Best for</th>
+                        <th className="text-left font-semibold px-3 py-2">Measured by</th>
+                      </tr>
+                    </thead>
+                    <tbody className="text-gray-700">
+                      <tr className="border-b align-top">
+                        <td className="px-3 py-2 font-medium">Package</td>
+                        <td className="px-3 py-2">Rice bags, pasta boxes, cases, packs of cups</td>
+                        <td className="px-3 py-2">Weight / package quantity</td>
+                      </tr>
+                      <tr className="border-b align-top">
+                        <td className="px-3 py-2 font-medium">Individual item</td>
+                        <td className="px-3 py-2">Apples, bread slices, eggs, bottled drinks</td>
+                        <td className="px-3 py-2">Count</td>
+                      </tr>
+                      <tr className="align-top">
+                        <td className="px-3 py-2 font-medium">Container</td>
+                        <td className="px-3 py-2">Seasoning, breadcrumbs, oil, sauce, detergent</td>
+                        <td className="px-3 py-2">Fullness percentage</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </PopoverContent>
+              </Popover>
             </div>
             <div className="relative w-full">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -883,10 +941,14 @@ export default function InventoryPage() {
                             className="h-12 px-2 md:px-3 hidden md:table-cell"
                             onClick={(e) => e.stopPropagation()}
                           >
-                            <FullnessInline
-                              value={item.fullness ?? 100}
-                              itemId={item.id}
-                            />
+                            {item.isContainer ? (
+                              <FullnessInline
+                                value={item.fullness ?? 100}
+                                itemId={item.id}
+                              />
+                            ) : (
+                              <span className="text-sm text-gray-300">—</span>
+                            )}
                           </TableCell>
                           <TableCell className="h-12 px-4 md:px-6 hidden lg:table-cell overflow-hidden">
                             <span className="text-sm text-gray-500 truncate block">{item.notes || "—"}</span>
@@ -1019,10 +1081,14 @@ export default function InventoryPage() {
                             className="h-12 px-2 md:px-3 hidden md:table-cell"
                             onClick={(e) => e.stopPropagation()}
                           >
-                            <FullnessInline
-                              value={item.fullness ?? 0}
-                              itemId={item.id}
-                            />
+                            {item.isContainer ? (
+                              <FullnessInline
+                                value={item.fullness ?? 0}
+                                itemId={item.id}
+                              />
+                            ) : (
+                              <span className="text-sm text-gray-300">—</span>
+                            )}
                           </TableCell>
                           <TableCell className="h-12 px-4 md:px-6 hidden lg:table-cell overflow-hidden">
                             <span className="text-sm text-gray-400 truncate block">{item.notes || "—"}</span>
@@ -1152,26 +1218,86 @@ export default function InventoryPage() {
               </Combobox>
             </div>
 
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setFormData({ ...formData, isNotPackage: !formData.isNotPackage })}
-                className={cn(
-                  "h-5 w-5 rounded border-2 flex items-center justify-center cursor-pointer transition-colors",
-                  formData.isNotPackage
-                    ? "bg-gray-900 border-gray-900 text-white"
-                    : "border-gray-300 bg-white"
-                )}
-              >
-                {formData.isNotPackage && <Check className="h-3 w-3" />}
-              </button>
-              <Label className="text-sm cursor-pointer" onClick={() => setFormData({ ...formData, isNotPackage: !formData.isNotPackage })}>
-                Individual item (not packaged)
-              </Label>
+            <div className="space-y-2">
+              {/* Individual item — mutually exclusive with Container */}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setFormData({
+                      ...formData,
+                      isNotPackage: !formData.isNotPackage,
+                      // Turning on Individual turns off Container
+                      isContainer: !formData.isNotPackage ? false : formData.isContainer,
+                    })
+                  }
+                  className={cn(
+                    "h-5 w-5 rounded border-2 flex items-center justify-center cursor-pointer transition-colors",
+                    formData.isNotPackage
+                      ? "bg-gray-900 border-gray-900 text-white"
+                      : "border-gray-300 bg-white"
+                  )}
+                >
+                  {formData.isNotPackage && <Check className="h-3 w-3" />}
+                </button>
+                <Label
+                  className="text-sm cursor-pointer"
+                  onClick={() =>
+                    setFormData({
+                      ...formData,
+                      isNotPackage: !formData.isNotPackage,
+                      isContainer: !formData.isNotPackage ? false : formData.isContainer,
+                    })
+                  }
+                >
+                  Individual item (not packaged)
+                </Label>
+              </div>
+
+              {/* Container — mutually exclusive with Individual */}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setFormData({
+                      ...formData,
+                      isContainer: !formData.isContainer,
+                      // Turning on Container turns off Individual
+                      isNotPackage: !formData.isContainer ? false : formData.isNotPackage,
+                    })
+                  }
+                  className={cn(
+                    "h-5 w-5 rounded border-2 flex items-center justify-center cursor-pointer transition-colors",
+                    formData.isContainer
+                      ? "bg-gray-900 border-gray-900 text-white"
+                      : "border-gray-300 bg-white"
+                  )}
+                >
+                  {formData.isContainer && <Check className="h-3 w-3" />}
+                </button>
+                <Label
+                  className="text-sm cursor-pointer"
+                  onClick={() =>
+                    setFormData({
+                      ...formData,
+                      isContainer: !formData.isContainer,
+                      isNotPackage: !formData.isContainer ? false : formData.isNotPackage,
+                    })
+                  }
+                >
+                  Container (tracked by fullness)
+                </Label>
+              </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="packages">{formData.isNotPackage ? "Quantity" : "Packages"}</Label>
+              <Label htmlFor="packages">
+                {formData.isContainer
+                  ? "Containers"
+                  : formData.isNotPackage
+                  ? "Quantity"
+                  : "Packages"}
+              </Label>
               <Input
                 id="packages"
                 type="number"
@@ -1184,7 +1310,7 @@ export default function InventoryPage() {
               />
             </div>
 
-            {!formData.isNotPackage && (
+            {!formData.isNotPackage && !formData.isContainer && (
               <div className="space-y-2">
                 <Label htmlFor="oz_per_package">Oz / Package</Label>
                 <Input
@@ -1200,16 +1326,18 @@ export default function InventoryPage() {
               </div>
             )}
 
-            <div className="space-y-2">
-              <Label>Fullness</Label>
-              <FullnessPills
-                value={formData.fullness}
-                onChange={(next) => setFormData({ ...formData, fullness: next })}
-              />
-              <p className="text-xs text-gray-500">
-                How full the current package/item is.
-              </p>
-            </div>
+            {formData.isContainer && (
+              <div className="space-y-2">
+                <Label>Fullness</Label>
+                <FullnessPills
+                  value={formData.fullness}
+                  onChange={(next) => setFormData({ ...formData, fullness: next })}
+                />
+                <p className="text-xs text-gray-500">
+                  How full the current container is.
+                </p>
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="notes">Notes</Label>

@@ -914,6 +914,8 @@ export async function createExpeditionsInventoryItem(data: {
   oz_per_package: number
   notes?: string
   fullness?: number
+  isContainer?: boolean
+  isNotPackage?: boolean
 }) {
   return xanoFetch<any>("/expeditions_inventory", {
     method: "POST",

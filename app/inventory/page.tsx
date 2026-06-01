@@ -1124,13 +1124,13 @@ export default function InventoryPage() {
           clicks, with a manual overlay since Radix skips its overlay in non-modal mode. */}
       {sheetOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm animate-in fade-in-0"
+          className="fixed inset-0 z-[55] bg-black/50 backdrop-blur-sm animate-in fade-in-0"
           onClick={() => setSheetOpen(false)}
           aria-hidden="true"
         />
       )}
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen} modal={false}>
-        <SheetContent className="w-full sm:w-[520px] sm:max-w-[90vw] p-0 flex flex-col h-full overflow-hidden">
+        <SheetContent className="w-full sm:w-[520px] sm:max-w-[90vw] p-0 flex flex-col h-full overflow-hidden z-[60]">
           <SheetHeader className="p-6 pb-4 border-b shrink-0">
             <div className="flex items-center justify-between">
               <div>

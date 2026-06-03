@@ -34,7 +34,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { toast } from "sonner"
-import { Plus, Pencil, X, FileUp } from "lucide-react"
+import { Plus, Pencil, X, FileUp, Search } from "lucide-react"
 import {
   FileUpload,
   FileUploadDropzone,
@@ -82,6 +82,7 @@ const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
 export default function MealPlanningPage() {
   const router = useRouter()
+  const [search, setSearch] = useState("")
   const [assignSheetOpen, setAssignSheetOpen] = useState(false)
   const [selectedExpeditionForAssign, setSelectedExpeditionForAssign] = useState<number | null>(null)
   const [isAssigning, setIsAssigning] = useState(false)
@@ -156,9 +157,18 @@ export default function MealPlanningPage() {
     return [...ids].map(id => galleyEquipment.find((e: any) => e.id === id)?.name).filter(Boolean).sort()
   }
 
-  // Group recipes by types array (a recipe can appear in multiple groups)
+  // Group recipes by types array (a recipe can appear in multiple groups),
+  // filtered by the search query (name, description, or equipment).
   const groupedRecipes = useMemo(() => {
     if (!recipes) return { Breakfast: [], Lunch: [], Dinner: [], Snack: [] }
+
+    const q = search.trim().toLowerCase()
+    const matchesSearch = (recipe: Recipe) => {
+      if (!q) return true
+      if ((recipe.recipe_name || "").toLowerCase().includes(q)) return true
+      if ((recipe.summary || "").toLowerCase().includes(q)) return true
+      return getRecipeEquipment(recipe.id).some((name) => name.toLowerCase().includes(q))
+    }
 
     const groups: Record<string, Recipe[]> = {
       Breakfast: [],
@@ -168,6 +178,7 @@ export default function MealPlanningPage() {
     }
 
     recipes.forEach((recipe) => {
+      if (!matchesSearch(recipe)) return
       const recipeTypes = Array.isArray(recipe.types) && recipe.types.length > 0
         ? recipe.types
         : recipe.type ? [recipe.type] : []
@@ -182,7 +193,7 @@ export default function MealPlanningPage() {
     })
 
     return groups
-  }, [recipes])
+  }, [recipes, search, recipeDetails, galleyEquipment])
 
   const handleRowClick = (id: number) => {
     router.push(`/meal-planning/${id}`)
@@ -473,21 +484,32 @@ export default function MealPlanningPage() {
 
   return (
     <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-      <div className="mb-6 sm:mb-8 flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Meal Planning</h1>
-          <p className="text-sm sm:text-base text-muted-foreground mt-1">
-            Browse and manage expedition recipes by meal type
-          </p>
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Meal Planning</h1>
+        <p className="text-sm sm:text-base text-muted-foreground mt-1">
+          Browse and manage expedition recipes by meal type
+        </p>
+      </div>
+
+      {/* Recipe search + actions */}
+      <div className="mb-6 flex w-full flex-col gap-2 sm:flex-row sm:items-center">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Input
+            placeholder="Search recipes..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9 h-10 w-full"
+          />
         </div>
-        <div className="flex gap-2 shrink-0">
+        <div className="flex gap-2">
           <Button
             variant="outline"
             onClick={() => {
               setSelectedExpeditionForAssign(null)
               setAssignSheetOpen(true)
             }}
-            className="cursor-pointer"
+            className="cursor-pointer flex-1 sm:flex-none h-10"
           >
             Assign All
           </Button>
@@ -505,7 +527,7 @@ export default function MealPlanningPage() {
               setAddPhotoPreview(null)
               setAddSheetOpen(true)
             }}
-            className="cursor-pointer"
+            className="cursor-pointer flex-1 sm:flex-none h-10"
           >
             <Plus className="h-4 w-4 mr-1.5" />
             Add Recipe
@@ -525,6 +547,13 @@ export default function MealPlanningPage() {
           {renderSkeletonTable()}
           {renderSkeletonTable()}
         </>
+      ) : search.trim() && !Object.values(groupedRecipes).some((arr) => arr.length > 0) ? (
+        <div className="text-center py-16">
+          <p className="text-lg font-medium text-gray-600">No recipes found</p>
+          <p className="text-sm text-gray-500 mt-1">
+            Nothing matches &ldquo;{search.trim()}&rdquo;. Try a different search.
+          </p>
+        </div>
       ) : (
         <>
           {renderMealSection("Breakfast", groupedRecipes.Breakfast)}

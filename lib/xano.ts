@@ -162,6 +162,16 @@ export async function getStudentsByExpedition(expeditionsId: number) {
   return xanoFetch<any[]>(`/students_by_expedition?expeditions_id=${expeditionsId}`)
 }
 
+// Create a student record directly (i.e. NOT from the Toddle sync). Manually
+// added students get an empty toddleID, which is what distinguishes them from
+// Toddle-sourced records.
+export async function createStudent(data: Record<string, any>) {
+  return xanoFetch<any>("/students", {
+    method: "POST",
+    body: JSON.stringify(data),
+  })
+}
+
 export async function createExpeditionStudentInformation(data: Record<string, any>) {
   return xanoFetch<any>("/expeditions_student_information", {
     method: "POST",

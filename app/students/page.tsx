@@ -13,7 +13,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
-import { ExternalLink, User, Users, Link2, Link2Off, RefreshCw } from "lucide-react"
+import { ExternalLink, User, Users, Link2, Link2Off, RefreshCw, UserPlus } from "lucide-react"
 import { useStudentsByExpedition, useStudents as useAllStudents } from "@/lib/hooks/use-expeditions"
 import { useCurrentUser } from "@/lib/contexts/user-context"
 import { useExpeditionContext } from "@/lib/contexts/expedition-context"
@@ -41,10 +41,13 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { updateStudent, reloadToddleStudents } from "@/lib/xano"
+import { Input } from "@/components/ui/input"
+import { createStudent, updateStudent, reloadToddleStudents } from "@/lib/xano"
 import { mutate } from "swr"
 import { toast } from "sonner"
 import useSWR from "swr"
@@ -97,7 +100,22 @@ function StudentsPageContent() {
   const [linkModalOpen, setLinkModalOpen] = useState(false)
   const [selectedStudentForLink, setSelectedStudentForLink] = useState<any>(null)
   const [isReloadingToddle, setIsReloadingToddle] = useState(false)
-  
+
+  // Manual "Add Student" dialog (non-Toddle students)
+  const [addOpen, setAddOpen] = useState(false)
+  const [isCreating, setIsCreating] = useState(false)
+  const emptyAddForm = {
+    firstName: "",
+    lastName: "",
+    studentEmail: "",
+    yearGroup: "",
+    grade: "",
+    gender: "",
+    nationality: "",
+    expeditionId: "",
+  }
+  const [addForm, setAddForm] = useState(emptyAddForm)
+
   // Fetch applications for linking
   const { data: applications } = useSWR("expedition_student_applications", fetchApplications)
   
@@ -300,6 +318,42 @@ function StudentsPageContent() {
     setLinkModalOpen(true)
   }
 
+  // Create a manual (non-Toddle) student
+  const handleCreateStudent = async () => {
+    if (!addForm.firstName.trim() || !addForm.lastName.trim()) {
+      toast.error("First and last name are required")
+      return
+    }
+    setIsCreating(true)
+    try {
+      await createStudent({
+        firstName: addForm.firstName.trim(),
+        lastName: addForm.lastName.trim(),
+        studentEmail: addForm.studentEmail.trim(),
+        yearGroup: addForm.yearGroup.trim(),
+        grade: addForm.grade.trim(),
+        gender: addForm.gender.trim(),
+        nationality: addForm.nationality.trim(),
+        // Empty toddleID marks this as a manually-added student, not from Toddle.
+        toddleID: "",
+        isArchived: false,
+        expeditions_id: addForm.expeditionId ? [Number(addForm.expeditionId)] : [],
+      })
+      mutate("students")
+      if (addForm.expeditionId) {
+        mutate(`students_by_expedition_${addForm.expeditionId}`)
+      }
+      toast.success("Student added")
+      setAddOpen(false)
+      setAddForm(emptyAddForm)
+    } catch (error) {
+      console.error("Failed to add student:", error)
+      toast.error("Failed to add student")
+    } finally {
+      setIsCreating(false)
+    }
+  }
+
   // Reload Toddle students
   const handleReloadToddleStudents = async () => {
     setIsReloadingToddle(true)
@@ -352,6 +406,16 @@ function StudentsPageContent() {
                   </p>
                 </div>
                 <div className="flex items-center gap-4">
+                  <Button
+                    onClick={() => {
+                      setAddForm(emptyAddForm)
+                      setAddOpen(true)
+                    }}
+                    className="cursor-pointer"
+                  >
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Add Student
+                  </Button>
                   <Button
                     variant="outline"
                     onClick={handleReloadToddleStudents}
@@ -752,6 +816,142 @@ function StudentsPageContent() {
           </div>
         )}
       </main>
+
+      {/* Add Student Modal (manual, non-Toddle) */}
+      <Dialog open={addOpen} onOpenChange={(open) => { setAddOpen(open); if (!open) setAddForm(emptyAddForm) }}>
+        <DialogContent className="w-full sm:max-w-lg max-h-[85vh] flex flex-col [&>button]:cursor-pointer">
+          <DialogHeader className="border-b pb-4">
+            <DialogTitle>Add Student</DialogTitle>
+            <DialogDescription>
+              Manually add a student that isn&apos;t in Toddle. They won&apos;t be affected by Toddle reloads.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto py-4 space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="add-firstName">First name *</Label>
+                <Input
+                  id="add-firstName"
+                  value={addForm.firstName}
+                  onChange={(e) => setAddForm({ ...addForm, firstName: e.target.value })}
+                  placeholder="First name"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="add-lastName">Last name *</Label>
+                <Input
+                  id="add-lastName"
+                  value={addForm.lastName}
+                  onChange={(e) => setAddForm({ ...addForm, lastName: e.target.value })}
+                  placeholder="Last name"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="add-email">Email</Label>
+              <Input
+                id="add-email"
+                type="email"
+                value={addForm.studentEmail}
+                onChange={(e) => setAddForm({ ...addForm, studentEmail: e.target.value })}
+                placeholder="name@sailfuture.org"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="add-yearGroup">Year group</Label>
+                <Input
+                  id="add-yearGroup"
+                  value={addForm.yearGroup}
+                  onChange={(e) => setAddForm({ ...addForm, yearGroup: e.target.value })}
+                  placeholder="e.g., Batch of 2030"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="add-grade">Grade</Label>
+                <Input
+                  id="add-grade"
+                  value={addForm.grade}
+                  onChange={(e) => setAddForm({ ...addForm, grade: e.target.value })}
+                  placeholder="e.g., Year 1"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="add-gender">Gender</Label>
+                <Input
+                  id="add-gender"
+                  value={addForm.gender}
+                  onChange={(e) => setAddForm({ ...addForm, gender: e.target.value })}
+                  placeholder="Optional"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="add-nationality">Nationality</Label>
+                <Input
+                  id="add-nationality"
+                  value={addForm.nationality}
+                  onChange={(e) => setAddForm({ ...addForm, nationality: e.target.value })}
+                  placeholder="Optional"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Assign to expedition (optional)</Label>
+              <Select
+                value={addForm.expeditionId || "none"}
+                onValueChange={(val) => setAddForm({ ...addForm, expeditionId: val === "none" ? "" : val })}
+              >
+                <SelectTrigger className="cursor-pointer">
+                  <SelectValue placeholder="None" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  {(allExpeditionsData || []).map((exp: any) => (
+                    <SelectItem key={exp.id} value={String(exp.id)}>
+                      {exp.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <DialogFooter className="border-t pt-4">
+            <Button
+              variant="outline"
+              onClick={() => setAddOpen(false)}
+              disabled={isCreating}
+              className="cursor-pointer"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCreateStudent}
+              disabled={isCreating || !addForm.firstName.trim() || !addForm.lastName.trim()}
+              className="cursor-pointer"
+            >
+              {isCreating ? (
+                <>
+                  <Spinner className="h-4 w-4 mr-2" />
+                  Adding...
+                </>
+              ) : (
+                <>
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Add Student
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Link Application Modal */}
       <Dialog open={linkModalOpen} onOpenChange={setLinkModalOpen}>

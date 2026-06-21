@@ -379,15 +379,31 @@ function StudentsPageContent() {
           {/* Filter Bar */}
           <div className="border-b bg-muted/30">
             <div className="container mx-auto px-4 py-4">
-              <div className="flex items-center gap-2">
-                <Switch
-                  id="show-archived-expedition"
-                  checked={showArchived}
-                  onCheckedChange={setShowArchived}
-                />
-                <Label htmlFor="show-archived-expedition" className="text-sm cursor-pointer">
-                  Show archived students
-                </Label>
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id="show-archived-expedition"
+                    checked={showArchived}
+                    onCheckedChange={setShowArchived}
+                  />
+                  <Label htmlFor="show-archived-expedition" className="text-sm cursor-pointer">
+                    Show archived students
+                  </Label>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setAddForm({
+                      ...emptyAddForm,
+                      expeditionId: effectiveExpeditionId ? String(effectiveExpeditionId) : "",
+                    })
+                    setAddOpen(true)
+                  }}
+                  className="cursor-pointer"
+                >
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Add Student
+                </Button>
               </div>
             </div>
           </div>

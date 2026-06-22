@@ -47,7 +47,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { createStudent, updateStudent, reloadToddleStudents } from "@/lib/xano"
+import { createStudent, updateStudent, reloadToddleStudents, createExpeditionAssignment } from "@/lib/xano"
 import { mutate } from "swr"
 import { toast } from "sonner"
 import useSWR from "swr"
@@ -326,7 +326,7 @@ function StudentsPageContent() {
     }
     setIsCreating(true)
     try {
-      await createStudent({
+      const newStudent = await createStudent({
         firstName: addForm.firstName.trim(),
         lastName: addForm.lastName.trim(),
         studentEmail: addForm.studentEmail.trim(),
@@ -339,9 +339,19 @@ function StudentsPageContent() {
         isArchived: false,
         expeditions_id: addForm.expeditionId ? [Number(addForm.expeditionId)] : [],
       })
+      // Create the expedition_student_assignments join record so the student
+      // shows up in the expedition's Assignment tab (which reads only from that
+      // table, not the student's expeditions_id array).
+      if (newStudent?.id && addForm.expeditionId) {
+        await createExpeditionAssignment({
+          students_id: newStudent.id,
+          expeditions_id: Number(addForm.expeditionId),
+        })
+      }
       mutate("students")
       if (addForm.expeditionId) {
         mutate(`students_by_expedition_${addForm.expeditionId}`)
+        mutate(`expedition_assignments_${addForm.expeditionId}`)
       }
       toast.success("Student added")
       setAddOpen(false)

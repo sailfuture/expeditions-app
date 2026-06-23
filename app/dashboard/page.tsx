@@ -40,6 +40,7 @@ import { useExpeditionSchedules, useExpeditionLocations, useTeachers } from "@/l
 import { useExpeditionContext } from "@/lib/contexts/expedition-context"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { addAllDatesForExpedition, deleteExpeditionSchedule, updateExpeditionSchedule, getExpeditionsGalleyTeam, getExpeditionDishDays } from "@/lib/xano"
+import { autoAssignTeamsForExpedition } from "@/lib/team-assignment"
 import useSWR, { mutate } from "swr"
 import { toast } from "sonner"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -478,6 +479,19 @@ export default function DashboardPage() {
     setGeneratingDates(true)
     try {
       await addAllDatesForExpedition(activeExpeditionId)
+
+      // Auto-assign dish teams (by weekday) and galley teams (rotation) to the
+      // newly generated days. Fetch fresh data inside the helper since the days
+      // were just created. Don't fail the whole action if assignment hiccups.
+      try {
+        await autoAssignTeamsForExpedition(activeExpeditionId, {
+          startDate: displayExpedition?.startDate || displayExpedition?.start_date,
+          endDate: displayExpedition?.endDate || displayExpedition?.end_date,
+        })
+      } catch (assignError) {
+        console.error("Failed to auto-assign teams after generating dates:", assignError)
+      }
+
       mutate(`expedition_schedules_${activeExpeditionId}`)
       toast.success("All dates generated successfully")
     } catch (error) {
@@ -505,48 +519,21 @@ export default function DashboardPage() {
     const expeditionEndDate = displayExpedition?.endDate || displayExpedition?.end_date
 
     setRotatingGalleyTeams(true)
-    
+
     try {
-      // Sort galley teams alphabetically
-      const sortedGalleyTeams = [...galleyTeams].sort((a: any, b: any) => 
-        (a.name || "").localeCompare(b.name || "")
-      )
-      
-      // Filter and sort schedules by date, only within expedition date range
-      const sortedSchedules = [...schedules]
-        .filter((s: any) => {
-          if (!expeditionStartDate || !expeditionEndDate) return true
-          return s.date >= expeditionStartDate && s.date <= expeditionEndDate
-        })
-        .sort((a: any, b: any) => a.date.localeCompare(b.date))
-      
-      if (sortedSchedules.length === 0) {
-        toast.error("No schedule days found within expedition date range")
-        setRotatingGalleyTeams(false)
-        return
-      }
-      
-      // Update each schedule with rotating galley team
-      let successCount = 0
-      for (let i = 0; i < sortedSchedules.length; i++) {
-        const schedule = sortedSchedules[i]
-        const galleyTeamIndex = i % sortedGalleyTeams.length
-        const galleyTeam = sortedGalleyTeams[galleyTeamIndex]
-        
-        try {
-          await updateExpeditionSchedule(schedule.id, {
-            expeditions_galley_team_id: galleyTeam.id
-          })
-          successCount++
-        } catch (error) {
-          console.error(`Failed to update schedule ${schedule.id}:`, error)
-        }
-      }
-      
+      const { galleyUpdated } = await autoAssignTeamsForExpedition(activeExpeditionId!, {
+        startDate: expeditionStartDate,
+        endDate: expeditionEndDate,
+        dishDays,
+        galleyTeams,
+        schedules,
+        assignDish: false,
+      })
+
       // Refresh schedule data
       await mutate(`expedition_schedules_${activeExpeditionId}`)
-      
-      toast.success(`Galley teams updated for ${successCount} days`)
+
+      toast.success(`Galley teams updated for ${galleyUpdated} days`)
     } catch (error) {
       console.error("Failed to rotate galley teams:", error)
       toast.error("Failed to rotate galley teams")
@@ -572,48 +559,23 @@ export default function DashboardPage() {
     const expeditionEndDate = displayExpedition?.endDate || displayExpedition?.end_date
 
     setRotatingDishTeams(true)
-    
+
     try {
-      // Sort dish days by dishteam name (Dish Team A, Dish Team B, etc.)
-      const sortedDishDays = [...dishDays].sort((a: any, b: any) => 
-        (a.dishteam || "").localeCompare(b.dishteam || "")
-      )
-      
-      // Filter and sort schedules by date, only within expedition date range
-      const sortedSchedules = [...schedules]
-        .filter((s: any) => {
-          if (!expeditionStartDate || !expeditionEndDate) return true
-          return s.date >= expeditionStartDate && s.date <= expeditionEndDate
-        })
-        .sort((a: any, b: any) => a.date.localeCompare(b.date))
-      
-      if (sortedSchedules.length === 0) {
-        toast.error("No schedule days found within expedition date range")
-        setRotatingDishTeams(false)
-        return
-      }
-      
-      // Update each schedule with rotating dish team
-      let successCount = 0
-      for (let i = 0; i < sortedSchedules.length; i++) {
-        const schedule = sortedSchedules[i]
-        const dishDayIndex = i % sortedDishDays.length
-        const dishDay = sortedDishDays[dishDayIndex]
-        
-        try {
-          await updateExpeditionSchedule(schedule.id, {
-            expedition_dish_days_id: dishDay.id
-          })
-          successCount++
-        } catch (error) {
-          console.error(`Failed to update schedule ${schedule.id}:`, error)
-        }
-      }
-      
+      // Dish teams are matched to each day's actual weekday (a dish team's
+      // day_of_week -> the schedule day that falls on that weekday).
+      const { dishUpdated } = await autoAssignTeamsForExpedition(activeExpeditionId!, {
+        startDate: expeditionStartDate,
+        endDate: expeditionEndDate,
+        dishDays,
+        galleyTeams,
+        schedules,
+        assignGalley: false,
+      })
+
       // Refresh schedule data
       await mutate(`expedition_schedules_${activeExpeditionId}`)
-      
-      toast.success(`Dish teams updated for ${successCount} days`)
+
+      toast.success(`Dish teams updated for ${dishUpdated} days`)
     } catch (error) {
       console.error("Failed to rotate dish teams:", error)
       toast.error("Failed to rotate dish teams")
@@ -813,7 +775,7 @@ export default function DashboardPage() {
                   size="sm"
                   disabled={rotatingDishTeams || !activeExpeditionId || !dishDays || dishDays.length === 0 || !schedules || schedules.length === 0}
                   className="cursor-pointer h-8 sm:h-9 px-2 sm:px-3"
-                  title={!schedules || schedules.length === 0 ? "Generate dates first" : "Assign dish teams in rotation starting from first date"}
+                  title={!schedules || schedules.length === 0 ? "Generate dates first" : "Assign dish teams by matching each day's weekday"}
                 >
                   {rotatingDishTeams ? (
                     <Spinner className="h-4 w-4 sm:mr-2" />

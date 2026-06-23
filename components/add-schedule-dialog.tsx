@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { createExpeditionSchedule, createExpeditionScheduleItem } from "@/lib/xano"
+import { autoAssignTeamsForExpedition } from "@/lib/team-assignment"
 import { useExpeditionLocations, useExpeditionScheduleTemplates } from "@/lib/hooks/use-expeditions"
 import { useExpeditionContext } from "@/lib/contexts/expedition-context"
 import { mutate } from "swr"
@@ -26,7 +27,7 @@ interface AddScheduleDialogProps {
 
 export function AddScheduleDialog({ open, onOpenChange }: AddScheduleDialogProps) {
   const router = useRouter()
-  const { selectedExpeditionId } = useExpeditionContext()
+  const { selectedExpeditionId, selectedExpedition } = useExpeditionContext()
   const { data: locations } = useExpeditionLocations(selectedExpeditionId || undefined)
   const { data: templates } = useExpeditionScheduleTemplates()
   
@@ -79,6 +80,18 @@ export function AddScheduleDialog({ open, onOpenChange }: AddScheduleDialogProps
         }
       }
       
+      // Auto-assign the dish team (by weekday) and galley team (rotation) for
+      // the new day. A full recompute keeps the galley rotation consistent when
+      // a day is inserted. Idempotent, so it won't disturb already-correct days.
+      try {
+        await autoAssignTeamsForExpedition(selectedExpeditionId, {
+          startDate: (selectedExpedition as any)?.startDate || (selectedExpedition as any)?.start_date,
+          endDate: (selectedExpedition as any)?.endDate || (selectedExpedition as any)?.end_date,
+        })
+      } catch (assignError) {
+        console.error("Failed to auto-assign teams for new schedule day:", assignError)
+      }
+
       // Refresh schedules data with correct SWR key
       mutate(`expedition_schedules_${selectedExpeditionId}`)
       onOpenChange(false)

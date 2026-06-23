@@ -1,6 +1,6 @@
 "use client"
 
-import { use } from "react"
+import { use, Fragment } from "react"
 import { useRouter } from "next/navigation"
 import useSWR from "swr"
 import {
@@ -298,6 +298,30 @@ function EditDishTeamDialog({
   )
 }
 
+// Maps a granular bunk name (e.g. "Port Fwd Crew Top") to its parent area group.
+// Ordered most-specific first so "Port Midship"/"Stbd Midship" win before the
+// looser "Aft" check. Students with no bunk fall through to "Unassigned".
+const BUNK_AREA_ORDER = [
+  "Port Forward",
+  "Port Midship",
+  "Starboard Forward",
+  "Starboard Midship",
+  "Aft",
+  "VIP",
+  "Unassigned",
+] as const
+
+function getBunkArea(bunk: string | null | undefined): string {
+  if (!bunk || bunk === "none") return "Unassigned"
+  if (bunk.includes("Port Midship")) return "Port Midship"
+  if (bunk.includes("Port Fwd")) return "Port Forward"
+  if (bunk.includes("Stbd Midship")) return "Starboard Midship"
+  if (bunk.includes("Stbd Fwd")) return "Starboard Forward"
+  if (bunk.includes("Aft")) return "Aft"
+  if (bunk.includes("VIP")) return "VIP"
+  return "Unassigned"
+}
+
 interface PageProps {
   params: Promise<{ id: string }>
 }
@@ -377,6 +401,15 @@ export default function AssignmentsPage({ params }: PageProps) {
       profileImage: a._students?.profileImage || "",
     }))
     .sort((a, b) => (a.name || "").localeCompare(b.name || ""))
+
+  // Group students by the parent area their bunk falls under, for visual
+  // section headers. Areas are rendered in BUNK_AREA_ORDER; empty areas skipped.
+  const studentsByArea = BUNK_AREA_ORDER
+    .map((area) => ({
+      area,
+      students: studentAssignments.filter((s: any) => getBunkArea(s.bunk) === area),
+    }))
+    .filter((group) => group.students.length > 0)
 
   const handleFieldChange = async (assignmentId: number, field: string, value: string | number[] | null) => {
     const updateKey = `${assignmentId}-${field}`
@@ -855,7 +888,18 @@ export default function AssignmentsPage({ params }: PageProps) {
                         </span>
                       </TableCell>
                     </TableRow>
-                    {studentAssignments.map((assignment: any) => renderAssignmentRow(assignment))}
+                    {studentsByArea.map((group) => (
+                      <Fragment key={`area-${group.area}`}>
+                        <TableRow className="bg-gray-50 hover:bg-gray-50">
+                          <TableCell colSpan={5} className="h-9 px-6 pl-10">
+                            <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                              {group.area} ({group.students.length})
+                            </span>
+                          </TableCell>
+                        </TableRow>
+                        {group.students.map((assignment: any) => renderAssignmentRow(assignment))}
+                      </Fragment>
+                    ))}
                   </>
                 )}
 

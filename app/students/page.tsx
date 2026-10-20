@@ -150,8 +150,8 @@ function StudentsPageContent() {
   const { activeStudents, archivedStudents} = useMemo(() => {
     if (!students) return { activeStudents: [], archivedStudents: [] }
     
-    const active = students.filter((s: any) => !s.archived)
-    const archived = students.filter((s: any) => s.archived)
+    const active = students.filter((s: any) => !s.isArchived)
+    const archived = students.filter((s: any) => s.isArchived)
     
     // Sort both groups alphabetically
     const sortAlphabetically = (a: any, b: any) => {
@@ -170,7 +170,7 @@ function StudentsPageContent() {
   const studentsByYearGroup = useMemo(() => {
     if (!students) return []
     
-    const filtered = students.filter((student: any) => showArchived || !student.archived)
+    const filtered = students.filter((student: any) => showArchived || !student.isArchived)
     
     // Group by yearGroup
     const grouped = filtered.reduce((acc: any, student: any) => {
@@ -368,12 +368,16 @@ function StudentsPageContent() {
   const handleReloadToddleStudents = async () => {
     setIsReloadingToddle(true)
     try {
-      await reloadToddleStudents()
-      mutate("students")
-      toast.success("Toddle students reloaded successfully")
+      const result = await reloadToddleStudents()
+      // Refresh every students list (all-students and per-expedition caches)
+      mutate((key) => typeof key === "string" && (key === "students" || key.startsWith("students_by_expedition_")))
+      const count = typeof result?.synced === "number" ? result.synced : null
+      toast.success(count !== null ? `Synced ${count} students from Toddle` : "Toddle students reloaded successfully")
     } catch (error) {
       console.error("Failed to reload Toddle students:", error)
-      toast.error("Failed to reload Toddle students")
+      // Xano forwards the real reason (e.g. an expired Toddle token), so show it.
+      const message = error instanceof Error && error.message ? error.message : "Failed to reload Toddle students"
+      toast.error(message, { duration: 10000 })
     } finally {
       setIsReloadingToddle(false)
     }
@@ -796,7 +800,7 @@ function StudentsPageContent() {
                             )}
                           </TableCell>
                           <TableCell className="h-14 px-4 w-[100px]">
-                            {student.archived ? (
+                            {student.isArchived ? (
                               <Badge variant="outline" className="bg-gray-100 border-gray-300 text-gray-600 text-xs whitespace-nowrap">
                                 Archived
                               </Badge>

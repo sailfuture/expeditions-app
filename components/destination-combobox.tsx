@@ -115,11 +115,19 @@ export function PortCombobox({ id, value, country, onChange, onSelectPort }: Por
     const matches = q
       ? PORTS.filter((port) => normalizeSearch(port.name).includes(q) || normalizeSearch(port.country).includes(q))
       : PORTS
-    if (!country) return matches.slice(0, MAX_RESULTS)
-    const selectedCountry = normalizeSearch(country)
-    const inCountry = matches.filter((port) => normalizeSearch(port.country) === selectedCountry)
-    const elsewhere = matches.filter((port) => normalizeSearch(port.country) !== selectedCountry)
-    return [...inCountry, ...elsewhere].slice(0, MAX_RESULTS)
+    // Featured ports (SailFuture's regular route) first, then the selected
+    // country's ports, then everything else, each group in list order.
+    const selectedCountry = country ? normalizeSearch(country) : ""
+    const rank = (port: PortDefinition) => {
+      if (port.featured) return 0
+      if (selectedCountry && normalizeSearch(port.country) === selectedCountry) return 1
+      return 2
+    }
+    return matches
+      .map((port, index) => ({ port, index, rank: rank(port) }))
+      .sort((a, b) => a.rank - b.rank || a.index - b.index)
+      .map(({ port }) => port)
+      .slice(0, MAX_RESULTS)
   }, [search, country])
 
   const trimmed = search.trim()

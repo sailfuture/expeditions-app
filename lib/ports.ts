@@ -16,6 +16,8 @@ export interface PortDefinition {
   lat: number
   long: number
   timezone: string
+  /** Regular stops on SailFuture's Eastern Caribbean route; listed first in the picker. */
+  featured?: boolean
 }
 
 // Unicode minus sign, matching the timezone option labels ("UTC−4").
@@ -60,6 +62,11 @@ function p(name: string, country: string, lat: number, long: number, timezone: s
   return { name, country, lat, long, timezone }
 }
 
+/** A featured port: same as `p` but floated to the top of the picker. */
+function f(name: string, country: string, lat: number, long: number, timezone: string): PortDefinition {
+  return { name, country, lat, long, timezone, featured: true }
+}
+
 export const PORTS: PortDefinition[] = [
   // United States – Florida
   p("St. Petersburg", "United States", 27.7676, -82.6403, UTC_M5),
@@ -98,106 +105,223 @@ export const PORTS: PortDefinition[] = [
   p("Nassau", "Bahamas", 25.0480, -77.3554, UTC_M5),
   p("Bimini", "Bahamas", 25.7279, -79.2973, UTC_M5),
   p("Freeport", "Bahamas", 26.5333, -78.7000, UTC_M5),
+  p("West End", "Bahamas", 26.6870, -78.9770, UTC_M5),
+  p("Walker's Cay", "Bahamas", 27.2670, -78.4000, UTC_M5),
   p("Marsh Harbour", "Bahamas", 26.5412, -77.0636, UTC_M5),
   p("Hope Town", "Bahamas", 26.5361, -76.9578, UTC_M5),
+  p("Treasure Cay", "Bahamas", 26.6660, -77.2830, UTC_M5),
   p("Green Turtle Cay", "Bahamas", 26.7667, -77.3333, UTC_M5),
+  p("Great Harbour Cay", "Bahamas", 25.7480, -77.8650, UTC_M5),
+  p("Chub Cay", "Bahamas", 25.4100, -77.8900, UTC_M5),
   p("Andros Town", "Bahamas", 24.7000, -77.7833, UTC_M5),
+  p("Spanish Wells", "Bahamas", 25.5400, -76.7600, UTC_M5),
+  p("Harbour Island", "Bahamas", 25.5020, -76.6350, UTC_M5),
+  p("Governor's Harbour", "Bahamas", 25.1950, -76.2430, UTC_M5),
+  p("Rock Sound", "Bahamas", 24.8700, -76.1640, UTC_M5),
+  p("Highbourne Cay", "Bahamas", 24.7100, -76.8200, UTC_M5),
+  p("Warderick Wells", "Bahamas", 24.3950, -76.6300, UTC_M5),
   p("Staniel Cay", "Bahamas", 24.1710, -76.4428, UTC_M5),
+  p("Black Point", "Bahamas", 24.0980, -76.4030, UTC_M5),
+  p("Little Farmer's Cay", "Bahamas", 23.9570, -76.3230, UTC_M5),
   p("George Town", "Bahamas", 23.5063, -75.7682, UTC_M5),
+  p("Stocking Island", "Bahamas", 23.5200, -75.7600, UTC_M5),
+  p("New Bight (Cat Island)", "Bahamas", 24.2900, -75.4100, UTC_M5),
+  p("Cockburn Town (San Salvador)", "Bahamas", 24.0530, -74.5300, UTC_M5),
+  p("Salt Pond (Long Island)", "Bahamas", 23.3500, -75.1350, UTC_M5),
   p("Clarence Town", "Bahamas", 23.1000, -74.9833, UTC_M5),
+  p("Abraham's Bay (Mayaguana)", "Bahamas", 22.3700, -73.0000, UTC_M5),
   p("Matthew Town", "Bahamas", 20.9500, -73.6833, UTC_M5),
   // Turks & Caicos
   p("Providenciales", "Turks & Caicos Islands", 21.7740, -72.2660, UTC_M5),
+  p("South Caicos", "Turks & Caicos Islands", 21.4950, -71.5300, UTC_M5),
   p("Grand Turk", "Turks & Caicos Islands", 21.4675, -71.1389, UTC_M5),
+  p("Salt Cay", "Turks & Caicos Islands", 21.3330, -71.2000, UTC_M5),
   // Cuba
   p("Havana", "Cuba", 23.1136, -82.3666, UTC_M5),
+  p("Marina Hemingway", "Cuba", 23.0890, -82.5080, UTC_M5),
   p("Varadero", "Cuba", 23.1389, -81.2861, UTC_M5),
+  p("Cayo Coco", "Cuba", 22.5100, -78.4000, UTC_M5),
   p("Cienfuegos", "Cuba", 22.1461, -80.4356, UTC_M5),
+  p("Casilda (Trinidad)", "Cuba", 21.7530, -79.9870, UTC_M5),
+  p("Cayo Largo", "Cuba", 21.6230, -81.4550, UTC_M5),
+  p("María la Gorda", "Cuba", 21.8200, -84.5000, UTC_M5),
+  p("Guardalavaca", "Cuba", 21.1200, -75.8300, UTC_M5),
+  p("Baracoa", "Cuba", 20.3480, -74.5100, UTC_M5),
   p("Santiago de Cuba", "Cuba", 20.0247, -75.8219, UTC_M5),
   // Cayman Islands
   p("George Town", "Cayman Islands", 19.2869, -81.3674, UTC_M5),
+  p("Cayman Brac", "Cayman Islands", 19.7200, -79.8050, UTC_M5),
+  p("Little Cayman", "Cayman Islands", 19.6700, -80.0600, UTC_M5),
   // Jamaica
+  p("Negril", "Jamaica", 18.2700, -78.3500, UTC_M5),
+  p("Lucea", "Jamaica", 18.4500, -78.1750, UTC_M5),
   p("Montego Bay", "Jamaica", 18.4762, -77.8939, UTC_M5),
+  p("Falmouth", "Jamaica", 18.4930, -77.6550, UTC_M5),
   p("Ocho Rios", "Jamaica", 18.4075, -77.1031, UTC_M5),
   p("Port Antonio", "Jamaica", 18.1763, -76.4555, UTC_M5),
   p("Kingston", "Jamaica", 17.9714, -76.7931, UTC_M5),
+  p("Port Royal", "Jamaica", 17.9370, -76.8420, UTC_M5),
   // Haiti
   p("Cap-Haïtien", "Haiti", 19.7580, -72.2043, UTC_M5),
+  p("Labadee", "Haiti", 19.7850, -72.2460, UTC_M5),
   p("Port-au-Prince", "Haiti", 18.5944, -72.3074, UTC_M5),
+  p("Jacmel", "Haiti", 18.2340, -72.5350, UTC_M5),
+  p("Île-à-Vache", "Haiti", 18.0830, -73.6900, UTC_M5),
   // Dominican Republic
   p("Luperón", "Dominican Republic", 19.8911, -70.9600, UTC_M4),
+  p("Ocean World (Cofresí)", "Dominican Republic", 19.8300, -70.7300, UTC_M4),
   p("Puerto Plata", "Dominican Republic", 19.7934, -70.6884, UTC_M4),
+  p("Las Terrenas", "Dominican Republic", 19.3230, -69.5420, UTC_M4),
   p("Samaná", "Dominican Republic", 19.2058, -69.3364, UTC_M4),
   p("Punta Cana", "Dominican Republic", 18.5601, -68.3725, UTC_M4),
+  p("Cap Cana", "Dominican Republic", 18.4620, -68.3700, UTC_M4),
+  p("Bayahibe", "Dominican Republic", 18.3700, -68.8400, UTC_M4),
   p("La Romana", "Dominican Republic", 18.4273, -68.9728, UTC_M4),
   p("Boca Chica", "Dominican Republic", 18.4500, -69.6000, UTC_M4),
   p("Santo Domingo", "Dominican Republic", 18.4861, -69.9312, UTC_M4),
+  p("Barahona", "Dominican Republic", 18.2090, -71.1000, UTC_M4),
   // Puerto Rico
   p("San Juan", "Puerto Rico", 18.4655, -66.1057, UTC_M4),
   p("Fajardo", "Puerto Rico", 18.3258, -65.6524, UTC_M4),
+  p("Puerto del Rey", "Puerto Rico", 18.2900, -65.6350, UTC_M4),
+  p("Palmas del Mar", "Puerto Rico", 18.0780, -65.7960, UTC_M4),
   p("Culebra", "Puerto Rico", 18.3103, -65.3031, UTC_M4),
   p("Vieques", "Puerto Rico", 18.1263, -65.4401, UTC_M4),
   p("Ponce", "Puerto Rico", 17.9700, -66.6141, UTC_M4),
   p("Salinas", "Puerto Rico", 17.9774, -66.2974, UTC_M4),
+  p("Guánica", "Puerto Rico", 17.9700, -66.9100, UTC_M4),
+  p("Boquerón", "Puerto Rico", 18.0260, -67.1740, UTC_M4),
   p("Mayagüez", "Puerto Rico", 18.2013, -67.1397, UTC_M4),
   // US Virgin Islands
   p("Charlotte Amalie", "US Virgin Islands", 18.3419, -64.9307, UTC_M4),
+  p("Magens Bay", "US Virgin Islands", 18.3620, -64.9240, UTC_M4),
+  p("Red Hook", "US Virgin Islands", 18.3250, -64.8550, UTC_M4),
   p("Cruz Bay", "US Virgin Islands", 18.3315, -64.7937, UTC_M4),
+  p("Francis Bay (St. John)", "US Virgin Islands", 18.3630, -64.7450, UTC_M4),
+  p("Coral Bay (St. John)", "US Virgin Islands", 18.3450, -64.7150, UTC_M4),
   p("Christiansted", "US Virgin Islands", 17.7466, -64.7032, UTC_M4),
+  p("Frederiksted", "US Virgin Islands", 17.7140, -64.8830, UTC_M4),
   // British Virgin Islands
   p("Road Town", "British Virgin Islands", 18.4286, -64.6185, UTC_M4),
+  p("Nanny Cay", "British Virgin Islands", 18.4000, -64.6300, UTC_M4),
+  p("Soper's Hole (West End)", "British Virgin Islands", 18.3860, -64.7020, UTC_M4),
+  p("Cane Garden Bay", "British Virgin Islands", 18.4280, -64.6600, UTC_M4),
+  p("Trellis Bay (Beef Island)", "British Virgin Islands", 18.4450, -64.5300, UTC_M4),
+  p("Marina Cay", "British Virgin Islands", 18.4520, -64.5300, UTC_M4),
+  p("The Bight (Norman Island)", "British Virgin Islands", 18.3180, -64.6190, UTC_M4),
+  p("Cooper Island", "British Virgin Islands", 18.3850, -64.5120, UTC_M4),
   p("Spanish Town", "British Virgin Islands", 18.4480, -64.4350, UTC_M4),
+  p("The Baths (Virgin Gorda)", "British Virgin Islands", 18.4300, -64.4450, UTC_M4),
+  p("North Sound (Virgin Gorda)", "British Virgin Islands", 18.5000, -64.3600, UTC_M4),
   p("Jost Van Dyke", "British Virgin Islands", 18.4458, -64.7500, UTC_M4),
   p("Anegada", "British Virgin Islands", 18.7300, -64.3200, UTC_M4),
   // Leeward Islands
   p("Road Bay", "Anguilla", 18.2000, -63.0833, UTC_M4),
+  p("Crocus Bay", "Anguilla", 18.2190, -63.0700, UTC_M4),
+  p("Island Harbour", "Anguilla", 18.2500, -63.0100, UTC_M4),
   p("Marigot", "Saint Martin", 18.0671, -63.0824, UTC_M4),
+  p("Grand Case", "Saint Martin", 18.1040, -63.0520, UTC_M4),
+  p("Anse Marcel", "Saint Martin", 18.1190, -63.0310, UTC_M4),
+  p("Oyster Pond", "Saint Martin", 18.0530, -63.0170, UTC_M4),
+  f("Simpson Bay", "Sint Maarten", 18.0350, -63.0950, UTC_M4),
   p("Philipsburg", "Sint Maarten", 18.0255, -63.0450, UTC_M4),
   p("Gustavia", "Saint Barthélemy", 17.8962, -62.8498, UTC_M4),
+  p("Colombier", "Saint Barthélemy", 17.9230, -62.8650, UTC_M4),
   p("Fort Bay", "Saba", 17.6167, -63.2500, UTC_M4),
   p("Oranjestad", "Sint Eustatius", 17.4833, -62.9833, UTC_M4),
   p("Basseterre", "Saint Kitts & Nevis", 17.3026, -62.7177, UTC_M4),
+  p("White House Bay", "Saint Kitts & Nevis", 17.2550, -62.6700, UTC_M4),
+  p("Christophe Harbour", "Saint Kitts & Nevis", 17.2500, -62.6600, UTC_M4),
   p("Charlestown", "Saint Kitts & Nevis", 17.1383, -62.6217, UTC_M4),
-  p("English Harbour", "Antigua & Barbuda", 17.0050, -61.7640, UTC_M4),
-  p("Jolly Harbour", "Antigua & Barbuda", 17.0718, -61.8880, UTC_M4),
+  p("Pinney's Beach (Nevis)", "Saint Kitts & Nevis", 17.1600, -62.6300, UTC_M4),
+  p("Codrington (Barbuda)", "Antigua & Barbuda", 17.6400, -61.8300, UTC_M4),
   p("St. John's", "Antigua & Barbuda", 17.1274, -61.8468, UTC_M4),
+  p("Dickenson Bay", "Antigua & Barbuda", 17.1600, -61.8500, UTC_M4),
+  p("Deep Bay", "Antigua & Barbuda", 17.1200, -61.8800, UTC_M4),
+  p("Five Islands Harbour", "Antigua & Barbuda", 17.1000, -61.8900, UTC_M4),
+  f("Jolly Harbour", "Antigua & Barbuda", 17.0718, -61.8880, UTC_M4),
+  p("Falmouth Harbour", "Antigua & Barbuda", 17.0130, -61.7720, UTC_M4),
+  p("English Harbour", "Antigua & Barbuda", 17.0050, -61.7640, UTC_M4),
+  p("Nonsuch Bay", "Antigua & Barbuda", 17.0700, -61.6900, UTC_M4),
+  p("Green Island", "Antigua & Barbuda", 17.0750, -61.6700, UTC_M4),
   p("Little Bay", "Montserrat", 16.7950, -62.2100, UTC_M4),
-  p("Pointe-à-Pitre", "Guadeloupe", 16.2410, -61.5331, UTC_M4),
   p("Deshaies", "Guadeloupe", 16.3060, -61.7940, UTC_M4),
+  f("Pointe-à-Pitre", "Guadeloupe", 16.2410, -61.5331, UTC_M4),
+  p("Marina Bas-du-Fort", "Guadeloupe", 16.2250, -61.5300, UTC_M4),
+  p("Le Gosier", "Guadeloupe", 16.2060, -61.4950, UTC_M4),
+  p("Sainte-Anne (Guadeloupe)", "Guadeloupe", 16.2250, -61.3800, UTC_M4),
+  p("Saint-François", "Guadeloupe", 16.2500, -61.2700, UTC_M4),
+  p("Basse-Terre", "Guadeloupe", 15.9960, -61.7280, UTC_M4),
   p("Terre-de-Haut", "Guadeloupe", 15.8650, -61.5840, UTC_M4),
+  p("Saint-Louis (Marie-Galante)", "Guadeloupe", 15.9570, -61.3180, UTC_M4),
+  p("La Désirade", "Guadeloupe", 16.3100, -61.0700, UTC_M4),
   p("Portsmouth", "Dominica", 15.5833, -61.4667, UTC_M4),
-  p("Roseau", "Dominica", 15.3017, -61.3881, UTC_M4),
+  f("Roseau", "Dominica", 15.3017, -61.3881, UTC_M4),
+  p("Soufrière Bay (Dominica)", "Dominica", 15.2330, -61.3650, UTC_M4),
   // Windward Islands
   p("Saint-Pierre", "Martinique", 14.7431, -61.1758, UTC_M4),
   p("Fort-de-France", "Martinique", 14.6161, -61.0588, UTC_M4),
+  p("Anse Mitan (Trois-Îlets)", "Martinique", 14.5500, -61.0500, UTC_M4),
+  p("Grande Anse d'Arlet", "Martinique", 14.5000, -61.0830, UTC_M4),
   p("Le Marin", "Martinique", 14.4667, -60.8667, UTC_M4),
+  p("Sainte-Anne (Martinique)", "Martinique", 14.4330, -60.8830, UTC_M4),
+  p("Le François", "Martinique", 14.6150, -60.9000, UTC_M4),
+  p("Le Robert", "Martinique", 14.6800, -60.9400, UTC_M4),
+  p("Pigeon Island", "Saint Lucia", 14.0920, -60.9600, UTC_M4),
   p("Rodney Bay", "Saint Lucia", 14.0760, -60.9490, UTC_M4),
   p("Castries", "Saint Lucia", 14.0101, -60.9875, UTC_M4),
   p("Marigot Bay", "Saint Lucia", 13.9661, -61.0239, UTC_M4),
   p("Soufrière", "Saint Lucia", 13.8561, -61.0569, UTC_M4),
+  p("Vieux Fort", "Saint Lucia", 13.7250, -60.9500, UTC_M4),
+  p("Chateaubelair", "Saint Vincent & the Grenadines", 13.2900, -61.2850, UTC_M4),
+  p("Cumberland Bay", "Saint Vincent & the Grenadines", 13.2667, -61.2667, UTC_M4),
+  p("Wallilabou Bay", "Saint Vincent & the Grenadines", 13.2500, -61.2750, UTC_M4),
   p("Kingstown", "Saint Vincent & the Grenadines", 13.1600, -61.2248, UTC_M4),
-  p("Port Elizabeth (Bequia)", "Saint Vincent & the Grenadines", 13.0105, -61.2355, UTC_M4),
+  f("Young Island (St. Vincent)", "Saint Vincent & the Grenadines", 13.1290, -61.2110, UTC_M4),
+  p("Blue Lagoon (St. Vincent)", "Saint Vincent & the Grenadines", 13.1300, -61.2000, UTC_M4),
+  f("Port Elizabeth (Bequia)", "Saint Vincent & the Grenadines", 13.0105, -61.2355, UTC_M4),
+  p("Friendship Bay (Bequia)", "Saint Vincent & the Grenadines", 12.9950, -61.2200, UTC_M4),
   p("Mustique", "Saint Vincent & the Grenadines", 12.8833, -61.1833, UTC_M4),
   p("Canouan", "Saint Vincent & the Grenadines", 12.7042, -61.3236, UTC_M4),
+  f("Saline Bay (Mayreau)", "Saint Vincent & the Grenadines", 12.6400, -61.3950, UTC_M4),
+  p("Salt Whistle Bay (Mayreau)", "Saint Vincent & the Grenadines", 12.6500, -61.3920, UTC_M4),
   p("Tobago Cays", "Saint Vincent & the Grenadines", 12.6300, -61.3500, UTC_M4),
-  p("Clifton (Union Island)", "Saint Vincent & the Grenadines", 12.5953, -61.4153, UTC_M4),
-  p("Bridgetown", "Barbados", 13.0969, -59.6145, UTC_M4),
+  f("Clifton (Union Island)", "Saint Vincent & the Grenadines", 12.5953, -61.4153, UTC_M4),
+  p("Chatham Bay (Union Island)", "Saint Vincent & the Grenadines", 12.6010, -61.4500, UTC_M4),
+  p("Palm Island", "Saint Vincent & the Grenadines", 12.5833, -61.3917, UTC_M4),
+  p("Petit St. Vincent", "Saint Vincent & the Grenadines", 12.5333, -61.3833, UTC_M4),
+  f("Bridgetown", "Barbados", 13.0969, -59.6145, UTC_M4),
+  p("Carlisle Bay", "Barbados", 13.0800, -59.6150, UTC_M4),
+  p("Holetown", "Barbados", 13.1860, -59.6400, UTC_M4),
+  p("Speightstown", "Barbados", 13.2500, -59.6430, UTC_M4),
+  p("Port St. Charles", "Barbados", 13.2600, -59.6450, UTC_M4),
+  p("Petite Martinique", "Grenada", 12.5200, -61.3850, UTC_M4),
   p("Hillsborough (Carriacou)", "Grenada", 12.4833, -61.4583, UTC_M4),
+  p("Tyrrel Bay (Carriacou)", "Grenada", 12.4550, -61.4850, UTC_M4),
+  p("Grenville", "Grenada", 12.1200, -61.6200, UTC_M4),
   p("St. George's", "Grenada", 12.0561, -61.7488, UTC_M4),
+  p("Grand Anse", "Grenada", 12.0300, -61.7550, UTC_M4),
   p("Prickly Bay", "Grenada", 12.0017, -61.7633, UTC_M4),
+  p("Clarkes Court Bay", "Grenada", 12.0050, -61.7300, UTC_M4),
   // Trinidad & Tobago
-  p("Chaguaramas", "Trinidad & Tobago", 10.6764, -61.6380, UTC_M4),
+  f("Chaguaramas", "Trinidad & Tobago", 10.6764, -61.6380, UTC_M4),
   p("Port of Spain", "Trinidad & Tobago", 10.6596, -61.5086, UTC_M4),
   p("Scarborough", "Trinidad & Tobago", 11.1817, -60.7350, UTC_M4),
+  p("Store Bay (Tobago)", "Trinidad & Tobago", 11.1550, -60.8400, UTC_M4),
+  p("Pigeon Point (Tobago)", "Trinidad & Tobago", 11.1680, -60.8420, UTC_M4),
   p("Charlotteville", "Trinidad & Tobago", 11.3233, -60.5500, UTC_M4),
   // ABC Islands and Venezuela
   p("Oranjestad", "Aruba", 12.5186, -70.0358, UTC_M4),
   p("Willemstad", "Curaçao", 12.1091, -68.9316, UTC_M4),
+  p("Spanish Water", "Curaçao", 12.0700, -68.8600, UTC_M4),
   p("Kralendijk", "Bonaire", 12.1508, -68.2767, UTC_M4),
   p("Los Roques", "Venezuela", 11.9500, -66.6667, UTC_M4),
+  p("Puerto La Cruz", "Venezuela", 10.2130, -64.6330, UTC_M4),
+  p("Cumaná", "Venezuela", 10.4500, -64.1700, UTC_M4),
   p("Porlamar", "Venezuela", 10.9577, -63.8697, UTC_M4),
   // Colombia
   p("Santa Marta", "Colombia", 11.2408, -74.1990, UTC_M5),
+  p("Taganga", "Colombia", 11.2650, -74.1900, UTC_M5),
   p("Cartagena", "Colombia", 10.3910, -75.4794, UTC_M5),
   p("Providencia", "Colombia", 13.3500, -81.3667, UTC_M5),
   p("San Andrés", "Colombia", 12.5847, -81.7006, UTC_M5),
@@ -205,6 +329,8 @@ export const PORTS: PortDefinition[] = [
   p("Shelter Bay", "Panama", 9.3697, -79.9524, UTC_M5),
   p("Colón", "Panama", 9.3547, -79.9003, UTC_M5),
   p("Portobelo", "Panama", 9.5547, -79.6553, UTC_M5),
+  p("Linton Bay", "Panama", 9.6090, -79.5880, UTC_M5),
+  p("Isla Grande", "Panama", 9.6280, -79.5700, UTC_M5),
   p("El Porvenir (San Blas)", "Panama", 9.5569, -78.9499, UTC_M5),
   p("Bocas del Toro", "Panama", 9.3403, -82.2420, UTC_M5),
   p("Balboa (Panama City)", "Panama", 8.9500, -79.5667, UTC_M5),
@@ -273,11 +399,20 @@ export const PORTS: PortDefinition[] = [
   p("Piraeus", "Greece", 37.9475, 23.6372, UTC_P2),
 ]
 
-/** Lowercase, accent-stripped form used for matching search text. */
+/**
+ * Lowercase, accent-stripped form used for matching search text. Also folds
+ * common spelling variants so "St. Vincent" finds "Saint Vincent & the
+ * Grenadines", "St Maarten" finds "Sint Maarten" and "Antigua and Barbuda"
+ * finds "Antigua & Barbuda".
+ */
 export function normalizeSearch(value: string): string {
   return value
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "")
     .toLowerCase()
+    .replace(/[-–—]/g, " ")
+    .replace(/&/g, " and ")
+    .replace(/\b(st\.?|ste\.?|sint|saint|sainte)\s+/g, "saint ")
+    .replace(/\s+/g, " ")
     .trim()
 }

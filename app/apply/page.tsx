@@ -101,10 +101,35 @@ const initialFormData: FormData = {
 
 export default function ApplyPage() {
   const [formData, setFormData] = useState<FormData>(initialFormData)
+  // Expedition this application belongs to: ?expedition=<id> in the link,
+  // falling back to the currently active expedition.
+  const [expeditionsId, setExpeditionsId] = useState<number | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
   const [isSaving, setIsSaving] = useState(false)
+
+  // Resolve which expedition this application is for
+  useEffect(() => {
+    let cancelled = false
+    const fromUrl = parseInt(new URLSearchParams(window.location.search).get("expedition") || "", 10)
+    if (Number.isFinite(fromUrl) && fromUrl > 0) {
+      setExpeditionsId(fromUrl)
+      return
+    }
+    fetch("https://xsc3-mvx7-r86m.n7e.xano.io/api:bXFdqx8y/active_expedition")
+      .then((res) => (res.ok ? res.json() : []))
+      .then((rows) => {
+        const active = Array.isArray(rows) ? rows[0] : null
+        if (!cancelled && active?.id) setExpeditionsId(Number(active.id))
+      })
+      .catch(() => {
+        // Leave unset; the submission still goes through without an expedition.
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   // Load saved data on mount
   useEffect(() => {
@@ -189,7 +214,7 @@ export default function ApplyPage() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({ ...formData, expeditions_id: expeditionsId ?? 0 }),
       })
 
       if (!response.ok) {

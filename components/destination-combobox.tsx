@@ -49,7 +49,7 @@ export function CountryCombobox({ id, value, onChange }: CountryComboboxProps) {
   }
 
   return (
-    <Popover open={open} onOpenChange={(next) => { setOpen(next); if (!next) setSearch("") }}>
+    <Popover modal open={open} onOpenChange={(next) => { setOpen(next); if (!next) setSearch("") }}>
       <PopoverTrigger asChild>
         <Button
           id={id}
@@ -141,7 +141,7 @@ export function PortCombobox({ id, value, country, onChange, onSelectPort }: Por
   }
 
   return (
-    <Popover open={open} onOpenChange={(next) => { setOpen(next); if (!next) setSearch("") }}>
+    <Popover modal open={open} onOpenChange={(next) => { setOpen(next); if (!next) setSearch("") }}>
       <PopoverTrigger asChild>
         <Button
           id={id}

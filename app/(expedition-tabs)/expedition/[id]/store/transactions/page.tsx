@@ -51,12 +51,13 @@ import {
 } from "lucide-react"
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import React from "react"
-import { 
+import {
   getExpeditionTransactions,
   getExpeditionsStore,
   updateExpeditionTransaction,
-  deleteExpeditionTransaction,
-  updateExpeditionsStoreItem,
+  refundOrder,
+  refundTransaction,
+  payDay,
   getStudentsWithBalance
 } from "@/lib/xano"
 import { useExpeditions, useStudentsByExpedition } from "@/lib/hooks/use-expeditions"
@@ -77,16 +78,23 @@ interface ExpeditionTransaction {
   expeditions_id: number
   expeditions_store_id: number
   quantity: number
+  order_ref?: string | null
+  refund_of_id?: number | null
+  note?: string | null
 }
 
 interface Order {
   id: string // Composite key for the order
+  order_ref: string | null
   created_at: number
   date: string
   students_id: number
   transactions: ExpeditionTransaction[]
   totalAmount: number
   totalItems: number
+  refundedLineIds: Set<number>
+  refundedAmount: number
+  refunded?: boolean
 }
 
 export default function StoreTransactionsPage({ params }: PageProps) {
@@ -172,7 +180,7 @@ export default function StoreTransactionsPage({ params }: PageProps) {
     if (!allTransactions) return new Set<string>()
     const dates = new Set<string>()
     ;(allTransactions as ExpeditionTransaction[]).forEach((t) => {
-      if (t.transaction !== "Purchase" && t.date) {
+      if (t.transaction === "Daily Pay" && t.date) {
         dates.add(t.date)
       }
     })
@@ -208,7 +216,7 @@ export default function StoreTransactionsPage({ params }: PageProps) {
       const dayTransactions = studentTransactions.filter(
         (t) => t.students_id === selectedStudent.id && t.date === dateStr
       )
-      const payTransaction = dayTransactions.find((t) => t.transaction !== "Purchase")
+      const payTransaction = dayTransactions.find((t) => t.transaction === "Daily Pay")
 
       return {
         date,
@@ -222,7 +230,7 @@ export default function StoreTransactionsPage({ params }: PageProps) {
   const studentPurchases = useMemo(() => {
     if (!selectedStudent) return []
     return ((allTransactions || []) as ExpeditionTransaction[])
-      .filter((t) => t.students_id === selectedStudent.id && t.transaction === "Purchase")
+      .filter((t) => t.students_id === selectedStudent.id && (t.transaction === "Purchase" || t.transaction === "Refund"))
       .sort((a, b) => b.created_at - a.created_at)
   }, [selectedStudent, allTransactions])
 
@@ -230,8 +238,12 @@ export default function StoreTransactionsPage({ params }: PageProps) {
     return studentDailyHistory.reduce((sum, day) => sum + (day.earned || 0), 0)
   }, [studentDailyHistory])
 
+  // Net spend: purchases minus refunds
   const studentTotalSpent = useMemo(() => {
-    return studentPurchases.reduce((sum, t) => sum + Math.abs(t.amount), 0)
+    return studentPurchases.reduce(
+      (sum, t) => (t.transaction === "Refund" ? sum - Math.abs(t.amount) : sum + Math.abs(t.amount)),
+      0
+    )
   }, [studentPurchases])
 
   const isLoading = expeditionsLoading || transactionsLoading
@@ -246,51 +258,75 @@ export default function StoreTransactionsPage({ params }: PageProps) {
     return storeItems?.find((item: any) => item.id === storeItemId)
   }
 
-  // Group transactions into orders (by student + date + created_at within 10 seconds)
+  // Refund rows point at the purchase line they reverse (refund_of_id)
+  const refundsByLine = useMemo(() => {
+    const map = new Map<number, ExpeditionTransaction>()
+    ;((allTransactions || []) as ExpeditionTransaction[]).forEach((t) => {
+      if (t.transaction === "Refund" && t.refund_of_id) map.set(t.refund_of_id, t)
+    })
+    return map
+  }, [allTransactions])
+
+  // Group purchase lines into orders. New orders share an order_ref written by
+  // Xano; older rows (before order_ref existed) are clustered by student + date
+  // + created_at within 10 seconds, as before.
   const groupedOrders = useMemo(() => {
     if (!purchaseTransactions.length) return []
-    
+
     const orderMap = new Map<string, Order>()
-    const TIME_WINDOW = 10000 // 10 seconds in milliseconds
-    
-    // Sort by created_at first
+    const TIME_WINDOW = 10000
+
     const sorted = [...purchaseTransactions].sort((a, b) => a.created_at - b.created_at)
-    
+
     sorted.forEach((t: ExpeditionTransaction) => {
-      // Find an existing order for this student on the same date within the time window
       let foundOrder: Order | null = null
-      
-      orderMap.forEach((order) => {
-        if (
-          order.students_id === t.students_id &&
-          order.date === t.date && // Same date
-          Math.abs(t.created_at - order.created_at) < TIME_WINDOW
-        ) {
-          foundOrder = order
-        }
-      })
-      
+
+      if (t.order_ref) {
+        foundOrder = orderMap.get(`ref_${t.order_ref}`) || null
+      } else {
+        orderMap.forEach((order) => {
+          if (
+            !order.order_ref &&
+            order.students_id === t.students_id &&
+            order.date === t.date &&
+            Math.abs(t.created_at - order.created_at) < TIME_WINDOW
+          ) {
+            foundOrder = order
+          }
+        })
+      }
+
+      const refund = refundsByLine.get(t.id)
       if (foundOrder) {
         foundOrder.transactions.push(t)
         foundOrder.totalAmount += Math.abs(t.amount)
         foundOrder.totalItems += t.quantity || 1
+        if (refund) {
+          foundOrder.refundedLineIds.add(t.id)
+          foundOrder.refundedAmount += Math.abs(refund.amount)
+        }
       } else {
-        // Create a new order
-        const orderId = `${t.students_id}_${t.date}_${t.created_at}`
+        const orderId = t.order_ref ? `ref_${t.order_ref}` : `${t.students_id}_${t.date}_${t.created_at}`
         orderMap.set(orderId, {
           id: orderId,
+          order_ref: t.order_ref || null,
           created_at: t.created_at,
           date: t.date,
           students_id: t.students_id,
           transactions: [t],
           totalAmount: Math.abs(t.amount),
-          totalItems: t.quantity || 1
+          totalItems: t.quantity || 1,
+          refundedLineIds: new Set(refund ? [t.id] : []),
+          refundedAmount: refund ? Math.abs(refund.amount) : 0,
         })
       }
     })
-    
-    return Array.from(orderMap.values())
-  }, [purchaseTransactions])
+
+    return Array.from(orderMap.values()).map((order) => ({
+      ...order,
+      refunded: order.transactions.every((t) => order.refundedLineIds.has(t.id)),
+    }))
+  }, [purchaseTransactions, refundsByLine])
 
   // Filter orders based on search
   const filteredOrders = groupedOrders.filter((order: Order) => {
@@ -324,9 +360,13 @@ export default function StoreTransactionsPage({ params }: PageProps) {
   }
 
   // Calculate stats
-  const totalRevenue = groupedOrders.reduce((sum: number, o: Order) => sum + o.totalAmount, 0)
-  const totalOrders = groupedOrders.length
-  const totalItemsSold = groupedOrders.reduce((sum: number, o: Order) => sum + o.totalItems, 0)
+  const totalRevenue = groupedOrders.reduce((sum: number, o: Order) => sum + o.totalAmount - o.refundedAmount, 0)
+  const totalOrders = groupedOrders.filter((o: Order) => !o.refunded).length
+  const totalItemsSold = groupedOrders.reduce(
+    (sum: number, o: Order) =>
+      sum + o.transactions.filter((t) => !o.refundedLineIds.has(t.id)).reduce((s, t) => s + (t.quantity || 1), 0),
+    0
+  )
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -383,30 +423,21 @@ export default function StoreTransactionsPage({ params }: PageProps) {
 
   const handleDeleteConfirm = async () => {
     if (!selectedTransaction) return
-    
+
     setIsSubmitting(true)
     try {
-      await deleteExpeditionTransaction(selectedTransaction.id)
-      
-      // Restore the store item quantity
-      if (selectedTransaction.expeditions_store_id > 0) {
-        const storeItem = storeItems?.find((item: any) => item.id === selectedTransaction.expeditions_store_id)
-        if (storeItem) {
-          const restoredQuantity = (storeItem.quantity || 0) + (selectedTransaction.quantity || 1)
-          await updateExpeditionsStoreItem(selectedTransaction.expeditions_store_id, {
-            quantity: restoredQuantity
-          })
-        }
-      }
-      
+      // Xano writes an offsetting Refund row and returns the item to stock in one transaction
+      const result = await refundTransaction(selectedTransaction.id)
+
       mutate(`expedition_transactions_${expeditionId}`)
       mutate(`students_with_balance_${expeditionId}`)
       mutate("expeditions_store")
       setDeleteDialogOpen(false)
-      toast.success("Transaction deleted successfully")
+      toast.success(`Refunded ${formatPrice(result.total)}`)
     } catch (error) {
-      console.error("Error deleting transaction:", error)
-      toast.error("Failed to delete transaction")
+      console.error("Error refunding transaction:", error)
+      const message = error instanceof Error ? error.message : "An unexpected error occurred"
+      toast.error("Refund failed", { description: message })
     } finally {
       setIsSubmitting(false)
     }
@@ -420,45 +451,31 @@ export default function StoreTransactionsPage({ params }: PageProps) {
 
   const handleDeleteOrderConfirm = async () => {
     if (!selectedOrder) return
-    
+
     setIsSubmitting(true)
     try {
-      // Delete all transactions in the order
-      await Promise.all(
-        selectedOrder.transactions.map((t) => deleteExpeditionTransaction(t.id))
-      )
-      
-      // Restore store item quantities
-      // Group transactions by store item to calculate total quantity to restore
-      const quantityByStoreItem: Record<number, number> = {}
-      for (const t of selectedOrder.transactions) {
-        if (t.expeditions_store_id > 0) {
-          quantityByStoreItem[t.expeditions_store_id] = 
-            (quantityByStoreItem[t.expeditions_store_id] || 0) + (t.quantity || 1)
+      let refundedTotal = 0
+      if (selectedOrder.order_ref) {
+        const result = await refundOrder(selectedOrder.order_ref)
+        refundedTotal = result.total
+      } else {
+        // Legacy order without an order_ref: refund each unrefunded line
+        for (const t of selectedOrder.transactions) {
+          if (selectedOrder.refundedLineIds.has(t.id)) continue
+          const result = await refundTransaction(t.id)
+          refundedTotal += result.total
         }
       }
-      
-      // Update each store item's quantity
-      await Promise.all(
-        Object.entries(quantityByStoreItem).map(async ([storeItemId, quantityToRestore]) => {
-          const storeItem = storeItems?.find((item: any) => item.id === Number(storeItemId))
-          if (storeItem) {
-            const restoredQuantity = (storeItem.quantity || 0) + quantityToRestore
-            await updateExpeditionsStoreItem(Number(storeItemId), {
-              quantity: restoredQuantity
-            })
-          }
-        })
-      )
-      
+
       mutate(`expedition_transactions_${expeditionId}`)
       mutate(`students_with_balance_${expeditionId}`)
       mutate("expeditions_store")
       setDeleteOrderDialogOpen(false)
-      toast.success(`Order with ${selectedOrder.transactions.length} item(s) deleted successfully`)
+      toast.success(`Order refunded: ${formatPrice(refundedTotal)} returned to the student`)
     } catch (error) {
-      console.error("Error deleting order:", error)
-      toast.error("Failed to delete order")
+      console.error("Error refunding order:", error)
+      const message = error instanceof Error ? error.message : "An unexpected error occurred"
+      toast.error("Refund failed", { description: message })
     } finally {
       setIsSubmitting(false)
     }
@@ -471,25 +488,21 @@ export default function StoreTransactionsPage({ params }: PageProps) {
     const isRerun = paidDates.has(dateStr)
     setProcessingPayDate(dateStr)
     try {
-      const response = await fetch(`https://xsc3-mvx7-r86m.n7e.xano.io/api:bXFdqx8y/pay_students?target_date=${dateStr}&expeditions_id=${expeditionId}`)
-      if (!response.ok) {
-        let errorMessage = `${response.status} ${response.statusText}`
-        try {
-          const errorData = await response.json()
-          if (errorData?.message) errorMessage = errorData.message
-        } catch {}
-        throw new Error(errorMessage)
-      }
-      // Small delay to ensure backend has finished processing
-      await new Promise(resolve => setTimeout(resolve, 500))
+      const result = await payDay(expeditionId, dateStr)
       await mutate(`students_with_balance_${expeditionId}`)
       await mutate(`expedition_transactions_${expeditionId}`)
       if (isRerun) {
         toast.success(`Pay day values updated for ${format(date, "MMM d, yyyy")}`, {
-          description: "Student balances have been recalculated.",
+          description: `${result.paid} student${result.paid === 1 ? "" : "s"} recalculated from their scores, bonuses and penalties.`,
+        })
+      } else if (result.paid === 0) {
+        toast.warning(`No scores found for ${format(date, "MMM d, yyyy")}`, {
+          description: "Nothing was paid. Enter scores for that day first.",
         })
       } else {
-        toast.success(`Pay day processed for ${format(date, "MMM d, yyyy")}`)
+        toast.success(`Pay day processed for ${format(date, "MMM d, yyyy")}`, {
+          description: `${result.paid} student${result.paid === 1 ? "" : "s"} paid.`,
+        })
       }
     } catch (error) {
       console.error("Failed to pay students:", error)
@@ -783,14 +796,23 @@ export default function StoreTransactionsPage({ params }: PageProps) {
                             </Badge>
                           </TableCell>
                           <TableCell className="h-14 px-4 sm:px-6 text-right">
-                            <span className="font-bold text-gray-900">
-                              {formatPrice(order.totalAmount)}
-                            </span>
+                            <div className="flex items-center justify-end gap-2">
+                              {order.refunded ? (
+                                <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-[10px]">Refunded</Badge>
+                              ) : order.refundedAmount > 0 ? (
+                                <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-[10px]">
+                                  {formatPrice(order.refundedAmount)} refunded
+                                </Badge>
+                              ) : null}
+                              <span className={`font-bold ${order.refunded ? "text-gray-400 line-through" : "text-gray-900"}`}>
+                                {formatPrice(order.totalAmount)}
+                              </span>
+                            </div>
                           </TableCell>
                           {isAdmin && (
                             <TableCell className="h-14 px-4 sm:px-6 text-right">
                               <DropdownMenu>
-                                <DropdownMenuTrigger 
+                                <DropdownMenuTrigger
                                   className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-accent hover:text-accent-foreground cursor-pointer"
                                   onClick={(e) => e.stopPropagation()}
                                 >
@@ -799,9 +821,10 @@ export default function StoreTransactionsPage({ params }: PageProps) {
                                 <DropdownMenuContent align="end">
                                   <DropdownMenuItem
                                     className="text-red-600 cursor-pointer focus:text-red-600 focus:bg-red-50"
+                                    disabled={order.refunded}
                                     onClick={(e) => handleDeleteOrderClick(order, e)}
                                   >
-                                    Delete Order
+                                    {order.refunded ? "Already refunded" : "Refund Order"}
                                   </DropdownMenuItem>
                                 </DropdownMenuContent>
                               </DropdownMenu>
@@ -841,12 +864,14 @@ export default function StoreTransactionsPage({ params }: PageProps) {
                                 </div>
                               </TableCell>
                               <TableCell className="h-12 px-4 sm:px-6 text-center">
-                                <span className="text-sm text-gray-600">
+                                <span className={`text-sm ${order.refundedLineIds.has(transaction.id) ? "text-gray-400 line-through" : "text-gray-600"}`}>
                                   {formatPrice(Math.abs(transaction.amount))}
                                 </span>
                               </TableCell>
                               <TableCell className="h-12 px-4 sm:px-6 text-right">
-                                {isAdmin && (
+                                {isAdmin && order.refundedLineIds.has(transaction.id) ? (
+                                  <span className="text-[10px] text-amber-700">Refunded</span>
+                                ) : isAdmin && (
                                   <Button
                                     variant="ghost"
                                     size="icon"
@@ -944,9 +969,9 @@ export default function StoreTransactionsPage({ params }: PageProps) {
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent className="sm:max-w-[400px] [&>button]:cursor-pointer">
           <DialogHeader>
-            <DialogTitle>Delete Transaction</DialogTitle>
+            <DialogTitle>Refund Item</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete this transaction? This will refund {formatPrice(Math.abs(selectedTransaction?.amount || 0))} to the student&apos;s account. This action cannot be undone.
+              This adds a {formatPrice(Math.abs(selectedTransaction?.amount || 0))} refund to the student&apos;s account and returns the item to stock. The original purchase stays in the history.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -964,19 +989,19 @@ export default function StoreTransactionsPage({ params }: PageProps) {
               className="cursor-pointer"
               disabled={isSubmitting}
             >
-              {isSubmitting ? <Spinner className="h-4 w-4" /> : "Delete"}
+              {isSubmitting ? <Spinner className="h-4 w-4" /> : "Refund"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Delete Order Confirmation Dialog */}
+      {/* Refund Order Confirmation Dialog */}
       <Dialog open={deleteOrderDialogOpen} onOpenChange={setDeleteOrderDialogOpen}>
         <DialogContent className="sm:max-w-[400px] [&>button]:cursor-pointer">
           <DialogHeader>
-            <DialogTitle>Delete Order</DialogTitle>
+            <DialogTitle>Refund Order</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete this entire order? This will delete {selectedOrder?.transactions.length || 0} item(s) and refund {formatPrice(selectedOrder?.totalAmount || 0)} to the student&apos;s account. This action cannot be undone.
+              This refunds {formatPrice((selectedOrder?.totalAmount || 0) - (selectedOrder?.refundedAmount || 0))} across {selectedOrder ? selectedOrder.transactions.filter((t) => !selectedOrder.refundedLineIds.has(t.id)).length : 0} item(s) to the student&apos;s account and returns them to stock. The original purchase stays in the history.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -994,7 +1019,7 @@ export default function StoreTransactionsPage({ params }: PageProps) {
               className="cursor-pointer"
               disabled={isSubmitting}
             >
-              {isSubmitting ? <Spinner className="h-4 w-4" /> : "Delete Order"}
+              {isSubmitting ? <Spinner className="h-4 w-4" /> : "Refund Order"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1186,12 +1211,17 @@ export default function StoreTransactionsPage({ params }: PageProps) {
                             </TableCell>
                             <TableCell className="h-9 px-3">
                               <span className="text-sm text-gray-700 truncate">
+                                {t.transaction === "Refund" ? "Refund: " : ""}
                                 {storeItem?.product_name || "Unknown"}
                                 {t.quantity > 1 ? ` × ${t.quantity}` : ""}
                               </span>
                             </TableCell>
                             <TableCell className="h-9 px-3 text-right">
-                              <span className="text-sm font-medium text-red-600">-{formatPrice(Math.abs(t.amount))}</span>
+                              {t.transaction === "Refund" ? (
+                                <span className="text-sm font-medium text-green-600">+{formatPrice(Math.abs(t.amount))}</span>
+                              ) : (
+                                <span className="text-sm font-medium text-red-600">-{formatPrice(Math.abs(t.amount))}</span>
+                              )}
                             </TableCell>
                           </TableRow>
                         )

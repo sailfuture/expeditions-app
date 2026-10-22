@@ -223,12 +223,6 @@ export async function updateExpeditionsProfessionalism(id: number, data: Record<
   })
 }
 
-export async function editExpeditionsProfessionalism(id: number) {
-  return xanoFetch<any>(`/expeditions_professionalism/edit`, {
-    method: "POST",
-    body: JSON.stringify({ expeditions_professionalism_id: id }),
-  })
-}
 
 export async function getStudentProfessionalismByExpedition(studentsId: number, expeditionsId: number) {
   return xanoFetch<any[]>(`/expeditions_professionalism?students_id=${studentsId}&expeditions_id=${expeditionsId}`)
@@ -905,11 +899,98 @@ export async function deleteExpeditionTransaction(id: number) {
 }
 
 // ============ Students with Balance ============
-export async function getStudentsWithBalance(expeditionsId?: number) {
-  const url = expeditionsId 
-    ? `/students_with_balance?expeditions_id=${expeditionsId}`
-    : "/students_with_balance"
-  return xanoFetch<any[]>(url)
+export async function getStudentsWithBalance(expeditionsId: number) {
+  return xanoFetch<any[]>(`/students_with_balance?expeditions_id=${expeditionsId}`)
+}
+
+// ============ Money actions (pay day, purchases, refunds) ============
+// These go through the Next.js server (app/api/accounts/[action]), which checks
+// the staff session and adds the shared secret that Xano's guard requires.
+async function accountsAction<T>(action: string, body: Record<string, unknown>): Promise<T> {
+  const res = await fetch(`/api/accounts/${action}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  })
+  const text = await res.text()
+  let payload: any = null
+  try {
+    payload = text ? JSON.parse(text) : null
+  } catch {
+    payload = text
+  }
+  if (!res.ok) {
+    const message =
+      (payload && typeof payload === "object" && (payload.message || payload.payload?.message)) ||
+      (typeof payload === "string" && payload.length < 500 ? payload : null) ||
+      `Request failed: ${res.status}`
+    throw new Error(message)
+  }
+  return payload as T
+}
+
+export interface PayDayResult {
+  expeditions_id: number
+  date: string
+  paid: number
+  results: Array<{
+    students_id: number
+    professionalism_id: number
+    existing_transaction_id: number | null
+    categories_counted: number
+    daily_average: number
+    base: number
+    bonus_total: number
+    penalty_total: number
+    amount: number
+  }>
+}
+
+export async function payDay(expeditionsId: number, date: string) {
+  return accountsAction<PayDayResult>("pay_day", { expeditions_id: expeditionsId, date })
+}
+
+export interface PurchaseResult {
+  order_ref: string
+  date: string
+  students_id: number
+  total: number
+  balance_after: number
+  lines: Array<{
+    expeditions_store_id: number
+    product_name: string
+    quantity: number
+    unit_price: number
+    line_total: number
+    new_stock: number
+  }>
+}
+
+export async function createPurchase(data: {
+  students_id: number
+  expeditions_id: number
+  items: Array<{ expeditions_store_id: number; quantity: number }>
+  note?: string
+}) {
+  return accountsAction<PurchaseResult>("purchase", data)
+}
+
+export interface RefundResult {
+  date: string
+  refunded: number
+  total: number
+  order_ref?: string
+}
+
+export async function refundOrder(orderRef: string, note?: string) {
+  return accountsAction<RefundResult>("refund_order", { order_ref: orderRef, note })
+}
+
+export async function refundTransaction(transactionId: number, note?: string) {
+  return accountsAction<RefundResult>("refund_transaction", {
+    expedition_transactions_id: transactionId,
+    note,
+  })
 }
 
 // ============ Expedition Transactions (for store purchases) ============

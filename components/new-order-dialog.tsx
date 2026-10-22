@@ -36,11 +36,10 @@ import {
   CheckCircle,
   AlertCircle
 } from "lucide-react"
-import { 
+import {
   getStudentsWithBalance,
   getExpeditionsStore,
-  createExpeditionTransaction,
-  updateExpeditionsStoreItem
+  createPurchase
 } from "@/lib/xano"
 
 interface NewOrderDialogProps {
@@ -208,26 +207,16 @@ export function NewOrderDialog({ open, onOpenChange, expeditionId }: NewOrderDia
 
     setIsSubmitting(true)
     try {
-      const today = new Date().toISOString().split('T')[0]
-
-      // Create a transaction for each cart item
-      for (const cartItem of cart) {
-        await createExpeditionTransaction({
-          date: today,
-          transaction: "Purchase",
-          amount: -Math.abs(cartItem.storeItem.price * cartItem.quantity), // Negative total
-          students_id: selectedStudent.id,
-          expeditions_id: expeditionId,
+      // One server-side checkout: Xano re-checks balance and stock, decrements
+      // stock and writes every line in a single transaction.
+      await createPurchase({
+        students_id: selectedStudent.id,
+        expeditions_id: expeditionId,
+        items: cart.map((cartItem) => ({
           expeditions_store_id: cartItem.storeItem.id,
-          quantity: cartItem.quantity
-        })
-
-        // Update the store item quantity
-        const newQuantity = Math.max(0, cartItem.storeItem.quantity - cartItem.quantity)
-        await updateExpeditionsStoreItem(cartItem.storeItem.id, {
-          quantity: newQuantity
-        })
-      }
+          quantity: cartItem.quantity,
+        })),
+      })
 
       // Refresh data
       mutate(`students_with_balance_${expeditionId}`)
@@ -238,7 +227,11 @@ export function NewOrderDialog({ open, onOpenChange, expeditionId }: NewOrderDia
       toast.success("Order submitted successfully!")
     } catch (error) {
       console.error("Error submitting order:", error)
-      toast.error("Failed to submit order")
+      const message = error instanceof Error ? error.message : "Failed to submit order"
+      toast.error("Order not submitted", { description: message })
+      // Balances or stock may have changed under us; reload them
+      mutate(`students_with_balance_${expeditionId}`)
+      mutate("expeditions_store")
     } finally {
       setIsSubmitting(false)
     }

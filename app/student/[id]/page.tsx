@@ -262,7 +262,9 @@ export default function StudentDetailPage() {
   })
   
   useEffect(() => {
-    if (student) {
+    // Only sync from the server while the dialog is closed, so a refetch
+    // (e.g. after a photo upload) doesn't wipe unsaved edits
+    if (student && !dialogOpen) {
       // Extract expedition IDs from the full expedition objects or plain IDs
       const expeditionIds = Array.isArray(student.expeditions_id)
         ? student.expeditions_id.map((e: any) => typeof e === 'object' ? e.id : e).filter(Boolean)
@@ -285,7 +287,7 @@ export default function StudentDetailPage() {
         passport_photo: student.passport_photo || "",
       })
     }
-  }, [student])
+  }, [student, dialogOpen])
   
   const handleSubmit = async () => {
     if (!formData.firstName || !formData.lastName) {
@@ -313,6 +315,14 @@ export default function StudentDetailPage() {
         grade: formData.grade,
         expeditions_id: formData.expeditions_id,
         isArchived: formData.isArchived,
+        crew_position: formData.crew_position,
+        crew_status: formData.crew_status,
+        dob: formData.dob,
+        gender: formData.gender,
+        nationality: formData.nationality,
+        passport_number: formData.passport_number,
+        issue_date: formData.issue_date,
+        expiration_date: formData.expiration_date,
       })
       
       // Create expedition assignments for newly added expeditions

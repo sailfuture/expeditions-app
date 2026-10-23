@@ -100,7 +100,9 @@ export default function StaffDetailPage() {
   })
   
   useEffect(() => {
-    if (staffMember) {
+    // Only sync from the server while the dialog is closed, so a refetch
+    // (e.g. after a photo upload) doesn't wipe unsaved edits
+    if (staffMember && !dialogOpen) {
       setFormData({
         name: staffMember.name || "",
         email: staffMember.email || "",
@@ -118,7 +120,7 @@ export default function StaffDetailPage() {
         passport_photo: staffMember.passport_photo || "",
       })
     }
-  }, [staffMember])
+  }, [staffMember, dialogOpen])
   
   const handleSubmit = async () => {
     if (!formData.name) {

@@ -391,6 +391,11 @@ export async function createExpedition(data: {
   schoolyears_id: number
   number_participants?: number
   expedition_type?: ExpeditionType
+  // Public site fields (see lib/expedition-site.ts)
+  title?: string
+  slug?: string
+  is_published?: boolean
+  published_at?: number
 }) {
   return xanoFetch<any>("/expeditions", {
     method: "POST",
@@ -409,6 +414,11 @@ export async function updateExpedition(id: number, data: {
   isActive?: boolean
   number_participants?: number
   expedition_type?: ExpeditionType
+  // Public site fields (see lib/expedition-site.ts)
+  title?: string
+  slug?: string
+  is_published?: boolean
+  published_at?: number
 }) {
   return xanoFetch<any>(`/expeditions/${id}`, {
     method: "PATCH",
@@ -418,6 +428,11 @@ export async function updateExpedition(id: number, data: {
       ...data,
     }),
   })
+}
+
+// Deletes the expedition row only; Xano refuses the active expedition.
+export async function deleteExpedition(id: number) {
+  return xanoFetch<null>(`/expeditions/${id}`, { method: "DELETE" })
 }
 
 // ============ Student Management ============

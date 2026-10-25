@@ -37,12 +37,14 @@ import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
-import { ExternalLink, Calendar, MapPin, Plus, Pencil, ChevronDown } from "lucide-react"
+import { ExternalLink, Calendar, MapPin, Plus, Pencil, ChevronDown, Trash2 } from "lucide-react"
+import { DeleteExpeditionDialog } from "@/components/delete-expedition-dialog"
 import { useExpeditions, useSchoolTerms, useSchoolYears } from "@/lib/hooks/use-expeditions"
 import { useCurrentUser } from "@/lib/contexts/user-context"
 import { createExpedition, updateExpedition } from "@/lib/xano"
 import { DEFAULT_EXPEDITION_TYPE, EXPEDITION_TYPES, getExpeditionType } from "@/lib/expedition-type"
 import { ExpeditionTypeBadge } from "@/components/expedition-type-badge"
+import { siteFieldsForCreate, siteFieldsForUpdate, expeditionSiteUrl } from "@/lib/expedition-site"
 import type { ExpeditionType } from "@/lib/types"
 import { toast } from "sonner"
 import { mutate } from "swr"
@@ -58,6 +60,8 @@ export default function ExpeditionsPage() {
   const [editingExpedition, setEditingExpedition] = useState<any>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSettingActive, setIsSettingActive] = useState<number | null>(null)
+  // Expedition whose delete confirmation is open
+  const [deletingExpedition, setDeletingExpedition] = useState<any>(null)
   const [showPastExpeditions, setShowPastExpeditions] = useState(true)
   const [formData, setFormData] = useState({
     name: "",
@@ -67,6 +71,7 @@ export default function ExpeditionsPage() {
     schoolyears_id: 0,
     number_participants: "",
     expedition_type: DEFAULT_EXPEDITION_TYPE as ExpeditionType,
+    show_on_site: true,
   })
 
   // Sort expeditions by start date descending (most recent first) - MUST be before any conditional returns
@@ -111,6 +116,7 @@ export default function ExpeditionsPage() {
       schoolyears_id: 0,
       number_participants: "",
       expedition_type: DEFAULT_EXPEDITION_TYPE,
+      show_on_site: true,
     })
     setDialogOpen(true)
   }
@@ -125,6 +131,7 @@ export default function ExpeditionsPage() {
       schoolyears_id: expedition.schoolyears_id,
       number_participants: expedition.number_participants ? String(expedition.number_participants) : "",
       expedition_type: getExpeditionType(expedition),
+      show_on_site: Boolean(expedition.is_published),
     })
     setDialogOpen(true)
   }
@@ -146,14 +153,17 @@ export default function ExpeditionsPage() {
           schoolyears_id: formData.schoolyears_id,
           number_participants: parseInt(formData.number_participants) || 0,
           expedition_type: formData.expedition_type,
+          ...siteFieldsForUpdate(editingExpedition, formData.name.trim(), formData.show_on_site, expeditions ?? []),
         })
         toast.success("Expedition updated successfully")
       } else {
+        const { show_on_site, ...fields } = formData
         await createExpedition({
-          ...formData,
+          ...fields,
           number_participants: parseInt(formData.number_participants) || 0,
+          ...siteFieldsForCreate(formData.name.trim(), show_on_site, expeditions ?? []),
         })
-        toast.success("Expedition created successfully")
+        toast.success(show_on_site ? "Expedition created and added to the expeditions site" : "Expedition created")
       }
       mutate("expeditions")
       setDialogOpen(false)
@@ -316,6 +326,9 @@ export default function ExpeditionsPage() {
                     >
                       <TableCell className="h-16 px-6">
                         <div className="font-medium text-gray-900">{expedition.name}</div>
+                        {!expedition.is_published && (
+                          <div className="mt-0.5 text-xs text-muted-foreground">Not on the expeditions site</div>
+                        )}
                       </TableCell>
                       <TableCell className="h-16 px-6">
                         <ExpeditionTypeBadge expedition={expedition} />
@@ -389,6 +402,19 @@ export default function ExpeditionsPage() {
                                 }}
                               >
                                 <Pencil className="h-4 w-4 text-gray-500" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 cursor-pointer hover:bg-red-50"
+                                title={expedition.isActive ? "The active expedition can't be deleted" : "Delete expedition"}
+                                aria-label={`Delete ${expedition.name}`}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setDeletingExpedition(expedition)
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4 text-red-500" />
                               </Button>
                             </>
                           )}
@@ -538,6 +564,35 @@ export default function ExpeditionsPage() {
               </p>
             </div>
 
+            <div className="flex items-start justify-between gap-4 rounded-lg border border-gray-200 bg-gray-50/60 p-3">
+              <div className="space-y-0.5">
+                <Label htmlFor="show_on_site" className="cursor-pointer">Show on the expeditions site</Label>
+                <p className="text-xs text-muted-foreground">
+                  Lists it on expeditions.sailfuture.org. The site shows it as Upcoming before the start date, Current
+                  while it is the active expedition here, and Past afterwards.
+                  {editingExpedition && expeditionSiteUrl(editingExpedition.slug) && formData.show_on_site && (
+                    <>
+                      {" "}
+                      <a
+                        href={expeditionSiteUrl(editingExpedition.slug)!}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-medium text-gray-700 underline underline-offset-2"
+                      >
+                        Open on site
+                      </a>
+                    </>
+                  )}
+                </p>
+              </div>
+              <Switch
+                id="show_on_site"
+                checked={formData.show_on_site}
+                onCheckedChange={(checked) => setFormData(prev => ({ ...prev, show_on_site: checked }))}
+                className="mt-0.5 shrink-0"
+              />
+            </div>
+
             <div>
               <Label htmlFor="school_term">School Term *</Label>
               <Select
@@ -590,7 +645,21 @@ export default function ExpeditionsPage() {
             </div>
           </div>
           
-          <DialogFooter>
+          <DialogFooter className="sm:justify-between">
+            {editingExpedition ? (
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setDeletingExpedition(editingExpedition)}
+                className="cursor-pointer text-red-600 hover:bg-red-50 hover:text-red-700 sm:mr-auto"
+              >
+                <Trash2 className="h-4 w-4" />
+                Delete
+              </Button>
+            ) : (
+              <span className="hidden sm:block" />
+            )}
+            <div className="flex flex-col-reverse gap-2 sm:flex-row">
             <Button
               type="button"
               variant="outline"
@@ -614,9 +683,20 @@ export default function ExpeditionsPage() {
                 editingExpedition ? "Update Expedition" : "Create Expedition"
               )}
             </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <DeleteExpeditionDialog
+        expedition={deletingExpedition}
+        open={!!deletingExpedition}
+        onOpenChange={(open) => { if (!open) setDeletingExpedition(null) }}
+        onDeleted={() => {
+          setDialogOpen(false)
+          mutate("expeditions")
+        }}
+      />
     </div>
   )
 }

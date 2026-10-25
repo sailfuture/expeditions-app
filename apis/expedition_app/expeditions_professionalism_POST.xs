@@ -29,12 +29,24 @@ query expeditions_professionalism verb=POST {
     json[] job_reason?
     json[] crew_reason?
     json[] service_reason?
+    int? fitness?
+  
+    // Blocked (N/A) flags from the scores screen; true = left out of averages and the award.
+    bool isAcademicsUsed?
+    bool isCitizenshipUsed?
+    bool isJobUsed?
+    bool isCrewUsed?
+    bool isServiceUsed?
   
     // Type of day (Anchored, Offshore, Service Learning)
     text day_type?
   }
 
   stack {
+    function.run review_period_assert_open {
+      input = {expeditions_id: $input.expeditions_id, date: $input.date}
+    } as $score_period_open
+  
     db.get expedition_schedule {
       field_name = "id"
       field_value = $input.expedition_schedule_id
@@ -93,15 +105,16 @@ query expeditions_professionalism verb=POST {
         students_id           : $input.students_id
         date                  : $input.date
         academics             : $input.academics
-        isAcademicsUsed       : $isAcademicsUsed
+        isAcademicsUsed       : $input.isAcademicsUsed ?? false
         citizenship           : $input.citizenship
-        isCitizenshipUsed     : true
+        isCitizenshipUsed     : $input.isCitizenshipUsed ?? false
         job                   : $input.job
-        isJobUsed             : true
+        isJobUsed             : $input.isJobUsed ?? false
         crew                  : $input.crew
-        isCrewUsed            : $isCrewUsed
+        isCrewUsed            : $input.isCrewUsed ?? false
         service               : $input.service
-        isServiceUsed         : $isServiceUsed
+        isServiceUsed         : $input.isServiceUsed ?? false
+        fitness               : $input.fitness
         journaling            : $input.journaling
         isFlagged             : false
         isLocked              : false

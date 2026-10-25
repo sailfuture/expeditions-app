@@ -8,7 +8,7 @@
 // later. The legacy `bonus` / `penalty` arrays on the same record are kept in
 // sync from those reasons so older readers keep working.
 
-import type { ExpeditionBonus, ExpeditionPenalty } from "@/lib/types"
+import type { ExpeditionBonus, ExpeditionPenalty, ReasonCategory } from "@/lib/types"
 
 export type ReasonType = "bonus" | "penalty"
 
@@ -144,4 +144,111 @@ export function splitReasons(reasons: Partial<CategoryReasons>): { bonus: Expedi
     }
   }
   return { bonus: Array.from(bonus.values()), penalty: Array.from(penalty.values()) }
+}
+
+// ---------------------------------------------------------------------------
+// Category tags: each bonus/penalty reason lists the score categories it can
+// explain (expedition_bonus.categories / expedition_penalty.categories).
+// ---------------------------------------------------------------------------
+
+/** The tag each score key is filed under. */
+export const REASON_CATEGORY_BY_KEY: Record<ScoreKey, ReasonCategory> = {
+  school: "school",
+  job: "job",
+  crew: "crew",
+  service_learning: "service",
+  citizenship: "citizenship",
+}
+
+export const REASON_CATEGORIES: ReadonlyArray<{ value: ReasonCategory; label: string }> = [
+  { value: "school", label: "School" },
+  { value: "job", label: "Job" },
+  { value: "crew", label: "Crew" },
+  { value: "service", label: "Service" },
+  { value: "citizenship", label: "Citizenship" },
+]
+
+/** True when a reason option may be offered for this category (untagged reasons fit every category). */
+export function optionFitsCategory(option: { categories?: ReadonlyArray<string> | null }, key: ScoreKey): boolean {
+  const tags = option.categories
+  if (!Array.isArray(tags) || tags.length === 0) return true
+  return tags.includes(REASON_CATEGORY_BY_KEY[key])
+}
+
+/**
+ * The options a category's picker shows: its tagged reasons, plus any reason
+ * already chosen for this record so an earlier choice never disappears.
+ */
+export function optionsForCategory<T extends { id: number; categories?: ReadonlyArray<string> | null }>(
+  options: ReadonlyArray<T>,
+  key: ScoreKey,
+  selectedIds: ReadonlyArray<number> = []
+): T[] {
+  const keep = new Set(selectedIds)
+  return options.filter((o) => optionFitsCategory(o, key) || keep.has(o.id))
+}
+
+// ---------------------------------------------------------------------------
+// Reporting: read the per-category reasons back off stored score rows.
+// ---------------------------------------------------------------------------
+
+export interface CategoryReasonGroup {
+  key: ScoreKey
+  label: string
+  reasons: ExpeditionReason[]
+}
+
+/** Display order for reasons in reports. */
+export const REPORT_KEY_ORDER: ReadonlyArray<ScoreKey> = ["school", "crew", "job", "service_learning", "citizenship"]
+
+/** The categories on one stored row that have reasons, in report order. */
+export function reasonGroupsForRow(row: Record<string, unknown> | null | undefined): CategoryReasonGroup[] {
+  const stored = readStoredReasons(row)
+  return REPORT_KEY_ORDER.filter((key) => stored[key].length > 0).map((key) => ({
+    key,
+    label: SCORE_LABELS[key],
+    reasons: stored[key],
+  }))
+}
+
+export interface ReasonTally {
+  type: ReasonType
+  id: number
+  name: string
+  count: number
+}
+
+export interface CategoryReasonSummary {
+  key: ScoreKey
+  label: string
+  bonus: ReasonTally[]
+  penalty: ReasonTally[]
+}
+
+/** How often each reason was given in each category across many rows, most frequent first. */
+export function summarizeReasons(rows: ReadonlyArray<Record<string, unknown>>): CategoryReasonSummary[] {
+  const tallies = new Map<ScoreKey, Map<string, ReasonTally>>()
+  for (const row of rows) {
+    const stored = readStoredReasons(row)
+    for (const key of SCORE_KEYS) {
+      for (const reason of stored[key]) {
+        const byReason = tallies.get(key) ?? new Map<string, ReasonTally>()
+        const id = `${reason.type}:${reason.id}`
+        const tally = byReason.get(id) ?? { type: reason.type, id: reason.id, name: reason.name, count: 0 }
+        tally.count += 1
+        byReason.set(id, tally)
+        tallies.set(key, byReason)
+      }
+    }
+  }
+  const sortTallies = (list: ReasonTally[]) => list.sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
+  return REPORT_KEY_ORDER.filter((key) => tallies.has(key)).map((key) => {
+    const all = Array.from(tallies.get(key)!.values())
+    return {
+      key,
+      label: SCORE_LABELS[key],
+      bonus: sortTallies(all.filter((t) => t.type === "bonus")),
+      penalty: sortTallies(all.filter((t) => t.type === "penalty")),
+    }
+  })
 }

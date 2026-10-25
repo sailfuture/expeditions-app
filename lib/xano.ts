@@ -1,5 +1,5 @@
 // Xano API client
-import type { ExpeditionType } from "@/lib/types"
+import type { ExpeditionType, ReasonCategory, ReviewPeriod, ReviewPeriodKind, ReviewPeriodsResponse, ReviewPeriodAwardPreview } from "@/lib/types"
 import type { VesselPositionResponse } from "@/lib/vessel-position"
 
 const XANO_BASE_URL = "https://xsc3-mvx7-r86m.n7e.xano.io/api:bXFdqx8y"
@@ -258,6 +258,62 @@ export async function calculateStudentEvaluation(studentsId: number, expeditions
   })
 }
 
+// ============ Review periods (weekly pay periods + final evaluation) ============
+// Every rule lives in Xano: dates inside the expedition, no overlapping weeks,
+// one final per expedition, one review per student per period, and finalized
+// periods frozen (scores on their days locked, award amounts saved).
+export async function getReviewPeriods(expeditionsId: number) {
+  return xanoFetch<ReviewPeriodsResponse>(`/review_periods?expeditions_id=${expeditionsId}`)
+}
+
+export async function createReviewPeriod(data: {
+  expeditions_id: number
+  kind: ReviewPeriodKind
+  name?: string
+  startDate?: string
+  endDate?: string
+}) {
+  return xanoFetch<{ period: ReviewPeriod; generated: { created: number; updated: number } }>("/review_periods", {
+    method: "POST",
+    body: JSON.stringify(data),
+  })
+}
+
+/** Add missing students and refresh scores on a draft period. Never duplicates; keeps notes. */
+export async function regenerateReviewPeriod(id: number) {
+  return xanoFetch<{ created: number; updated: number }>(`/review_periods/${id}/generate`, {
+    method: "POST",
+    body: JSON.stringify({ review_periods_id: id }),
+  })
+}
+
+/** Freeze the period: final score refresh, award amounts saved, scores on its days locked. */
+export async function finalizeReviewPeriod(id: number, staffId?: number | null) {
+  return xanoFetch<any>(`/review_periods/${id}/finalize`, {
+    method: "POST",
+    body: JSON.stringify({ review_periods_id: id, expedition_staff_id: staffId ?? null }),
+  })
+}
+
+export async function reopenReviewPeriod(id: number) {
+  return xanoFetch<ReviewPeriod>(`/review_periods/${id}/reopen`, {
+    method: "POST",
+    body: JSON.stringify({ review_periods_id: id }),
+  })
+}
+
+/** Deletes a draft period and its reviews; finalized periods are refused. */
+export async function deleteReviewPeriod(id: number) {
+  return xanoFetch<{ deleted_reviews: number }>(`/review_periods/${id}`, { method: "DELETE" })
+}
+
+/** What finalizing would freeze for each student over a date range (read-only). */
+export async function getReviewPeriodAwardPreview(expeditionsId: number, startDate: string, endDate: string) {
+  return xanoFetch<ReviewPeriodAwardPreview>(
+    `/review_period_award_preview?expeditions_id=${expeditionsId}&startDate=${startDate}&endDate=${endDate}`
+  )
+}
+
 export async function getExpeditionPerformanceReviews(expeditionsId: number) {
   return xanoFetch<any[]>(`/expedition_performance_reviews?expeditions_id=${expeditionsId}`)
 }
@@ -271,26 +327,6 @@ export async function getProfessionalismByStudentAndDate(
   return xanoFetch<any[]>(
     `/expeditions_professionalism_by_student_and_date?students_id=${studentsId}&expeditions_id=${expeditionsId}&startDate=${startDate}&endDate=${endDate}`
   )
-}
-
-export async function createPerformanceReview(data: {
-  expeditions_id: number
-  report_name: string
-  startDate: string
-  endDate: string
-  is_final?: boolean
-}) {
-  return xanoFetch<any>("/calculate_student_evaluation_performance_evaluation", {
-    method: "POST",
-    body: JSON.stringify({
-      expeditions_id: data.expeditions_id,
-      students_id: 0,
-      report_name: data.report_name,
-      startDate: data.startDate,
-      endDate: data.endDate,
-      is_final: data.is_final ?? false,
-    }),
-  })
 }
 
 export async function getPerformanceReviewById(reviewId: number) {
@@ -308,13 +344,6 @@ export async function updatePerformanceReviewNotes(id: number, notes: string, ex
   })
 }
 
-export async function setPerformanceReviewIsFinal(id: number, isFinal: boolean) {
-  return xanoFetch<any>(`/expedition_performance_reviews/${id}`, {
-    method: "PATCH",
-    body: JSON.stringify({ is_final: isFinal }),
-  })
-}
-
 export async function deletePerformanceReview(id: number) {
   return xanoFetch<any>(`/expedition_performance_reviews/${id}`, {
     method: "DELETE",
@@ -327,6 +356,22 @@ export async function getExpeditionBonus() {
 }
 
 // ============ Penalty Options ============
+/** Change which score categories a bonus reason is offered for. */
+export async function updateExpeditionBonusCategories(id: number, categories: ReasonCategory[]) {
+  return xanoFetch<any>(`/expedition_bonus/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ expedition_bonus_id: id, categories }),
+  })
+}
+
+/** Change which score categories a penalty reason is offered for. */
+export async function updateExpeditionPenaltyCategories(id: number, categories: ReasonCategory[]) {
+  return xanoFetch<any>(`/expedition_penalty/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ expedition_penalty_id: id, categories }),
+  })
+}
+
 export async function getExpeditionPenalty() {
   return xanoFetch<any[]>("/expedition_penalty")
 }

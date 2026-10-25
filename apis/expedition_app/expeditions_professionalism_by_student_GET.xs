@@ -30,6 +30,11 @@ query expeditions_professionalism_by_student verb=GET {
         "isServiceUsed"
         "journaling"
         "fitness"
+        "academics_reason"
+        "job_reason"
+        "crew_reason"
+        "service_reason"
+        "citizenship_reason"
         "bonus"
         "penalty"
       ]

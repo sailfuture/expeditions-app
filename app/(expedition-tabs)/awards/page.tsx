@@ -5,7 +5,7 @@ import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import useSWR from "swr"
 import { format } from "date-fns"
-import { ChevronDown, ChevronRight, Info, Printer, Trophy } from "lucide-react"
+import { ChevronDown, ChevronRight, Info, Lock, Printer, Trophy } from "lucide-react"
 import {
   Table,
   TableBody,
@@ -21,10 +21,12 @@ import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { useExpeditions, useStudentsByExpedition, useExpeditionJournalStatus } from "@/lib/hooks/use-expeditions"
+import { useExpeditions, useStudentsByExpedition, useExpeditionJournalStatus, useExpeditionPerformanceReviews } from "@/lib/hooks/use-expeditions"
+import { useReviewPeriods } from "@/components/review-periods-panel"
 import { getProfessionalismByStudent } from "@/lib/xano"
 import { cn } from "@/lib/utils"
 import { isResidentialExpedition } from "@/lib/expedition-type"
+import { DayReasons, ReasonsSummary } from "@/components/score-reasons"
 import {
   DEFAULT_AWARD_SETTINGS,
   RATED_CATEGORIES,
@@ -33,6 +35,7 @@ import {
   summarizeStudentAwards,
   formatAwardDollars,
   formatAwardPercent,
+  computeDailyAward,
   type DailyAward,
   type DailyScores,
   type StudentAwardSummary,
@@ -43,6 +46,14 @@ const SETTINGS = DEFAULT_AWARD_SETTINGS
 interface StudentRow {
   student: any
   summary: StudentAwardSummary
+  /** The raw score rows behind each scored day, for the per-category reasons. */
+  rowsByDate: Record<string, Record<string, unknown>>
+  /** Amount from finalized weeks (frozen when the week was finalized). */
+  paid: number
+  /** Live amount for days not in a finalized week. */
+  open: number
+  /** Day -> name of the finalized week that froze it. */
+  lockedByDate: Record<string, string>
 }
 
 function formatDate(dateStr: string) {
@@ -85,9 +96,18 @@ function ScoreCell({ value, earned }: { value: number | null; earned: number }) 
   )
 }
 
-function DailyBreakdown({ days }: { days: DailyAward[] }) {
+function DailyBreakdown({
+  days,
+  rowsByDate,
+  lockedByDate,
+}: {
+  days: DailyAward[]
+  rowsByDate: Record<string, Record<string, unknown>>
+  lockedByDate: Record<string, string>
+}) {
   return (
-    <div className="border-t bg-gray-50/60 px-3 py-3 sm:px-6">
+    <div className="space-y-3 border-t bg-gray-50/60 px-3 py-3 sm:px-6">
+      <ReasonsSummary rows={days.map((d) => rowsByDate[d.date]).filter(Boolean)} title="Reasons this period" />
       <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
         <Table>
           <TableHeader>
@@ -106,12 +126,22 @@ function DailyBreakdown({ days }: { days: DailyAward[] }) {
               <TableHead className={cn(HEAD, "text-right")}>Cit. %</TableHead>
               <TableHead className={cn(HEAD, "text-right")}>Withheld</TableHead>
               <TableHead className={cn(HEAD, "text-right")}>Award</TableHead>
+              <TableHead className={HEAD}>Reasons</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {days.map((d) => (
               <TableRow key={d.date} className="border-b last:border-0">
-                <TableCell className={cn(CELL, "font-medium text-gray-900")}>{formatDate(d.date)}</TableCell>
+                <TableCell className={cn(CELL, "font-medium text-gray-900")}>
+                  <span className="inline-flex items-center gap-1.5">
+                    {formatDate(d.date)}
+                    {lockedByDate[d.date] && (
+                      <span title={`Finalized in ${lockedByDate[d.date]}`} className="text-gray-400">
+                        <Lock className="h-3 w-3" />
+                      </span>
+                    )}
+                  </span>
+                </TableCell>
                 {RATED_CATEGORIES.map((c) => (
                   <ScoreCell key={c.key} value={d.scores[c.key]} earned={d.earnedByCategory[c.key]} />
                 ))}
@@ -146,6 +176,9 @@ function DailyBreakdown({ days }: { days: DailyAward[] }) {
                 <TableCell className={cn(CELL, "text-right font-semibold", d.award > 0 ? "text-green-700" : "text-gray-400")}>
                   {formatAwardDollars(d.award)}
                 </TableCell>
+                <TableCell className="min-w-[16rem] px-3 py-2 align-top">
+                  <DayReasons row={rowsByDate[d.date]} empty={<span className="text-sm text-gray-300">—</span>} />
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -155,15 +188,93 @@ function DailyBreakdown({ days }: { days: DailyAward[] }) {
   )
 }
 
+// ---------------------------------------------------------------------------
+// "How the award is calculated": four step cards in a 2x2 grid. Every number
+// comes from SETTINGS, so the explainer can't drift from the calculation.
+// ---------------------------------------------------------------------------
+
+const EXPLAIN_TH = "px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-500"
+const EXPLAIN_TD = "px-3 py-2 text-sm text-gray-700"
+const EXPLAIN_NUM = "px-3 py-2 text-right text-sm font-semibold tabular-nums text-gray-900"
+
+function StepCard({
+  step,
+  title,
+  description,
+  children,
+}: {
+  step: number
+  title: string
+  description: React.ReactNode
+  children: React.ReactNode
+}) {
+  return (
+    <section className="flex flex-col overflow-hidden rounded-lg border border-gray-200 bg-white">
+      <header className="flex items-start gap-3 border-b border-gray-200 px-4 py-3">
+        <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gray-900 text-xs font-semibold text-white">
+          {step}
+        </span>
+        <div className="min-w-0">
+          <h3 className="text-sm font-semibold text-gray-900">{title}</h3>
+          <p className="mt-0.5 text-xs leading-relaxed text-gray-500">{description}</p>
+        </div>
+      </header>
+      <div className="flex-1">{children}</div>
+    </section>
+  )
+}
+
+/** A two-column "condition → keeps" table. */
+function KeepsTable({ heading, rows }: { heading: string; rows: Array<{ label: React.ReactNode; percent: number }> }) {
+  return (
+    <table className="w-full">
+      <thead className="bg-gray-50">
+        <tr>
+          <th className={EXPLAIN_TH}>{heading}</th>
+          <th className={cn(EXPLAIN_TH, "text-right")}>Keeps</th>
+        </tr>
+      </thead>
+      <tbody className="divide-y divide-gray-100">
+        {rows.map((row, i) => (
+          <tr key={i}>
+            <td className={EXPLAIN_TD}>{row.label}</td>
+            <td className={cn(EXPLAIN_NUM, row.percent === 0 && "text-gray-400")}>{formatAwardPercent(row.percent)}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )
+}
+
+// The spreadsheet's Example Week, Day 3: four categories earn, performance 2.75, citizenship 3.
+const WORKED_EXAMPLE = computeDailyAward({
+  date: "example",
+  school: 2,
+  job: 3,
+  service: 3,
+  crew: 3,
+  journaling: 100,
+  fitness: 0,
+  citizenship: 3,
+})
+
 function HowItWorks() {
   const [open, setOpen] = useState(false)
+  const perDay = SETTINGS.dollarsPerCategory * (RATED_CATEGORIES.length + COMPLETION_CATEGORIES.length)
+  const lowestTier = SETTINGS.performanceTiers[SETTINGS.performanceTiers.length - 1]
+  const ex = WORKED_EXAMPLE
+
   return (
     <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
       <div className="flex items-center gap-2 pr-3 sm:pr-4">
         <button
           type="button"
           onClick={() => setOpen((o) => !o)}
-          className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 px-4 py-3 text-left sm:px-6"
+          aria-expanded={open}
+          className={cn(
+            "flex min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-l-xl px-4 py-3 text-left transition-colors sm:px-6",
+            "outline-none hover:bg-gray-50/70 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-gray-300"
+          )}
         >
           {open ? <ChevronDown className="h-4 w-4 text-gray-400" /> : <ChevronRight className="h-4 w-4 text-gray-400" />}
           <Info className="h-4 w-4 text-gray-400" />
@@ -180,126 +291,142 @@ function HowItWorks() {
           </Link>
         </Button>
       </div>
-      {open && (
-        <div className="border-t px-4 py-4 text-sm text-gray-600 sm:px-6">
-          <div className="max-w-3xl space-y-6">
-            <p className="text-gray-700">
-              Each scored day is worked out in three steps, then the days are added up for the expedition total.
-              Every number below comes from the award settings.
-            </p>
 
-            <section className="space-y-2">
-              <p className="font-semibold text-gray-800">Step 1 · Earned dollars</p>
-              <p className="text-xs text-gray-500">
-                Each category that qualifies earns {formatAwardDollars(SETTINGS.dollarsPerCategory)}. Blank categories (not part of
-                the day, or blocked on the scores screen) earn nothing and are left out of every average. Most per day:{" "}
-                {formatAwardDollars(SETTINGS.dollarsPerCategory * (RATED_CATEGORIES.length + COMPLETION_CATEGORIES.length))}.
-              </p>
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="text-left text-gray-500">
-                    <th className="py-1 pr-2 font-medium">Category</th>
-                    <th className="py-1 pr-2 font-medium">Qualifies when</th>
-                    <th className="py-1 text-right font-medium">Earns</th>
+      {open && (
+        <div className="space-y-4 border-t bg-gray-50/60 px-4 py-4 sm:px-6">
+          <p className="text-sm text-gray-600">
+            Each scored day is worked out in three steps, then the days are added up for the expedition total.
+          </p>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <StepCard
+              step={1}
+              title="Earned dollars"
+              description={
+                <>
+                  Each qualifying category earns {formatAwardDollars(SETTINGS.dollarsPerCategory)}. Blank or blocked categories earn
+                  nothing.
+                </>
+              }
+            >
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className={EXPLAIN_TH}>Category</th>
+                    <th className={EXPLAIN_TH}>Earns when</th>
+                    <th className={cn(EXPLAIN_TH, "text-right")}>Earns</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-gray-100">
                   {RATED_CATEGORIES.map((c) => (
-                    <tr key={c.key} className="border-t">
-                      <td className="py-1 pr-2 text-gray-800">{c.label}</td>
-                      <td className="py-1 pr-2">Scored {SETTINGS.ratedThreshold} or higher</td>
-                      <td className="py-1 text-right font-medium text-gray-800">{formatAwardDollars(SETTINGS.dollarsPerCategory)}</td>
+                    <tr key={c.key}>
+                      <td className={cn(EXPLAIN_TD, "font-medium text-gray-900")}>{c.label}</td>
+                      <td className={EXPLAIN_TD}>Score {SETTINGS.ratedThreshold} or higher</td>
+                      <td className={EXPLAIN_NUM}>{formatAwardDollars(SETTINGS.dollarsPerCategory)}</td>
                     </tr>
                   ))}
                   {COMPLETION_CATEGORIES.map((c) => (
-                    <tr key={c.key} className="border-t">
-                      <td className="py-1 pr-2 text-gray-800">{c.label}</td>
-                      <td className="py-1 pr-2">
-                        Marked complete ({SETTINGS.completionValue}){c.key === "journaling" ? " — only the \"Completed\" journal status counts" : ""}
-                      </td>
-                      <td className="py-1 text-right font-medium text-gray-800">{formatAwardDollars(SETTINGS.dollarsPerCategory)}</td>
+                    <tr key={c.key}>
+                      <td className={cn(EXPLAIN_TD, "font-medium text-gray-900")}>{c.label}</td>
+                      <td className={EXPLAIN_TD}>Marked Complete</td>
+                      <td className={EXPLAIN_NUM}>{formatAwardDollars(SETTINGS.dollarsPerCategory)}</td>
                     </tr>
                   ))}
                 </tbody>
+                <tfoot className="border-t border-gray-200 bg-gray-50">
+                  <tr>
+                    <td colSpan={2} className={cn(EXPLAIN_TD, "font-semibold text-gray-900")}>Most per day</td>
+                    <td className={EXPLAIN_NUM}>{formatAwardDollars(perDay)}</td>
+                  </tr>
+                </tfoot>
               </table>
-            </section>
+            </StepCard>
 
-            <section className="space-y-2">
-              <p className="font-semibold text-gray-800">Step 2 · Performance percent</p>
-              <p className="text-xs text-gray-500">
-                Performance score = average of the {RATED_CATEGORIES.map((c) => c.label).join(", ")} scores entered that day (a 0
-                counts as 0; blanks are left out). Rows are checked from the top; the first match sets the percent kept.
-              </p>
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="text-left text-gray-500">
-                    <th className="py-1 pr-2 font-medium">Performance score</th>
-                    <th className="py-1 text-right font-medium">Keeps</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {SETTINGS.performanceTiers.map((t) => (
-                    <tr key={`${t.op}-${t.value}`} className="border-t">
-                      <td className="py-1 pr-2 text-gray-800">{t.op === "gt" ? "Greater than" : "At least"} {t.value.toFixed(2)}</td>
-                      <td className="py-1 text-right font-medium text-gray-800">{formatAwardPercent(t.percent)}</td>
-                    </tr>
-                  ))}
-                  <tr className="border-t">
-                    <td className="py-1 pr-2 text-gray-800">Below {SETTINGS.performanceTiers[SETTINGS.performanceTiers.length - 1]?.value.toFixed(2)}</td>
-                    <td className="py-1 text-right font-medium text-gray-800">0%</td>
-                  </tr>
-                </tbody>
-              </table>
-            </section>
+            <StepCard
+              step={2}
+              title="Performance percent"
+              description={
+                <>
+                  Average of the {RATED_CATEGORIES.map((c) => c.label).join(", ")} scores entered that day. Checked top to bottom;
+                  the first match sets what is kept.
+                </>
+              }
+            >
+              <KeepsTable
+                heading="Performance score"
+                rows={[
+                  ...SETTINGS.performanceTiers.map((t) => ({
+                    label: `${t.op === "gt" ? "Greater than" : "At least"} ${t.value.toFixed(2)}`,
+                    percent: t.percent,
+                  })),
+                  { label: `Below ${lowestTier?.value.toFixed(2)}`, percent: 0 },
+                ]}
+              />
+            </StepCard>
 
-            <section className="space-y-2">
-              <p className="font-semibold text-gray-800">Step 3 · Citizenship percent</p>
-              <p className="text-xs text-gray-500">Exact lookup by the day&apos;s citizenship score. A blank citizenship score keeps 0%.</p>
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="text-left text-gray-500">
-                    <th className="py-1 pr-2 font-medium">Citizenship score</th>
-                    <th className="py-1 text-right font-medium">Keeps</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {Object.entries(SETTINGS.citizenshipPercents)
+            <StepCard
+              step={3}
+              title="Citizenship percent"
+              description="Looked up from the day's citizenship score. A 5 adds a 10% bonus; a blank score keeps nothing."
+            >
+              <KeepsTable
+                heading="Citizenship score"
+                rows={[
+                  ...Object.entries(SETTINGS.citizenshipPercents)
                     .map(([score, pct]) => ({ score: Number(score), pct }))
                     .sort((a, b) => b.score - a.score)
-                    .map(({ score, pct }) => (
-                      <tr key={score} className="border-t">
-                        <td className="py-1 pr-2 text-gray-800">{score}</td>
-                        <td className="py-1 text-right font-medium text-gray-800">{formatAwardPercent(pct)}</td>
-                      </tr>
-                    ))}
-                  <tr className="border-t">
-                    <td className="py-1 pr-2 text-gray-800">Blank</td>
-                    <td className="py-1 text-right font-medium text-gray-800">0%</td>
-                  </tr>
-                </tbody>
-              </table>
-            </section>
+                    .map(({ score, pct }) => ({ label: String(score), percent: pct })),
+                  { label: "Blank", percent: 0 },
+                ]}
+              />
+            </StepCard>
 
-            <section className="space-y-2">
-              <p className="font-semibold text-gray-800">Step 4 · Daily award and expedition total</p>
-              <table className="w-full text-xs">
-                <tbody>
-                  <tr className="border-t">
-                    <td className="py-1 pr-2 text-gray-800">Daily award</td>
-                    <td className="py-1 text-right font-medium text-gray-800">earned $ × performance % × citizenship %</td>
+            <StepCard
+              step={4}
+              title="Daily award and total"
+              description="The earned dollars are multiplied by both percents. The expedition total adds up every day's award."
+            >
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className={EXPLAIN_TH}>Worked example</th>
+                    <th className={EXPLAIN_TH}>Value</th>
+                    <th className={cn(EXPLAIN_TH, "text-right")}>Running</th>
                   </tr>
-                  <tr className="border-t">
-                    <td className="py-1 pr-2 text-gray-800">Withheld</td>
-                    <td className="py-1 text-right font-medium text-gray-800">earned $ − daily award</td>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  <tr>
+                    <td className={cn(EXPLAIN_TD, "font-medium text-gray-900")}>Earned</td>
+                    <td className={EXPLAIN_TD}>{Object.values(ex.earnedByCategory).filter((v) => v > 0).length} categories qualified</td>
+                    <td className={EXPLAIN_NUM}>{formatAwardDollars(ex.earned)}</td>
                   </tr>
-                  <tr className="border-t">
-                    <td className="py-1 pr-2 text-gray-800">Expedition total</td>
-                    <td className="py-1 text-right font-medium text-gray-800">sum of every day&apos;s award</td>
+                  <tr>
+                    <td className={cn(EXPLAIN_TD, "font-medium text-gray-900")}>× Performance</td>
+                    <td className={EXPLAIN_TD}>Score {ex.performanceScore.toFixed(2)} keeps {formatAwardPercent(ex.performancePercent)}</td>
+                    <td className={EXPLAIN_NUM}>{formatAwardDollars(ex.earned * ex.performancePercent)}</td>
+                  </tr>
+                  <tr>
+                    <td className={cn(EXPLAIN_TD, "font-medium text-gray-900")}>× Citizenship</td>
+                    <td className={EXPLAIN_TD}>Score {ex.scores.citizenship} keeps {formatAwardPercent(ex.citizenshipPercent)}</td>
+                    <td className={EXPLAIN_NUM}>{formatAwardDollars(ex.award)}</td>
                   </tr>
                 </tbody>
+                <tfoot className="border-t border-gray-200 bg-gray-50">
+                  <tr>
+                    <td colSpan={2} className={cn(EXPLAIN_TD, "font-semibold text-gray-900")}>
+                      Daily award <span className="font-normal text-gray-500">· {formatAwardDollars(ex.withheld)} withheld</span>
+                    </td>
+                    <td className={EXPLAIN_NUM}>{formatAwardDollars(ex.award)}</td>
+                  </tr>
+                </tfoot>
               </table>
-            </section>
+            </StepCard>
           </div>
+
+          <p className="text-xs text-gray-500">
+            Journaling counts as complete only with the &quot;Complete&quot; status. A 0 counts as 0 in the performance average;
+            blank categories are left out of it. The performance score is not rounded before the lookup.
+          </p>
         </div>
       )}
     </div>
@@ -355,27 +482,64 @@ function AwardsPageContent() {
     return value
   }
 
+  // Finalized weekly review periods are pay periods with frozen amounts.
+  const { data: periodsData } = useReviewPeriods(residential ? expeditionId : null)
+  const { data: reviews } = useExpeditionPerformanceReviews(residential ? expeditionId : null)
+  const finalizedWeekIds = useMemo(
+    () => new Set((periodsData?.periods ?? []).filter((p) => p.kind === "weekly" && p.status === "finalized").map((p) => p.id)),
+    [periodsData]
+  )
+  const finalizedWeekName = useMemo(
+    () => new Map((periodsData?.periods ?? []).map((p) => [p.id, p.name] as const)),
+    [periodsData]
+  )
+
   const rows: StudentRow[] = useMemo(() => {
     if (!rowsByStudent) return []
     return activeStudents
       .map((student: any) => {
-        const days = (rowsByStudent[student.id] || [])
+        const raw: any[] = rowsByStudent[student.id] || []
+        const rowsByDate: Record<string, Record<string, unknown>> = {}
+        for (const r of raw) if (r?.date) rowsByDate[r.date] = r
+        const days = raw
           .map((r: any) => dailyScoresFromProfessionalism(r, journalStatuses))
           .filter((d: DailyScores) => d.date && hasAnyScore(d))
           .filter((d: DailyScores) => (!startDate || d.date >= startDate) && (!endDate || d.date <= endDate))
-        return { student, summary: summarizeStudentAwards(days, SETTINGS) }
+        const summary = summarizeStudentAwards(days, SETTINGS)
+
+        // Finalized weeks pay their frozen amounts; every other day is live.
+        const frozenReviews = (reviews ?? []).filter(
+          (r: any) => r.students_id === student.id && finalizedWeekIds.has(r.expedition_review_periods_id)
+        )
+        const frozenByDate: Record<string, number> = {}
+        const lockedByDate: Record<string, string> = {}
+        for (const r of frozenReviews) {
+          const weekName = finalizedWeekName.get(r.expedition_review_periods_id) ?? "a finalized week"
+          for (const day of Array.isArray(r.award_daily) ? r.award_daily : []) {
+            if (!day?.date) continue
+            frozenByDate[day.date] = Number(day.award) || 0
+            lockedByDate[day.date] = weekName
+          }
+        }
+        const inRange = (d: string) => (!startDate || d >= startDate) && (!endDate || d <= endDate)
+        const paid = startDate || endDate
+          ? Object.entries(frozenByDate).filter(([d]) => inRange(d)).reduce((sum, [, v]) => sum + v, 0)
+          : frozenReviews.reduce((sum: number, r: any) => sum + (Number(r.award_total) || 0), 0)
+        const open = summary.days.filter((d) => !(d.date in frozenByDate)).reduce((sum, d) => sum + d.award, 0)
+        return { student, summary, rowsByDate, paid, open, lockedByDate }
       })
-      .sort((a: StudentRow, b: StudentRow) => b.summary.total - a.summary.total || studentName(a.student).localeCompare(studentName(b.student)))
-  }, [rowsByStudent, activeStudents, journalStatuses, startDate, endDate])
+      .sort((a: StudentRow, b: StudentRow) => b.paid + b.open - (a.paid + a.open) || studentName(a.student).localeCompare(studentName(b.student)))
+  }, [rowsByStudent, activeStudents, journalStatuses, startDate, endDate, reviews, finalizedWeekIds, finalizedWeekName])
 
   const totals = useMemo(
     () => rows.reduce(
       (acc, r) => ({
         earned: acc.earned + r.summary.earned,
         withheld: acc.withheld + r.summary.withheld,
-        total: acc.total + r.summary.total,
+        total: acc.total + r.paid + r.open,
+        paid: acc.paid + r.paid,
       }),
-      { earned: 0, withheld: 0, total: 0 }
+      { earned: 0, withheld: 0, total: 0, paid: 0 }
     ),
     [rows]
   )
@@ -477,12 +641,12 @@ function AwardsPageContent() {
                 <TableHead className="h-10 px-3 text-center text-xs font-semibold text-gray-600">Days scored</TableHead>
                 <TableHead className="h-10 px-3 text-right text-xs font-semibold text-gray-600">Earned</TableHead>
                 <TableHead className="h-10 px-3 text-right text-xs font-semibold text-gray-600">Withheld</TableHead>
-                <TableHead className="h-10 px-3 text-right text-xs font-semibold text-gray-600">Avg / day</TableHead>
+                <TableHead className="h-10 px-3 text-right text-xs font-semibold text-gray-600" title="Saved when a week was finalized">Finalized</TableHead>
                 <TableHead className="h-10 px-3 text-right text-xs font-semibold text-gray-600 sm:px-6">Award</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {rows.map(({ student, summary }) => {
+              {rows.map(({ student, summary, rowsByDate, paid, open, lockedByDate }) => {
                 const isOpen = expanded.has(student.id)
                 const keptPct = summary.earned > 0 ? summary.total / summary.earned : 0
                 return (
@@ -514,12 +678,17 @@ function AwardsPageContent() {
                         )}
                       </TableCell>
                       <TableCell className="h-14 px-3 text-right text-sm text-gray-700">
-                        {summary.daysScored > 0 ? formatAwardDollars(summary.total / summary.daysScored) : "—"}
+                        {paid > 0 ? (
+                          <span className="inline-flex items-center gap-1"><Lock className="h-3 w-3 text-gray-400" />{formatAwardDollars(paid)}</span>
+                        ) : "—"}
                       </TableCell>
                       <TableCell className="h-14 px-3 text-right sm:px-6">
-                        <span className={cn("text-base font-semibold", summary.total > 0 ? "text-green-700" : "text-gray-400")}>
-                          {formatAwardDollars(summary.total)}
+                        <span className={cn("text-base font-semibold", paid + open > 0 ? "text-green-700" : "text-gray-400")}>
+                          {formatAwardDollars(paid + open)}
                         </span>
+                        {paid > 0 && open > 0 && (
+                          <span className="block text-[11px] text-gray-400">{formatAwardDollars(open)} not finalized</span>
+                        )}
                       </TableCell>
                     </TableRow>
                     {isOpen && (
@@ -528,7 +697,7 @@ function AwardsPageContent() {
                           {summary.days.length === 0 ? (
                             <p className="border-t bg-gray-50/60 px-6 py-4 text-sm text-gray-500">No scored days in this range.</p>
                           ) : (
-                            <DailyBreakdown days={summary.days} />
+                            <DailyBreakdown days={summary.days} rowsByDate={rowsByDate} lockedByDate={lockedByDate} />
                           )}
                         </TableCell>
                       </TableRow>
@@ -544,7 +713,9 @@ function AwardsPageContent() {
                 <TableCell className="h-12 px-3 text-right text-sm font-semibold text-gray-500">
                   {totals.withheld > 0 ? `-${formatAwardDollars(totals.withheld)}` : "—"}
                 </TableCell>
-                <TableCell className="h-12 px-3" />
+                <TableCell className="h-12 px-3 text-right text-sm font-semibold text-gray-900">
+                  {totals.paid > 0 ? formatAwardDollars(totals.paid) : "—"}
+                </TableCell>
                 <TableCell className="h-12 px-3 text-right text-base font-bold text-green-700 sm:px-6">{formatAwardDollars(totals.total)}</TableCell>
               </TableRow>
             </TableBody>

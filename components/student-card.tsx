@@ -97,6 +97,8 @@ export function StudentCard({
   const photoUrl = record._students?.profileImage || record._students?.photo_url
 
   const scoreCategories = getScoreCategories(isOffshore, isService)
+  const performanceCategories = scoreCategories.filter((c) => c.key !== "citizenship")
+  const citizenshipCategory = scoreCategories.find((c) => c.key === "citizenship")
   const isExcluded = record.isFlagged
 
   const handleScoreChange = (key: ScoreKey, value: number | null) => {
@@ -162,6 +164,7 @@ export function StudentCard({
           max={5}
         />
         <ScoreReasonField
+          category={key}
           score={score}
           blocked={isCategoryBlocked}
           bonusOptions={bonusOptions}
@@ -297,8 +300,15 @@ export function StudentCard({
       </div>
 
       <div className="px-3 sm:px-4 pb-3 mb-2">
-        {/* One full-width row per category: CREW (offshore) or SCHOOL (in port), JOB, CITIZENSHIP, SERVICE (if applicable) */}
-        <div className="space-y-2.5">{scoreCategories.map(renderCategory)}</div>
+        {/* Performance categories, one full-width row each: CREW (offshore) or SCHOOL (in port), JOB, SERVICE (if applicable) */}
+        <div className="space-y-2.5">{performanceCategories.map(renderCategory)}</div>
+
+        {/* Citizenship stands apart: it is scored every day and sets how much of the day is kept, not a category of work */}
+        {citizenshipCategory && (
+          <div className="mt-4 border-t border-dashed border-gray-200 pt-3">
+            {renderCategory(citizenshipCategory)}
+          </div>
+        )}
       </div>
 
       <div className="px-3 sm:px-4 pb-4 space-y-2.5 relative">

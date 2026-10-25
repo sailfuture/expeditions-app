@@ -3,9 +3,11 @@
 import { AnimatePresence, motion } from "motion/react"
 import { MultiSelectDropdown } from "./multi-select-dropdown"
 import type { ExpeditionBonus, ExpeditionPenalty } from "@/lib/types"
-import { reasonTypeForScore, toReason, type ExpeditionReason } from "@/lib/evaluation-reasons"
+import { optionsForCategory, reasonTypeForScore, toReason, type ExpeditionReason, type ScoreKey } from "@/lib/evaluation-reasons"
 
 interface ScoreReasonFieldProps {
+  /** Which score this explains; the picker only offers reasons tagged for it. */
+  category: ScoreKey
   /** The category's current score; null displays as 3 and needs no reason. */
   score: number | null
   /** Category blocked (N/A) for the day: never shows reasons. */
@@ -28,6 +30,7 @@ const REVEAL = {
 // reasons when it rises above 3. The parent clears reasons whenever the score
 // crosses back through 3, so the field only ever shows matching ones.
 export function ScoreReasonField({
+  category,
   score,
   blocked = false,
   bonusOptions,
@@ -37,8 +40,9 @@ export function ScoreReasonField({
   disabled = false,
 }: ScoreReasonFieldProps) {
   const type = blocked ? null : reasonTypeForScore(score)
-  const options = type === "bonus" ? bonusOptions : type === "penalty" ? penaltyOptions : []
   const selectedIds = type ? value.filter((r) => r.type === type).map((r) => r.id) : []
+  const allOptions = type === "bonus" ? bonusOptions : type === "penalty" ? penaltyOptions : []
+  const options = optionsForCategory(allOptions, category, selectedIds)
 
   return (
     <AnimatePresence initial={false} mode="wait">

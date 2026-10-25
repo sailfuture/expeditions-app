@@ -14,15 +14,18 @@ import {
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
-import { useExpeditions, useExpeditionPerformanceReviews, useTeachersByExpedition, useExpeditionSchedules, useExpeditionLocations } from "@/lib/hooks/use-expeditions"
+import { useExpeditions, useExpeditionPerformanceReviews, useTeachersByExpedition, useExpeditionSchedules, useExpeditionLocations, useStudentsByExpedition } from "@/lib/hooks/use-expeditions"
+import { ReviewPeriodsPanel, useReviewPeriods } from "@/components/review-periods-panel"
+import type { ReviewPeriod } from "@/lib/types"
 import { calculateRouteDistance } from "@/lib/haversine"
-import { FileText, User, Download, ExternalLink, Plus, Calendar, Eye, Trash2, Mail, Award, CheckCircle2, AlertCircle } from "lucide-react"
+import { FileText, User, Download, ExternalLink, Plus, Calendar, Eye, Trash2, Mail, Award, CheckCircle2, AlertCircle, Lock } from "lucide-react"
 import { Textarea } from "@/components/ui/textarea"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { generatePerformanceReviewPDF } from "@/lib/pdf-generator"
+import { DayReasons, ReasonsSummary } from "@/components/score-reasons"
 import { toast } from "sonner"
-import { getProfessionalismByStudentAndDate, createPerformanceReview, updatePerformanceReviewNotes, getPerformanceReviewById, deletePerformanceReview, getEvaluationByStudent, getStudentById, getExpeditionPerformanceReviews, setPerformanceReviewIsFinal } from "@/lib/xano"
+import { getProfessionalismByStudentAndDate, updatePerformanceReviewNotes, getPerformanceReviewById, deletePerformanceReview, getEvaluationByStudent, getStudentById, getExpeditionPerformanceReviews } from "@/lib/xano"
 import { Spinner } from "@/components/ui/spinner"
 import { mutate } from "swr"
 import {
@@ -563,6 +566,11 @@ function PreviewModal({
           </div>
           )}
 
+          {/* Reasons given per category over the review period */}
+          {!loadingDailyScores && dailyScores && dailyScores.length > 0 && (
+            <ReasonsSummary rows={dailyScores} title="Reasons this period" />
+          )}
+
           {/* Daily Scores Table - hidden for final evaluation */}
           {!review?.is_final && (
           <div>
@@ -584,6 +592,7 @@ function PreviewModal({
                         <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600 text-center">Crew</TableHead>
                         <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600 text-center">Serv</TableHead>
                         <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600 text-center">Jrnl</TableHead>
+                        <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600">Reasons</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -622,6 +631,9 @@ function PreviewModal({
                             return ''
                           })()}`}>
                             {score.journaling || score.note || score._expedition_journal_status?.name || '—'}
+                          </TableCell>
+                          <TableCell className="min-w-[14rem] px-2 py-2 align-top">
+                            <DayReasons row={score} empty={<span className="text-sm text-gray-300">—</span>} />
                           </TableCell>
                         </TableRow>
                       ))}
@@ -729,22 +741,6 @@ function PerformanceReviewsContent() {
   )
   const { data: staff } = useTeachersByExpedition(expeditionId)
 
-  const [createDialogOpen, setCreateDialogOpen] = useState(false)
-  const [reportName, setReportName] = useState("")
-  const [startDate, setStartDate] = useState<Date | undefined>(undefined)
-  const [endDate, setEndDate] = useState<Date | undefined>(undefined)
-  const [startDateOpen, setStartDateOpen] = useState(false)
-  const [endDateOpen, setEndDateOpen] = useState(false)
-  const [creating, setCreating] = useState(false)
-
-  // Final Evaluation creation
-  const [finalDialogOpen, setFinalDialogOpen] = useState(false)
-  const [finalStartDate, setFinalStartDate] = useState<Date | undefined>(undefined)
-  const [finalEndDate, setFinalEndDate] = useState<Date | undefined>(undefined)
-  const [finalStartDateOpen, setFinalStartDateOpen] = useState(false)
-  const [finalEndDateOpen, setFinalEndDateOpen] = useState(false)
-  const [creatingFinal, setCreatingFinal] = useState(false)
-
   const [previewModalOpen, setPreviewModalOpen] = useState(false)
   const [selectedReviewId, setSelectedReviewId] = useState<number | null>(null)
   const [editedNotes, setEditedNotes] = useState("")
@@ -755,114 +751,20 @@ function PerformanceReviewsContent() {
   const [reviewToDelete, setReviewToDelete] = useState<any>(null)
   const [deleting, setDeleting] = useState(false)
 
+  // Students for the review periods panel, and the periods to show which reviews are locked
+  const { data: periodStudents } = useStudentsByExpedition(expeditionId)
+  const { data: periodsData } = useReviewPeriods(expeditionId)
+  const periodById = useMemo(() => {
+    const map = new Map<number, ReviewPeriod>()
+    for (const p of periodsData?.periods ?? []) map.set(p.id, p)
+    return map
+  }, [periodsData])
+
   // Find the expedition to display
   const displayExpedition = useMemo(() => {
     if (!expeditionId || !allExpeditions) return null
     return allExpeditions.find((e: any) => e.id === expeditionId)
   }, [expeditionId, allExpeditions])
-
-  const handleCreateReview = async () => {
-    if (!reportName || !startDate || !endDate || !expeditionId) {
-      toast.error("Please fill in all fields")
-      return
-    }
-
-    setCreating(true)
-    try {
-      // Format dates as YYYY-MM-DD
-      const formattedStartDate = format(startDate, 'yyyy-MM-dd')
-      const formattedEndDate = format(endDate, 'yyyy-MM-dd')
-
-      // Call API to create performance review
-      await createPerformanceReview({
-        expeditions_id: expeditionId,
-        report_name: reportName,
-        startDate: formattedStartDate,
-        endDate: formattedEndDate,
-      })
-
-      toast.success("Performance review created")
-      setCreateDialogOpen(false)
-      setReportName("")
-      setStartDate(undefined)
-      setEndDate(undefined)
-
-      // Refresh data
-      await mutate(`expedition_performance_reviews_${expeditionId}`)
-    } catch (error) {
-      console.error("Error creating review:", error)
-      toast.error("Failed to create review")
-    } finally {
-      setCreating(false)
-    }
-  }
-
-  const handleCreateFinalEvaluation = async () => {
-    if (!finalStartDate || !finalEndDate || !expeditionId) {
-      toast.error("Please fill in start and end dates")
-      return
-    }
-
-    setCreatingFinal(true)
-    try {
-      const formattedStartDate = format(finalStartDate, 'yyyy-MM-dd')
-      const formattedEndDate = format(finalEndDate, 'yyyy-MM-dd')
-      const beforeCreate = Date.now()
-
-      await createPerformanceReview({
-        expeditions_id: expeditionId,
-        report_name: "Final Expedition Evaluation",
-        startDate: formattedStartDate,
-        endDate: formattedEndDate,
-        is_final: true,
-      })
-
-      // Workaround: the create endpoint ignores is_final, so PATCH the records ourselves.
-      // Fetch all reviews and patch the ones we just created (within last 60 seconds and matching name)
-      try {
-        const allReviews = await getExpeditionPerformanceReviews(expeditionId)
-        const justCreated = (allReviews || []).filter((r: any) =>
-          r.report_name === "Final Expedition Evaluation"
-          && r.is_final !== true
-          && r.created_at >= beforeCreate - 5000
-        )
-        if (justCreated.length > 0) {
-          await Promise.all(justCreated.map((r: any) => setPerformanceReviewIsFinal(r.id, true)))
-        }
-      } catch (patchErr) {
-        console.error("Failed to flag records as final:", patchErr)
-      }
-
-      toast.success("Final Expedition Evaluation created")
-      setFinalDialogOpen(false)
-      setFinalStartDate(undefined)
-      setFinalEndDate(undefined)
-
-      await mutate(`expedition_performance_reviews_${expeditionId}`)
-    } catch (error) {
-      console.error("Error creating final evaluation:", error)
-      toast.error("Failed to create final evaluation")
-    } finally {
-      setCreatingFinal(false)
-    }
-  }
-
-  // Pre-fill final eval dates from expedition range when dialog opens
-  const openFinalDialog = () => {
-    if (displayExpedition) {
-      const start = displayExpedition.startDate || displayExpedition.start_date
-      const end = displayExpedition.endDate || displayExpedition.end_date
-      if (start && !finalStartDate) {
-        const [y, m, d] = start.split('-').map(Number)
-        setFinalStartDate(new Date(y, m - 1, d))
-      }
-      if (end && !finalEndDate) {
-        const [y, m, d] = end.split('-').map(Number)
-        setFinalEndDate(new Date(y, m - 1, d))
-      }
-    }
-    setFinalDialogOpen(true)
-  }
 
   const handlePreviewReview = async (reviewId: number, currentNotes: string, staffId?: number) => {
     setSelectedReviewId(reviewId)
@@ -947,33 +849,10 @@ function PerformanceReviewsContent() {
   return (
     <div className="min-h-screen bg-gray-50">
 
-      {/* Button Bar */}
-      {expeditionId && (
-        <div className="border-b bg-muted/30">
-          <div className="container mx-auto px-4 py-4">
-            <div className="flex items-center justify-end gap-2">
-              <Button
-                onClick={() => setCreateDialogOpen(true)}
-                variant="outline"
-                className="cursor-pointer"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Create Review
-              </Button>
-              <Button
-                onClick={openFinalDialog}
-                className="cursor-pointer"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Create Final Evaluation
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Main Content */}
       <main className="container mx-auto px-4 py-6 space-y-6">
+        <ReviewPeriodsPanel expedition={displayExpedition} students={periodStudents ?? []} />
+
         {isLoading ? (
           <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
             <div className="px-6 py-4 border-b bg-gray-50/50">
@@ -1072,6 +951,11 @@ function PerformanceReviewsContent() {
                           ) : (
                             <span className="text-sm text-gray-400 italic">Untitled</span>
                           )}
+                          {periodById.get(review.expedition_review_periods_id)?.status === "finalized" && (
+                            <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-gray-900 px-1.5 py-0.5 align-middle text-[10px] font-medium text-white">
+                              <Lock className="h-2.5 w-2.5" /> Finalized
+                            </span>
+                          )}
                         </TableCell>
                         <TableCell className="h-14 px-6">
                           <span className="text-sm text-gray-600">{formatDate(review.startDate)}</span>
@@ -1107,15 +991,17 @@ function PerformanceReviewsContent() {
                             >
                               <Download className="h-4 w-4" />
                             </Button>
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              className="cursor-pointer h-9 w-9 hover:bg-red-50 hover:border-red-200"
-                              onClick={() => handleDeleteClick(review)}
-                              title="Delete"
-                            >
-                              <Trash2 className="h-4 w-4 text-gray-500" />
-                            </Button>
+                            {periodById.get(review.expedition_review_periods_id)?.status !== "finalized" && (
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                className="cursor-pointer h-9 w-9 hover:bg-red-50 hover:border-red-200"
+                                onClick={() => handleDeleteClick(review)}
+                                title="Delete"
+                              >
+                                <Trash2 className="h-4 w-4 text-gray-500" />
+                              </Button>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>
@@ -1150,195 +1036,6 @@ function PerformanceReviewsContent() {
           expeditionStartDate={displayExpedition?.startDate || displayExpedition?.start_date}
         />
       )}
-
-      {/* Create Review Dialog */}
-      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Create Performance Review</DialogTitle>
-            <DialogDescription>
-              Create a new performance review for all students in this expedition.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="report-name">Report Name</Label>
-              <Input
-                id="report-name"
-                placeholder="Enter report name"
-                value={reportName}
-                onChange={(e) => setReportName(e.target.value)}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Start Date</Label>
-                <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start text-left font-normal cursor-pointer"
-                    >
-                      <Calendar className="mr-2 h-4 w-4" />
-                      {startDate ? format(startDate, 'MMM d, yyyy') : 'Select date'}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <ExpeditionCalendar
-                      mode="single"
-                      selected={startDate}
-                      expeditionStartDate={expedition?.startDate}
-                      expeditionEndDate={expedition?.endDate}
-                      onSelect={(date) => {
-                        setStartDate(date)
-                        setStartDateOpen(false)
-                      }}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              <div className="space-y-2">
-                <Label>End Date</Label>
-                <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start text-left font-normal cursor-pointer"
-                    >
-                      <Calendar className="mr-2 h-4 w-4" />
-                      {endDate ? format(endDate, 'MMM d, yyyy') : 'Select date'}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <ExpeditionCalendar
-                      mode="single"
-                      selected={endDate}
-                      expeditionStartDate={expedition?.startDate}
-                      expeditionEndDate={expedition?.endDate}
-                      onSelect={(date) => {
-                        setEndDate(date)
-                        setEndDateOpen(false)
-                      }}
-                      initialFocus
-                      disabled={(date) => startDate ? date < startDate : false}
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setCreateDialogOpen(false)}
-              disabled={creating}
-              className="cursor-pointer"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleCreateReview}
-              disabled={creating || !reportName || !startDate || !endDate}
-              className="cursor-pointer"
-            >
-              {creating ? (
-                <>
-                  <Spinner size="sm" className="h-4 w-4 mr-2" />
-                  Creating...
-                </>
-              ) : (
-                'Create Review'
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Create Final Evaluation Dialog */}
-      <Dialog open={finalDialogOpen} onOpenChange={setFinalDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Create Final Expedition Evaluation</DialogTitle>
-            <DialogDescription>
-              Generate a final evaluation for all students using their aggregated scores across the expedition. Strong Sat (≥3.21), Sat (2.75–3.20), or Unsat (&lt;2.75) is determined per domain.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Start Date</Label>
-                <Popover open={finalStartDateOpen} onOpenChange={setFinalStartDateOpen}>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start text-left font-normal cursor-pointer">
-                      <Calendar className="mr-2 h-4 w-4" />
-                      {finalStartDate ? format(finalStartDate, 'MMM d, yyyy') : 'Select date'}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <ExpeditionCalendar
-                      mode="single"
-                      selected={finalStartDate}
-                      expeditionStartDate={expedition?.startDate}
-                      expeditionEndDate={expedition?.endDate}
-                      onSelect={(date) => { setFinalStartDate(date); setFinalStartDateOpen(false) }}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              <div className="space-y-2">
-                <Label>End Date</Label>
-                <Popover open={finalEndDateOpen} onOpenChange={setFinalEndDateOpen}>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start text-left font-normal cursor-pointer">
-                      <Calendar className="mr-2 h-4 w-4" />
-                      {finalEndDate ? format(finalEndDate, 'MMM d, yyyy') : 'Select date'}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <ExpeditionCalendar
-                      mode="single"
-                      selected={finalEndDate}
-                      expeditionStartDate={expedition?.startDate}
-                      expeditionEndDate={expedition?.endDate}
-                      onSelect={(date) => { setFinalEndDate(date); setFinalEndDateOpen(false) }}
-                      initialFocus
-                      disabled={(date) => finalStartDate ? date < finalStartDate : false}
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Defaults to the full expedition date range. Adjust if you want a narrower window.
-            </p>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setFinalDialogOpen(false)} disabled={creatingFinal} className="cursor-pointer">Cancel</Button>
-            <Button onClick={handleCreateFinalEvaluation} disabled={creatingFinal || !finalStartDate || !finalEndDate} className="cursor-pointer">
-              {creatingFinal ? (
-                <>
-                  <Spinner size="sm" className="h-4 w-4 mr-2" />
-                  Creating...
-                </>
-              ) : (
-                <>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Final Evaluation
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>

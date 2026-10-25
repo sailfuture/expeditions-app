@@ -60,6 +60,7 @@ import { toast } from "sonner"
 import { mutate } from "swr"
 import { Spinner } from "@/components/ui/spinner"
 import { useExpeditions, useEvaluationByStudent, useProfessionalismByStudent, useExpeditionPerformanceReviews } from "@/lib/hooks/use-expeditions"
+import { DayReasons, ReasonsSummary } from "@/components/score-reasons"
 import { useCurrentUser } from "@/lib/contexts/user-context"
 import { generatePerformanceReviewPDF } from "@/lib/pdf-generator"
 import { formatDistanceToNow } from "date-fns"
@@ -1116,6 +1117,11 @@ export default function StudentDetailPage() {
                 </TableRow>
               </TableBody>
             </Table>
+            {expeditionId && sortedAllRecords.length > 0 && (
+              <div className="border-t px-6 py-4">
+                <ReasonsSummary rows={sortedAllRecords} title="Reasons by category this expedition" />
+              </div>
+            )}
           </div>
         )}
 
@@ -2288,19 +2294,20 @@ export default function StudentDetailPage() {
                     <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 bg-gray-50 text-center whitespace-nowrap">Job</TableHead>
                     <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 bg-gray-50 text-center whitespace-nowrap">Service</TableHead>
                     <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 bg-gray-50 text-center whitespace-nowrap">Journal</TableHead>
+                    <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 bg-gray-50 whitespace-nowrap">Reasons</TableHead>
                     <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 bg-gray-50 text-right whitespace-nowrap">View</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {loadingAllRecords ? (
                     <TableRow>
-                      <TableCell colSpan={9} className="text-center py-8">
+                      <TableCell colSpan={10} className="text-center py-8">
                         <Spinner size="md" className="mx-auto" />
                       </TableCell>
                     </TableRow>
                   ) : sortedAllRecords.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={9} className="text-center py-8 text-gray-500">
+                      <TableCell colSpan={10} className="text-center py-8 text-gray-500">
                         No records found
                       </TableCell>
                     </TableRow>
@@ -2368,6 +2375,9 @@ export default function StudentDetailPage() {
                             <span className={`text-sm ${(record.journaling || record.note) ? 'font-medium text-gray-700' : 'text-gray-400'}`}>
                               {record.journaling || record.note || 'No Score'}
                             </span>
+                          </TableCell>
+                          <TableCell className="min-w-[14rem] px-4 py-3 align-top">
+                            <DayReasons row={record} empty={<span className="text-sm text-gray-300">—</span>} />
                           </TableCell>
                           <TableCell className="px-4 py-3 text-right">
                             <Button
@@ -2511,6 +2521,10 @@ export default function StudentDetailPage() {
                   </div>
                 </div>
                 
+                {!loadingReviewDailyScores && reviewDailyScores && reviewDailyScores.length > 0 && (
+                  <ReasonsSummary rows={reviewDailyScores} title="Reasons this period" />
+                )}
+
                 {/* Daily Scores Table */}
                 <div>
                   <h3 className="text-sm font-semibold text-gray-700 mb-3">Daily Scores</h3>
@@ -2531,6 +2545,7 @@ export default function StudentDetailPage() {
                               <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600 text-center">Crew</TableHead>
                               <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600 text-center">Serv</TableHead>
                               <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600 text-center">Jrnl</TableHead>
+                              <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600">Reasons</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
@@ -2558,6 +2573,9 @@ export default function StudentDetailPage() {
                                 </TableCell>
                                 <TableCell className={`px-2 py-2 text-center text-sm ${(score.journaling || score.note || score._expedition_journal_status?.name) ? getJournalStringColor(score.journaling || score.note || score._expedition_journal_status?.name) : ''}`}>
                                   {score.journaling || score.note || score._expedition_journal_status?.name || '—'}
+                                </TableCell>
+                                <TableCell className="min-w-[14rem] px-2 py-2 align-top">
+                                  <DayReasons row={score} empty={<span className="text-sm text-gray-300">—</span>} />
                                 </TableCell>
                               </TableRow>
                             ))}

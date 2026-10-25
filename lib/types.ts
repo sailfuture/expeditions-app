@@ -86,16 +86,23 @@ export interface Student {
   profileImage?: string
 }
 
+/** Score categories a reason can be tagged with (expedition_bonus/penalty.categories). */
+export type ReasonCategory = "school" | "job" | "crew" | "service" | "citizenship"
+
 export interface ExpeditionBonus {
   id: number
   name: string
   value: number
+  /** Categories whose picker offers this reason; empty or missing means all. */
+  categories?: ReasonCategory[] | null
 }
 
 export interface ExpeditionPenalty {
   id: number
   name: string
   value: number
+  /** Categories whose picker offers this reason; empty or missing means all. */
+  categories?: ReasonCategory[] | null
 }
 
 export interface ExpeditionJournalStatus {
@@ -128,4 +135,48 @@ export interface ExpeditionProfessionalism {
   isCrewUsed?: boolean
   isServiceUsed?: boolean
   _students?: Student
+}
+
+// ---------------------------------------------------------------------------
+// Review periods (Xano expedition_review_periods): weekly pay periods and the
+// final evaluation. A finalized period has its reviews and award amounts frozen.
+// ---------------------------------------------------------------------------
+export type ReviewPeriodKind = "weekly" | "final"
+export type ReviewPeriodStatus = "draft" | "finalized"
+
+export interface ReviewPeriod {
+  id: number
+  created_at?: number
+  expeditions_id: number
+  name: string
+  kind: ReviewPeriodKind
+  sequence?: number | null
+  startDate: string
+  endDate: string
+  status: ReviewPeriodStatus
+  finalized_at?: number | null
+  finalized_by_staff_id?: number | null
+  /** From GET review_periods. */
+  review_count?: number
+  with_notes?: number
+  with_reviewer?: number
+  missing_students?: number[]
+  award_total?: number
+}
+
+export interface ReviewPeriodsResponse {
+  periods: ReviewPeriod[]
+  active_students: number
+  unassigned_count: number
+}
+
+export interface ReviewPeriodAwardPreview {
+  settings: unknown
+  students: Array<{
+    students_id: number
+    days: number
+    earned: number
+    withheld: number
+    total: number
+  }>
 }

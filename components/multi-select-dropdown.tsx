@@ -66,9 +66,13 @@ export function MultiSelectDropdown({
         disabled={disabled}
         className={cn(
           "mt-1.5 h-11 w-full rounded-lg border border-gray-200 bg-background px-3 flex items-center justify-between gap-2 text-left cursor-pointer",
-          "hover:bg-gray-50 transition-colors",
+          "hover:bg-gray-50 transition-colors outline-none",
+          // Inset ring and border only: this field often sits inside an
+          // overflow-hidden wrapper (the animated reason picker), which would
+          // clip a ring drawn outside the box.
+          "focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-gray-300",
           disabled && "opacity-50 cursor-not-allowed",
-          isOpen && "ring-2 ring-ring ring-offset-2",
+          isOpen && "border-gray-400 bg-gray-50",
         )}
       >
         <span className={cn("truncate text-sm", selectedOptions.length === 0 && "text-muted-foreground")}>

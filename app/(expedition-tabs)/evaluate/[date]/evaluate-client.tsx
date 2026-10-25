@@ -15,7 +15,10 @@ import {
 } from "@/components/ui/breadcrumb"
 import { DateNavigation } from "@/components/date-navigation"
 import { Spinner } from "@/components/ui/spinner"
-import { Unlock, MapPin, Calendar, X } from "lucide-react"
+import { Unlock, MapPin, Calendar, X, Tags, Lock } from "lucide-react"
+import { useReviewPeriods } from "@/components/review-periods-panel"
+import { lockingPeriodForDate } from "@/lib/review-periods"
+import { ReasonCategoriesDialog } from "@/components/reason-categories-dialog"
 import { StudentCard } from "@/components/student-card"
 import { useExpeditionContext } from "@/lib/contexts/expedition-context"
 import {
@@ -68,6 +71,12 @@ export function EvaluateClient({ date, expeditionId }: EvaluateClientProps) {
 
   // Use expedition ID from URL if provided, otherwise fall back to active expedition
   const effectiveExpeditionId = expeditionId || activeExpedition?.id || null
+  // A finalized review period locks the scores on its days (Xano refuses edits too).
+  const { data: reviewPeriodsData } = useReviewPeriods(effectiveExpeditionId)
+  const lockingPeriod = useMemo(
+    () => lockingPeriodForDate(reviewPeriodsData?.periods ?? [], date),
+    [reviewPeriodsData, date]
+  )
 
   // Find the expedition to display - prioritize URL parameter, fetch full data with term info
   const displayExpedition = useMemo(() => {
@@ -87,6 +96,8 @@ export function EvaluateClient({ date, expeditionId }: EvaluateClientProps) {
   const { data: allProfessionalism, isLoading: loadingProfessionalism } = useExpeditionsProfessionalismByDate(date, effectiveExpeditionId)
   const { data: bonusOptions = [], isLoading: loadingBonus } = useExpeditionBonus()
   const { data: penaltyOptions = [], isLoading: loadingPenalty } = useExpeditionPenalty()
+  // Editor for which score categories each reason is offered for
+  const [reasonTagsOpen, setReasonTagsOpen] = useState(false)
 
   const [localUpdates, setLocalUpdates] = useState<Record<number, Partial<ExpeditionProfessionalism>>>({})
   const [isNavigating, setIsNavigating] = useState(false)
@@ -580,6 +591,16 @@ export function EvaluateClient({ date, expeditionId }: EvaluateClientProps) {
               <Button
                 variant="outline"
                 size="icon"
+                onClick={() => setReasonTagsOpen(true)}
+                className="hidden sm:flex cursor-pointer h-10 w-10"
+                title="Reason categories"
+                aria-label="Edit reason categories"
+              >
+                <Tags className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
                 onClick={handleUnlockAll}
                 className="cursor-pointer h-10 w-10"
                 disabled={isNavigating || !isWithinExpeditionRange}
@@ -597,7 +618,7 @@ export function EvaluateClient({ date, expeditionId }: EvaluateClientProps) {
               )}
               <Button
                 size="default"
-                disabled={submitCount === 0 || isNavigating || isSubmitting || !isWithinExpeditionRange || !allProfessionalism || allProfessionalism.length === 0 || loadingProfessionalism || missingReasons.length > 0}
+                disabled={submitCount === 0 || isNavigating || isSubmitting || !isWithinExpeditionRange || !allProfessionalism || allProfessionalism.length === 0 || loadingProfessionalism || missingReasons.length > 0 || !!lockingPeriod}
                 onClick={handleSubmitScores}
                 className="cursor-pointer h-10 px-4"
                 title={!isWithinExpeditionRange ? "Outside expedition date range" : (!allProfessionalism || allProfessionalism.length === 0) ? "No students loaded" : missingReasons.length > 0 ? `Choose a reason for every score above or below 3 (${missingReasons.length} missing)` : "Submit professionalism scores"}
@@ -631,6 +652,15 @@ export function EvaluateClient({ date, expeditionId }: EvaluateClientProps) {
 
       {/* Student Cards Grid */}
       <main className="container mx-auto px-4 py-8 relative bg-transparent">
+        {lockingPeriod && (
+          <div className="mb-4 flex items-start gap-2 rounded-lg border border-gray-300 bg-gray-50 px-4 py-3 text-sm text-gray-700">
+            <Lock className="mt-0.5 h-4 w-4 shrink-0 text-gray-500" />
+            <span>
+              This day is in <span className="font-semibold">{lockingPeriod.name}</span>, which is finalized, so its scores are
+              locked. An admin can reopen the period on the Reviews tab to change them.
+            </span>
+          </div>
+        )}
         {/* Loading Overlay */}
         {isNavigating && (
           <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-10 flex items-center justify-center">
@@ -718,6 +748,13 @@ export function EvaluateClient({ date, expeditionId }: EvaluateClientProps) {
           </div>
         )}
       </main>
+
+      <ReasonCategoriesDialog
+        open={reasonTagsOpen}
+        onOpenChange={setReasonTagsOpen}
+        bonusOptions={bonusOptions}
+        penaltyOptions={penaltyOptions}
+      />
     </div>
   )
 }

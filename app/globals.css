@@ -125,6 +125,18 @@ body {
   @apply bg-background text-foreground;
   pointer-events: auto !important;
 }
+/* Every clickable button shows a pointer and a hover background by default.
+   Tailwind utilities on the element (bg-*, hover:bg-*) still win over this. */
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]),
+[role="menuitem"],
+[role="option"] {
+  cursor: pointer;
+}
+button:not(:disabled):not([data-variant="link"]):hover {
+  background-color: var(--accent);
+  color: var(--accent-foreground);
+}
 }
 
 /* Subtle scrollbar styles */
@@ -170,4 +182,33 @@ input[type="number"]::-webkit-outer-spin-button {
 input[type="number"] {
   -moz-appearance: textfield;
   appearance: textfield;
+}
+/* Route map popups (components/expedition-route-map.tsx): a small round close
+   button inset from the corner, instead of Mapbox's square corner button and
+   the app-wide button hover background. */
+.expedition-map-popup .mapboxgl-popup-close-button {
+  top: 6px;
+  right: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border-radius: 9999px;
+  background-color: transparent;
+  color: #9ca3af;
+  font-size: 16px;
+  line-height: 1;
+}
+.expedition-map-popup .mapboxgl-popup-close-button:hover {
+  background-color: #f3f4f6;
+  color: #111827;
+}
+.expedition-map-popup .mapboxgl-popup-close-button:focus {
+  outline: none;
+}
+.expedition-map-popup .mapboxgl-popup-close-button:focus-visible {
+  outline: 2px solid #9ca3af;
+  outline-offset: 1px;
 }

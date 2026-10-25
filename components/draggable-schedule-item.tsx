@@ -1,10 +1,20 @@
 "use client"
 
-import React, { useRef, useEffect } from "react"
+import React, { useRef, useEffect, useState, useCallback } from "react"
 import { useDraggable } from "@dnd-kit/core"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { MessageSquare, GripVertical, Pencil } from "lucide-react"
 import { cn, getPhotoUrl } from "@/lib/utils"
+
+// Rendered block heights (px, including padding and border) below which the
+// block switches to a denser layout so the assigned staff never gets cut off:
+//   >= FULL_MIN_HEIGHT     title / time / staff + avatars on separate lines
+//   >= COMPACT_MIN_HEIGHT  "Title • Staff" on one line, time underneath
+//   smaller                "Title • Staff · time" on a single line
+const FULL_MIN_HEIGHT = 76
+const COMPACT_MIN_HEIGHT = 46
+
+type ItemDensity = "full" | "compact" | "tiny"
 
 // Check if item is a meal type using the isMeal boolean from the item type record
 function isMealType(item: any): boolean {
@@ -56,6 +66,30 @@ export function DraggableScheduleItem({
     },
   })
 
+  // Heights are percentages of the timeline, so measure the rendered block
+  // to pick a layout that fits it.
+  const elementRef = useRef<HTMLDivElement | null>(null)
+  const [heightPx, setHeightPx] = useState<number | null>(null)
+  const setRefs = useCallback(
+    (node: HTMLDivElement | null) => {
+      setNodeRef(node)
+      elementRef.current = node
+    },
+    [setNodeRef]
+  )
+  useEffect(() => {
+    const el = elementRef.current
+    if (!el) return
+    const observer = new ResizeObserver(() => setHeightPx(el.offsetHeight))
+    observer.observe(el)
+    setHeightPx(el.offsetHeight)
+    return () => observer.disconnect()
+  }, [])
+  const density: ItemDensity =
+    heightPx === null || heightPx >= FULL_MIN_HEIGHT ? "full" : heightPx >= COMPACT_MIN_HEIGHT ? "compact" : "tiny"
+  const staffName: string | undefined = item._expedition_staff?.name
+  const timeRange = `${formatMilitaryTime(item.time_in)} - ${formatMilitaryTime(item.time_out)}`
+
   // Track if drag happened to prevent click from firing after drag
   const wasDraggingRef = useRef(false)
   
@@ -80,7 +114,7 @@ export function DraggableScheduleItem({
   }
 
   // Calculate resize handle height - 15% of item height, min 8px, max 24px
-  const itemHeightPx = parseFloat(position.height) || 100
+  const itemHeightPx = heightPx ?? 100
   const resizeHandleHeight = Math.min(24, Math.max(8, itemHeightPx * 0.15))
 
   const style: React.CSSProperties = {
@@ -97,9 +131,10 @@ export function DraggableScheduleItem({
 
   return (
     <div
-      ref={setNodeRef}
+      ref={setRefs}
       className={cn(
-        "absolute mx-2 md:mx-4 rounded-xl border-2 p-2 bg-white overflow-hidden group",
+        "absolute mx-2 md:mx-4 rounded-xl border-2 bg-white overflow-hidden group",
+        density === "tiny" ? "px-2 py-1" : "p-2",
         isCurrentlyDragging 
           ? "border-blue-400 shadow-2xl cursor-grabbing" 
           : editMode 
@@ -189,11 +224,32 @@ export function DraggableScheduleItem({
         <div className={`w-1 rounded-full ${getColorForType(item)} flex-shrink-0`} />
         
             <div className="flex-1 min-w-0 overflow-hidden pr-12">
+          {density !== "full" ? (
+            <>
+              {/* Short block: "Title • Staff" on one line so the staff name is never cut off */}
+              <p className="flex min-w-0 items-baseline gap-1 text-sm leading-tight" title={[item.name, staffName].filter(Boolean).join(" • ")}>
+                <span className="min-w-0 shrink truncate font-semibold text-gray-900">{item.name}</span>
+                {staffName && (
+                  <>
+                    <span aria-hidden="true" className="shrink-0 text-gray-400">&bull;</span>
+                    <span className="min-w-0 shrink-[2] truncate text-[11px] text-gray-500">{staffName}</span>
+                  </>
+                )}
+                {density === "tiny" && (
+                  <span className="ml-1 shrink-0 text-[11px] text-gray-500">{timeRange}</span>
+                )}
+              </p>
+              {density === "compact" && (
+                <p className="truncate text-[11px] text-gray-600 leading-tight">{timeRange}</p>
+              )}
+            </>
+          ) : (
+          <>
           <h3 className="font-semibold text-sm text-gray-900 leading-tight line-clamp-1">
             {item.name}
           </h3>
           <p className="text-[11px] text-gray-600 leading-tight">
-            {formatMilitaryTime(item.time_in)} - {formatMilitaryTime(item.time_out)}
+            {timeRange}
           </p>
           {item._expedition_staff && (
               <div className="flex items-center gap-1.5 mt-0.5">
@@ -257,6 +313,8 @@ export function DraggableScheduleItem({
                 {item._expedition_cookbook?.recipe_name || (item.expedition_cookbook_id > 0 ? `Meal Plan #${item.expedition_cookbook_id}` : 'No Meal Plan')}
               </p>
             </div>
+          )}
+          </>
           )}
         </div>
       </div>

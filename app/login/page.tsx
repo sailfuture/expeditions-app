@@ -11,9 +11,9 @@ export default async function LoginPage({
   const session = await auth()
   const params = await searchParams
   
-  // If already logged in, redirect to expeditions
+  // If already logged in, redirect to the dashboard
   if (session?.user) {
-    redirect("/expeditions")
+    redirect("/home")
   }
 
   return (

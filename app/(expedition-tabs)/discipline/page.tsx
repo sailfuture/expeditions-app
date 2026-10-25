@@ -19,11 +19,11 @@ import { AlertTriangle, Download, Plus, Eye, Pencil, Trash2, FileWarning, Calend
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
-import { 
-  getExpeditionDiscipline, 
-  createExpeditionDiscipline, 
-  updateExpeditionDiscipline, 
-  deleteExpeditionDiscipline 
+import {
+  getExpeditionDiscipline,
+  createExpeditionDiscipline,
+  updateExpeditionDiscipline,
+  deleteExpeditionDiscipline
 } from "@/lib/xano"
 import { Spinner } from "@/components/ui/spinner"
 import {
@@ -54,7 +54,8 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
-import { Calendar as CalendarComponent } from "@/components/ui/calendar"
+import { ExpeditionCalendar } from "@/components/expedition-calendar"
+import { formatLocalDateString } from "@/lib/utils"
 import {
   Popover,
   PopoverContent,
@@ -101,49 +102,49 @@ async function generateDisciplinePDF(record: any, studentName: string, staffName
   const pageWidth = doc.internal.pageSize.getWidth()
   const margin = 14
   const contentWidth = pageWidth - margin * 2
-  
+
   const docType = record.isReferral ? "Referral" : "Infraction"
-  
+
   // Add school header
   let yPos = await addPDFHeader(doc)
-  
+
   // Title
   doc.setFontSize(18)
   doc.setFont("helvetica", "bold")
   doc.text(`Student ${docType} Report`, margin, yPos)
   yPos += 12
-  
+
   // Info section
   doc.setFontSize(11)
   doc.setFont("helvetica", "bold")
   doc.text("Student:", margin, yPos)
   doc.setFont("helvetica", "normal")
   doc.text(studentName, margin + 30, yPos)
-  
+
   yPos += 8
   doc.setFont("helvetica", "bold")
   doc.text("Date:", margin, yPos)
   doc.setFont("helvetica", "normal")
   doc.text(formatDate(record.date), margin + 30, yPos)
-  
+
   yPos += 8
   doc.setFont("helvetica", "bold")
   doc.text("Staff:", margin, yPos)
   doc.setFont("helvetica", "normal")
   doc.text(staffName, margin + 30, yPos)
-  
+
   yPos += 8
   doc.setFont("helvetica", "bold")
   doc.text("Reason:", margin, yPos)
   doc.setFont("helvetica", "normal")
   doc.text(record.reason || "—", margin + 30, yPos)
-  
+
   yPos += 8
   doc.setFont("helvetica", "bold")
   doc.text("Consequence:", margin, yPos)
   doc.setFont("helvetica", "normal")
   doc.text(record.consequence || "—", margin + 45, yPos)
-  
+
   // Summary section
   yPos += 15
   doc.setFont("helvetica", "bold")
@@ -153,7 +154,7 @@ async function generateDisciplinePDF(record: any, studentName: string, staffName
   const summaryLines = doc.splitTextToSize(record.summary_of_incident || "No summary provided.", contentWidth)
   doc.text(summaryLines, margin, yPos)
   yPos += summaryLines.length * 5 + 5
-  
+
   // Action taken section
   yPos += 5
   doc.setFont("helvetica", "bold")
@@ -162,12 +163,12 @@ async function generateDisciplinePDF(record: any, studentName: string, staffName
   doc.setFont("helvetica", "normal")
   const actionLines = doc.splitTextToSize(record.action_taken || "No action documented.", contentWidth)
   doc.text(actionLines, margin, yPos)
-  
+
   // Footer
   doc.setFontSize(9)
   doc.setTextColor(128, 128, 128)
   doc.text(`Generated on ${format(new Date(), 'MMM d, yyyy h:mm a')}`, pageWidth / 2, doc.internal.pageSize.getHeight() - 10, { align: "center" })
-  
+
   // Save
   const fileName = `${studentName.replace(/\s+/g, '_')}_${docType}_${record.date}.pdf`
   doc.save(fileName)
@@ -177,23 +178,23 @@ function DisciplinePageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const expeditionId = searchParams.get("expedition")
-  
+
   // Data hooks
   const { data: expeditions, isLoading: loadingExpeditions } = useExpeditions()
   const { data: students } = useStudentsByExpedition(expeditionId ? parseInt(expeditionId) : null)
   const { data: staff } = useTeachersByExpedition(expeditionId ? parseInt(expeditionId) : null)
-  
+
   const expedition = useMemo(() => {
     if (!expeditions || !expeditionId) return null
     return expeditions.find((e: any) => e.id === parseInt(expeditionId))
   }, [expeditions, expeditionId])
-  
+
   // Discipline records
   const { data: disciplineRecords, isLoading: loadingDiscipline, error: disciplineError } = useSWR(
     expeditionId ? `discipline_${expeditionId}` : null,
     expeditionId ? () => getExpeditionDiscipline(parseInt(expeditionId)) : null
   )
-  
+
   // State
   const [viewModalOpen, setViewModalOpen] = useState(false)
   const [createModalOpen, setCreateModalOpen] = useState(false)
@@ -202,7 +203,7 @@ function DisciplinePageContent() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
-  
+
   // Form state for create/edit
   const [formData, setFormData] = useState({
     students_id: "",
@@ -214,7 +215,7 @@ function DisciplinePageContent() {
     expedition_staff_id: "",
     action_taken: "",
   })
-  
+
   const resetForm = () => {
     setFormData({
       students_id: "",
@@ -227,7 +228,7 @@ function DisciplinePageContent() {
       action_taken: "",
     })
   }
-  
+
   const handleOpenView = (record: any) => {
     setSelectedRecord(record)
     setFormData({
@@ -243,20 +244,20 @@ function DisciplinePageContent() {
     setIsEditing(false)
     setViewModalOpen(true)
   }
-  
+
   const handleOpenCreate = () => {
     resetForm()
     setCreateModalOpen(true)
   }
-  
+
   const handleCreate = async () => {
     if (!expeditionId) return
-    
+
     if (!formData.students_id || !formData.date || !formData.reason) {
       toast.error("Please fill in required fields: Student, Date, and Reason")
       return
     }
-    
+
     setIsSaving(true)
     try {
       await createExpeditionDiscipline({
@@ -270,7 +271,7 @@ function DisciplinePageContent() {
         expedition_staff_id: parseInt(formData.expedition_staff_id) || 0,
         action_taken: formData.action_taken,
       })
-      
+
       toast.success(`${formData.isReferral ? "Referral" : "Infraction"} created successfully`)
       mutate(`discipline_${expeditionId}`)
       setCreateModalOpen(false)
@@ -282,10 +283,10 @@ function DisciplinePageContent() {
       setIsSaving(false)
     }
   }
-  
+
   const handleSaveEdit = async () => {
     if (!selectedRecord) return
-    
+
     setIsSaving(true)
     try {
       await updateExpeditionDiscipline(selectedRecord.id, {
@@ -298,7 +299,7 @@ function DisciplinePageContent() {
         expedition_staff_id: parseInt(formData.expedition_staff_id) || 0,
         action_taken: formData.action_taken,
       })
-      
+
       toast.success("Record updated successfully")
       mutate(`discipline_${expeditionId}`)
       setIsEditing(false)
@@ -310,10 +311,10 @@ function DisciplinePageContent() {
       setIsSaving(false)
     }
   }
-  
+
   const handleDelete = async () => {
     if (!selectedRecord) return
-    
+
     setIsDeleting(true)
     try {
       await deleteExpeditionDiscipline(selectedRecord.id)
@@ -329,29 +330,29 @@ function DisciplinePageContent() {
       setIsDeleting(false)
     }
   }
-  
+
   const handleDownloadPDF = async (record: any) => {
     const student = students?.find((s: any) => s.id === record.students_id)
     const staffMember = staff?.find((s: any) => s.id === record.expedition_staff_id)
     await generateDisciplinePDF(
-      record, 
+      record,
       `${student?.firstName || ""} ${student?.lastName || ""}`.trim() || "Unknown Student",
       staffMember?.name || "Unknown Staff"
     )
     toast.success("PDF downloaded")
   }
-  
+
   // Get student and staff names for display
   const getStudentName = (id: number) => {
     const student = students?.find((s: any) => s.id === id)
     return `${student?.firstName || ""} ${student?.lastName || ""}`.trim() || "Unknown"
   }
-  
+
   const getStaffName = (id: number) => {
     const staffMember = staff?.find((s: any) => s.id === id)
     return staffMember?.name || "Unknown"
   }
-  
+
   // Sort records by date (newest first)
   const sortedRecords = useMemo(() => {
     if (!disciplineRecords) return []
@@ -361,7 +362,7 @@ function DisciplinePageContent() {
       return dateB - dateA
     })
   }, [disciplineRecords])
-  
+
   // Reason options
   const reasonOptions = [
     "Physically Dangerous",
@@ -374,7 +375,7 @@ function DisciplinePageContent() {
     "Unauthorized Absence",
     "Other",
   ]
-  
+
   // Consequence options
   const consequenceOptions = [
     "Shore Leave Revoked",
@@ -385,7 +386,7 @@ function DisciplinePageContent() {
 
   return (
     <div className="min-h-screen bg-gray-50/50">
-      
+
       <main className="container mx-auto px-4 py-8">
         <div className="mb-8 flex items-start justify-between">
           <div>
@@ -399,7 +400,7 @@ function DisciplinePageContent() {
             New Record
           </Button>
         </div>
-        
+
         {/* Table */}
         <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
           <Table className="table-fixed w-full">
@@ -437,8 +438,8 @@ function DisciplinePageContent() {
                 </TableRow>
               ) : (
                 sortedRecords.map((record: any) => (
-                  <TableRow 
-                    key={record.id} 
+                  <TableRow
+                    key={record.id}
                     className="border-b last:border-0 transition-colors hover:bg-gray-50/50 cursor-pointer"
                     onClick={() => handleOpenView(record)}
                   >
@@ -496,7 +497,7 @@ function DisciplinePageContent() {
           </Table>
         </div>
       </main>
-      
+
       {/* View/Edit Modal */}
       <Dialog open={viewModalOpen} onOpenChange={setViewModalOpen}>
         <DialogContent className="w-full sm:max-w-2xl max-h-[90vh] flex flex-col">
@@ -513,7 +514,7 @@ function DisciplinePageContent() {
               {formatDate(selectedRecord?.date)} • Filed by {getStaffName(selectedRecord?.expedition_staff_id)}
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="flex-1 overflow-y-auto py-4 space-y-4">
             {isEditing ? (
               <>
@@ -543,17 +544,19 @@ function DisciplinePageContent() {
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0">
-                        <CalendarComponent
+                        <ExpeditionCalendar
                           mode="single"
                           selected={formData.date ? new Date(formData.date + 'T00:00:00') : undefined}
-                          onSelect={(date) => date && setFormData(prev => ({ ...prev, date: date.toISOString().split('T')[0] }))}
+                          expeditionStartDate={expedition?.startDate}
+                          expeditionEndDate={expedition?.endDate}
+                          onSelect={(date) => date && setFormData(prev => ({ ...prev, date: formatLocalDateString(date) }))}
                           initialFocus
                         />
                       </PopoverContent>
                     </Popover>
                   </div>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
                   <Switch
                     checked={formData.isReferral}
@@ -561,7 +564,7 @@ function DisciplinePageContent() {
                   />
                   <Label>Referral (vs Infraction)</Label>
                 </div>
-                
+
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Reason *</Label>
@@ -590,7 +593,7 @@ function DisciplinePageContent() {
                     </Select>
                   </div>
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label>Staff Member</Label>
                   <Select value={formData.expedition_staff_id} onValueChange={(v) => setFormData(prev => ({ ...prev, expedition_staff_id: v }))}>
@@ -604,7 +607,7 @@ function DisciplinePageContent() {
                     </SelectContent>
                   </Select>
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label>Summary of Incident</Label>
                   <Textarea
@@ -614,7 +617,7 @@ function DisciplinePageContent() {
                     placeholder="Describe what happened..."
                   />
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label>Action Taken</Label>
                   <Textarea
@@ -637,12 +640,12 @@ function DisciplinePageContent() {
                     <p className="font-medium">{selectedRecord?.consequence || "—"}</p>
                   </div>
                 </div>
-                
+
                 <div>
                   <Label className="text-muted-foreground text-sm">Summary of Incident</Label>
                   <p className="mt-1 text-sm whitespace-pre-wrap">{selectedRecord?.summary_of_incident || "No summary provided."}</p>
                 </div>
-                
+
                 <div>
                   <Label className="text-muted-foreground text-sm">Action Taken</Label>
                   <p className="mt-1 text-sm whitespace-pre-wrap">{selectedRecord?.action_taken || "No action documented."}</p>
@@ -650,7 +653,7 @@ function DisciplinePageContent() {
               </>
             )}
           </div>
-          
+
           <DialogFooter className="border-t pt-4">
             {isEditing ? (
               <>
@@ -693,7 +696,7 @@ function DisciplinePageContent() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      
+
       {/* Create Modal */}
       <Dialog open={createModalOpen} onOpenChange={setCreateModalOpen}>
         <DialogContent className="w-full sm:max-w-2xl max-h-[90vh] flex flex-col">
@@ -703,7 +706,7 @@ function DisciplinePageContent() {
               Document a new infraction or referral for a student
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="flex-1 overflow-y-auto py-4 space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -731,17 +734,19 @@ function DisciplinePageContent() {
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
-                    <CalendarComponent
+                    <ExpeditionCalendar
                       mode="single"
                       selected={formData.date ? new Date(formData.date + 'T00:00:00') : undefined}
-                      onSelect={(date) => date && setFormData(prev => ({ ...prev, date: date.toISOString().split('T')[0] }))}
+                      expeditionStartDate={expedition?.startDate}
+                      expeditionEndDate={expedition?.endDate}
+                      onSelect={(date) => date && setFormData(prev => ({ ...prev, date: formatLocalDateString(date) }))}
                       initialFocus
                     />
                   </PopoverContent>
                 </Popover>
               </div>
             </div>
-            
+
             <div className="flex items-center space-x-2">
               <Switch
                 checked={formData.isReferral}
@@ -749,7 +754,7 @@ function DisciplinePageContent() {
               />
               <Label>Referral (vs Infraction)</Label>
             </div>
-            
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Reason *</Label>
@@ -778,7 +783,7 @@ function DisciplinePageContent() {
                 </Select>
               </div>
             </div>
-            
+
             <div className="space-y-2">
               <Label>Staff Member</Label>
               <Select value={formData.expedition_staff_id} onValueChange={(v) => setFormData(prev => ({ ...prev, expedition_staff_id: v }))}>
@@ -792,7 +797,7 @@ function DisciplinePageContent() {
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="space-y-2">
               <Label>Summary of Incident</Label>
               <Textarea
@@ -802,7 +807,7 @@ function DisciplinePageContent() {
                 placeholder="Describe what happened..."
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label>Action Taken</Label>
               <Textarea
@@ -813,7 +818,7 @@ function DisciplinePageContent() {
               />
             </div>
           </div>
-          
+
           <DialogFooter className="border-t pt-4">
             <Button variant="outline" className="cursor-pointer" onClick={() => setCreateModalOpen(false)} disabled={isSaving}>
               Cancel
@@ -825,7 +830,7 @@ function DisciplinePageContent() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      
+
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>

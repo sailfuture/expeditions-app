@@ -6,24 +6,24 @@ const publicRoutes = ["/login", "/public", "/api/auth", "/tv", "/apply", "/intak
 
 export default auth((req) => {
   const { pathname } = req.nextUrl
-  
+
   // Check if the route is public
-  const isPublicRoute = publicRoutes.some(route => 
+  const isPublicRoute = publicRoutes.some(route =>
     pathname.startsWith(route) || pathname === route
   )
-  
+
   // Allow public routes
   if (isPublicRoute) {
     return NextResponse.next()
   }
-  
+
   // Check if user is authenticated
   if (!req.auth) {
     // Redirect to login page
     const loginUrl = new URL("/login", req.url)
     return NextResponse.redirect(loginUrl)
   }
-  
+
   // User is authenticated, allow access
   return NextResponse.next()
 })

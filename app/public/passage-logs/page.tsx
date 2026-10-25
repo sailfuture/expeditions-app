@@ -27,7 +27,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { Moon, Sun, HelpCircle, ChevronsUpDown, Check, ChevronDown } from "lucide-react"
-import { Calendar } from "@/components/ui/calendar"
+import { ExpeditionCalendar } from "@/components/expedition-calendar"
 import {
   Command,
   CommandEmpty,
@@ -274,14 +274,14 @@ const lonDirOptions = [
 ]
 
 // Helper component for tooltips on labels
-function LabelWithTooltip({ 
-  htmlFor, 
-  children, 
-  tooltip 
-}: { 
+function LabelWithTooltip({
+  htmlFor,
+  children,
+  tooltip
+}: {
   htmlFor: string
   children: React.ReactNode
-  tooltip: string 
+  tooltip: string
 }) {
   return (
     <FieldLabel htmlFor={htmlFor} className="flex items-center gap-1.5">
@@ -301,15 +301,15 @@ function LabelWithTooltip({
 }
 
 // Section Card component for form areas
-function FormSection({ 
-  title, 
+function FormSection({
+  title,
   description,
   children,
   footer
-}: { 
+}: {
   title: string
   description?: string
-  children: React.ReactNode 
+  children: React.ReactNode
   footer?: React.ReactNode
 }) {
   return (
@@ -354,6 +354,8 @@ interface Staff {
 interface ActiveExpedition {
   id: number
   name: string
+  startDate?: string
+  endDate?: string
 }
 
 const getFullName = (person: { firstName?: string; lastName?: string } | null | undefined) => {
@@ -514,7 +516,7 @@ export default function PassageLogsPage() {
   // Validation for each step - returns field keys that are invalid
   const validateStep = (step: number): { valid: boolean; invalidFieldKeys: string[]; missingCount: number } => {
     const invalidFieldKeys: string[] = []
-    
+
     switch (step) {
       case 1: // Overview
         if (!formData.date) invalidFieldKeys.push("date")
@@ -616,7 +618,7 @@ export default function PassageLogsPage() {
         // generalObservations and additionalNotes are optional
         break
     }
-    
+
     return { valid: invalidFieldKeys.length === 0, invalidFieldKeys, missingCount: invalidFieldKeys.length }
   }
 
@@ -707,7 +709,7 @@ export default function PassageLogsPage() {
     }
     setInvalidFields(new Set())
     setIsSubmitting(true)
-    
+
     try {
       // Parse time into hours and minutes
       const timeParts = formData.time.split(":")
@@ -860,10 +862,10 @@ export default function PassageLogsPage() {
           <Card>
             <CardContent className="pt-12 pb-12 text-center">
               <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center overflow-hidden">
-                <Image 
-                  src="/sailfuture-square (8).webp" 
-                  alt="SailFuture Academy" 
-                  width={80} 
+                <Image
+                  src="/sailfuture-square (8).webp"
+                  alt="SailFuture Academy"
+                  width={80}
                   height={80}
                   className="object-cover rounded-full"
                 />
@@ -895,16 +897,16 @@ export default function PassageLogsPage() {
       <div className="sticky top-0 z-10 bg-white dark:bg-gray-800 border-b">
         <div className="max-w-4xl mx-auto px-4 md:px-6 lg:px-8 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Image 
-              src="/sailfuture-square (8).webp" 
-              alt="SailFuture Academy" 
-              width={36} 
+            <Image
+              src="/sailfuture-square (8).webp"
+              alt="SailFuture Academy"
+              width={36}
               height={36}
               className="rounded-full"
             />
             <span className="font-semibold text-gray-900 dark:text-white">Passage Logs</span>
           </div>
-          
+
           <div className="flex items-center gap-2">
             <AlertDialog>
               <AlertDialogTrigger asChild>
@@ -984,9 +986,11 @@ export default function PassageLogsPage() {
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto overflow-hidden p-0" align="start">
-                          <Calendar
+                          <ExpeditionCalendar
                             mode="single"
                             selected={formData.date}
+                            expeditionStartDate={activeExpedition?.startDate}
+                            expeditionEndDate={activeExpedition?.endDate}
                             onSelect={(date) => {
                               updateFieldAndClearInvalid("date", date)
                               setDateOpen(false)
@@ -2469,9 +2473,9 @@ export default function PassageLogsPage() {
       <div className="fixed bottom-0 left-0 right-0 z-10 bg-white dark:bg-gray-800 border-t shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
         <div className="max-w-4xl mx-auto px-4 md:px-6 lg:px-8 py-3 h-[60px] flex items-center">
           <div className="flex gap-2 w-full">
-            <Button 
-              variant="outline" 
-              onClick={handlePrevious} 
+            <Button
+              variant="outline"
+              onClick={handlePrevious}
               disabled={currentStep === 1}
               className="flex-1 h-10 cursor-pointer disabled:cursor-not-allowed"
             >

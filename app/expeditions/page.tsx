@@ -41,6 +41,9 @@ import { ExternalLink, Calendar, MapPin, Plus, Pencil, ChevronDown } from "lucid
 import { useExpeditions, useSchoolTerms, useSchoolYears } from "@/lib/hooks/use-expeditions"
 import { useCurrentUser } from "@/lib/contexts/user-context"
 import { createExpedition, updateExpedition } from "@/lib/xano"
+import { DEFAULT_EXPEDITION_TYPE, EXPEDITION_TYPES, getExpeditionType } from "@/lib/expedition-type"
+import { ExpeditionTypeBadge } from "@/components/expedition-type-badge"
+import type { ExpeditionType } from "@/lib/types"
 import { toast } from "sonner"
 import { mutate } from "swr"
 
@@ -63,6 +66,7 @@ export default function ExpeditionsPage() {
     schoolterms_id: 0,
     schoolyears_id: 0,
     number_participants: "",
+    expedition_type: DEFAULT_EXPEDITION_TYPE as ExpeditionType,
   })
 
   // Sort expeditions by start date descending (most recent first) - MUST be before any conditional returns
@@ -106,6 +110,7 @@ export default function ExpeditionsPage() {
       schoolterms_id: 0,
       schoolyears_id: 0,
       number_participants: "",
+      expedition_type: DEFAULT_EXPEDITION_TYPE,
     })
     setDialogOpen(true)
   }
@@ -119,6 +124,7 @@ export default function ExpeditionsPage() {
       schoolterms_id: expedition.schoolterms_id,
       schoolyears_id: expedition.schoolyears_id,
       number_participants: expedition.number_participants ? String(expedition.number_participants) : "",
+      expedition_type: getExpeditionType(expedition),
     })
     setDialogOpen(true)
   }
@@ -139,6 +145,7 @@ export default function ExpeditionsPage() {
           schoolterms_id: formData.schoolterms_id,
           schoolyears_id: formData.schoolyears_id,
           number_participants: parseInt(formData.number_participants) || 0,
+          expedition_type: formData.expedition_type,
         })
         toast.success("Expedition updated successfully")
       } else {
@@ -246,6 +253,7 @@ export default function ExpeditionsPage() {
               <TableHeader>
                 <TableRow className="border-b bg-gray-50/30 hover:bg-gray-50/30">
                   <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600">Name</TableHead>
+                  <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600">Type</TableHead>
                   <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600">Dates</TableHead>
                   <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600">Duration</TableHead>
                   <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600">Term</TableHead>
@@ -257,6 +265,7 @@ export default function ExpeditionsPage() {
                 {Array.from({ length: 3 }).map((_, i) => (
                   <TableRow key={i}>
                     <TableCell className="h-16 px-6"><Skeleton className="h-4 w-32" /></TableCell>
+                    <TableCell className="h-16 px-6"><Skeleton className="h-5 w-20" /></TableCell>
                     <TableCell className="h-16 px-6"><Skeleton className="h-4 w-48" /></TableCell>
                     <TableCell className="h-16 px-6"><Skeleton className="h-4 w-16" /></TableCell>
                     <TableCell className="h-16 px-6"><Skeleton className="h-4 w-20" /></TableCell>
@@ -287,6 +296,7 @@ export default function ExpeditionsPage() {
               <TableHeader>
                 <TableRow className="border-b bg-gray-50/30 hover:bg-gray-50/30">
                   <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600">Name</TableHead>
+                  <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600">Type</TableHead>
                   <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600">Dates</TableHead>
                   <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600">Duration</TableHead>
                   <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600">Term</TableHead>
@@ -306,6 +316,9 @@ export default function ExpeditionsPage() {
                     >
                       <TableCell className="h-16 px-6">
                         <div className="font-medium text-gray-900">{expedition.name}</div>
+                      </TableCell>
+                      <TableCell className="h-16 px-6">
+                        <ExpeditionTypeBadge expedition={expedition} />
                       </TableCell>
                       <TableCell className="h-16 px-6">
                         <div className="flex items-center gap-2 text-sm text-gray-600">
@@ -503,6 +516,28 @@ export default function ExpeditionsPage() {
               </div>
             </div>
             
+            <div>
+              <Label htmlFor="expedition_type">Expedition Type *</Label>
+              <Select
+                value={formData.expedition_type}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, expedition_type: value as ExpeditionType }))}
+              >
+                <SelectTrigger id="expedition_type" className="w-full mt-1.5 cursor-pointer">
+                  <SelectValue placeholder="Select expedition type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {EXPEDITION_TYPES.map((type) => (
+                    <SelectItem key={type.value} value={type.value}>
+                      {type.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="mt-1.5 text-xs text-muted-foreground">
+                {EXPEDITION_TYPES.find((t) => t.value === formData.expedition_type)?.description}
+              </p>
+            </div>
+
             <div>
               <Label htmlFor="school_term">School Term *</Label>
               <Select

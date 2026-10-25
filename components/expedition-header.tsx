@@ -13,15 +13,18 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import {
-  Home, Map, ClipboardList, Users, Eye, PlusCircle, FileText, AlertTriangle, ClipboardCheck, IdCard, Receipt,
+  Home, Map, Route, ClipboardList, Users, Eye, PlusCircle, FileText, AlertTriangle, ClipboardCheck, IdCard, Trophy,
   type LucideIcon,
 } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { cn, clampDateToExpeditionRange } from "@/lib/utils"
 import { useCurrentUser } from "@/lib/contexts/user-context"
+import { ExpeditionTypeBadge } from "@/components/expedition-type-badge"
+import { isResidentialExpedition } from "@/lib/expedition-type"
 
 export type ExpeditionPage =
   | "overview"
   | "trip-planner"
+  | "route-map"
   | "weekly-planner"
   | "students"
   | "daily-view"
@@ -30,7 +33,10 @@ export type ExpeditionPage =
   | "discipline"
   | "applications"
   | "passport-manifest"
-  | "transactions"
+  | "awards"
+  // The post-login home dashboard (/home): shows the header for the active
+  // expedition but is not one of the tabs, so no tab is highlighted.
+  | "dashboard"
 
 interface ExpeditionHeaderProps {
   expedition: any
@@ -41,6 +47,7 @@ interface ExpeditionHeaderProps {
 const PAGE_TITLES: Record<ExpeditionPage, string> = {
   "overview": "Overview",
   "trip-planner": "Trip Planner",
+  "route-map": "Route Map",
   "weekly-planner": "Weekly Planner",
   "students": "Assignments",
   "daily-view": "Daily View",
@@ -49,7 +56,8 @@ const PAGE_TITLES: Record<ExpeditionPage, string> = {
   "discipline": "Discipline",
   "applications": "Applications",
   "passport-manifest": "Manifest",
-  "transactions": "Transactions",
+  "awards": "Awards",
+  "dashboard": "Dashboard",
 }
 
 interface TabDef {
@@ -62,6 +70,7 @@ interface TabDef {
 const TABS: TabDef[] = [
   { page: "overview", label: "Overview", icon: Home, href: (id) => `/expedition/${id}` },
   { page: "trip-planner", label: "Planner", icon: Map, href: (id) => `/dashboard?expedition=${id}` },
+  { page: "route-map", label: "Map", icon: Route, href: (id) => `/map?expedition=${id}` },
   { page: "weekly-planner", label: "Weekly", icon: ClipboardList, href: (id) => `/planner?expedition=${id}` },
   { page: "daily-view", label: "Daily", icon: Eye, href: (id, date) => `/schedule/${date}?expedition=${id}` },
   { page: "students", label: "Assign", icon: Users, href: (id) => `/expedition/${id}/assignments` },
@@ -70,7 +79,7 @@ const TABS: TabDef[] = [
   { page: "discipline", label: "Discipline", icon: AlertTriangle, href: (id) => `/discipline?expedition=${id}` },
   { page: "applications", label: "Apps", icon: ClipboardCheck, href: (id) => `/applications?expedition=${id}` },
   { page: "passport-manifest", label: "Manifest", icon: IdCard, href: (id) => `/expedition/${id}/passport-manifest` },
-  { page: "transactions", label: "Orders", icon: Receipt, href: (id) => `/expedition/${id}/store/transactions` },
+  { page: "awards", label: "Awards", icon: Trophy, href: (id) => `/awards?expedition=${id}` },
 ]
 
 const TAB_BUTTON_CLASS = "cursor-pointer h-7 px-2 rounded-md text-xs min-w-0"
@@ -89,12 +98,22 @@ export function ExpeditionHeader({ expedition, isLoading = false, currentPage = 
   const { currentUser } = useCurrentUser()
   const isAdmin = currentUser?.role === "Admin"
 
-  // Active expeditions default to today; otherwise jump to the start date.
+  // Default to today when it falls inside the expedition; otherwise the
+  // start date (or the end date once the expedition has passed).
   const defaultDate = useMemo(() => {
-    if (!expedition) return getLocalDateString()
-    if (expedition.isActive) return getLocalDateString()
-    return expedition.startDate || expedition.start_date || getLocalDateString()
+    const today = getLocalDateString()
+    if (!expedition) return today
+    const start = expedition.startDate || expedition.start_date
+    const end = expedition.endDate || expedition.end_date
+    return clampDateToExpeditionRange(today, start, end) || start || today
   }, [expedition])
+
+  // The award system is only for residential expeditions, so academy
+  // expeditions (and the skeleton, before the expedition loads) hide its tab.
+  const visibleTabs = useMemo(
+    () => TABS.filter((tab) => tab.page !== "awards" || isResidentialExpedition(expedition)),
+    [expedition]
+  )
 
   return (
     <>
@@ -123,6 +142,9 @@ export function ExpeditionHeader({ expedition, isLoading = false, currentPage = 
                       </BreadcrumbLink>
                     )}
                   </BreadcrumbItem>
+                  <BreadcrumbItem>
+                    <ExpeditionTypeBadge expedition={expedition} className="h-5 px-1.5 text-[10px] uppercase tracking-wide" />
+                  </BreadcrumbItem>
                 </>
               ) : isLoading ? (
                 <>
@@ -150,7 +172,7 @@ export function ExpeditionHeader({ expedition, isLoading = false, currentPage = 
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center">
             <nav aria-label="Expedition sections" className="inline-flex gap-1 rounded-lg border border-gray-200 bg-gray-50 p-1 shadow-sm flex-wrap">
-              {TABS.map(({ page, label, icon: Icon, href }) => {
+              {visibleTabs.map(({ page, label, icon: Icon, href }) => {
                 const isActive = currentPage === page
                 const className = cn(TAB_BUTTON_CLASS, !isActive && INACTIVE_TAB_CLASS)
                 const content = (

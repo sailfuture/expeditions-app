@@ -6,27 +6,34 @@ import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { X, Lock, LockOpen } from "lucide-react"
 import { ScoreControl } from "./score-control"
-import { MultiSelectDropdown } from "./multi-select-dropdown"
-import { SingleSelectDropdown } from "./single-select-dropdown"
+import { ScoreReasonField } from "./score-reason-field"
+import { JournalStatusControl } from "./journal-status-control"
 import type {
   ExpeditionProfessionalism,
   ExpeditionBonus,
   ExpeditionPenalty,
-  ExpeditionJournalStatus,
 } from "@/lib/types"
 import { cn } from "@/lib/utils"
+import { BLOCK_FLAG_BY_KEY, reconcileReasons, type ExpeditionReason, type ScoreKey } from "@/lib/evaluation-reasons"
+import type { JournalStatus } from "@/lib/journal-status"
 
 interface StudentCardProps {
   record: ExpeditionProfessionalism
   bonusOptions: ExpeditionBonus[]
   penaltyOptions: ExpeditionPenalty[]
-  journalStatusOptions: ExpeditionJournalStatus[]
   isOffshore: boolean
   isService: boolean
   onUpdate: (updated: ExpeditionProfessionalism) => void
 }
 
-function getScoreCategories(isOffshore: boolean, isService: boolean) {
+// Fitness is tri-state for the expedition award: blank (not applicable), incomplete, complete.
+const FITNESS_OPTIONS: ReadonlyArray<{ label: string; value: number | null; selectedClass: string }> = [
+  { label: "N/A", value: null, selectedClass: "bg-white text-gray-700 shadow-sm border border-gray-200" },
+  { label: "Incomplete", value: 0, selectedClass: "bg-red-100 text-red-700 shadow-sm" },
+  { label: "Complete", value: 100, selectedClass: "bg-green-100 text-green-700 shadow-sm" },
+]
+
+function getScoreCategories(isOffshore: boolean, isService: boolean): Array<{ key: ScoreKey; label: string }> {
   // Service Learning day (in port)
   if (!isOffshore && isService) {
     return [
@@ -71,29 +78,15 @@ function getInitials(name: string): string {
 }
 
 // Map score category key to the corresponding "isUsed" boolean field
-function getCategoryDisabledFlag(record: ExpeditionProfessionalism, key: string): boolean {
+function getCategoryDisabledFlag(record: ExpeditionProfessionalism, key: ScoreKey): boolean {
   // If the boolean flag is true, the category is disabled/inactive
-  switch (key) {
-    case "school":
-      return record.isAcademicsUsed === true
-    case "job":
-      return record.isJobUsed === true
-    case "citizenship":
-      return record.isCitizenshipUsed === true
-    case "crew":
-      return record.isCrewUsed === true
-    case "service_learning":
-      return record.isServiceUsed === true
-    default:
-      return false
-  }
+  return record[BLOCK_FLAG_BY_KEY[key]] === true
 }
 
 export function StudentCard({
   record,
   bonusOptions,
   penaltyOptions,
-  journalStatusOptions,
   isOffshore,
   isService,
   onUpdate,
@@ -106,9 +99,16 @@ export function StudentCard({
   const scoreCategories = getScoreCategories(isOffshore, isService)
   const isExcluded = record.isFlagged
 
-  const handleScoreChange = (key: string, value: number | null) => {
+  const handleScoreChange = (key: ScoreKey, value: number | null) => {
+    // Reasons only survive while they still match the score's direction
+    // (bonus above 3, penalty below 3); crossing 3 clears them.
+    const reasons = { ...record.reasons, [key]: reconcileReasons(record.reasons[key], value) }
     // Also unlock the record when changing a score so it can be re-submitted
-    onUpdate({ ...record, [key]: value, isLocked: false })
+    onUpdate({ ...record, [key]: value, reasons, isLocked: false })
+  }
+
+  const handleReasonChange = (key: ScoreKey, reasons: ExpeditionReason[]) => {
+    onUpdate({ ...record, reasons: { ...record.reasons, [key]: reasons }, isLocked: false })
   }
 
   const handleExcludeToggle = () => {
@@ -119,66 +119,59 @@ export function StudentCard({
     onUpdate({ ...record, isLocked: !record.isLocked })
   }
 
-  const handleBonusChange = (selectedIds: number[]) => {
-    const selectedBonuses = bonusOptions.filter((b) => selectedIds.includes(b.id))
-    onUpdate({ ...record, bonuses: selectedBonuses })
+  const handleJournalingChange = (status: JournalStatus | null) => {
+    onUpdate({ ...record, journaling: status, isLocked: false })
   }
 
-  const handlePenaltyChange = (selectedIds: number[]) => {
-    const selectedPenalties = penaltyOptions.filter((p) => selectedIds.includes(p.id))
-    onUpdate({ ...record, penalties: selectedPenalties })
-  }
-
-  const handleJournalStatusChange = (statusId: number | null) => {
-    onUpdate({ ...record, journal_status_id: statusId })
+  // Fitness feeds the expedition award: 100 = complete ($5), 0 = incomplete, null = not applicable
+  const handleFitnessChange = (value: number | null) => {
+    onUpdate({ ...record, fitness: value })
   }
 
   // Toggle the isXUsed flag for a category
-  // When blocking (setting isXUsed to true), also clear the score value to null
+  // When blocking (setting isXUsed to true), also clear the score and its reason
   // Also unlock the record so it can be re-submitted
-  const handleBlockToggle = (key: string) => {
-    switch (key) {
-      case "school":
-        onUpdate({ 
-          ...record, 
-          isAcademicsUsed: !record.isAcademicsUsed,
-          school: !record.isAcademicsUsed ? null : record.school, // Clear to null when blocking
-          isLocked: false // Unlock so changes can be submitted
-        })
-        break
-      case "job":
-        onUpdate({ 
-          ...record, 
-          isJobUsed: !record.isJobUsed,
-          job: !record.isJobUsed ? null : record.job,
-          isLocked: false
-        })
-        break
-      case "citizenship":
-        onUpdate({ 
-          ...record, 
-          isCitizenshipUsed: !record.isCitizenshipUsed,
-          citizenship: !record.isCitizenshipUsed ? null : record.citizenship,
-          isLocked: false
-        })
-        break
-      case "crew":
-        onUpdate({ 
-          ...record, 
-          isCrewUsed: !record.isCrewUsed,
-          crew: !record.isCrewUsed ? null : record.crew,
-          isLocked: false
-        })
-        break
-      case "service_learning":
-        onUpdate({ 
-          ...record, 
-          isServiceUsed: !record.isServiceUsed,
-          service_learning: !record.isServiceUsed ? null : record.service_learning,
-          isLocked: false
-        })
-        break
-    }
+  const handleBlockToggle = (key: ScoreKey) => {
+    const flag = BLOCK_FLAG_BY_KEY[key]
+    const blocking = !record[flag]
+    onUpdate({
+      ...record,
+      [flag]: blocking,
+      [key]: blocking ? null : record[key], // Clear to null when blocking
+      reasons: blocking ? { ...record.reasons, [key]: [] } : record.reasons,
+      isLocked: false, // Unlock so changes can be submitted
+    })
+  }
+
+  // A full-width score control plus its reason picker, which animates in
+  // whenever the score moves above or below 3 (bonus reasons above, penalty
+  // reasons below) and allows several reasons.
+  const renderCategory = ({ key, label }: { key: ScoreKey; label: string }) => {
+    const isCategoryBlocked = getCategoryDisabledFlag(record, key)
+    const score = record[key] ?? null
+    return (
+      <div key={key} className="flex flex-col">
+        <ScoreControl
+          label={label}
+          value={score}
+          onChange={(value) => handleScoreChange(key, value)}
+          disabled={record.isLocked}
+          isBlocked={isCategoryBlocked}
+          onBlockToggle={() => handleBlockToggle(key)}
+          min={0}
+          max={5}
+        />
+        <ScoreReasonField
+          score={score}
+          blocked={isCategoryBlocked}
+          bonusOptions={bonusOptions}
+          penaltyOptions={penaltyOptions}
+          value={record.reasons[key]}
+          onChange={(reason) => handleReasonChange(key, reason)}
+          disabled={record.isLocked}
+        />
+      </div>
+    )
   }
 
   const handleNoteChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -304,130 +297,49 @@ export function StudentCard({
       </div>
 
       <div className="px-3 sm:px-4 pb-3 mb-2">
-        {isOffshore ? (
-          <>
-            {/* Offshore: First Row - CREW, JOB */}
-            <div className="grid grid-cols-2 gap-2 mb-2">
-              {scoreCategories
-                .filter(({ key }) => key === "crew" || key === "job")
-                .map(({ key, label }) => {
-                  const isCategoryBlocked = getCategoryDisabledFlag(record, key)
-                  return (
-                    <ScoreControl
-                      key={key}
-                      label={label}
-                      value={(record as Record<string, number | null | undefined>)[key] ?? null}
-                      onChange={(value) => handleScoreChange(key, value)}
-                      disabled={record.isLocked}
-                      isBlocked={isCategoryBlocked}
-                      onBlockToggle={() => handleBlockToggle(key)}
-                      min={0}
-                      max={5}
-                    />
-                  )
-                })}
-            </div>
-            
-            {/* Offshore: Second Row - CITIZENSHIP, SERVICE (if applicable) */}
-            <div className="grid grid-cols-2 gap-2">
-              {scoreCategories
-                .filter(({ key }) => key === "citizenship" || key === "service_learning")
-                .map(({ key, label }) => {
-                  const isCategoryBlocked = getCategoryDisabledFlag(record, key)
-                  return (
-                    <ScoreControl
-                      key={key}
-                      label={label}
-                      value={(record as Record<string, number | null | undefined>)[key] ?? null}
-                      onChange={(value) => handleScoreChange(key, value)}
-                      disabled={record.isLocked}
-                      isBlocked={isCategoryBlocked}
-                      onBlockToggle={() => handleBlockToggle(key)}
-                      min={0}
-                      max={5}
-                    />
-                  )
-                })}
-            </div>
-          </>
-        ) : (
-          <>
-            {/* In Port: First Row - SCHOOL, JOB */}
-            <div className="grid grid-cols-2 gap-2 mb-2">
-              {scoreCategories
-                .filter(({ key }) => key === "school" || key === "job")
-                .map(({ key, label }) => {
-                  const isCategoryBlocked = getCategoryDisabledFlag(record, key)
-                  return (
-                    <ScoreControl
-                      key={key}
-                      label={label}
-                      value={(record as Record<string, number | null | undefined>)[key] ?? null}
-                      onChange={(value) => handleScoreChange(key, value)}
-                      disabled={record.isLocked}
-                      isBlocked={isCategoryBlocked}
-                      onBlockToggle={() => handleBlockToggle(key)}
-                      min={0}
-                      max={5}
-                    />
-                  )
-                })}
-            </div>
-            
-            {/* In Port: Second Row - CITIZENSHIP, SERVICE (if applicable) */}
-            <div className="grid grid-cols-2 gap-2">
-              {scoreCategories
-                .filter(({ key }) => key === "citizenship" || key === "service_learning")
-                .map(({ key, label }) => {
-                  const isCategoryBlocked = getCategoryDisabledFlag(record, key)
-                  return (
-                    <ScoreControl
-                      key={key}
-                      label={label}
-                      value={(record as Record<string, number | null | undefined>)[key] ?? null}
-                      onChange={(value) => handleScoreChange(key, value)}
-                      disabled={record.isLocked}
-                      isBlocked={isCategoryBlocked}
-                      onBlockToggle={() => handleBlockToggle(key)}
-                      min={0}
-                      max={5}
-                    />
-                  )
-                })}
-            </div>
-          </>
-        )}
+        {/* One full-width row per category: CREW (offshore) or SCHOOL (in port), JOB, CITIZENSHIP, SERVICE (if applicable) */}
+        <div className="space-y-2.5">{scoreCategories.map(renderCategory)}</div>
       </div>
 
       <div className="px-3 sm:px-4 pb-4 space-y-2.5 relative">
-        <SingleSelectDropdown
-          label="JOURNALING"
-          placeholder="Select Status"
-          options={journalStatusOptions}
-          selectedId={record.journal_status_id ?? null}
-          onChange={handleJournalStatusChange}
+        <JournalStatusControl
+          value={record.journaling}
+          onChange={handleJournalingChange}
           disabled={record.isLocked}
         />
 
-        <MultiSelectDropdown
-          label="BONUS"
-          placeholder="Select Bonus"
-          options={bonusOptions}
-          selectedIds={record.bonuses?.map((b) => b.id) ?? []}
-          onChange={handleBonusChange}
-          disabled={record.isLocked}
-          variant="bonus"
-        />
-
-        <MultiSelectDropdown
-          label="PENALTY"
-          placeholder="Select Penalty"
-          options={penaltyOptions}
-          selectedIds={record.penalties?.map((p) => p.id) ?? []}
-          onChange={handlePenaltyChange}
-          disabled={record.isLocked}
-          variant="penalty"
-        />
+        <div className="w-full">
+          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">FITNESS</label>
+          <div
+            role="radiogroup"
+            aria-label="Fitness"
+            className={cn(
+              "mt-1 grid grid-cols-3 gap-1 rounded-lg border border-gray-200 bg-gray-50 p-1",
+              record.isLocked && "opacity-50"
+            )}
+          >
+            {FITNESS_OPTIONS.map((option) => {
+              const selected = (record.fitness ?? null) === option.value
+              return (
+                <button
+                  key={option.label}
+                  type="button"
+                  role="radio"
+                  aria-checked={selected}
+                  disabled={record.isLocked}
+                  onClick={() => handleFitnessChange(option.value)}
+                  className={cn(
+                    "h-7 rounded-md text-xs font-medium transition-colors",
+                    record.isLocked ? "cursor-not-allowed" : "cursor-pointer",
+                    selected ? option.selectedClass : "text-gray-500 hover:bg-white hover:text-gray-700"
+                  )}
+                >
+                  {option.label}
+                </button>
+              )
+            })}
+          </div>
+        </div>
 
         <div className="w-full">
           <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">NOTE</label>

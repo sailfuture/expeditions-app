@@ -17,6 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { ExternalLink, Calendar, MapPin } from "lucide-react"
 import { useExpeditions } from "@/lib/hooks/use-expeditions"
 import { useCurrentUser } from "@/lib/contexts/user-context"
+import { ExpeditionTypeBadge } from "@/components/expedition-type-badge"
 
 export default function MyExpeditionsPage() {
   const router = useRouter()
@@ -75,6 +76,7 @@ export default function MyExpeditionsPage() {
               <TableHeader>
                 <TableRow className="border-b bg-gray-50/30 hover:bg-gray-50/30">
                   <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600">Name</TableHead>
+                  <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600">Type</TableHead>
                   <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600">Dates</TableHead>
                   <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600">Duration</TableHead>
                   <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600">Status</TableHead>
@@ -85,6 +87,7 @@ export default function MyExpeditionsPage() {
                 {Array.from({ length: 3 }).map((_, i) => (
                   <TableRow key={i}>
                     <TableCell className="h-16 px-6"><Skeleton className="h-4 w-32" /></TableCell>
+                    <TableCell className="h-16 px-6"><Skeleton className="h-5 w-20" /></TableCell>
                     <TableCell className="h-16 px-6"><Skeleton className="h-4 w-48" /></TableCell>
                     <TableCell className="h-16 px-6"><Skeleton className="h-4 w-16" /></TableCell>
                     <TableCell className="h-16 px-6"><Skeleton className="h-4 w-20" /></TableCell>
@@ -131,6 +134,7 @@ export default function MyExpeditionsPage() {
               <TableHeader>
                 <TableRow className="border-b bg-gray-50/30 hover:bg-gray-50/30">
                   <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600">Name</TableHead>
+                  <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600">Type</TableHead>
                   <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600">Dates</TableHead>
                   <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600">Duration</TableHead>
                   <TableHead className="h-10 px-6 text-xs font-semibold text-gray-600">Status</TableHead>
@@ -149,6 +153,9 @@ export default function MyExpeditionsPage() {
                     >
                       <TableCell className="h-16 px-6">
                         <div className="font-medium text-gray-900">{expedition.name}</div>
+                      </TableCell>
+                      <TableCell className="h-16 px-6">
+                        <ExpeditionTypeBadge expedition={expedition} />
                       </TableCell>
                       <TableCell className="h-16 px-6">
                         <div className="flex items-center gap-2 text-sm text-gray-600">

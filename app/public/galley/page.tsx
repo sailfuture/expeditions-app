@@ -41,7 +41,7 @@ import {
 } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Calendar as CalendarComponent } from "@/components/ui/calendar"
+import { ExpeditionCalendar, expeditionDateBounds, isOutsideExpedition } from "@/components/expedition-calendar"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -452,7 +452,17 @@ function PublicGalleyPage() {
 
   const isToday = selectedDateStr === getTodayDateString()
 
+  // Previous / next day stay inside the expedition; both are off until its dates are known
+  const expeditionBounds = expeditionDateBounds((activeExpedition as any)?.startDate, (activeExpedition as any)?.endDate)
+  const prevDate = new Date(selectedDate)
+  prevDate.setDate(prevDate.getDate() - 1)
+  const nextDate = new Date(selectedDate)
+  nextDate.setDate(nextDate.getDate() + 1)
+  const canGoPrev = !isOutsideExpedition(prevDate, expeditionBounds)
+  const canGoNext = !isOutsideExpedition(nextDate, expeditionBounds)
+
   const goToPrevDay = () => {
+    if (!canGoPrev) return
     const newDate = new Date(selectedDate)
     newDate.setDate(newDate.getDate() - 1)
     const y = newDate.getFullYear()
@@ -462,6 +472,7 @@ function PublicGalleyPage() {
   }
 
   const goToNextDay = () => {
+    if (!canGoNext) return
     const newDate = new Date(selectedDate)
     newDate.setDate(newDate.getDate() + 1)
     const y = newDate.getFullYear()
@@ -768,7 +779,9 @@ function PublicGalleyPage() {
               <div className="flex items-center gap-2">
                 <button
                   onClick={goToPrevDay}
-                  className="h-10 w-10 rounded-lg flex items-center justify-center border border-gray-200 bg-white hover:bg-gray-50 active:bg-gray-100 cursor-pointer transition-colors shrink-0"
+                  disabled={!canGoPrev}
+                  title={canGoPrev ? "Previous day" : "Start of expedition"}
+                  className="h-10 w-10 rounded-lg flex items-center justify-center border border-gray-200 bg-white hover:bg-gray-50 active:bg-gray-100 cursor-pointer transition-colors shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   <ChevronLeft className="h-5 w-5 text-gray-600" />
                 </button>
@@ -783,10 +796,12 @@ function PublicGalleyPage() {
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="center">
-                    <CalendarComponent
+                    <ExpeditionCalendar
                       mode="single"
                       selected={selectedDate}
                       defaultMonth={selectedDate}
+                      expeditionStartDate={(activeExpedition as any)?.startDate}
+                      expeditionEndDate={(activeExpedition as any)?.endDate}
                       onSelect={(d) => {
                         if (d) handleDateChange(d)
                       }}
@@ -798,7 +813,9 @@ function PublicGalleyPage() {
 
                 <button
                   onClick={goToNextDay}
-                  className="h-10 w-10 rounded-lg flex items-center justify-center border border-gray-200 bg-white hover:bg-gray-50 active:bg-gray-100 cursor-pointer transition-colors shrink-0"
+                  disabled={!canGoNext}
+                  title={canGoNext ? "Next day" : "End of expedition"}
+                  className="h-10 w-10 rounded-lg flex items-center justify-center border border-gray-200 bg-white hover:bg-gray-50 active:bg-gray-100 cursor-pointer transition-colors shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   <ChevronRight className="h-5 w-5 text-gray-600" />
                 </button>

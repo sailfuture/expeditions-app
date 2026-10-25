@@ -29,7 +29,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -87,11 +86,11 @@ import {
   useExpeditionSchedules, 
   useStudentsByExpedition, 
   useTeachersByExpedition,
-  useEvaluationByStudent
 } from "@/lib/hooks/use-expeditions"
 import { getProfessionalismByStudent, calculateStudentEvaluation, getExpeditionLocations, createExpeditionLocation, updateExpeditionLocation, deleteExpeditionLocation, getExpeditionAssignmentsByExpedition, getExpeditionDepartments } from "@/lib/xano"
 import { useCurrentUser } from "@/lib/contexts/user-context"
-import { calculateDistanceBetweenLocations, calculateRouteDistance } from "@/lib/haversine"
+import { ExpeditionStatsCards } from "@/components/expedition-stats-cards"
+import { StudentEvaluationsTable, StudentEvaluationsTableSkeleton, getJournalStringColor } from "@/components/student-evaluations-table"
 import { CountryCombobox, PortCombobox } from "@/components/destination-combobox"
 import { ExpeditionParticipants } from "@/components/expedition-participants"
 
@@ -126,178 +125,6 @@ const TIMEZONES = [
   { value: "UTC+11", label: "UTC+11 — Nouméa" },
   { value: "UTC+12", label: "UTC+12 — Auckland" },
 ]
-
-// Helper function to get color class based on evaluation score
-// 5.0–3.21 blue, 3.20–2.751 green, 2.75–2.251 yellow, 2.25–1.1 red, <1.1 gray
-function getEvaluationColorClass(score: number | null | undefined) {
-  if (score === null || score === undefined) return "bg-gray-50"
-  if (score >= 3.21) return "bg-blue-50"
-  if (score >= 2.751) return "bg-green-50"
-  if (score >= 2.251) return "bg-yellow-50"
-  if (score >= 1.1) return "bg-red-50"
-  return "bg-gray-50"
-}
-
-// Helper function to get color class based on journal percentage
-// 100–90 blue, <90–70 green, <70–50 yellow, <50–20 red, <20 gray
-function getJournalColorClass(percentage: number | null | undefined) {
-  if (percentage === null || percentage === undefined) return "bg-gray-50"
-  const pct = percentage <= 1 ? percentage * 100 : percentage
-  if (pct >= 90) return "bg-blue-50"
-  if (pct >= 70) return "bg-green-50"
-  if (pct >= 50) return "bg-yellow-50"
-  if (pct >= 20) return "bg-red-50"
-  return "bg-gray-50"
-}
-
-// Helper function to get color class based on journaling string value
-function getJournalStringColor(value: string | null | undefined) {
-  if (!value) return ""
-  const lowerValue = value.toLowerCase()
-  if (lowerValue.includes('complete') && !lowerValue.includes('incomplete')) return "bg-green-50"
-  if (lowerValue.includes('incomplete') || lowerValue.includes('late')) return "bg-yellow-50"
-  if (lowerValue.includes('not started') || lowerValue.includes('missing')) return "bg-red-50"
-  if (lowerValue.includes('excused')) return "bg-blue-50"
-  return ""
-  return "bg-green-50"
-}
-
-// Component to display a single student's evaluations
-function StudentEvaluationRow({ 
-  student, 
-  expeditionId,
-  onViewRecords 
-}: { 
-  student: any
-  expeditionId: number
-  onViewRecords: (student: any) => void
-}) {
-  const router = useRouter()
-  const { data: evaluation } = useEvaluationByStudent(student.id, expeditionId)
-  
-  const formatScore = (score: number | null | undefined) => {
-    if (score === null || score === undefined) return null
-    return score.toFixed(2)
-  }
-  
-  return (
-    <TableRow className="border-b last:border-0 hover:bg-gray-50/50">
-      <TableCell 
-        className="h-14 px-4 cursor-pointer"
-        onClick={() => router.push(`/student/${student.id}?expedition=${expeditionId}`)}
-      >
-        <div className="flex items-center gap-3">
-          <Avatar className="h-8 w-8">
-            <AvatarImage src={student.profileImage} alt={`${student.firstName || ""} ${student.lastName || ""}`.trim()} />
-            <AvatarFallback className="text-xs bg-gray-200 text-gray-600">
-              {`${student.firstName?.[0] || ""}${student.lastName?.[0] || ""}`}
-            </AvatarFallback>
-          </Avatar>
-          <span className="font-medium text-gray-900 truncate max-w-[180px]" title={`${student.firstName || ""} ${student.lastName || ""}`.trim()}>{`${student.firstName || ""} ${student.lastName || ""}`.trim()}</span>
-        </div>
-      </TableCell>
-      <TableCell className={`h-14 px-4 text-center ${getEvaluationColorClass(evaluation?.academics)}`}>
-        {formatScore(evaluation?.academics) ? (
-          <span className="text-xs font-medium text-gray-700">{formatScore(evaluation.academics)}</span>
-        ) : (
-          <span className="text-xs text-gray-400">—</span>
-        )}
-      </TableCell>
-      <TableCell className={`h-14 px-4 text-center ${getEvaluationColorClass(evaluation?.citizenship)}`}>
-        {formatScore(evaluation?.citizenship) ? (
-          <span className="text-xs font-medium text-gray-700">{formatScore(evaluation.citizenship)}</span>
-        ) : (
-          <span className="text-xs text-gray-400">—</span>
-        )}
-      </TableCell>
-      <TableCell className={`h-14 px-4 text-center ${getEvaluationColorClass(evaluation?.job)}`}>
-        {formatScore(evaluation?.job) ? (
-          <span className="text-xs font-medium text-gray-700">{formatScore(evaluation.job)}</span>
-        ) : (
-          <span className="text-xs text-gray-400">—</span>
-        )}
-      </TableCell>
-      <TableCell className={`h-14 px-4 text-center ${getEvaluationColorClass(evaluation?.crew)}`}>
-        {formatScore(evaluation?.crew) ? (
-          <span className="text-xs font-medium text-gray-700">{formatScore(evaluation.crew)}</span>
-        ) : (
-          <span className="text-xs text-gray-400">—</span>
-        )}
-      </TableCell>
-      <TableCell className={`h-14 px-4 text-center ${getEvaluationColorClass(evaluation?.service)}`}>
-        {formatScore(evaluation?.service) ? (
-          <span className="text-xs font-medium text-gray-700">{formatScore(evaluation.service)}</span>
-        ) : (
-          <span className="text-xs text-gray-400">—</span>
-        )}
-      </TableCell>
-      <TableCell className={`h-14 px-4 text-center ${getJournalColorClass(evaluation?.journal)}`}>
-        {evaluation?.journal !== null && evaluation?.journal !== undefined ? (
-          <span className="text-xs font-medium text-gray-700">
-            {(() => {
-              const pct = evaluation.journal <= 1 ? evaluation.journal * 100 : evaluation.journal
-              return `${pct.toFixed(2)}%`
-            })()}
-          </span>
-        ) : (
-          <span className="text-xs text-gray-400">—</span>
-        )}
-      </TableCell>
-      <TableCell className="h-14 px-4 text-right">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8 cursor-pointer"
-          onClick={(e) => {
-            e.stopPropagation()
-            onViewRecords(student)
-          }}
-          title="View all records"
-        >
-          <ExternalLink className="h-4 w-4 text-gray-500" />
-        </Button>
-      </TableCell>
-    </TableRow>
-  )
-}
-
-// Component to display evaluations table
-function StudentEvaluationsTable({ 
-  students, 
-  expeditionId,
-  onViewRecords 
-}: { 
-  students: any[]
-  expeditionId: number
-  onViewRecords: (student: any) => void
-}) {
-  return (
-    <Table>
-      <TableHeader>
-        <TableRow className="border-b bg-gray-50/30 hover:bg-gray-50/30">
-          <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600">Student</TableHead>
-          <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 text-center">Academics</TableHead>
-          <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 text-center">Citizenship</TableHead>
-          <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 text-center">Job Duties</TableHead>
-          <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 text-center">Crew</TableHead>
-          <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 text-center">Service</TableHead>
-          <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 text-center">Journaling</TableHead>
-          <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 text-right">View</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {students.map((student: any) => (
-          <StudentEvaluationRow 
-            key={student.id} 
-            student={student} 
-            expeditionId={expeditionId}
-            onViewRecords={onViewRecords}
-          />
-        ))}
-      </TableBody>
-    </Table>
-  )
-}
 
 export default function ExpeditionDetailPage({ params }: PageProps) {
   const { id } = use(params)
@@ -452,52 +279,6 @@ export default function ExpeditionDetailPage({ params }: PageProps) {
     return schedules.filter((s: any) => s.expeditions_id === expeditionId)
   }, [schedules, expeditionId])
 
-  // Calculate stats
-  const stats = useMemo(() => {
-    const totalDays = expeditionSchedules.length
-    const anchoredDays = expeditionSchedules.filter((s: any) => !s.isOffshore && !s.isService).length
-    const offshoreDays = expeditionSchedules.filter((s: any) => s.isOffshore).length
-    const serviceDays = expeditionSchedules.filter((s: any) => s.isService).length
-    
-    // Calculate total nautical miles from destinations/locations
-    let totalNauticalMiles = 0
-    
-    if (locations && locations.length >= 2) {
-      try {
-        // Sort locations by creation date to get the route order
-        const sortedLocations = [...locations].sort((a, b) => a.created_at - b.created_at)
-        
-        // Calculate route distance using the new function
-        const routeDistance = calculateRouteDistance(sortedLocations)
-        totalNauticalMiles = routeDistance.total_nm
-      } catch (error) {
-        console.error('Error calculating route distance:', error)
-        // Fallback to old method if route calculation fails
-        expeditionSchedules.forEach((schedule: any) => {
-          if (schedule.nautical_miles) {
-            totalNauticalMiles += schedule.nautical_miles
-          } else if (schedule._expedition_current_location && schedule._expedition_destination) {
-            const distance = calculateDistanceBetweenLocations(
-              schedule._expedition_current_location,
-              schedule._expedition_destination
-            )
-            if (distance) {
-              totalNauticalMiles += distance
-            }
-          }
-        })
-        totalNauticalMiles = Math.round(totalNauticalMiles * 10) / 10
-      }
-    }
-    
-    return {
-      totalDays,
-      anchoredDays,
-      offshoreDays,
-      serviceDays,
-      totalNauticalMiles
-    }
-  }, [expeditionSchedules, locations])
 
 
 
@@ -622,100 +403,8 @@ export default function ExpeditionDetailPage({ params }: PageProps) {
 
       {/* Content */}
       <main className="container mx-auto px-4 py-6">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
-          <Card className="py-4">
-            <CardHeader className="px-3 py-0 pb-0 gap-0">
-              <CardTitle className="text-xs font-medium text-muted-foreground">
-                Total Days
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="px-3 py-0 pt-0">
-              {isLoading ? (
-                <Skeleton className="h-5 w-10" />
-              ) : (
-                <p className="text-lg font-bold leading-tight">{stats.totalDays}</p>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="py-4">
-            <CardHeader className="px-3 py-0 pb-0 gap-0">
-              <CardTitle className="text-xs font-medium text-muted-foreground">
-                Anchored
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="px-3 py-0 pt-0">
-              {isLoading ? (
-                <Skeleton className="h-5 w-10" />
-              ) : (
-                <p className="text-lg font-bold leading-tight">{stats.anchoredDays}</p>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="py-4">
-            <CardHeader className="px-3 py-0 pb-0 gap-0">
-              <CardTitle className="text-xs font-medium text-muted-foreground">
-                Offshore
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="px-3 py-0 pt-0">
-              {isLoading ? (
-                <Skeleton className="h-5 w-10" />
-              ) : (
-                <p className="text-lg font-bold leading-tight">{stats.offshoreDays}</p>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="py-4">
-            <CardHeader className="px-3 py-0 pb-0 gap-0">
-              <CardTitle className="text-xs font-medium text-muted-foreground">
-                Service
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="px-3 py-0 pt-0">
-              {isLoading ? (
-                <Skeleton className="h-5 w-10" />
-              ) : (
-                <p className="text-lg font-bold leading-tight">{stats.serviceDays}</p>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="py-4">
-            <CardHeader className="px-3 py-0 pb-0 gap-0">
-              <CardTitle className="text-xs font-medium text-muted-foreground">
-                Nautical Miles
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="px-3 py-0 pt-0">
-              {isLoading ? (
-                <Skeleton className="h-5 w-12" />
-              ) : (
-                <p className="text-lg font-bold leading-tight">{stats.totalNauticalMiles}</p>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="py-4">
-            <CardHeader className="px-3 py-0 pb-0 gap-0">
-              <CardTitle className="text-xs font-medium text-muted-foreground">
-                Students
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="px-3 py-0 pt-0">
-              {studentsLoading ? (
-                <Skeleton className="h-5 w-10" />
-              ) : (
-                <p className="text-lg font-bold leading-tight">
-                  {expeditionStudents?.length || 0}
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+        {/* Stats Cards (shared with the home dashboard) */}
+        <ExpeditionStatsCards expeditionId={expeditionId} isLoading={userLoading || expeditionsLoading} className="mb-6" />
 
         {/* Participants (staff + students) with add pickers */}
         <ExpeditionParticipants
@@ -749,32 +438,7 @@ export default function ExpeditionDetailPage({ params }: PageProps) {
             )}
           </div>
           {studentsLoading ? (
-            <Table>
-              <TableHeader>
-                <TableRow className="border-b bg-gray-50/30 hover:bg-gray-50/30">
-                  <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600">Student</TableHead>
-                  <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 text-center">Academics</TableHead>
-                  <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 text-center">Citizenship</TableHead>
-                  <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 text-center">Job Duties</TableHead>
-                  <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 text-center">Crew</TableHead>
-                  <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 text-center">Service</TableHead>
-                  <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 text-center">Journaling</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {[1, 2, 3].map((i) => (
-                  <TableRow key={i}>
-                    <TableCell className="h-14 px-4"><Skeleton className="h-4 w-32" /></TableCell>
-                    <TableCell className="h-14 px-4"><Skeleton className="h-6 w-20 mx-auto" /></TableCell>
-                    <TableCell className="h-14 px-4"><Skeleton className="h-6 w-20 mx-auto" /></TableCell>
-                    <TableCell className="h-14 px-4"><Skeleton className="h-6 w-20 mx-auto" /></TableCell>
-                    <TableCell className="h-14 px-4"><Skeleton className="h-6 w-20 mx-auto" /></TableCell>
-                    <TableCell className="h-14 px-4"><Skeleton className="h-6 w-20 mx-auto" /></TableCell>
-                    <TableCell className="h-14 px-4"><Skeleton className="h-6 w-16 mx-auto" /></TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <StudentEvaluationsTableSkeleton />
           ) : !expeditionStudents || expeditionStudents.filter((s: any) => !s.isArchived).length === 0 ? (
             <div className="p-12 text-center text-muted-foreground">
               <p>No active students in this expedition</p>

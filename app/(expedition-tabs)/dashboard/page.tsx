@@ -18,13 +18,14 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
-import { Calendar, Plus, Check, X, ChevronDown, ChevronRight, ExternalLink, MapPin, Users, Ship, RefreshCw, Trash2 } from "lucide-react"
+import { Calendar, Plus, Check, X, ChevronDown, ChevronRight, ExternalLink, MapPin, Users, Ship, RefreshCw, Trash2, Clock } from "lucide-react"
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,11 +37,12 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Textarea } from "@/components/ui/textarea"
-import { useExpeditionSchedules, useExpeditionLocations, useTeachers } from "@/lib/hooks/use-expeditions"
+import { useExpeditionSchedules, useExpeditionLocations, useTeachers, useExpeditionScheduleItemsByDate } from "@/lib/hooks/use-expeditions"
 import { useExpeditionContext } from "@/lib/contexts/expedition-context"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { addAllDatesForExpedition, deleteExpeditionSchedule, updateExpeditionSchedule, getExpeditionsGalleyTeam, getExpeditionDishDays } from "@/lib/xano"
 import { autoAssignTeamsForExpedition } from "@/lib/team-assignment"
+import { scheduleItemTitle } from "@/lib/schedule-item-title"
 import useSWR, { mutate } from "swr"
 import { toast } from "sonner"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -221,6 +223,21 @@ export default function DashboardPage() {
   const [deleteRowDialogOpen, setDeleteRowDialogOpen] = useState(false)
   const [scheduleToDelete, setScheduleToDelete] = useState<any>(null)
   const [deletingRow, setDeletingRow] = useState(false)
+  const { data: dayItemsData, isLoading: loadingDayItems } = useExpeditionScheduleItemsByDate(
+    detailModalOpen && selectedSchedule?.date ? selectedSchedule.date : null,
+    activeExpeditionId || undefined
+  )
+  const dayItems = useMemo(() => {
+    const items: any[] = dayItemsData?.items || []
+    return [...items].sort((a: any, b: any) => {
+      const aUnscheduled = !a.time_in || !a.time_out
+      const bUnscheduled = !b.time_in || !b.time_out
+      if (aUnscheduled && bUnscheduled) return 0
+      if (aUnscheduled) return 1
+      if (bUnscheduled) return -1
+      return a.time_in - b.time_in
+    })
+  }, [dayItemsData])
 
   // Scroll tracking for gradient indicators
   const [scrollState, setScrollState] = useState<Record<string, { left: boolean; right: boolean }>>({})
@@ -270,6 +287,38 @@ export default function DashboardPage() {
       month: "short",
       day: "numeric",
     })
+  }
+
+  const formatLongDate = (dateString: string) => {
+    const [year, month, day] = dateString.split('-').map(Number)
+    const date = new Date(year, month - 1, day)
+    return date.toLocaleDateString("en-US", {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+    })
+  }
+
+  const formatMilitaryTime = (militaryTime: number) => {
+    if (militaryTime === 2400) return "12:00 AM"
+    const hours = Math.floor(militaryTime / 100)
+    const minutes = militaryTime % 100
+    const displayHours = hours % 12 || 12
+    const period = hours >= 12 ? "PM" : "AM"
+    return displayHours + ":" + minutes.toString().padStart(2, "0") + " " + period
+  }
+
+  const ITEM_TYPE_COLORS: Record<string, string> = {
+    amber: "bg-amber-500", orange: "bg-orange-500", red: "bg-red-500", green: "bg-green-500",
+    blue: "bg-blue-500", purple: "bg-purple-500", teal: "bg-teal-500", pink: "bg-pink-500",
+    indigo: "bg-indigo-500", cyan: "bg-cyan-500", yellow: "bg-yellow-500", lime: "bg-lime-500",
+    emerald: "bg-emerald-500", sky: "bg-sky-500", violet: "bg-violet-500", fuchsia: "bg-fuchsia-500",
+    rose: "bg-rose-500", slate: "bg-slate-500", gray: "bg-gray-500", zinc: "bg-zinc-500",
+    neutral: "bg-neutral-500", stone: "bg-stone-500",
+  }
+  const getItemTypeColor = (item: any) => {
+    const color = item?._expedition_schedule_item_types?.color
+    return (color && ITEM_TYPE_COLORS[color]) || "bg-gray-400"
   }
 
   const calculateTotalDays = (startDate: string, endDate: string) => {
@@ -903,7 +952,7 @@ export default function DashboardPage() {
                             >
                               {/* Row content - reuse the same cells */}
                               <TableCell className="h-14 px-4" style={{ width: "100px" }}>
-                                <span className="font-semibold text-sm text-gray-900">
+                                <span className="font-semibold text-sm text-gray-900 underline decoration-gray-300 underline-offset-4 hover:decoration-gray-900">
                                   {formatDate(schedule.date)}
                                 </span>
                               </TableCell>
@@ -1162,7 +1211,7 @@ export default function DashboardPage() {
                               onClick={() => handleRowClick(schedule)}
                             >
                               <TableCell className="h-14 px-4" style={{ width: "100px" }}>
-                                <span className="font-semibold text-sm text-gray-900">
+                                <span className="font-semibold text-sm text-gray-900 underline decoration-gray-300 underline-offset-4 hover:decoration-gray-900">
                                   {formatDate(schedule.date)}
                                 </span>
                               </TableCell>
@@ -1391,138 +1440,231 @@ export default function DashboardPage() {
         </div>
       </main>
 
-      {/* Schedule Detail Modal */}
-      <Dialog open={detailModalOpen} onOpenChange={setDetailModalOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="text-xl">
-              {selectedSchedule && formatDate(selectedSchedule.date)}
-            </DialogTitle>
-          </DialogHeader>
-          
-          {selectedSchedule && (
-            <div className="space-y-5">
-              {/* Type Badge */}
-              <div className="flex items-center gap-3">
-                <div className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium ${getScheduleTypeColor(selectedSchedule)}`}>
-                  {getScheduleTypeName(selectedSchedule)}
-                </div>
-              </div>
-
-              {/* Location */}
-              <div>
-                <div className="text-xs uppercase tracking-wide text-muted-foreground mb-1.5">
-                  Current Location
-                </div>
-                <div className="flex items-center gap-2 text-gray-900">
-                  <MapPin className="h-4 w-4 text-gray-400" />
-                  <span className="font-medium">
-                    {selectedSchedule._expedition_current_location 
-                      ? formatLocation(selectedSchedule._expedition_current_location)
-                      : "No location set"}
+      {/* Day Preview Sheet */}
+      <Sheet open={detailModalOpen} onOpenChange={setDetailModalOpen}>
+        <SheetContent className="w-full sm:w-[640px] sm:max-w-[90vw] p-0 flex flex-col h-full overflow-hidden">
+          <SheetHeader className="p-6 pb-4 border-b shrink-0">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <SheetTitle className="text-xl truncate">
+                  {selectedSchedule && formatLongDate(selectedSchedule.date)}
+                </SheetTitle>
+                {selectedSchedule && (
+                  <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium shrink-0 ${getScheduleTypeColor(selectedSchedule)}`}>
+                    {getScheduleTypeName(selectedSchedule)}
                   </span>
-                </div>
+                )}
               </div>
-
-              {/* Destination - only show for offshore */}
-              {(selectedSchedule.isOffshore || selectedSchedule.is_offshore) && (
-                <div>
-                  <div className="text-xs uppercase tracking-wide text-muted-foreground mb-1.5">
-                    Destination
-                  </div>
-                  <div className="flex items-center gap-2 text-gray-900">
-                    <Ship className="h-4 w-4 text-gray-400" />
-                    <span className="font-medium">
-                      {selectedSchedule._expedition_destination_location 
+              <button
+                onClick={() => setDetailModalOpen(false)}
+                className="rounded-full p-1.5 hover:bg-gray-100 transition-colors cursor-pointer shrink-0"
+                aria-label="Close"
+              >
+                <X className="h-5 w-5 text-gray-500" />
+              </button>
+            </div>
+            {selectedSchedule && (
+              <SheetDescription className="flex items-center gap-2 pt-1">
+                <MapPin className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+                <span className="truncate">
+                  {selectedSchedule._expedition_current_location
+                    ? formatLocation(selectedSchedule._expedition_current_location)
+                    : "No location set"}
+                </span>
+                {(selectedSchedule.isOffshore || selectedSchedule.is_offshore) && (
+                  <>
+                    <Ship className="h-3.5 w-3.5 text-gray-400 shrink-0 ml-1" />
+                    <span className="truncate">
+                      {selectedSchedule._expedition_destination_location
                         ? formatLocation(selectedSchedule._expedition_destination_location)
                         : locations?.find((l: any) => l.id === selectedSchedule.destination)
                           ? formatLocation(locations.find((l: any) => l.id === selectedSchedule.destination))
                           : "No destination set"}
                     </span>
-                  </div>
-                </div>
-              )}
-
-              {/* Staff Off */}
-              <div>
-                <div className="text-xs uppercase tracking-wide text-muted-foreground mb-1.5">
-                  Staff Off
-                </div>
-                {selectedSchedule.staff_off && selectedSchedule.staff_off.length > 0 ? (
-                  <div className="flex flex-wrap gap-2">
-                    {selectedSchedule.staff_off.map((staffId: number) => {
-                      const staffMember = staff?.find((s: any) => s.id === staffId)
-                      return (
-                        <div key={staffId} className="flex items-center gap-2 bg-gray-100 rounded-full px-3 py-1">
-                          <Avatar className="h-5 w-5">
-                            <AvatarFallback className="text-[8px] bg-gray-200 text-gray-600">
-                              {staffMember?.name?.split(" ").map((n: string) => n[0]).join("")}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="text-sm text-gray-700">{staffMember?.name || "Unknown"}</span>
-                        </div>
-                      )
-                    })}
-                  </div>
-                ) : (
-                  <span className="text-gray-400">No staff off</span>
+                  </>
                 )}
+              </SheetDescription>
+            )}
+          </SheetHeader>
+
+          {selectedSchedule && (
+            <div className="flex-1 overflow-y-auto">
+              {/* Schedule table */}
+              <div className="px-6 pt-5 pb-2">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="text-xs uppercase tracking-wide text-muted-foreground">
+                    Schedule
+                  </div>
+                  {!loadingDayItems && dayItems.length > 0 && (
+                    <span className="text-xs text-muted-foreground">
+                      {dayItems.length} {dayItems.length === 1 ? "activity" : "activities"}
+                    </span>
+                  )}
+                </div>
+                <div className="rounded-lg border overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-gray-50/50 hover:bg-gray-50/50">
+                        <TableHead className="h-9 px-3 text-xs w-[120px]">Time</TableHead>
+                        <TableHead className="h-9 px-3 text-xs">Activity</TableHead>
+                        <TableHead className="h-9 px-3 text-xs w-[150px]">Staff</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {loadingDayItems ? (
+                        [...Array(4)].map((_, i) => (
+                          <TableRow key={i}>
+                            <TableCell className="px-3 py-2.5"><Skeleton className="h-4 w-20" /></TableCell>
+                            <TableCell className="px-3 py-2.5"><Skeleton className="h-4 w-40" /></TableCell>
+                            <TableCell className="px-3 py-2.5"><Skeleton className="h-4 w-24" /></TableCell>
+                          </TableRow>
+                        ))
+                      ) : dayItems.length === 0 ? (
+                        <TableRow className="hover:bg-transparent">
+                          <TableCell colSpan={3} className="px-3 py-8 text-center">
+                            <Clock className="h-6 w-6 mx-auto text-gray-300 mb-2" />
+                            <p className="text-sm text-muted-foreground">No activities scheduled for this day</p>
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        dayItems.map((item: any) => {
+                          const isUnscheduled = !item.time_in || !item.time_out
+                          const staffMember = item._expedition_staff
+                          return (
+                            <TableRow key={item.id} className="hover:bg-gray-50/50">
+                              <TableCell className="px-3 py-2.5 align-top whitespace-nowrap">
+                                {isUnscheduled ? (
+                                  <span className="text-xs text-gray-400 italic">Unscheduled</span>
+                                ) : (
+                                  <div className="text-xs leading-tight">
+                                    <div className="font-medium text-gray-900">{formatMilitaryTime(item.time_in)}</div>
+                                    <div className="text-gray-400">{formatMilitaryTime(item.time_out)}</div>
+                                  </div>
+                                )}
+                              </TableCell>
+                              <TableCell className="px-3 py-2.5 align-top">
+                                <div className="flex gap-2.5">
+                                  <div className={`w-1 rounded-full shrink-0 self-stretch ${getItemTypeColor(item)}`} />
+                                  <div className="min-w-0">
+                                    {/* Type as the title, except "Other", where the item's own name is the title. */}
+                                    <div className="text-sm font-medium text-gray-900 leading-tight">
+                                      {scheduleItemTitle(item).title}
+                                    </div>
+                                    {scheduleItemTitle(item).subtitle && (
+                                      <div className="text-xs text-gray-500 mt-0.5 line-clamp-1">{scheduleItemTitle(item).subtitle}</div>
+                                    )}
+                                    {item.notes && (
+                                      <div className="text-xs text-gray-500 mt-0.5 line-clamp-2">{item.notes}</div>
+                                    )}
+                                  </div>
+                                </div>
+                              </TableCell>
+                              <TableCell className="px-3 py-2.5 align-top">
+                                {staffMember ? (
+                                  <div className="flex items-center gap-1.5 min-w-0">
+                                    <Avatar className="h-5 w-5 shrink-0">
+                                      <AvatarFallback className="text-[8px] bg-gray-200 text-gray-600">
+                                        {staffMember.name?.split(" ").map((n: string) => n[0]).join("")}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <span className="text-xs text-gray-700 truncate">{staffMember.name}</span>
+                                  </div>
+                                ) : (
+                                  <span className="text-xs text-gray-400">—</span>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          )
+                        })
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
 
-              {/* Notes */}
-              <div>
-                <div className="text-xs uppercase tracking-wide text-muted-foreground mb-1.5">
-                  Notes
-                </div>
-                <Textarea
-                  value={detailNotes}
-                  onChange={(e) => setDetailNotes(e.target.value)}
-                  placeholder="Add notes for this day..."
-                  className="min-h-[100px] resize-none"
-                />
-                {detailNotes !== (selectedSchedule.notes || "") && (
-                  <div className="flex justify-end mt-2">
-                    <Button
-                      size="sm"
-                      onClick={handleDetailNotesUpdate}
-                      disabled={savingDetailNotes}
-                      className="cursor-pointer"
-                    >
-                      {savingDetailNotes ? "Saving..." : "Save Notes"}
-                    </Button>
+              <div className="px-6 py-5 space-y-5">
+                {/* Staff Off */}
+                <div>
+                  <div className="text-xs uppercase tracking-wide text-muted-foreground mb-1.5">
+                    Staff Off
                   </div>
-                )}
-              </div>
+                  {selectedSchedule.staff_off && selectedSchedule.staff_off.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {selectedSchedule.staff_off.map((staffId: number) => {
+                        const staffMember = staff?.find((s: any) => s.id === staffId)
+                        return (
+                          <div key={staffId} className="flex items-center gap-2 bg-gray-100 rounded-full px-3 py-1">
+                            <Avatar className="h-5 w-5">
+                              <AvatarFallback className="text-[8px] bg-gray-200 text-gray-600">
+                                {staffMember?.name?.split(" ").map((n: string) => n[0]).join("")}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="text-sm text-gray-700">{staffMember?.name || "Unknown"}</span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  ) : (
+                    <span className="text-sm text-gray-400">No staff off</span>
+                  )}
+                </div>
 
-              {/* Action Buttons */}
-              <div className="flex gap-2 pt-2 border-t">
-                <Button
-                  variant="outline"
-                  className="flex-1 cursor-pointer"
-                  onClick={() => {
-                    setDetailModalOpen(false)
-                    router.push(`/schedule/${selectedSchedule.date}`)
-                  }}
-                >
-                  <Calendar className="h-4 w-4 mr-2" />
-                  View Daily Schedule
-                </Button>
-                <Button
-                  variant="outline"
-                  className="flex-1 cursor-pointer"
-                  onClick={() => {
-                    setDetailModalOpen(false)
-                    router.push(`/evaluate/${selectedSchedule.date}`)
-                  }}
-                >
-                  <Users className="h-4 w-4 mr-2" />
-                  Evaluate Students
-                </Button>
+                {/* Notes */}
+                <div>
+                  <div className="text-xs uppercase tracking-wide text-muted-foreground mb-1.5">
+                    Notes
+                  </div>
+                  <Textarea
+                    value={detailNotes}
+                    onChange={(e) => setDetailNotes(e.target.value)}
+                    placeholder="Add notes for this day..."
+                    className="min-h-[90px] resize-none"
+                  />
+                  {detailNotes !== (selectedSchedule.notes || "") && (
+                    <div className="flex justify-end mt-2">
+                      <Button
+                        size="sm"
+                        onClick={handleDetailNotesUpdate}
+                        disabled={savingDetailNotes}
+                        className="cursor-pointer"
+                      >
+                        {savingDetailNotes ? "Saving..." : "Save Notes"}
+                      </Button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )}
-        </DialogContent>
-      </Dialog>
+
+          {selectedSchedule && (
+            <div className="flex gap-2 p-4 border-t shrink-0">
+              <Button
+                variant="outline"
+                className="flex-1 cursor-pointer"
+                onClick={() => {
+                  setDetailModalOpen(false)
+                  router.push(`/schedule/${selectedSchedule.date}`)
+                }}
+              >
+                <Calendar className="h-4 w-4 mr-2" />
+                Open Full Schedule
+              </Button>
+              <Button
+                variant="outline"
+                className="flex-1 cursor-pointer"
+                onClick={() => {
+                  setDetailModalOpen(false)
+                  router.push(`/evaluate/${selectedSchedule.date}`)
+                }}
+              >
+                <Users className="h-4 w-4 mr-2" />
+                Evaluate Students
+              </Button>
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
 
       {/* Delete Date Row Confirmation */}
       <AlertDialog open={deleteRowDialogOpen} onOpenChange={setDeleteRowDialogOpen}>

@@ -11,12 +11,12 @@ async function validateStaffByEmail(email: string) {
       return null
     }
     const teachers = await res.json()
-    
+
     // Find staff member by email (case-insensitive)
-    const staff = teachers.find((t: any) => 
+    const staff = teachers.find((t: any) =>
       t.email?.toLowerCase() === email.toLowerCase()
     )
-    
+
     // Check if staff exists and is active
     if (staff && staff.isActive) {
       return staff
@@ -40,21 +40,18 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     error: "/login",
   },
   callbacks: {
-    async signIn({ user, account, profile }) {
+    async signIn({ user }) {
       if (!user.email) {
         return false
       }
 
-      // Validate that this email belongs to an active staff member
+      // Only active staff members may sign in.
       const staff = await validateStaffByEmail(user.email)
-      if (!staff) {
-        // User is not an approved staff member
-        return "/login?error=unauthorized"
-      }
+      if (staff) return true
 
-      return true
+      return "/login?error=unauthorized"
     },
-    async jwt({ token, user, account }) {
+    async jwt({ token, user }) {
       if (user?.email) {
         // Fetch staff data on initial sign in
         const staff = await validateStaffByEmail(user.email)

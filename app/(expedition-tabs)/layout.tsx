@@ -11,15 +11,16 @@ import { useExpeditionContext } from "@/lib/contexts/expedition-context"
 const TAB_ROUTES: Array<[RegExp, ExpeditionPage]> = [
   [/^\/expedition\/\d+\/assignments/, "students"],
   [/^\/expedition\/\d+\/passport-manifest/, "passport-manifest"],
-  [/^\/expedition\/\d+\/store\/transactions/, "transactions"],
   [/^\/expedition\/\d+/, "overview"],
   [/^\/dashboard/, "trip-planner"],
+  [/^\/map/, "route-map"],
   [/^\/planner/, "weekly-planner"],
   [/^\/schedule\//, "daily-view"],
   [/^\/evaluate\//, "add-scores"],
   [/^\/performance-reviews/, "performance-reviews"],
   [/^\/discipline/, "discipline"],
   [/^\/applications/, "applications"],
+  [/^\/awards/, "awards"],
 ]
 
 function resolveCurrentPage(pathname: string): ExpeditionPage {

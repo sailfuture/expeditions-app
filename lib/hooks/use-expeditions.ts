@@ -26,6 +26,7 @@ import {
   getEvaluationByStudentType,
   getProfessionalismByStudent,
   getExpeditionPerformanceReviews,
+  getVesselPosition,
 } from "@/lib/xano"
 
 // SWR fetcher keys
@@ -178,5 +179,17 @@ export function useExpeditionPerformanceReviews(expeditionsId: number | null) {
   return useSWR(
     expeditionsId ? `expedition_performance_reviews_${expeditionsId}` : null,
     expeditionsId ? () => getExpeditionPerformanceReviews(expeditionsId) : null
+  )
+}
+
+/**
+ * Live position of the boat on an expedition. Polls every minute by default
+ * so a dashboard left open keeps the marker current.
+ */
+export function useVesselPosition(expeditionsId: number | null, options?: { refreshInterval?: number }) {
+  return useSWR(
+    expeditionsId ? `vessel_position_${expeditionsId}` : null,
+    expeditionsId ? () => getVesselPosition(expeditionsId) : null,
+    { refreshInterval: options?.refreshInterval ?? 60_000, revalidateOnFocus: true }
   )
 }

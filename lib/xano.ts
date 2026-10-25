@@ -1,4 +1,7 @@
 // Xano API client
+import type { ExpeditionType } from "@/lib/types"
+import type { VesselPositionResponse } from "@/lib/vessel-position"
+
 const XANO_BASE_URL = "https://xsc3-mvx7-r86m.n7e.xano.io/api:bXFdqx8y"
 
 async function xanoFetch<T>(endpoint: string, options?: RequestInit): Promise<T> {
@@ -333,6 +336,14 @@ export async function getExpeditionJournalStatus() {
   return xanoFetch<any[]>("/expedition_journal_status")
 }
 
+// ============ Vessel position ============
+// Latest known position of the boat sailing an expedition (defaults to the
+// active expedition). See lib/vessel-position.ts for the response shape.
+export async function getVesselPosition(expeditionsId?: number) {
+  const url = expeditionsId ? `/vessel_position?expeditions_id=${expeditionsId}` : "/vessel_position"
+  return xanoFetch<VesselPositionResponse>(url)
+}
+
 // ============ Locations ============
 export async function getExpeditionLocations(expeditionsId?: number) {
   const url = expeditionsId 
@@ -379,6 +390,7 @@ export async function createExpedition(data: {
   schoolterms_id: number
   schoolyears_id: number
   number_participants?: number
+  expedition_type?: ExpeditionType
 }) {
   return xanoFetch<any>("/expeditions", {
     method: "POST",
@@ -396,6 +408,7 @@ export async function updateExpedition(id: number, data: {
   schoolyears_id?: number
   isActive?: boolean
   number_participants?: number
+  expedition_type?: ExpeditionType
 }) {
   return xanoFetch<any>(`/expeditions/${id}`, {
     method: "PATCH",
@@ -817,183 +830,6 @@ export async function reloadToddleStudents() {
   return xanoFetch<any>("/toddle_students_api")
 }
 
-// ============ Expedition Transactions ============
-export async function getExpeditionTransactionsByDateByStudent(
-  studentsId: number,
-  expeditionsId: number,
-  startDate: string | null,
-  endDate: string | null
-) {
-  const params = new URLSearchParams()
-  if (startDate) params.append('startDate', startDate)
-  if (endDate) params.append('endDate', endDate)
-  params.append('students_id', studentsId.toString())
-  params.append('expeditions_id', expeditionsId.toString())
-  return xanoFetch<any[]>(`/expedition_transactions_by_date_by_student?${params.toString()}`)
-}
-
-// ============ Expeditions Store ============
-export async function getExpeditionsStore() {
-  return xanoFetch<any[]>("/expeditions_store")
-}
-
-export async function getExpeditionsStoreItem(id: number) {
-  return xanoFetch<any>(`/expeditions_store/${id}`)
-}
-
-export async function createExpeditionsStoreItem(data: {
-  product_name: string
-  quantity: number
-  description: string
-  isArchived: boolean
-  product_image: string
-  price: number
-}) {
-  return xanoFetch<any>("/expeditions_store", {
-    method: "POST",
-    body: JSON.stringify(data),
-  })
-}
-
-export async function updateExpeditionsStoreItem(id: number, data: Record<string, any>) {
-  return xanoFetch<any>(`/expeditions_store/${id}`, {
-    method: "PATCH",
-    body: JSON.stringify(data),
-  })
-}
-
-export async function deleteExpeditionsStoreItem(id: number) {
-  return xanoFetch<any>(`/expeditions_store/${id}`, {
-    method: "DELETE",
-  })
-}
-
-// ============ Expedition Transactions (All types including purchases) ============
-export async function getExpeditionTransactions(expeditionsId: number) {
-  return xanoFetch<any[]>(`/expedition_transactions?expeditions_id=${expeditionsId}`)
-}
-
-export async function getExpeditionTransactionById(id: number) {
-  return xanoFetch<any>(`/expedition_transactions/${id}`)
-}
-
-export async function updateExpeditionTransaction(id: number, data: {
-  date?: string
-  transaction?: string
-  amount?: number
-  students_id?: number
-  expeditions_id?: number
-  expeditions_store_id?: number
-  quantity?: number
-}) {
-  return xanoFetch<any>(`/expedition_transactions/${id}`, {
-    method: "PATCH",
-    body: JSON.stringify(data),
-  })
-}
-
-export async function deleteExpeditionTransaction(id: number) {
-  return xanoFetch<any>(`/expedition_transactions/${id}`, {
-    method: "DELETE",
-  })
-}
-
-// ============ Students with Balance ============
-export async function getStudentsWithBalance(expeditionsId: number) {
-  return xanoFetch<any[]>(`/students_with_balance?expeditions_id=${expeditionsId}`)
-}
-
-// ============ Money actions (pay day, purchases, refunds) ============
-// These go through the Next.js server (app/api/accounts/[action]), which checks
-// the staff session and adds the shared secret that Xano's guard requires.
-async function accountsAction<T>(action: string, body: Record<string, unknown>): Promise<T> {
-  const res = await fetch(`/api/accounts/${action}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  })
-  const text = await res.text()
-  let payload: any = null
-  try {
-    payload = text ? JSON.parse(text) : null
-  } catch {
-    payload = text
-  }
-  if (!res.ok) {
-    const message =
-      (payload && typeof payload === "object" && (payload.message || payload.payload?.message)) ||
-      (typeof payload === "string" && payload.length < 500 ? payload : null) ||
-      `Request failed: ${res.status}`
-    throw new Error(message)
-  }
-  return payload as T
-}
-
-export interface PayDayResult {
-  expeditions_id: number
-  date: string
-  paid: number
-  results: Array<{
-    students_id: number
-    professionalism_id: number
-    existing_transaction_id: number | null
-    categories_counted: number
-    daily_average: number
-    base: number
-    bonus_total: number
-    penalty_total: number
-    amount: number
-  }>
-}
-
-export async function payDay(expeditionsId: number, date: string) {
-  return accountsAction<PayDayResult>("pay_day", { expeditions_id: expeditionsId, date })
-}
-
-export interface PurchaseResult {
-  order_ref: string
-  date: string
-  students_id: number
-  total: number
-  balance_after: number
-  lines: Array<{
-    expeditions_store_id: number
-    product_name: string
-    quantity: number
-    unit_price: number
-    line_total: number
-    new_stock: number
-  }>
-}
-
-export async function createPurchase(data: {
-  students_id: number
-  expeditions_id: number
-  items: Array<{ expeditions_store_id: number; quantity: number }>
-  note?: string
-}) {
-  return accountsAction<PurchaseResult>("purchase", data)
-}
-
-export interface RefundResult {
-  date: string
-  refunded: number
-  total: number
-  order_ref?: string
-}
-
-export async function refundOrder(orderRef: string, note?: string) {
-  return accountsAction<RefundResult>("refund_order", { order_ref: orderRef, note })
-}
-
-export async function refundTransaction(transactionId: number, note?: string) {
-  return accountsAction<RefundResult>("refund_transaction", {
-    expedition_transactions_id: transactionId,
-    note,
-  })
-}
-
-// ============ Expedition Transactions (for store purchases) ============
 // ============ Expeditions Inventory ============
 export async function getExpeditionsInventory() {
   return xanoFetch<any[]>("/expeditions_inventory")
@@ -1214,17 +1050,3 @@ export async function deleteExpeditionLinenInventoryLocation(id: number) {
   })
 }
 
-export async function createExpeditionTransaction(data: {
-  date: string | null
-  transaction: string
-  amount: number
-  students_id: number
-  expeditions_id: number
-  expeditions_store_id: number
-  quantity: number
-}) {
-  return xanoFetch<any>("/expedition_transactions", {
-    method: "POST",
-    body: JSON.stringify(data),
-  })
-}

@@ -66,7 +66,7 @@ import { mutate } from "swr"
 import { toast } from "sonner"
 import { Spinner } from "@/components/ui/spinner"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Calendar as CalendarComponent } from "@/components/ui/calendar"
+import { ExpeditionCalendar } from "@/components/expedition-calendar"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -615,10 +615,10 @@ function PlannerPageContent() {
   const expeditionIdFromUrl = searchParams.get('expedition') ? parseInt(searchParams.get('expedition')!) : null
   const { activeExpedition, userExpeditions } = useExpeditionContext()
   const { data: allExpeditionsData } = useExpeditions()
-  
+
   // Use expedition ID from URL if provided, otherwise fall back to active expedition
   const effectiveExpeditionId = expeditionIdFromUrl || activeExpedition?.id
-  
+
   // Find the expedition to display - prioritize URL parameter, fetch full data with term info
   const displayExpedition = useMemo(() => {
     if (expeditionIdFromUrl && allExpeditionsData) {
@@ -631,7 +631,7 @@ function PlannerPageContent() {
     }
     return activeExpedition
   }, [expeditionIdFromUrl, allExpeditionsData, userExpeditions, activeExpedition])
-  
+
   // Default to expedition first date if expedition is not active, otherwise today
   const getDefaultDate = () => {
     if (displayExpedition?.isActive) {
@@ -639,13 +639,13 @@ function PlannerPageContent() {
     }
     return getExpeditionFirstDate(displayExpedition?.startDate || displayExpedition?.start_date)
   }
-  
+
   const [centerDate, setCenterDate] = useState(getDefaultDate())
-  
+
   // Update center date when display expedition changes (especially on reload)
   useEffect(() => {
     if (displayExpedition) {
-      const defaultDate = displayExpedition.isActive 
+      const defaultDate = displayExpedition.isActive
         ? new Date()
         : getExpeditionFirstDate(displayExpedition.startDate || displayExpedition.start_date)
       setCenterDate(defaultDate)
@@ -664,11 +664,11 @@ function PlannerPageContent() {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [itemToDelete, setItemToDelete] = useState<any>(null)
   const [deleting, setDeleting] = useState(false)
-  
+
   // Meal Plan Sheet state
   const [mealPlanSheetOpen, setMealPlanSheetOpen] = useState(false)
   const [selectedRecipeId, setSelectedRecipeId] = useState<number | null>(null)
-  
+
   // Meal Plan data fetching
   const XANO_COOKBOOK_URL = "https://xsc3-mvx7-r86m.n7e.xano.io/api:bXFdqx8y"
   const recipeFetcher = (url: string) => fetch(url).then((res) => res.json())
@@ -676,7 +676,7 @@ function PlannerPageContent() {
     selectedRecipeId ? `${XANO_COOKBOOK_URL}/expedition_cookbook/${selectedRecipeId}` : null,
     recipeFetcher
   )
-  
+
   const handleMealPlanClick = (recipeId: number) => {
     // Close the dialog first, then open the sheet after a brief delay
     // to avoid Radix focus management conflicts
@@ -686,7 +686,7 @@ function PlannerPageContent() {
       setMealPlanSheetOpen(true)
     }, 150)
   }
-  
+
   // Cookbook recipes for galley view - fetch all and filter client-side to support types[] array
   const { data: allCookbookRecipes = [] } = useSWR(
     plannerView === "galley" ? "expedition_cookbook_all" : null,
@@ -739,7 +739,7 @@ function PlannerPageContent() {
 
   // Scroll gradient tracking for each day column
   const [scrollGradients, setScrollGradients] = useState<Record<number, boolean>>({})
-  
+
   const handleScroll = useCallback((index: number, element: HTMLDivElement | null) => {
     if (!element) return
     const { scrollTop, scrollHeight, clientHeight } = element
@@ -749,19 +749,19 @@ function PlannerPageContent() {
       return { ...prev, [index]: canScrollMore }
     })
   }, [])
-  
+
   // Fetch all schedules to get day types
   const { data: allSchedules } = useExpeditionSchedules(effectiveExpeditionId)
-  
+
   // Fetch staff for the add/edit sheet
   const { data: staff } = useTeachers()
-  
+
   // Fetch students for the add/edit sheet
   const { data: students } = useStudentsByExpedition(effectiveExpeditionId || null)
-  
+
   // Fetch templates for empty day states
   const { data: templates } = useExpeditionScheduleTemplates()
-  
+
   // Fetch dish days and galley teams
   const { data: dishDays } = useSWR(
     effectiveExpeditionId ? `expedition_dish_days_${effectiveExpeditionId}` : null,
@@ -771,19 +771,19 @@ function PlannerPageContent() {
     effectiveExpeditionId ? `expeditions_galley_team_${effectiveExpeditionId}` : null,
     () => getExpeditionsGalleyTeam(effectiveExpeditionId!)
   )
-  
+
   // State for tracking updates and optimistic values
   const [updatingScheduleField, setUpdatingScheduleField] = useState<string | null>(null)
   const [optimisticValues, setOptimisticValues] = useState<Record<string, string>>({})
-  
+
   // Handler for updating schedule dish day or galley team (using IDs)
   const handleScheduleFieldChange = async (scheduleId: number, field: string, value: string) => {
     const updateKey = `${scheduleId}-${field}`
-    
+
     // Set optimistic value immediately
     setOptimisticValues(prev => ({ ...prev, [updateKey]: value }))
     setUpdatingScheduleField(updateKey)
-    
+
     try {
       const updateData: Record<string, any> = {}
       // Use the ID fields instead of string names
@@ -794,9 +794,9 @@ function PlannerPageContent() {
       } else {
         updateData[field] = value === "none" ? "" : value
       }
-      
+
       await updateExpeditionSchedule(scheduleId, updateData)
-      
+
       // Refresh only the specific schedule data that was updated (not all schedule items)
       await mutate(`expedition_schedules_${effectiveExpeditionId}`)
       // Also refresh the specific day's items since they include schedule info
@@ -804,7 +804,7 @@ function PlannerPageContent() {
       if (scheduleDate) {
         await mutate(`expedition_schedule_items_date_${scheduleDate}_${effectiveExpeditionId || 'all'}`)
       }
-      
+
       toast.success(`${field === 'expedition_dish_days_id' ? 'Dish Team' : 'Galley Team'} updated`)
     } catch (error) {
       console.error(`Failed to update ${field}:`, error)
@@ -819,7 +819,7 @@ function PlannerPageContent() {
       })
     }
   }
-  
+
   // Generate the 5 days to display
   const days = useMemo(() => {
     return [
@@ -830,12 +830,12 @@ function PlannerPageContent() {
       addDays(centerDate, 3),
     ]
   }, [centerDate])
-  
+
   // Format dates for API calls
   const dateStrings = useMemo(() => {
     return days.map(d => format(d, "yyyy-MM-dd"))
   }, [days])
-  
+
   // Get schedule info for each day (fallback to allSchedules if no schedule in items response)
   const getScheduleForDate = (dateString: string, itemsData?: any) => {
     // First try to use the schedule from the items response (has expanded dish/galley data)
@@ -844,19 +844,19 @@ function PlannerPageContent() {
     if (!allSchedules) return null
     return allSchedules.find((s: any) => s.date === dateString)
   }
-  
+
   // Fetch items for each day - now returns { items, schedule }
   const { data: data0, isLoading: loading0 } = useExpeditionScheduleItemsByDate(dateStrings[0], effectiveExpeditionId)
   const { data: data1, isLoading: loading1 } = useExpeditionScheduleItemsByDate(dateStrings[1], effectiveExpeditionId)
   const { data: data2, isLoading: loading2 } = useExpeditionScheduleItemsByDate(dateStrings[2], effectiveExpeditionId)
   const { data: data3, isLoading: loading3 } = useExpeditionScheduleItemsByDate(dateStrings[3], effectiveExpeditionId)
   const { data: data4, isLoading: loading4 } = useExpeditionScheduleItemsByDate(dateStrings[4], effectiveExpeditionId)
-  
+
   // Extract items arrays for backward compatibility
   const allData = [data0, data1, data2, data3, data4]
   const allItems = allData.map(d => d?.items || d || [])
   const allLoading = [loading0, loading1, loading2, loading3, loading4]
-  
+
   const formatMilitaryTime = (time: number) => {
     if (!time && time !== 0) return ""
     const hours = Math.floor(time / 100)
@@ -865,7 +865,7 @@ function PlannerPageContent() {
     const displayHours = hours % 12 || 12
     return `${displayHours}:${minutes.toString().padStart(2, "0")} ${period}`
   }
-  
+
   // Check if item is a meal type using the isMeal boolean from the item type record
   const isMealType = (item: any) => {
     if (!item) return false
@@ -903,14 +903,14 @@ function PlannerPageContent() {
     }
     return "bg-gray-500"
   }
-  
+
   const getDayType = (schedule: any) => {
     if (!schedule) return { label: "-" }
     if (schedule.isOffshore || schedule.is_offshore) return { label: "O" }
     if (schedule.isService || schedule.is_service) return { label: "S" }
     return { label: "A" }
   }
-  
+
   const getLocation = (schedule: any) => {
     if (!schedule) return "No Location"
     // Try multiple possible field names for current location
@@ -924,7 +924,7 @@ function PlannerPageContent() {
     }
     return "No Location"
   }
-  
+
   const getDestination = (schedule: any) => {
     if (!schedule) return null
     // Try multiple possible field names for destination
@@ -938,7 +938,7 @@ function PlannerPageContent() {
     }
     return null
   }
-  
+
   const getStaffOff = (schedule: any) => {
     if (!schedule?.staff_off || schedule.staff_off.length === 0 || !staff) return null
     const staffOffNames = schedule.staff_off.map((id: number) => {
@@ -957,7 +957,7 @@ function PlannerPageContent() {
     if (!schedule?.galley_team) return null
     return schedule.galley_team
   }
-  
+
   const handlePrevious = () => {
     setCenterDate(prev => {
       const newDate = subDays(prev, 1)
@@ -965,7 +965,7 @@ function PlannerPageContent() {
       return new Date(newDate.getFullYear(), newDate.getMonth(), newDate.getDate(), 12, 0, 0)
     })
   }
-  
+
   const handleNext = () => {
     setCenterDate(prev => {
       const newDate = addDays(prev, 1)
@@ -973,22 +973,22 @@ function PlannerPageContent() {
       return new Date(newDate.getFullYear(), newDate.getMonth(), newDate.getDate(), 12, 0, 0)
     })
   }
-  
+
   const handleToday = () => {
     setCenterDate(new Date())
   }
-  
+
   const handleDayClick = (date: Date) => {
     const dateStr = format(date, "yyyy-MM-dd")
     const url = expeditionIdFromUrl ? `/schedule/${dateStr}?expedition=${expeditionIdFromUrl}` : `/schedule/${dateStr}`
     router.push(url)
   }
-  
+
   const handleItemClick = (item: any) => {
     setSelectedItem(item)
     setDialogOpen(true)
   }
-  
+
   const handleAddActivity = (dateString: string, e: React.MouseEvent) => {
     e.stopPropagation()
     const schedule = getScheduleForDate(dateString)
@@ -999,7 +999,7 @@ function PlannerPageContent() {
       setAddSheetOpen(true)
     }
   }
-  
+
   const handleEditItem = (item: any, dateString: string, e: React.MouseEvent) => {
     e.stopPropagation()
     const schedule = getScheduleForDate(dateString)
@@ -1010,13 +1010,13 @@ function PlannerPageContent() {
       setAddSheetOpen(true)
     }
   }
-  
+
   const handleDeleteClick = (item: any, e: React.MouseEvent) => {
     e.stopPropagation()
     setItemToDelete(item)
     setDeleteConfirmOpen(true)
   }
-  
+
   const handleConfirmDelete = async () => {
     if (!itemToDelete) return
     setDeleting(true)
@@ -1036,14 +1036,14 @@ function PlannerPageContent() {
       setDeleting(false)
     }
   }
-  
+
   const handleAddTemplate = async (dateString: string) => {
     const templateId = selectedTemplates[dateString]
     if (!templateId) {
       toast.error("Please select a template")
       return
     }
-    
+
     setAddingTemplate(dateString)
     try {
       await addExpeditionScheduleTemplate(dateString, templateId)
@@ -1102,10 +1102,12 @@ function PlannerPageContent() {
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
-                  <CalendarComponent
+                  <ExpeditionCalendar
                     mode="single"
                     selected={centerDate}
                     defaultMonth={centerDate}
+                    expeditionStartDate={displayExpedition?.startDate || displayExpedition?.start_date}
+                    expeditionEndDate={displayExpedition?.endDate || displayExpedition?.end_date}
                     onSelect={(selectedDate) => {
                       if (selectedDate) {
                         // Create a new date at noon local time to avoid timezone issues
@@ -1314,7 +1316,7 @@ function PlannerPageContent() {
             const staffOff = getStaffOff(schedule)
             const dishDay = getDishDay(schedule)
             const galleyTeam = getGalleyTeam(schedule)
-            
+
             // Check if date is within expedition range
             const isWithinRange = isDateWithinExpeditionRange(
               day,
@@ -1322,10 +1324,10 @@ function PlannerPageContent() {
               displayExpedition?.endDate || displayExpedition?.end_date
             )
             const hasSchedule = !!schedule
-            
+
             return (
-              <div 
-                key={dateStrings[index]} 
+              <div
+                key={dateStrings[index]}
                 className={cn(
                   "bg-white rounded-xl border-2 overflow-hidden flex flex-col h-full",
                   isTodayColumn && isWithinRange ? "border-green-500 shadow-lg" : "border-gray-200",
@@ -1420,13 +1422,13 @@ function PlannerPageContent() {
                                     <p className="font-semibold">{schedule._expedition_dish_days.dishteam?.replace('Dish Team ', 'Dish ')}</p>
                                     <p>
                                       <span className="text-gray-500">Wash:</span>{' '}
-                                      {schedule._expedition_dish_days.wash?.filter((s: any) => s)?.length > 0 
+                                      {schedule._expedition_dish_days.wash?.filter((s: any) => s)?.length > 0
                                         ? schedule._expedition_dish_days.wash.filter((s: any) => s).map((s: any) => `${s.firstName || ''} ${s.lastName || ''}`.trim() || 'Unknown').join(', ')
                                         : <span className="text-gray-400">Not Assigned</span>}
                                     </p>
                                     <p>
                                       <span className="text-gray-500">Dry:</span>{' '}
-                                      {schedule._expedition_dish_days.dry?.filter((s: any) => s)?.length > 0 
+                                      {schedule._expedition_dish_days.dry?.filter((s: any) => s)?.length > 0
                                         ? schedule._expedition_dish_days.dry.filter((s: any) => s).map((s: any) => `${s.firstName || ''} ${s.lastName || ''}`.trim() || 'Unknown').join(', ')
                                         : <span className="text-gray-400">Not Assigned</span>}
                                     </p>
@@ -1486,7 +1488,7 @@ function PlannerPageContent() {
                                     <p className="font-semibold">{schedule._expeditions_galley_team.name?.replace('Galley Team ', 'Galley ')}</p>
                                     <p>
                                       <span className="text-gray-500">Students:</span>{' '}
-                                      {schedule._expeditions_galley_team.students_id?.filter((s: any) => s)?.length > 0 
+                                      {schedule._expeditions_galley_team.students_id?.filter((s: any) => s)?.length > 0
                                         ? schedule._expeditions_galley_team.students_id.filter((s: any) => s).map((s: any) => `${s.firstName || ''} ${s.lastName || ''}`.trim() || 'Unknown').join(', ')
                                         : <span className="text-gray-400">Not Assigned</span>}
                                     </p>
@@ -1508,7 +1510,7 @@ function PlannerPageContent() {
                               <TooltipProvider key={idx}>
                                 <Tooltip>
                                   <TooltipTrigger asChild>
-                                    <div 
+                                    <div
                                       className="h-5 w-5 rounded-full bg-orange-50 border border-orange-200 flex items-center justify-center text-[8px] font-medium text-orange-700 cursor-default"
                                     >
                                       {name.split(' ').map((n: string) => n[0]).join('')}
@@ -1538,10 +1540,10 @@ function PlannerPageContent() {
                         )}
                       </div>
                 </div>
-                
+
                 {/* Events List - scrollable with subtle scrollbar */}
                 <div className="flex-1 min-h-0 relative bg-gray-50">
-                  <div 
+                  <div
                     className="h-full overflow-y-auto p-2 space-y-1.5 scrollbar-thin"
                     ref={(el) => {
                       if (el) {
@@ -1714,8 +1716,8 @@ function PlannerPageContent() {
                                   </Avatar>
                                 )}
                                 <p className={`text-[10px] truncate ${
-                                  item._expedition_cookbook?.recipe_name || item.expedition_cookbook_id > 0 
-                                    ? 'text-gray-600' 
+                                  item._expedition_cookbook?.recipe_name || item.expedition_cookbook_id > 0
+                                    ? 'text-gray-600'
                                     : 'text-gray-400 italic'
                                 }`}>
                                   {item._expedition_cookbook?.recipe_name || (item.expedition_cookbook_id > 0 ? `Meal Plan #${item.expedition_cookbook_id}` : 'No Meal Plan')}
@@ -1730,13 +1732,13 @@ function PlannerPageContent() {
                   )}
                   </div>
                   {/* Bottom gradient when more content to scroll */}
-                  <div 
+                  <div
                     className={`absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-gray-50 to-transparent pointer-events-none transition-opacity ${
                       scrollGradients[index] !== false && sortedItems.length > 3 ? 'opacity-100' : 'opacity-0'
-                    }`} 
+                    }`}
                   />
                 </div>
-                
+
                 {/* Day Footer - Event Count */}
                 <div className="px-3 py-1.5 border-t bg-white text-[10px] text-gray-400 flex-shrink-0">
                   {isLoadingDay ? (
@@ -1764,7 +1766,7 @@ function PlannerPageContent() {
                   {selectedItem?.name || "Activity"}
                 </DialogTitle>
                 <DialogDescription className="text-base">
-                  {selectedItem?.time_in || selectedItem?.time_out 
+                  {selectedItem?.time_in || selectedItem?.time_out
                     ? `${formatMilitaryTime(selectedItem.time_in)} - ${formatMilitaryTime(selectedItem.time_out)}`
                     : "No time set"
                   }
@@ -1794,7 +1796,7 @@ function PlannerPageContent() {
                 </span>
               </div>
             </div>
-            
+
             {/* Led By */}
             <div>
               <p className="text-xs text-gray-400 mb-1">Led By</p>
@@ -1811,7 +1813,7 @@ function PlannerPageContent() {
                 <span className="text-sm text-gray-400">No leader assigned</span>
               )}
             </div>
-            
+
             {/* Participants (Staff) */}
             <div>
               <p className="text-xs text-gray-400 mb-1.5">Staff</p>
@@ -1896,9 +1898,9 @@ function PlannerPageContent() {
                 )}
               </div>
             )}
-            
+
             <div className="h-px bg-gray-200" />
-            
+
             {/* Address */}
             <div>
               <p className="text-xs text-gray-400 mb-1">Address</p>
@@ -1906,7 +1908,7 @@ function PlannerPageContent() {
                 {selectedItem?.address || <span className="text-gray-400">No address</span>}
               </p>
             </div>
-            
+
             {/* Things to Bring */}
             <div>
               <p className="text-xs text-gray-400 mb-1">Things to Bring</p>
@@ -1914,9 +1916,9 @@ function PlannerPageContent() {
                 {selectedItem?.things_to_bring || <span className="text-gray-400">Nothing to bring</span>}
               </p>
             </div>
-            
+
             <div className="h-px bg-gray-200" />
-            
+
             {/* Notes */}
             <div className="bg-gray-100 rounded-lg p-4 overflow-hidden">
               <p className="text-xs font-medium text-gray-500 mb-1">Notes</p>
@@ -1925,10 +1927,10 @@ function PlannerPageContent() {
               </p>
             </div>
           </div>
-          
+
           {/* Divider */}
           <div className="h-px bg-gray-200" />
-          
+
           {/* Footer */}
           <div className="bg-white px-6 py-4 flex justify-between">
             <div className="flex items-center gap-2">
@@ -1977,7 +1979,7 @@ function PlannerPageContent() {
           </div>
         </DialogContent>
       </Dialog>
-      
+
       {/* Delete Confirmation */}
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <AlertDialogContent>
@@ -1989,8 +1991,8 @@ function PlannerPageContent() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleting} className="cursor-pointer">Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleConfirmDelete} 
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
               className="bg-red-600 hover:bg-red-700 text-white cursor-pointer"
               disabled={deleting}
             >
@@ -2000,7 +2002,7 @@ function PlannerPageContent() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      
+
       {/* Add/Edit Activity Sheet */}
       <AddScheduleItemSheet
         open={addSheetOpen}

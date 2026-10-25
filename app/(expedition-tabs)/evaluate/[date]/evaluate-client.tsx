@@ -24,7 +24,6 @@ import {
   useExpeditionsProfessionalismByDate,
   useExpeditionBonus,
   useExpeditionPenalty,
-  useExpeditionJournalStatus,
 } from "@/lib/hooks/use-expeditions"
 import { updateExpeditionsProfessionalism, createExpeditionsProfessionalism, addStudentsToProfessionalism } from "@/lib/xano"
 import {
@@ -38,9 +37,24 @@ import {
 import { Users } from "lucide-react"
 import { mutate } from "swr"
 import type { ExpeditionProfessionalism } from "@/lib/types"
-import { isDateWithinExpeditionRange } from "@/lib/utils"
+import { isDateWithinExpeditionRange, clampDateToExpeditionRange, formatLocalDateString } from "@/lib/utils"
 import { useExpeditions } from "@/lib/hooks/use-expeditions"
 import { toast } from "sonner"
+import { journalNameFromStatus, journalStatusFromName } from "@/lib/journal-status"
+import {
+  BLOCK_FLAG_BY_KEY,
+  emptyReasons,
+  REASON_FIELD_BY_KEY,
+  SCORE_KEYS,
+  SCORE_LABELS,
+  needsReason,
+  readStoredReasons,
+  reasonMatchesScore,
+  reconcileReasons,
+  splitReasons,
+  visibleScoreKeys,
+  type ScoreKey,
+} from "@/lib/evaluation-reasons"
 
 interface EvaluateClientProps {
   date: string
@@ -51,10 +65,10 @@ export function EvaluateClient({ date, expeditionId }: EvaluateClientProps) {
   const router = useRouter()
   const { activeExpedition, userExpeditions } = useExpeditionContext()
   const { data: allExpeditionsData } = useExpeditions()
-  
+
   // Use expedition ID from URL if provided, otherwise fall back to active expedition
   const effectiveExpeditionId = expeditionId || activeExpedition?.id || null
-  
+
   // Find the expedition to display - prioritize URL parameter, fetch full data with term info
   const displayExpedition = useMemo(() => {
     if (expeditionId && allExpeditionsData) {
@@ -73,13 +87,12 @@ export function EvaluateClient({ date, expeditionId }: EvaluateClientProps) {
   const { data: allProfessionalism, isLoading: loadingProfessionalism } = useExpeditionsProfessionalismByDate(date, effectiveExpeditionId)
   const { data: bonusOptions = [], isLoading: loadingBonus } = useExpeditionBonus()
   const { data: penaltyOptions = [], isLoading: loadingPenalty } = useExpeditionPenalty()
-  const { data: journalStatusOptions = [], isLoading: loadingJournalStatus } = useExpeditionJournalStatus()
 
   const [localUpdates, setLocalUpdates] = useState<Record<number, Partial<ExpeditionProfessionalism>>>({})
   const [isNavigating, setIsNavigating] = useState(false)
   const [isLoadingStudents, setIsLoadingStudents] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  
+
   // Get current schedule by date
   const schedule = useMemo(() => {
     if (!schedules) return null
@@ -108,19 +121,28 @@ export function EvaluateClient({ date, expeditionId }: EvaluateClientProps) {
     const [year, month, day] = date.split('-').map(Number)
     setCurrentDate(new Date(year, month - 1, day))
   }, [date])
-  
+
+  const expeditionStartDate = displayExpedition?.startDate || displayExpedition?.start_date
+  const expeditionEndDate = displayExpedition?.endDate || displayExpedition?.end_date
+
   // Check if current date is within expedition range
   const isWithinExpeditionRange = useMemo(() => {
-    return isDateWithinExpeditionRange(
-      currentDate,
-      displayExpedition?.startDate || displayExpedition?.start_date,
-      displayExpedition?.endDate || displayExpedition?.end_date
-    )
-  }, [currentDate, displayExpedition])
+    return isDateWithinExpeditionRange(currentDate, expeditionStartDate, expeditionEndDate)
+  }, [currentDate, expeditionStartDate, expeditionEndDate])
+
+  // If the URL date falls outside the expedition, jump to its start date
+  // (or its end date once the expedition has passed).
+  useEffect(() => {
+    const clamped = clampDateToExpeditionRange(date, expeditionStartDate, expeditionEndDate)
+    if (clamped && clamped !== date) {
+      const url = effectiveExpeditionId ? `/evaluate/${clamped}?expedition=${effectiveExpeditionId}` : `/evaluate/${clamped}`
+      router.replace(url)
+    }
+  }, [date, expeditionStartDate, expeditionEndDate, effectiveExpeditionId, router])
 
   // When date changes, navigate to new date (preserve expedition ID)
   const handleDateChange = (newDate: Date) => {
-    const dateStr = newDate.toISOString().split('T')[0]
+    const dateStr = formatLocalDateString(newDate)
     if (dateStr !== date) {
       setIsNavigating(true)
       setLocalUpdates({})
@@ -141,11 +163,11 @@ export function EvaluateClient({ date, expeditionId }: EvaluateClientProps) {
   // Get students for this expedition
   const expeditionStudents = useMemo(() => {
     if (!students || !schedule) return []
-    
+
     const filtered = students.filter((s: any) => {
       if (Array.isArray(s.expeditions_id)) {
         // Check if array contains objects with id property or just numbers
-        return s.expeditions_id.some((exp: any) => 
+        return s.expeditions_id.some((exp: any) =>
           typeof exp === 'object' ? exp.id === schedule.expeditions_id : exp === schedule.expeditions_id
         )
       }
@@ -164,12 +186,6 @@ export function EvaluateClient({ date, expeditionId }: EvaluateClientProps) {
         (p: any) => p.students_id === student.id && p.expedition_schedule_id === scheduleId,
       )
 
-      // Map journaling string to journal_status_id
-      const journalingString = existing?.journaling || existing?.note || ""
-      const matchedJournalStatus = journalStatusOptions.find(
-        opt => opt.name.toLowerCase() === journalingString.toLowerCase()
-      )
-      
       const baseRecord: ExpeditionProfessionalism = existing
         ? {
             id: existing.id,
@@ -182,10 +198,12 @@ export function EvaluateClient({ date, expeditionId }: EvaluateClientProps) {
             service_learning: existing.service ?? existing.service_learning ?? null,
             isFlagged: existing.isFlagged ?? existing.is_flagged ?? false,
             isLocked: existing.isLocked ?? existing.is_locked ?? false,
-            bonuses: Array.isArray(existing.bonus) ? existing.bonus : (Array.isArray(existing.bonuses) ? existing.bonuses : []),
-            penalties: Array.isArray(existing.penalty) ? existing.penalty : (Array.isArray(existing.penalties) ? existing.penalties : []),
             note: existing.note ?? null, // Note is separate from journaling status
-            journal_status_id: matchedJournalStatus?.id ?? null,
+            // Stored as a journal status name; legacy "Late Entry" reads as Incomplete/Late, "Excused" as none
+            journaling: journalStatusFromName(existing.journaling),
+            // Per-category reason columns (academics_reason, job_reason, ...)
+            reasons: readStoredReasons(existing),
+            fitness: existing.fitness ?? null,
             // Boolean flags for disabling categories (true = disabled)
             isAcademicsUsed: existing.isAcademicsUsed ?? false,
             isJobUsed: existing.isJobUsed ?? false,
@@ -205,10 +223,10 @@ export function EvaluateClient({ date, expeditionId }: EvaluateClientProps) {
             service_learning: null,
             isFlagged: false,
             isLocked: false,
-            bonuses: [],
-            penalties: [],
             note: null,
-            journal_status_id: null,
+            journaling: null,
+            reasons: emptyReasons(),
+            fitness: null,
             // Boolean flags for disabling categories (default to false = enabled)
             isAcademicsUsed: false,
             isJobUsed: false,
@@ -226,19 +244,19 @@ export function EvaluateClient({ date, expeditionId }: EvaluateClientProps) {
 
       return baseRecord
     })
-  }, [expeditionStudents, allProfessionalism, scheduleId, localUpdates, journalStatusOptions])
+  }, [expeditionStudents, allProfessionalism, scheduleId, localUpdates])
 
   const isIncomplete = useCallback(
     (record: ExpeditionProfessionalism) => {
       // A record is incomplete only if it has NO scores entered at all
       // Categories that are disabled (isXUsed = true) are skipped
-      
+
       // Helper to check if a category needs a score
       const needsScore = (value: number | null, isDisabled: boolean | undefined) => {
         if (isDisabled) return false // Disabled categories don't need scores
         return value === null
       }
-      
+
       // Service Learning day (in port)
       if (!isOffshore && isService) {
         // At least one enabled category must have a score
@@ -271,6 +289,26 @@ export function EvaluateClient({ date, expeditionId }: EvaluateClientProps) {
     },
     [isOffshore, isService],
   )
+
+  // Score categories shown for this day type
+  const visibleKeys = useMemo(() => visibleScoreKeys(isOffshore, isService), [isOffshore, isService])
+
+  // Every visible, unblocked score above or below 3 must carry a matching reason
+  // before the day can be submitted. Locked and excluded students are not submitted.
+  const missingReasons = useMemo(() => {
+    const missing: Array<{ record: ExpeditionProfessionalism; key: ScoreKey }> = []
+    for (const record of records) {
+      if (record.isLocked || record.isFlagged) continue
+      for (const key of visibleKeys) {
+        const blocked = record[BLOCK_FLAG_BY_KEY[key]] === true
+        const score = record[key]
+        if (needsReason(score, blocked) && !reasonMatchesScore(record.reasons[key], score)) {
+          missing.push({ record, key })
+        }
+      }
+    }
+    return missing
+  }, [records, visibleKeys])
 
   const stats = useMemo(() => {
     return {
@@ -327,7 +365,7 @@ export function EvaluateClient({ date, expeditionId }: EvaluateClientProps) {
       toast.error("No expedition selected")
       return
     }
-    
+
     setIsLoadingStudents(true)
     try {
       await addStudentsToProfessionalism(date, effectiveExpeditionId)
@@ -344,21 +382,39 @@ export function EvaluateClient({ date, expeditionId }: EvaluateClientProps) {
   const handleSubmitScores = async () => {
     // Get all unlocked, non-flagged records (submit even if values are null - use default of 3)
     const recordsToSubmit = records.filter((r) => !r.isLocked && !r.isFlagged)
-    
+
     if (recordsToSubmit.length === 0) return
 
+    if (missingReasons.length > 0) {
+      const where = Array.from(
+        new Set(missingReasons.map((m) => `${m.record._students?.firstName || "Student"}: ${SCORE_LABELS[m.key]}`))
+      )
+      toast.error("Choose a reason for every score above or below 3", {
+        description: where.slice(0, 6).join(", ") + (where.length > 6 ? ", …" : ""),
+      })
+      return
+    }
+
     setIsSubmitting(true)
-    
+
     try {
       for (const record of recordsToSubmit) {
         // Only submit scores for categories that are visible based on day type
         // Offshore: crew, citizenship (+ service if service day)
         // Anchored: school, job, citizenship (+ service if service day)
-        
-        // Get the journal status name from the selected ID
-        const selectedJournalStatus = journalStatusOptions.find(opt => opt.id === record.journal_status_id)
-        const journalingValue = selectedJournalStatus?.name || ""
-        
+
+        // Journaling is stored as the journal status name ("Completed", "Incomplete", "Not Started" or "")
+        const journalingValue = journalNameFromStatus(record.journaling)
+
+        // Reasons for each visible, unblocked category scored off 3; everything else is cleared.
+        // The legacy bonus / penalty arrays mirror the chosen reasons for older readers.
+        const submittedReasons = emptyReasons()
+        for (const key of visibleKeys) {
+          const blocked = record[BLOCK_FLAG_BY_KEY[key]] === true
+          submittedReasons[key] = blocked ? [] : reconcileReasons(record.reasons[key], record[key])
+        }
+        const { bonus, penalty } = splitReasons(submittedReasons)
+
         const data: Record<string, any> = {
           expedition_schedule_id: record.expedition_schedule_id,
           expeditions_id: effectiveExpeditionId || 0,
@@ -369,9 +425,11 @@ export function EvaluateClient({ date, expeditionId }: EvaluateClientProps) {
           isCitizenshipUsed: record.isCitizenshipUsed ?? false,
           isFlagged: record.isFlagged,
           isLocked: true, // Lock on submit
-          bonus: record.bonuses || [],
-          penalty: record.penalties || [],
+          bonus,
+          penalty,
           journaling: journalingValue,
+          // Fitness for the expedition award: 100 = complete, 0 = incomplete, null = not applicable
+          fitness: record.fitness ?? null,
         }
 
         if (isOffshore) {
@@ -394,6 +452,10 @@ export function EvaluateClient({ date, expeditionId }: EvaluateClientProps) {
           // Don't submit crew on anchored days
           data.crew = null
           data.isCrewUsed = false
+        }
+
+        for (const key of SCORE_KEYS) {
+          data[REASON_FIELD_BY_KEY[key]] = submittedReasons[key]
         }
 
         if (isService) {
@@ -442,8 +504,7 @@ export function EvaluateClient({ date, expeditionId }: EvaluateClientProps) {
     loadingStudents ||
     loadingProfessionalism ||
     loadingBonus ||
-    loadingPenalty ||
-    loadingJournalStatus
+    loadingPenalty
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -453,15 +514,15 @@ export function EvaluateClient({ date, expeditionId }: EvaluateClientProps) {
         <div className="container mx-auto px-4 py-4">
           <div className="flex flex-row items-center gap-4 justify-between flex-wrap lg:flex-nowrap">
             {/* Date Navigation */}
-            <DateNavigation 
-              date={currentDate} 
+            <DateNavigation
+              date={currentDate}
               onDateChange={handleDateChange}
               isOffshore={isOffshore}
               isService={isService}
               size="large"
               isLoading={isLoading || !schedule}
-              expeditionStartDate={schedule?._expeditions?.startDate}
-              expeditionEndDate={schedule?._expeditions?.endDate}
+              expeditionStartDate={expeditionStartDate || schedule?._expeditions?.startDate}
+              expeditionEndDate={expeditionEndDate || schedule?._expeditions?.endDate}
             />
 
             {/* Stats & Actions */}
@@ -526,12 +587,20 @@ export function EvaluateClient({ date, expeditionId }: EvaluateClientProps) {
               >
                 <Unlock className="h-4 w-4" />
               </Button>
+              {missingReasons.length > 0 && !isNavigating && !loadingProfessionalism && (
+                <span
+                  className="hidden md:inline-flex h-10 items-center rounded-md border border-amber-300 bg-amber-50 px-2.5 text-xs font-medium text-amber-800 whitespace-nowrap"
+                  title="Every score above or below 3 needs a reason before submitting"
+                >
+                  {missingReasons.length} reason{missingReasons.length === 1 ? "" : "s"} needed
+                </span>
+              )}
               <Button
                 size="default"
-                disabled={submitCount === 0 || isNavigating || isSubmitting || !isWithinExpeditionRange || !allProfessionalism || allProfessionalism.length === 0 || loadingProfessionalism}
+                disabled={submitCount === 0 || isNavigating || isSubmitting || !isWithinExpeditionRange || !allProfessionalism || allProfessionalism.length === 0 || loadingProfessionalism || missingReasons.length > 0}
                 onClick={handleSubmitScores}
                 className="cursor-pointer h-10 px-4"
-                title={!isWithinExpeditionRange ? "Outside expedition date range" : (!allProfessionalism || allProfessionalism.length === 0) ? "No students loaded" : "Submit professionalism scores"}
+                title={!isWithinExpeditionRange ? "Outside expedition date range" : (!allProfessionalism || allProfessionalism.length === 0) ? "No students loaded" : missingReasons.length > 0 ? `Choose a reason for every score above or below 3 (${missingReasons.length} missing)` : "Submit professionalism scores"}
               >
                 {isSubmitting ? (
                   <>
@@ -614,7 +683,7 @@ export function EvaluateClient({ date, expeditionId }: EvaluateClientProps) {
               </EmptyDescription>
             </EmptyHeader>
             <EmptyContent>
-              <Button 
+              <Button
                 onClick={handleLoadStudents}
                 disabled={isLoadingStudents}
                 className="cursor-pointer"
@@ -641,7 +710,6 @@ export function EvaluateClient({ date, expeditionId }: EvaluateClientProps) {
                 record={record}
                 bonusOptions={bonusOptions}
                 penaltyOptions={penaltyOptions}
-                journalStatusOptions={journalStatusOptions}
                 isOffshore={isOffshore}
                 isService={isService}
                 onUpdate={handleUpdateRecord}

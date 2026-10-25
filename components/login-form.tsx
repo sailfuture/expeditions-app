@@ -33,7 +33,7 @@ export function LoginForm({
   const handleGoogleSignIn = async () => {
     setIsLoading(true)
     try {
-      await signIn("google", { callbackUrl: "/expeditions" })
+      await signIn("google", { callbackUrl: "/home" })
     } catch (error) {
       console.error("Sign in error:", error)
       toast.error("Failed to sign in. Please try again.")

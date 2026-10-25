@@ -22,7 +22,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { generatePerformanceReviewPDF } from "@/lib/pdf-generator"
 import { toast } from "sonner"
-import { getProfessionalismByStudentAndDate, createPerformanceReview, updatePerformanceReviewNotes, getPerformanceReviewById, deletePerformanceReview, getExpeditionTransactionsByDateByStudent, getEvaluationByStudent, getStudentById, getExpeditionPerformanceReviews, setPerformanceReviewIsFinal } from "@/lib/xano"
+import { getProfessionalismByStudentAndDate, createPerformanceReview, updatePerformanceReviewNotes, getPerformanceReviewById, deletePerformanceReview, getEvaluationByStudent, getStudentById, getExpeditionPerformanceReviews, setPerformanceReviewIsFinal } from "@/lib/xano"
 import { Spinner } from "@/components/ui/spinner"
 import { mutate } from "swr"
 import {
@@ -45,7 +45,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
-import { Calendar as CalendarComponent } from "@/components/ui/calendar"
+import { ExpeditionCalendar } from "@/components/expedition-calendar"
 import {
   Popover,
   PopoverContent,
@@ -108,9 +108,9 @@ function formatRelativeTime(timestamp: number | null) {
 }
 
 // Component to preview a performance review with scores
-function PreviewModal({ 
-  reviewId, 
-  open, 
+function PreviewModal({
+  reviewId,
+  open,
   onOpenChange,
   notes,
   onNotesChange,
@@ -120,7 +120,7 @@ function PreviewModal({
   onSave,
   saving,
   expeditionStartDate
-}: { 
+}: {
   reviewId: number | null
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -149,7 +149,7 @@ function PreviewModal({
       }
     }
   )
-  
+
   // Fetch student details to get parent contact info
   const { data: studentDetails } = useSWR(
     open && review?.students_id ? `student_details_${review.students_id}` : null,
@@ -247,7 +247,7 @@ function PreviewModal({
         )
       : null
   )
-  
+
   // Fetch student evaluation summary (same as Student Evaluations table on expedition page)
   const { data: studentEvaluation, isLoading: loadingStudentEvaluation } = useSWR(
     open && review?.students_id && review?.expeditions_id
@@ -257,7 +257,7 @@ function PreviewModal({
       ? () => getEvaluationByStudent(review.students_id, review.expeditions_id)
       : null
   )
-  
+
   // Use the student evaluation data (same as expedition overview table)
   const displayAverages = useMemo(() => {
     if (studentEvaluation) {
@@ -280,7 +280,7 @@ function PreviewModal({
       journaling: review?.journaling
     }
   }, [studentEvaluation, review])
-  
+
   // Helper to get evaluation text based on score
   const getEvaluationText = (score: number | null | undefined) => {
     if (score === null || score === undefined) return '—'
@@ -307,7 +307,7 @@ function PreviewModal({
     if (normalized >= 70) return { label: 'Sat', color: 'text-green-700', bg: 'bg-green-50', isPassing: true }
     return { label: 'Unsat', color: 'text-red-700', bg: 'bg-red-50', isPassing: false }
   }
-  
+
   const getJournalingEvaluation = (pct: number | null | undefined) => {
     if (pct === null || pct === undefined) return '—'
     const normalizedPct = pct <= 1 ? pct : pct / 100
@@ -315,32 +315,7 @@ function PreviewModal({
     if (normalizedPct >= 0.9) return 'Exceptional'
     return 'Proficient'
   }
-  
-  // Fetch bonuses and penalties for this student and date range
-  const { data: transactions, isLoading: loadingTransactions } = useSWR(
-    open && review?.students_id && review?.expeditions_id && review?.startDate && review?.endDate
-      ? `transactions_${review.students_id}_${review.expeditions_id}_${review.startDate}_${review.endDate}`
-      : null,
-    open && review?.students_id && review?.expeditions_id && review?.startDate && review?.endDate
-      ? () => getExpeditionTransactionsByDateByStudent(
-          review.students_id,
-          review.expeditions_id,
-          review.startDate,
-          review.endDate
-        )
-      : null
-  )
-  
-  // Separate bonuses (positive) and penalties (negative) from transactions, excluding store Purchases
-  const { bonuses, penalties } = useMemo(() => {
-    if (!transactions || !Array.isArray(transactions)) return { bonuses: [], penalties: [] }
-    // Filter out store purchases, then split by positive/negative amount
-    const nonPurchases = transactions.filter((t: any) => t.transaction !== 'Purchase')
-    const bonusList = nonPurchases.filter((t: any) => t.amount > 0)
-    const penaltyList = nonPurchases.filter((t: any) => t.amount < 0)
-    return { bonuses: bonusList, penalties: penaltyList }
-  }, [transactions])
-  
+
   const getEvaluationColorByScore = (score: number | null | undefined) => {
     if (score === null || score === undefined) return ""
     if (score >= 3.21) return "bg-blue-50"
@@ -349,19 +324,19 @@ function PreviewModal({
     if (score >= 1.1) return "bg-red-50"
     return "bg-gray-50"
   }
-  
+
   const getJournalColor = (percentage: number | null | undefined) => {
     if (percentage === null || percentage === undefined) return ""
     if (percentage < 70) return "bg-red-50"
     if (percentage >= 90) return "bg-blue-50"
     return "bg-green-50"
   }
-  
+
   if (!reviewId) return null
-  
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent 
+      <DialogContent
         className="w-full sm:max-w-3xl max-h-[90vh] flex flex-col overflow-hidden"
       >
         <DialogHeader>
@@ -385,7 +360,7 @@ function PreviewModal({
           </div>
         ) : review ? (
           <>
-            
+
             <div className="flex-1 overflow-y-auto space-y-6">
           {/* Expedition Summary - only for final evaluations */}
           {review?.is_final && expeditionStats && (
@@ -573,8 +548,8 @@ function PreviewModal({
                   <TableRow className={getJournalColor(displayAverages.journaling !== null && displayAverages.journaling !== undefined ? (displayAverages.journaling <= 1 ? displayAverages.journaling * 100 : displayAverages.journaling) : null)}>
                     <TableCell className="px-3 py-2 font-medium text-gray-700 text-sm">Journaling</TableCell>
                     <TableCell className="px-3 py-2 text-center text-gray-700 text-sm">
-                      {displayAverages.journaling !== null && displayAverages.journaling !== undefined 
-                        ? `${(displayAverages.journaling <= 1 ? displayAverages.journaling * 100 : displayAverages.journaling).toFixed(2)}%` 
+                      {displayAverages.journaling !== null && displayAverages.journaling !== undefined
+                        ? `${(displayAverages.journaling <= 1 ? displayAverages.journaling * 100 : displayAverages.journaling).toFixed(2)}%`
                         : '—'}
                     </TableCell>
                     <TableCell className="px-3 py-2 text-gray-600 text-sm">
@@ -660,66 +635,6 @@ function PreviewModal({
           </div>
           )}
 
-          {/* Daily Transaction History Table - hidden for final evaluation */}
-          {!review?.is_final && (
-          <div>
-            <h3 className="text-sm font-semibold text-gray-700 mb-3">Daily Transaction History</h3>
-            {loadingTransactions ? (
-              <div className="flex justify-center py-4">
-                <Spinner size="sm" />
-              </div>
-            ) : (bonuses.length > 0 || penalties.length > 0) ? (
-              (() => {
-                const allTransactions = [...bonuses, ...penalties].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-                const total = allTransactions.reduce((sum, t) => sum + (t.amount || 0), 0)
-                return (
-                  <div className="border rounded-lg overflow-hidden">
-                    <div className="overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow className="border-b bg-gray-50 hover:bg-gray-50">
-                            <TableHead className="h-10 px-3 text-xs font-semibold text-gray-600">Date</TableHead>
-                            <TableHead className="h-10 px-3 text-xs font-semibold text-gray-600">Type</TableHead>
-                            <TableHead className="h-10 px-3 text-xs font-semibold text-gray-600 text-right">Amount</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {allTransactions.map((transaction: any, idx: number) => {
-                            const isBonus = transaction.transaction === 'Bonus' || transaction.amount > 0
-                            return (
-                              <TableRow key={transaction.id || idx} className="border-b">
-                                <TableCell className="px-3 py-2 text-sm text-gray-700">
-                                  {formatDateShort(transaction.date)}
-                                </TableCell>
-                                <TableCell className="px-3 py-2 text-sm text-gray-600">
-                                  {transaction.transaction || '—'}
-                                </TableCell>
-                                <TableCell className={`px-3 py-2 text-sm text-right font-medium ${isBonus ? 'text-green-600' : 'text-red-600'}`}>
-                                  {isBonus ? '+' : ''}{transaction.amount || 0}
-                                </TableCell>
-                              </TableRow>
-                            )
-                          })}
-                          <TableRow className="bg-gray-50 border-t-2">
-                            <TableCell colSpan={2} className="px-3 py-2 text-sm font-semibold text-gray-900">
-                              Total
-                            </TableCell>
-                            <TableCell className={`px-3 py-2 text-sm text-right font-bold ${total >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                              {total >= 0 ? '+' : ''}{total}
-                            </TableCell>
-                          </TableRow>
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </div>
-                )
-              })()
-            ) : (
-              <p className="text-sm text-gray-500 text-center py-4">No transactions for this period.</p>
-            )}
-          </div>
-          )}
-
           {/* Notes Section */}
           <div>
             <Label htmlFor="notes" className="text-sm font-semibold text-gray-700">{review?.is_final ? "Narrative Feedback" : "Notes"}</Label>
@@ -731,7 +646,7 @@ function PreviewModal({
               className="mt-2 min-h-[120px]"
             />
           </div>
-          
+
           {/* Staff Selection */}
           <div>
             <Label htmlFor="staff" className="text-sm font-semibold text-gray-700">Reviewed By</Label>
@@ -749,7 +664,7 @@ function PreviewModal({
             </Select>
           </div>
         </div>
-        
+
         <DialogFooter className="flex-shrink-0">
           <Button
             variant="outline"
@@ -804,11 +719,16 @@ function PerformanceReviewsContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const expeditionId = searchParams.get('expedition') ? parseInt(searchParams.get('expedition')!) : null
-  
+
   const { data: allExpeditions } = useExpeditions()
   const { data: performanceReviews, isLoading } = useExpeditionPerformanceReviews(expeditionId)
+  // The expedition whose reviews are shown; its date range bounds every date picker below
+  const expedition = useMemo(
+    () => (allExpeditions && expeditionId ? allExpeditions.find((e: any) => e.id === expeditionId) : null),
+    [allExpeditions, expeditionId]
+  )
   const { data: staff } = useTeachersByExpedition(expeditionId)
-  
+
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [reportName, setReportName] = useState("")
   const [startDate, setStartDate] = useState<Date | undefined>(undefined)
@@ -824,35 +744,35 @@ function PerformanceReviewsContent() {
   const [finalStartDateOpen, setFinalStartDateOpen] = useState(false)
   const [finalEndDateOpen, setFinalEndDateOpen] = useState(false)
   const [creatingFinal, setCreatingFinal] = useState(false)
-  
+
   const [previewModalOpen, setPreviewModalOpen] = useState(false)
   const [selectedReviewId, setSelectedReviewId] = useState<number | null>(null)
   const [editedNotes, setEditedNotes] = useState("")
   const [selectedStaffId, setSelectedStaffId] = useState("")
   const [savingNotes, setSavingNotes] = useState(false)
-  
+
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [reviewToDelete, setReviewToDelete] = useState<any>(null)
   const [deleting, setDeleting] = useState(false)
-  
+
   // Find the expedition to display
   const displayExpedition = useMemo(() => {
     if (!expeditionId || !allExpeditions) return null
     return allExpeditions.find((e: any) => e.id === expeditionId)
   }, [expeditionId, allExpeditions])
-  
+
   const handleCreateReview = async () => {
     if (!reportName || !startDate || !endDate || !expeditionId) {
       toast.error("Please fill in all fields")
       return
     }
-    
+
     setCreating(true)
     try {
       // Format dates as YYYY-MM-DD
       const formattedStartDate = format(startDate, 'yyyy-MM-dd')
       const formattedEndDate = format(endDate, 'yyyy-MM-dd')
-      
+
       // Call API to create performance review
       await createPerformanceReview({
         expeditions_id: expeditionId,
@@ -860,13 +780,13 @@ function PerformanceReviewsContent() {
         startDate: formattedStartDate,
         endDate: formattedEndDate,
       })
-      
+
       toast.success("Performance review created")
       setCreateDialogOpen(false)
       setReportName("")
       setStartDate(undefined)
       setEndDate(undefined)
-      
+
       // Refresh data
       await mutate(`expedition_performance_reviews_${expeditionId}`)
     } catch (error) {
@@ -876,7 +796,7 @@ function PerformanceReviewsContent() {
       setCreating(false)
     }
   }
-  
+
   const handleCreateFinalEvaluation = async () => {
     if (!finalStartDate || !finalEndDate || !expeditionId) {
       toast.error("Please fill in start and end dates")
@@ -950,10 +870,10 @@ function PerformanceReviewsContent() {
     setSelectedStaffId(staffId ? staffId.toString() : "")
     setPreviewModalOpen(true)
   }
-  
+
   const handleSaveNotes = async () => {
     if (!selectedReviewId) return
-    
+
     setSavingNotes(true)
     try {
       const staffId = selectedStaffId ? parseInt(selectedStaffId) : undefined
@@ -969,15 +889,15 @@ function PerformanceReviewsContent() {
       setSavingNotes(false)
     }
   }
-  
+
   const handleDeleteClick = (review: any) => {
     setReviewToDelete(review)
     setDeleteConfirmOpen(true)
   }
-  
+
   const handleConfirmDelete = async () => {
     if (!reviewToDelete) return
-    
+
     setDeleting(true)
     try {
       await deletePerformanceReview(reviewToDelete.id)
@@ -992,7 +912,7 @@ function PerformanceReviewsContent() {
       setDeleting(false)
     }
   }
-  
+
   // Group ALL reviews (regular + final) by student and sort students alphabetically
   const groupedReviews = useMemo(() => {
     if (!performanceReviews) return {}
@@ -1013,7 +933,7 @@ function PerformanceReviewsContent() {
 
     return Object.fromEntries(sortedEntries)
   }, [performanceReviews])
-  
+
   if (!expeditionId) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -1102,19 +1022,19 @@ function PerformanceReviewsContent() {
               if (!a.created_at || !b.created_at) return 0
               return a.created_at - b.created_at
             })
-            
+
             // Get student info from first review
             const student = sortedReviews[0]?._students
             const studentName = `${student?.firstName || ""} ${student?.lastName || ""}`.trim() || `Student ${studentId}`
-            
+
             return (
               <div key={studentId} className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
                 <div className="px-6 py-4 border-b bg-gray-50/50">
                   <div className="flex items-center gap-3">
                     <Avatar className="h-10 w-10">
-                      <AvatarImage 
-                        src={student?.profileImage || student?.photo_url} 
-                        alt={studentName} 
+                      <AvatarImage
+                        src={student?.profileImage || student?.photo_url}
+                        alt={studentName}
                       />
                       <AvatarFallback className="text-sm bg-gray-200 text-gray-600">
                         {studentName?.split(" ").map((n: string) => n[0]).join("")}
@@ -1126,7 +1046,7 @@ function PerformanceReviewsContent() {
                     </div>
                   </div>
                 </div>
-                
+
                 <Table>
                   <TableHeader>
                     <TableRow className="border-b bg-gray-50/30 hover:bg-gray-50/30">
@@ -1139,7 +1059,7 @@ function PerformanceReviewsContent() {
                   </TableHeader>
                   <TableBody>
                     {sortedReviews.map((review: any) => (
-                      <TableRow 
+                      <TableRow
                         key={review.id}
                         className="border-b last:border-0 hover:bg-gray-50/50"
                       >
@@ -1208,7 +1128,7 @@ function PerformanceReviewsContent() {
           </>
         )}
       </main>
-      
+
       {/* Preview Modal */}
       {selectedReviewId && (
         <PreviewModal
@@ -1230,7 +1150,7 @@ function PerformanceReviewsContent() {
           expeditionStartDate={displayExpedition?.startDate || displayExpedition?.start_date}
         />
       )}
-      
+
       {/* Create Review Dialog */}
       <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
@@ -1240,7 +1160,7 @@ function PerformanceReviewsContent() {
               Create a new performance review for all students in this expedition.
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="report-name">Report Name</Label>
@@ -1251,7 +1171,7 @@ function PerformanceReviewsContent() {
                 onChange={(e) => setReportName(e.target.value)}
               />
             </div>
-            
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Start Date</Label>
@@ -1266,9 +1186,11 @@ function PerformanceReviewsContent() {
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
-                    <CalendarComponent
+                    <ExpeditionCalendar
                       mode="single"
                       selected={startDate}
+                      expeditionStartDate={expedition?.startDate}
+                      expeditionEndDate={expedition?.endDate}
                       onSelect={(date) => {
                         setStartDate(date)
                         setStartDateOpen(false)
@@ -1278,7 +1200,7 @@ function PerformanceReviewsContent() {
                   </PopoverContent>
                 </Popover>
               </div>
-              
+
               <div className="space-y-2">
                 <Label>End Date</Label>
                 <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
@@ -1292,9 +1214,11 @@ function PerformanceReviewsContent() {
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
-                    <CalendarComponent
+                    <ExpeditionCalendar
                       mode="single"
                       selected={endDate}
+                      expeditionStartDate={expedition?.startDate}
+                      expeditionEndDate={expedition?.endDate}
                       onSelect={(date) => {
                         setEndDate(date)
                         setEndDateOpen(false)
@@ -1307,17 +1231,17 @@ function PerformanceReviewsContent() {
               </div>
             </div>
           </div>
-          
+
           <DialogFooter>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => setCreateDialogOpen(false)}
               disabled={creating}
               className="cursor-pointer"
             >
               Cancel
             </Button>
-            <Button 
+            <Button
               onClick={handleCreateReview}
               disabled={creating || !reportName || !startDate || !endDate}
               className="cursor-pointer"
@@ -1357,9 +1281,11 @@ function PerformanceReviewsContent() {
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
-                    <CalendarComponent
+                    <ExpeditionCalendar
                       mode="single"
                       selected={finalStartDate}
+                      expeditionStartDate={expedition?.startDate}
+                      expeditionEndDate={expedition?.endDate}
                       onSelect={(date) => { setFinalStartDate(date); setFinalStartDateOpen(false) }}
                       initialFocus
                     />
@@ -1377,9 +1303,11 @@ function PerformanceReviewsContent() {
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
-                    <CalendarComponent
+                    <ExpeditionCalendar
                       mode="single"
                       selected={finalEndDate}
+                      expeditionStartDate={expedition?.startDate}
+                      expeditionEndDate={expedition?.endDate}
                       onSelect={(date) => { setFinalEndDate(date); setFinalEndDateOpen(false) }}
                       initialFocus
                       disabled={(date) => finalStartDate ? date < finalStartDate : false}

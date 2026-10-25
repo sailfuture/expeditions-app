@@ -77,7 +77,7 @@ import { useCurrentUser } from "@/lib/contexts/user-context"
 import { useExpeditionContext } from "@/lib/contexts/expedition-context"
 import useSWR, { mutate } from "swr"
 import { toast } from "sonner"
-import { isDateWithinExpeditionRange, getPhotoUrl } from "@/lib/utils"
+import { isDateWithinExpeditionRange, clampDateToExpeditionRange, formatLocalDateString, getPhotoUrl } from "@/lib/utils"
 
 interface ScheduleViewClientProps {
   date: string
@@ -308,31 +308,34 @@ export function ScheduleViewClient({ date, expeditionId }: ScheduleViewClientPro
     return new Date(year, month - 1, day)
   }, [date])
   
+  const expeditionStartDate = displayExpedition?.startDate || displayExpedition?.start_date
+  const expeditionEndDate = displayExpedition?.endDate || displayExpedition?.end_date
+
   // Check if current date is within expedition range
   const isWithinExpeditionRange = useMemo(() => {
-    return isDateWithinExpeditionRange(
-      currentDate,
-      displayExpedition?.startDate || displayExpedition?.start_date,
-      displayExpedition?.endDate || displayExpedition?.end_date
-    )
-  }, [currentDate, displayExpedition])
+    return isDateWithinExpeditionRange(currentDate, expeditionStartDate, expeditionEndDate)
+  }, [currentDate, expeditionStartDate, expeditionEndDate])
 
-  const goToPrevDay = () => {
-    const newDate = new Date(currentDate)
-    newDate.setDate(newDate.getDate() - 1)
-    const dateStr = newDate.toISOString().split('T')[0]
-    router.push(`/schedule/${dateStr}`)
-  }
+  // If the URL date falls outside the expedition, jump to its start date
+  // (or its end date once the expedition has passed).
+  useEffect(() => {
+    const clamped = clampDateToExpeditionRange(date, expeditionStartDate, expeditionEndDate)
+    if (clamped && clamped !== date) {
+      const url = effectiveExpeditionId ? `/schedule/${clamped}?expedition=${effectiveExpeditionId}` : `/schedule/${clamped}`
+      router.replace(url)
+    }
+  }, [date, expeditionStartDate, expeditionEndDate, effectiveExpeditionId, router])
 
-  const goToNextDay = () => {
-    const newDate = new Date(currentDate)
-    newDate.setDate(newDate.getDate() + 1)
-    const dateStr = newDate.toISOString().split('T')[0]
-    router.push(`/schedule/${dateStr}`)
-  }
+  // Mobile prev/next buttons, clamped to the expedition range
+  const prevDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate() - 1)
+  const nextDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate() + 1)
+  const canGoPrev = isDateWithinExpeditionRange(prevDay, expeditionStartDate, expeditionEndDate)
+  const canGoNext = isDateWithinExpeditionRange(nextDay, expeditionStartDate, expeditionEndDate)
+  const goToPrevDay = () => { if (canGoPrev) handleDateChange(prevDay) }
+  const goToNextDay = () => { if (canGoNext) handleDateChange(nextDay) }
 
   const handleDateChange = (newDate: Date) => {
-    const dateStr = newDate.toISOString().split('T')[0]
+    const dateStr = formatLocalDateString(newDate)
     const url = effectiveExpeditionId ? `/schedule/${dateStr}?expedition=${effectiveExpeditionId}` : `/schedule/${dateStr}`
     router.push(url)
   }
@@ -676,8 +679,8 @@ export function ScheduleViewClient({ date, expeditionId }: ScheduleViewClientPro
               isService={schedule?.isService || schedule?.is_service || false}
               size="large"
               isLoading={isLoadingSchedules || !schedule}
-              expeditionStartDate={schedule?._expeditions?.startDate}
-              expeditionEndDate={schedule?._expeditions?.endDate}
+              expeditionStartDate={expeditionStartDate || schedule?._expeditions?.startDate}
+              expeditionEndDate={expeditionEndDate || schedule?._expeditions?.endDate}
             />
 
             {/* Actions */}
@@ -1351,6 +1354,7 @@ export function ScheduleViewClient({ date, expeditionId }: ScheduleViewClientPro
             variant="outline"
             size="icon"
             onClick={goToPrevDay}
+            disabled={!canGoPrev}
             className="h-12 w-12 rounded-full"
           >
             <ChevronLeft className="h-6 w-6" />
@@ -1368,6 +1372,7 @@ export function ScheduleViewClient({ date, expeditionId }: ScheduleViewClientPro
             variant="outline"
             size="icon"
             onClick={goToNextDay}
+            disabled={!canGoNext}
             className="h-12 w-12 rounded-full"
           >
             <ChevronRight className="h-6 w-6" />

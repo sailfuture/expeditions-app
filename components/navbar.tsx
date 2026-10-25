@@ -20,7 +20,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { ChevronDown, LogOut, Menu, Ship, Users, UserCog, ClipboardList, FileText, Tv, Calendar, BookOpen, ExternalLink, Boxes, ChefHat, MapPin, Shirt, BedDouble, Package, Utensils } from "lucide-react"
+import { ChevronDown, LayoutDashboard, LogOut, Menu, Ship, Users, UserCog, ClipboardList, FileText, Tv, Calendar, BookOpen, ExternalLink, Boxes, ChefHat, MapPin, Shirt, BedDouble, Package, Utensils } from "lucide-react"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -111,7 +111,7 @@ export function Navbar() {
       <div className="border-b">
         <div className="container mx-auto flex h-14 items-center px-4 gap-4 sm:gap-6">
           {/* Logo */}
-          <Link href={hasMounted && currentUser?.role === "Admin" ? "/expeditions" : "/my-expeditions"} className="flex items-center gap-2 cursor-pointer flex-shrink-0">
+          <Link href="/home" className="flex items-center gap-2 cursor-pointer flex-shrink-0">
             <div className="h-9 w-9 rounded-full overflow-hidden">
               <Image
                 src="/sailfuture-square (8).webp"
@@ -123,7 +123,20 @@ export function Navbar() {
             </div>
           </Link>
 
-          {/* Primary expeditions link — always visible, sits next to the logo */}
+          {/* Dashboard (post-login landing) + expeditions list — always visible, next to the logo */}
+          {hasMounted && (
+            <Link
+              href="/home"
+              className={cn(
+                navigationMenuTriggerStyle(),
+                "cursor-pointer flex-shrink-0 bg-gray-100 hover:bg-gray-200",
+                pathname === "/home" && "text-foreground",
+              )}
+            >
+              <LayoutDashboard className="h-4 w-4 sm:mr-1.5" />
+              <span className="hidden sm:inline">Dashboard</span>
+            </Link>
+          )}
           {hasMounted && (
             currentUser?.role === "Admin" ? (
               <Link
@@ -363,6 +376,13 @@ export function Navbar() {
                       }
                     }}
                   >
+                    <Link
+                      href="/home"
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium hover:bg-accent transition-colors"
+                    >
+                      <LayoutDashboard className="h-4 w-4 text-muted-foreground" />
+                      Dashboard
+                    </Link>
                     <Link
                       href="/expeditions"
                       className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium hover:bg-accent transition-colors"

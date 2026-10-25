@@ -37,7 +37,9 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className={fontSans.variable}>
+    // Browser extensions add attributes to <html> before React hydrates
+    // (e.g. data-brext-fragno); ignore attribute mismatches on this one element.
+    <html lang="en" className={fontSans.variable} suppressHydrationWarning>
       <body className="antialiased">
         <Providers>
           <Suspense fallback={<div className="h-16 bg-white border-b" />}>

@@ -34,7 +34,7 @@ import {
   useActiveExpedition,
 } from "@/lib/hooks/use-expeditions"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Calendar as CalendarComponent } from "@/components/ui/calendar"
+import { ExpeditionCalendar, expeditionDateBounds, isOutsideExpedition } from "@/components/expedition-calendar"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { getPhotoUrl } from "@/lib/utils"
 
@@ -95,18 +95,18 @@ const getTodayDateString = () => {
 
 export default function PublicScheduleTodayPage() {
   const router = useRouter()
-  
+
   // Use today's date
   const currentDateStr = getTodayDateString()
-  
+
   const [calendarOpen, setCalendarOpen] = useState(false)
   const [selectedItem, setSelectedItem] = useState<any>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
-  
+
   // Meal Plan Sheet state
   const [mealPlanSheetOpen, setMealPlanSheetOpen] = useState(false)
   const [selectedRecipeId, setSelectedRecipeId] = useState<number | null>(null)
-  
+
   // Meal Plan data fetching
   const XANO_COOKBOOK_URL = "https://xsc3-mvx7-r86m.n7e.xano.io/api:bXFdqx8y"
   const recipeFetcher = (url: string) => fetch(url).then((res) => res.json())
@@ -114,7 +114,7 @@ export default function PublicScheduleTodayPage() {
     selectedRecipeId ? `${XANO_COOKBOOK_URL}/expedition_cookbook/${selectedRecipeId}` : null,
     recipeFetcher
   )
-  
+
   const handleMealPlanClick = (recipeId: number) => {
     setSelectedRecipeId(recipeId)
     setMealPlanSheetOpen(true)
@@ -137,7 +137,17 @@ export default function PublicScheduleTodayPage() {
   }, [currentDateStr])
 
   // Navigate to date-specific pages when arrows are clicked
+  // Previous / next day stay inside the expedition; both are off until its dates are known
+  const expeditionBounds = expeditionDateBounds(activeExpedition?.startDate, activeExpedition?.endDate)
+  const prevDate = new Date(currentDate)
+  prevDate.setDate(prevDate.getDate() - 1)
+  const nextDate = new Date(currentDate)
+  nextDate.setDate(nextDate.getDate() + 1)
+  const canGoPrev = !isOutsideExpedition(prevDate, expeditionBounds)
+  const canGoNext = !isOutsideExpedition(nextDate, expeditionBounds)
+
   const goToPrevDay = () => {
+    if (!canGoPrev) return
     const newDate = new Date(currentDate)
     newDate.setDate(newDate.getDate() - 1)
     const dateStr = newDate.toISOString().split('T')[0]
@@ -145,6 +155,7 @@ export default function PublicScheduleTodayPage() {
   }
 
   const goToNextDay = () => {
+    if (!canGoNext) return
     const newDate = new Date(currentDate)
     newDate.setDate(newDate.getDate() + 1)
     const dateStr = newDate.toISOString().split('T')[0]
@@ -197,7 +208,9 @@ export default function PublicScheduleTodayPage() {
         <div className="flex items-center justify-between px-3 py-3">
           <button
             onClick={goToPrevDay}
-            className="h-9 w-9 rounded-full flex items-center justify-center border border-gray-200 bg-white hover:bg-gray-50 active:bg-gray-100 cursor-pointer transition-colors"
+            disabled={!canGoPrev}
+            title={canGoPrev ? "Previous day" : "Start of expedition"}
+            className="h-9 w-9 rounded-full flex items-center justify-center border border-gray-200 bg-white hover:bg-gray-50 active:bg-gray-100 cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <ChevronLeft className="h-5 w-5 text-gray-600" />
           </button>
@@ -213,10 +226,12 @@ export default function PublicScheduleTodayPage() {
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="center">
-                <CalendarComponent
+                <ExpeditionCalendar
                   mode="single"
                   selected={currentDate}
                   defaultMonth={currentDate}
+                  expeditionStartDate={activeExpedition?.startDate}
+                  expeditionEndDate={activeExpedition?.endDate}
                   onSelect={(selectedDate) => {
                     if (selectedDate) handleDateChange(selectedDate)
                   }}
@@ -225,12 +240,14 @@ export default function PublicScheduleTodayPage() {
                 />
               </PopoverContent>
             </Popover>
-            
+
           </div>
 
           <button
             onClick={goToNextDay}
-            className="h-9 w-9 rounded-full flex items-center justify-center border border-gray-200 bg-white hover:bg-gray-50 active:bg-gray-100 cursor-pointer transition-colors"
+            disabled={!canGoNext}
+            title={canGoNext ? "Next day" : "End of expedition"}
+            className="h-9 w-9 rounded-full flex items-center justify-center border border-gray-200 bg-white hover:bg-gray-50 active:bg-gray-100 cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <ChevronRight className="h-5 w-5 text-gray-600" />
           </button>
@@ -430,20 +447,20 @@ export default function PublicScheduleTodayPage() {
                 <div className="flex gap-3">
                   {/* Color bar */}
                   <div className={`w-1 rounded-full ${getColorForType(item)} flex-shrink-0 self-stretch`} />
-                  
+
                   <div className="flex-1 min-w-0">
                     {/* Title */}
                     <h3 className="font-semibold text-gray-900 text-base leading-snug">
                       {item.name}
                     </h3>
-                    
+
                     {/* Time */}
                     {(item.time_in !== 0 || item.time_out !== 0) && (
                       <p className="text-sm text-gray-500 mt-0.5">
                         {item.time_in !== 0 ? formatMilitaryTime(item.time_in) : "TBD"} - {item.time_out !== 0 ? formatMilitaryTime(item.time_out) : "TBD"}
                       </p>
                     )}
-                    
+
                     {/* Staff lead and participants */}
                     {(item._expedition_staff || (item.participants && item.participants.length > 0)) && (
                       <div className="flex items-center gap-2 mt-2 flex-wrap">
@@ -750,7 +767,7 @@ export default function PublicScheduleTodayPage() {
               </button>
             </div>
           </SheetHeader>
-          
+
           <div className="flex-1 overflow-y-auto p-6">
             {loadingRecipe ? (
               <div className="space-y-4">
@@ -883,7 +900,7 @@ export default function PublicScheduleTodayPage() {
                 )}
 
                 {/* Empty states */}
-                {(!selectedRecipe.instructions || selectedRecipe.instructions.length === 0) && 
+                {(!selectedRecipe.instructions || selectedRecipe.instructions.length === 0) &&
                  (!selectedRecipe.ingredients || selectedRecipe.ingredients.length === 0) && (
                   <div className="text-center py-8 text-muted-foreground">
                     No detailed recipe information available.

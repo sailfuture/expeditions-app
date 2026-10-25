@@ -184,21 +184,33 @@ export function ExpeditionParticipants({
   const [addingStudent, setAddingStudent] = useState(false)
   const [addingStaff, setAddingStaff] = useState(false)
 
+  // Active people first, then inactive (staff) / archived (students), each
+  // part in name order. Uses the same rule as the Status badge below: the
+  // person's own flag or an archived assignment on this expedition.
   const staffRows = useMemo(() => {
     if (!expeditionTeachers) return []
+    const isInactive = (t: any) =>
+      t.isActive === false ||
+      (assignments || []).some((a: any) => a.expedition_staff_id === t.id && a.isArchived === true)
     return [...expeditionTeachers].sort((a: any, b: any) =>
+      Number(isInactive(a)) - Number(isInactive(b)) ||
       (a.name || "").localeCompare(b.name || "")
     )
-  }, [expeditionTeachers])
+  }, [expeditionTeachers, assignments])
 
   const studentRows = useMemo(() => {
     if (!expeditionStudents) return []
+    const isArchived = (s: any) =>
+      s.isArchived === true ||
+      (assignments || []).some((a: any) => a.students_id === s.id && a.isArchived === true)
     return [...expeditionStudents].sort((a: any, b: any) => {
+      const byStatus = Number(isArchived(a)) - Number(isArchived(b))
+      if (byStatus !== 0) return byStatus
       const an = `${a.lastName || ""} ${a.firstName || ""}`.trim()
       const bn = `${b.lastName || ""} ${b.firstName || ""}`.trim()
       return an.localeCompare(bn)
     })
-  }, [expeditionStudents])
+  }, [expeditionStudents, assignments])
 
   // Candidates = everyone not already on this expedition.
   const studentCandidates = useMemo<Candidate[]>(() => {

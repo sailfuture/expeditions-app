@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Calendar as CalendarComponent } from "@/components/ui/calendar"
+import { ExpeditionCalendar } from "@/components/expedition-calendar"
 import { ChevronLeft, ChevronRight, Calendar } from "lucide-react"
 
 interface DateNavigationProps {
@@ -17,12 +17,12 @@ interface DateNavigationProps {
   expeditionEndDate?: string
 }
 
-export function DateNavigation({ 
-  date, 
-  onDateChange, 
-  isOffshore = false, 
-  isService = false, 
-  size = "default", 
+export function DateNavigation({
+  date,
+  onDateChange,
+  isOffshore = false,
+  isService = false,
+  size = "default",
   isLoading = false,
   expeditionStartDate,
   expeditionEndDate,
@@ -36,28 +36,40 @@ export function DateNavigation({
       year: "numeric",
     })
   }
-  
+
   // Parse expedition date range
   const minDate = expeditionStartDate ? (() => {
     const [y, m, d] = expeditionStartDate.split('-').map(Number)
     return new Date(y, m - 1, d)
   })() : undefined
-  
+
   const maxDate = expeditionEndDate ? (() => {
     const [y, m, d] = expeditionEndDate.split('-').map(Number)
     return new Date(y, m - 1, d)
   })() : undefined
 
+  // Nothing outside the expedition is valid; until its dates are known, nothing is.
+  const isOutOfRange = (d: Date) => {
+    if (!minDate || !maxDate) return true
+    const day = new Date(d.getFullYear(), d.getMonth(), d.getDate())
+    if (day < minDate) return true
+    if (day > maxDate) return true
+    return false
+  }
+
+  const prevDay = new Date(date.getFullYear(), date.getMonth(), date.getDate() - 1)
+  const nextDay = new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1)
+  const canGoPrev = !isOutOfRange(prevDay)
+  const canGoNext = !isOutOfRange(nextDay)
+
   const goToPrevDay = () => {
-    const newDate = new Date(date)
-    newDate.setDate(newDate.getDate() - 1)
-    onDateChange(newDate)
+    if (!canGoPrev) return
+    onDateChange(prevDay)
   }
 
   const goToNextDay = () => {
-    const newDate = new Date(date)
-    newDate.setDate(newDate.getDate() + 1)
-    onDateChange(newDate)
+    if (!canGoNext) return
+    onDateChange(nextDay)
   }
 
   const handleDateSelect = (selectedDate: Date) => {
@@ -101,6 +113,8 @@ export function DateNavigation({
         variant="outline"
         size="icon"
         onClick={goToPrevDay}
+        disabled={!canGoPrev}
+        title={!canGoPrev ? "Start of expedition" : "Previous day"}
         className={`hidden sm:flex ${buttonHeight} w-10 cursor-pointer flex-shrink-0`}
       >
         <ChevronLeft className="h-4 w-4" />
@@ -117,18 +131,13 @@ export function DateNavigation({
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align="start">
-          <CalendarComponent
+          <ExpeditionCalendar
             key={calendarOpen ? date.toISOString() : 'closed'}
             mode="single"
             selected={date}
             defaultMonth={date}
-            fromDate={minDate}
-            toDate={maxDate}
-            disabled={(date) => {
-              if (minDate && date < minDate) return true
-              if (maxDate && date > maxDate) return true
-              return false
-            }}
+            expeditionStartDate={expeditionStartDate}
+            expeditionEndDate={expeditionEndDate}
             onSelect={(selectedDate) => {
               if (selectedDate) {
                 handleDateSelect(selectedDate)
@@ -144,6 +153,8 @@ export function DateNavigation({
         variant="outline"
         size="icon"
         onClick={goToNextDay}
+        disabled={!canGoNext}
+        title={!canGoNext ? "End of expedition" : "Next day"}
         className={`hidden sm:flex ${buttonHeight} w-10 cursor-pointer flex-shrink-0`}
       >
         <ChevronRight className="h-4 w-4" />

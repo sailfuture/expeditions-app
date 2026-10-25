@@ -1,3 +1,6 @@
+import type { JournalStatus } from "@/lib/journal-status"
+import type { CategoryReasons } from "@/lib/evaluation-reasons"
+
 export interface ExpeditionStaff {
   id: number
   name: string
@@ -8,6 +11,11 @@ export interface ExpeditionStaff {
   role?: "Admin" | "Staff" | "Instructor"
 }
 
+// "academy" = a school expedition (scores, professionalism reviews);
+// "residential" = a residential-program expedition, which will use its own
+// incentive system. Stored as the `expedition_type` enum on the Xano table.
+export type ExpeditionType = "academy" | "residential"
+
 export interface Expedition {
   id: number
   name: string
@@ -16,6 +24,8 @@ export interface Expedition {
   start_date?: string
   end_date?: string
   number_participants?: number
+  expedition_type?: ExpeditionType
+  isActive?: boolean
 }
 
 export interface ExpeditionLocation {
@@ -104,10 +114,13 @@ export interface ExpeditionProfessionalism {
   service_learning: number | null
   isFlagged: boolean
   isLocked: boolean
-  bonuses: ExpeditionBonus[]
-  penalties: ExpeditionPenalty[]
   note: string | null
-  journal_status_id: number | null
+  // Daily journaling: Not Started / Incomplete-Late / Complete (stored as a journal status name)
+  journaling: JournalStatus | null
+  // One reason per score category, required whenever that score is above or below 3
+  reasons: CategoryReasons
+  // Fitness for the expedition award: 100 = complete, 0 = incomplete, null = not applicable that day
+  fitness?: number | null
   // Boolean flags to disable categories (true = disabled/inactive)
   isAcademicsUsed?: boolean
   isJobUsed?: boolean

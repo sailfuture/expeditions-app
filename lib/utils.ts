@@ -44,6 +44,39 @@ export function isDateWithinExpeditionRange(
 }
 
 /**
+ * Format a Date as a local "YYYY-MM-DD" string (no UTC shift)
+ */
+export function formatLocalDateString(date: Date): string {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, "0")
+  const day = String(date.getDate()).padStart(2, "0")
+  return `${year}-${month}-${day}`
+}
+
+/**
+ * Clamp a date into an expedition's range.
+ * Returns the date string to use: the date itself when it is inside the
+ * range; otherwise the end date when the expedition has already passed
+ * (today is after the end date), or the start date when it has not.
+ * Returns null when no range is defined.
+ */
+export function clampDateToExpeditionRange(
+  date: Date | string,
+  startDate: string | null | undefined,
+  endDate: string | null | undefined
+): string | null {
+  if (!startDate || !endDate) return null
+  const dateStr = typeof date === "string" ? date : formatLocalDateString(date)
+  if (isDateWithinExpeditionRange(dateStr, startDate, endDate)) return dateStr
+  const today = new Date()
+  const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+  const end = parseLocalDate(endDate)
+  const endMidnight = new Date(end.getFullYear(), end.getMonth(), end.getDate())
+  const hasPassed = todayMidnight > endMidnight
+  return hasPassed ? endDate : startDate
+}
+
+/**
  * Get the first date of an expedition (start date)
  * @param startDate - Expedition start date
  * @returns Date object of the first day, or today if no start date

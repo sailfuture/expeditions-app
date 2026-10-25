@@ -92,15 +92,17 @@ export default function StaffDetailPage() {
     dob: null as string | null,
     crew_status: "",
     passport_number: "",
-    passport_issue_date: null as string | null,
-    passport_expiration_date: null as string | null,
+    issue_date: null as string | null,
+    expiration_date: null as string | null,
     gender: "",
     nationality: "",
     passport_photo: "",
   })
   
   useEffect(() => {
-    if (staffMember) {
+    // Only sync from the server while the dialog is closed, so a refetch
+    // (e.g. after a photo upload) doesn't wipe unsaved edits
+    if (staffMember && !dialogOpen) {
       setFormData({
         name: staffMember.name || "",
         email: staffMember.email || "",
@@ -111,14 +113,14 @@ export default function StaffDetailPage() {
         dob: staffMember.dob || null,
         crew_status: staffMember.crew_status || "",
         passport_number: staffMember.passport_number || "",
-        passport_issue_date: staffMember.passport_issue_date || null,
-        passport_expiration_date: staffMember.passport_expiration_date || null,
+        issue_date: staffMember.issue_date || null,
+        expiration_date: staffMember.expiration_date || null,
         gender: staffMember.gender || "",
         nationality: staffMember.nationality || "",
         passport_photo: staffMember.passport_photo || "",
       })
     }
-  }, [staffMember])
+  }, [staffMember, dialogOpen])
   
   const handleSubmit = async () => {
     if (!formData.name) {
@@ -411,11 +413,11 @@ export default function StaffDetailPage() {
               </div>
               <div>
                 <dt className="text-sm font-medium text-gray-500">Passport Issue Date</dt>
-                <dd className="mt-1 text-sm text-gray-900">{staffMember.passport_issue_date || "—"}</dd>
+                <dd className="mt-1 text-sm text-gray-900">{staffMember.issue_date || "—"}</dd>
               </div>
               <div>
                 <dt className="text-sm font-medium text-gray-500">Passport Expiration</dt>
-                <dd className="mt-1 text-sm text-gray-900">{staffMember.passport_expiration_date || "—"}</dd>
+                <dd className="mt-1 text-sm text-gray-900">{staffMember.expiration_date || "—"}</dd>
               </div>
               <div>
                 <dt className="text-sm font-medium text-gray-500">Passport Photo</dt>
@@ -642,22 +644,22 @@ export default function StaffDetailPage() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="passport_issue_date">Issue Date</Label>
+                  <Label htmlFor="issue_date">Issue Date</Label>
                   <Input
-                    id="passport_issue_date"
+                    id="issue_date"
                     type="date"
-                    value={formData.passport_issue_date || ""}
-                    onChange={(e) => setFormData(prev => ({ ...prev, passport_issue_date: e.target.value || null }))}
+                    value={formData.issue_date || ""}
+                    onChange={(e) => setFormData(prev => ({ ...prev, issue_date: e.target.value || null }))}
                     className="mt-1.5"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="passport_expiration_date">Expiration Date</Label>
+                  <Label htmlFor="expiration_date">Expiration Date</Label>
                   <Input
-                    id="passport_expiration_date"
+                    id="expiration_date"
                     type="date"
-                    value={formData.passport_expiration_date || ""}
-                    onChange={(e) => setFormData(prev => ({ ...prev, passport_expiration_date: e.target.value || null }))}
+                    value={formData.expiration_date || ""}
+                    onChange={(e) => setFormData(prev => ({ ...prev, expiration_date: e.target.value || null }))}
                     className="mt-1.5"
                   />
                 </div>

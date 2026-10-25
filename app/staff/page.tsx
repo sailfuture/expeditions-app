@@ -66,8 +66,8 @@ export default function StaffPage() {
     dob: null as string | null,
     crew_status: "",
     passport_number: "",
-    passport_issue_date: null as string | null,
-    passport_expiration_date: null as string | null,
+    issue_date: null as string | null,
+    expiration_date: null as string | null,
     gender: "",
     nationality: "",
     passport_photo: "",
@@ -97,8 +97,8 @@ export default function StaffPage() {
       dob: null,
       crew_status: "",
       passport_number: "",
-      passport_issue_date: null,
-      passport_expiration_date: null,
+      issue_date: null,
+      expiration_date: null,
       gender: "",
       nationality: "",
       passport_photo: "",
@@ -432,22 +432,22 @@ export default function StaffPage() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="passport_issue_date">Issue Date</Label>
+                  <Label htmlFor="issue_date">Issue Date</Label>
                   <Input
-                    id="passport_issue_date"
+                    id="issue_date"
                     type="date"
-                    value={formData.passport_issue_date || ""}
-                    onChange={(e) => setFormData(prev => ({ ...prev, passport_issue_date: e.target.value || null }))}
+                    value={formData.issue_date || ""}
+                    onChange={(e) => setFormData(prev => ({ ...prev, issue_date: e.target.value || null }))}
                     className="mt-1.5"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="passport_expiration_date">Expiration Date</Label>
+                  <Label htmlFor="expiration_date">Expiration Date</Label>
                   <Input
-                    id="passport_expiration_date"
+                    id="expiration_date"
                     type="date"
-                    value={formData.passport_expiration_date || ""}
-                    onChange={(e) => setFormData(prev => ({ ...prev, passport_expiration_date: e.target.value || null }))}
+                    value={formData.expiration_date || ""}
+                    onChange={(e) => setFormData(prev => ({ ...prev, expiration_date: e.target.value || null }))}
                     className="mt-1.5"
                   />
                 </div>

@@ -12,6 +12,10 @@ query calculate_student_evaluation_performance_evaluation verb=POST {
   }
 
   stack {
+    function.run expedition_app_guard {
+      input = {}
+    } as $app_guard
+
     precondition (false) {
       error_type = "inputerror"
       error = "Performance reviews are now created from review periods (POST review_periods), which prevents duplicates."

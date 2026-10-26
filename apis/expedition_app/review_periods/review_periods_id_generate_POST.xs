@@ -8,6 +8,10 @@ query "review_periods/{review_periods_id}/generate" verb=POST {
   }
 
   stack {
+    function.run expedition_app_guard {
+      input = {}
+    } as $app_guard
+
     function.run review_period_generate {
       input = {review_periods_id: $input.review_periods_id}
     } as $generated

@@ -1,5 +1,6 @@
 "use client"
 
+import { XANO_BASE_URL } from "@/lib/xano-config"
 import * as React from "react"
 import { useState, useEffect } from "react"
 import Image from "next/image"
@@ -420,7 +421,7 @@ export default function PassageLogsPage() {
   useEffect(() => {
     const fetchActiveExpedition = async () => {
       try {
-        const response = await fetch("https://xsc3-mvx7-r86m.n7e.xano.io/api:bXFdqx8y/active_expedition")
+        const response = await fetch(`${XANO_BASE_URL}/active_expedition`)
         const data = await response.json()
         if (Array.isArray(data) && data.length > 0) {
           setActiveExpedition(data[0])
@@ -436,7 +437,7 @@ export default function PassageLogsPage() {
     if (!activeExpedition?.id) return
     const fetchLocations = async () => {
       try {
-        const response = await fetch(`https://xsc3-mvx7-r86m.n7e.xano.io/api:bXFdqx8y/expedition_locations?expeditions_id=${activeExpedition.id}`)
+        const response = await fetch(`${XANO_BASE_URL}/expedition_locations?expeditions_id=${activeExpedition.id}`)
         const data = await response.json()
         if (Array.isArray(data)) {
           setLocations(data)
@@ -452,8 +453,8 @@ export default function PassageLogsPage() {
     const fetchPeople = async () => {
       try {
         const [studentsRes, staffRes] = await Promise.all([
-          fetch("https://xsc3-mvx7-r86m.n7e.xano.io/api:bXFdqx8y/active_expedition_students"),
-          fetch("https://xsc3-mvx7-r86m.n7e.xano.io/api:bXFdqx8y/active_expedition_staff")
+          fetch(`${XANO_BASE_URL}/active_expedition_students`),
+          fetch(`${XANO_BASE_URL}/active_expedition_staff`)
         ])
         const studentsData = await studentsRes.json()
         const staffData = await staffRes.json()
@@ -799,7 +800,7 @@ export default function PassageLogsPage() {
         expeditions_id: activeExpedition?.id || 0,
       }
 
-      const response = await fetch("https://xsc3-mvx7-r86m.n7e.xano.io/api:bXFdqx8y/expedition_passage_logs", {
+      const response = await fetch(`${XANO_BASE_URL}/expedition_passage_logs`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

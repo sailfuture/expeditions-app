@@ -7,6 +7,10 @@ query "review_periods/{review_periods_id}" verb=DELETE {
   }
 
   stack {
+    function.run expedition_app_guard {
+      input = {}
+    } as $app_guard
+
     db.get expedition_review_periods {
       field_name = "id"
       field_value = $input.review_periods_id

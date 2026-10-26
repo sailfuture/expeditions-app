@@ -17,7 +17,7 @@
 //   node scripts/backfill-student-assignments.mjs            # dry run (default) — prints what WOULD be created
 //   node scripts/backfill-student-assignments.mjs --apply    # actually create the missing rows
 //
-// The Xano API used here is unauthenticated (same as the app's lib/xano.ts).
+// Xano answers only calls that carry the app's key: set XANO_EXPEDITIONS_APP_KEY.
 
 const XANO_BASE_URL = "https://xsc3-mvx7-r86m.n7e.xano.io/api:bXFdqx8y"
 
@@ -26,7 +26,7 @@ const APPLY = process.argv.includes("--apply")
 async function xanoFetch(endpoint, options) {
   const res = await fetch(`${XANO_BASE_URL}${endpoint}`, {
     ...options,
-    headers: { "Content-Type": "application/json", ...options?.headers },
+    headers: { "Content-Type": "application/json", "X-Expeditions-Key": process.env.XANO_EXPEDITIONS_APP_KEY ?? "", ...options?.headers },
   })
   if (!res.ok) {
     const text = await res.text().catch(() => "")

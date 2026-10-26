@@ -1,5 +1,6 @@
 "use client"
 
+import { XANO_BASE_URL } from "@/lib/xano-config"
 import { useMemo, useState } from "react"
 import useSWR, { mutate } from "swr"
 import Image from "next/image"
@@ -47,7 +48,6 @@ import {
 import { cn, getPhotoUrl } from "@/lib/utils"
 import { getGalleyEquipment } from "@/lib/xano"
 
-const XANO_BASE_URL = "https://xsc3-mvx7-r86m.n7e.xano.io/api:bXFdqx8y"
 
 interface Recipe {
   id: number

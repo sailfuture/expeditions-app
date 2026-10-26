@@ -11,6 +11,10 @@ query "expedition_performance_reviews/{expedition_performance_reviews_id}" verb=
   }
 
   stack {
+    function.run expedition_app_guard {
+      input = {}
+    } as $app_guard
+
     util.get_raw_input {
       encoding = "json"
       exclude_middleware = false

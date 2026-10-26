@@ -1,5 +1,6 @@
 "use client"
 
+import { XANO_BASE_URL } from "@/lib/xano-config"
 import { useMemo, useState, useRef, useCallback, useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { format, addDays, subDays, isToday } from "date-fns"
@@ -72,7 +73,6 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { useExpeditions } from "@/lib/hooks/use-expeditions"
 
-const XANO_BASE_URL = "https://xsc3-mvx7-r86m.n7e.xano.io/api:bXFdqx8y"
 
 function MealPlanSheet({ open, onOpenChange, recipe, loading, recipeId }: {
   open: boolean
@@ -670,7 +670,7 @@ function PlannerPageContent() {
   const [selectedRecipeId, setSelectedRecipeId] = useState<number | null>(null)
 
   // Meal Plan data fetching
-  const XANO_COOKBOOK_URL = "https://xsc3-mvx7-r86m.n7e.xano.io/api:bXFdqx8y"
+  const XANO_COOKBOOK_URL = XANO_BASE_URL
   const recipeFetcher = (url: string) => fetch(url).then((res) => res.json())
   const { data: selectedRecipe, isLoading: loadingRecipe } = useSWR(
     selectedRecipeId ? `${XANO_COOKBOOK_URL}/expedition_cookbook/${selectedRecipeId}` : null,

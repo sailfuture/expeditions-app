@@ -1,5 +1,6 @@
 "use client"
 
+import { XANO_BASE_URL } from "@/lib/xano-config"
 import React, { useMemo, useState } from "react"
 import useSWR, { mutate } from "swr"
 import Image from "next/image"
@@ -74,7 +75,6 @@ import { cn, getPhotoUrl } from "@/lib/utils"
 import { getExpeditionsInventory } from "@/lib/xano"
 import { useExpeditionContext } from "@/lib/contexts/expedition-context"
 
-const XANO_BASE_URL = "https://xsc3-mvx7-r86m.n7e.xano.io/api:bXFdqx8y"
 
 const getIngredientTypeColor = (type: string): string => {
   const colorMap: Record<string, string> = {

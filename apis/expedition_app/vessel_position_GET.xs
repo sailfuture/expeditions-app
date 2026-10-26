@@ -12,6 +12,10 @@ query vessel_position verb=GET {
   }
 
   stack {
+    function.run expedition_app_guard {
+      input = {}
+    } as $app_guard
+
     var $expedition {
       value = null
     }

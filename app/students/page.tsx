@@ -1,5 +1,6 @@
 "use client"
 
+import { XANO_BASE_URL } from "@/lib/xano-config"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useMemo, useState, Suspense } from "react"
 import { Badge } from "@/components/ui/badge"
@@ -75,7 +76,7 @@ const dishDays = [
 
 // Fetcher for applications
 async function fetchApplications() {
-  const response = await fetch("https://xsc3-mvx7-r86m.n7e.xano.io/api:bXFdqx8y/expedition_student_applications")
+  const response = await fetch(`${XANO_BASE_URL}/expedition_student_applications`)
   if (!response.ok) throw new Error("Failed to fetch applications")
   return response.json()
 }

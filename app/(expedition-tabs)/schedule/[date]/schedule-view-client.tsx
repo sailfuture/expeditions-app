@@ -1,5 +1,6 @@
 "use client"
 
+import { XANO_BASE_URL } from "@/lib/xano-config"
 import { useMemo, useState, useRef, useCallback, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
@@ -200,7 +201,7 @@ export function ScheduleViewClient({ date, expeditionId }: ScheduleViewClientPro
   const [selectedRecipeId, setSelectedRecipeId] = useState<number | null>(null)
   
   // Meal Plan data fetching (must be after state declaration)
-  const XANO_COOKBOOK_URL = "https://xsc3-mvx7-r86m.n7e.xano.io/api:bXFdqx8y"
+  const XANO_COOKBOOK_URL = XANO_BASE_URL
   const recipeFetcher = (url: string) => fetch(url).then((res) => res.json())
   const { data: selectedRecipe, isLoading: loadingRecipe } = useSWR(
     selectedRecipeId ? `${XANO_COOKBOOK_URL}/expedition_cookbook/${selectedRecipeId}` : null,

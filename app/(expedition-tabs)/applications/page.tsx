@@ -1,5 +1,6 @@
 "use client"
 
+import { XANO_BASE_URL } from "@/lib/xano-config"
 import { useMemo, useState, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { format } from "date-fns"
@@ -28,7 +29,7 @@ import { addPDFHeader } from "@/lib/pdf-generator"
 
 // Fetcher for SWR
 async function fetchApplications() {
-  const response = await fetch("https://xsc3-mvx7-r86m.n7e.xano.io/api:bXFdqx8y/expedition_student_applications")
+  const response = await fetch(`${XANO_BASE_URL}/expedition_student_applications`)
   if (!response.ok) throw new Error("Failed to fetch applications")
   return response.json()
 }

@@ -16,6 +16,10 @@ query expeditions_professionalism_by_student_and_date verb=GET {
   }
 
   stack {
+    function.run expedition_app_guard {
+      input = {}
+    } as $app_guard
+
     db.query expeditions_professionalism {
       where = $db.expeditions_professionalism.students_id == $input.students_id && $db.expeditions_professionalism.expeditions_id == $input.expeditions_id && $db.expeditions_professionalism.date >= $input.startDate && $db.expeditions_professionalism.date <= $input.endDate
       return = {type: "list"}

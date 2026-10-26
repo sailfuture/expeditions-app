@@ -8,6 +8,10 @@ query calculate_student_evaluation verb=POST {
   }
 
   stack {
+    function.run expedition_app_guard {
+      input = {}
+    } as $app_guard
+
     function.run professionalism_averages {
       input = {expeditions_id: $input.expeditions_id, students_id: $input.students_id}
     } as $results

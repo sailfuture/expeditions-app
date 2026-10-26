@@ -1,5 +1,6 @@
 "use client"
 
+import { XANO_BASE_URL } from "@/lib/xano-config"
 import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -117,7 +118,7 @@ export default function ApplyPage() {
       setExpeditionsId(fromUrl)
       return
     }
-    fetch("https://xsc3-mvx7-r86m.n7e.xano.io/api:bXFdqx8y/active_expedition")
+    fetch(`${XANO_BASE_URL}/active_expedition`)
       .then((res) => (res.ok ? res.json() : []))
       .then((rows) => {
         const active = Array.isArray(rows) ? rows[0] : null
@@ -209,7 +210,7 @@ export default function ApplyPage() {
 
     setIsSubmitting(true)
     try {
-      const response = await fetch("https://xsc3-mvx7-r86m.n7e.xano.io/api:bXFdqx8y/expedition_student_applications", {
+      const response = await fetch(`${XANO_BASE_URL}/expedition_student_applications`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

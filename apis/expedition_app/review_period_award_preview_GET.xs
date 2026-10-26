@@ -11,6 +11,10 @@ query review_period_award_preview verb=GET {
   }
 
   stack {
+    function.run expedition_app_guard {
+      input = {}
+    } as $app_guard
+
     function.run review_period_award {
       input = {
         expeditions_id: $input.expeditions_id

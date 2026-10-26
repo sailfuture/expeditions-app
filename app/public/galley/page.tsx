@@ -1,5 +1,6 @@
 "use client"
 
+import { XANO_BASE_URL } from "@/lib/xano-config"
 import React, { useState, useMemo, Suspense } from "react"
 import useSWR, { mutate } from "swr"
 import Image from "next/image"
@@ -64,7 +65,6 @@ import {
 
 const INVENTORY_SWR_KEY = "expeditions_inventory"
 
-const XANO_BASE_URL = "https://xsc3-mvx7-r86m.n7e.xano.io/api:bXFdqx8y"
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
 interface InventoryItem {

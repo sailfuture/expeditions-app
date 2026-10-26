@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { google } from "googleapis"
 import { Readable } from "stream"
 
-const XANO_BASE_URL = "https://xsc3-mvx7-r86m.n7e.xano.io/api:bXFdqx8y"
+import { XANO_DIRECT_URL as XANO_BASE_URL, xanoKeyHeaders } from "@/lib/xano-config"
 
 function getAuth() {
   const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL
@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
 
     const xanoRes = await fetch(`${XANO_BASE_URL}${endpoint}`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...xanoKeyHeaders() },
       body: JSON.stringify(updateBody),
     })
 
@@ -191,7 +191,7 @@ export async function DELETE(request: NextRequest) {
 
     const xanoRes = await fetch(`${XANO_BASE_URL}${endpoint}`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...xanoKeyHeaders() },
       body: JSON.stringify(updateBody),
     })
 

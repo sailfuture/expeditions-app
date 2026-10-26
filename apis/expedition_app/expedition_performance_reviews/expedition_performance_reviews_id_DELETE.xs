@@ -7,6 +7,10 @@ query "expedition_performance_reviews/{expedition_performance_reviews_id}" verb=
   }
 
   stack {
+    function.run expedition_app_guard {
+      input = {}
+    } as $app_guard
+
     db.get expedition_performance_reviews {
       field_name = "id"
       field_value = $input.expedition_performance_reviews_id

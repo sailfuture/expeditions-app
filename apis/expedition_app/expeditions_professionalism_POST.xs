@@ -43,6 +43,10 @@ query expeditions_professionalism verb=POST {
   }
 
   stack {
+    function.run expedition_app_guard {
+      input = {}
+    } as $app_guard
+
     function.run review_period_assert_open {
       input = {expeditions_id: $input.expeditions_id, date: $input.date}
     } as $score_period_open

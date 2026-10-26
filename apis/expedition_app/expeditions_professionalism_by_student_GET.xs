@@ -13,6 +13,10 @@ query expeditions_professionalism_by_student verb=GET {
   }
 
   stack {
+    function.run expedition_app_guard {
+      input = {}
+    } as $app_guard
+
     db.query expeditions_professionalism {
       where = $db.expeditions_professionalism.students_id == $input.students_id && $db.expeditions_professionalism.expeditions_id == $input.expeditions_id
       return = {type: "list"}

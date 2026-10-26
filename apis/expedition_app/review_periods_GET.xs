@@ -8,6 +8,10 @@ query review_periods verb=GET {
   }
 
   stack {
+    function.run expedition_app_guard {
+      input = {}
+    } as $app_guard
+
     db.query expedition_review_periods {
       where = $db.expedition_review_periods.expeditions_id == $input.expeditions_id
       sort = {expedition_review_periods.startDate: "asc"}

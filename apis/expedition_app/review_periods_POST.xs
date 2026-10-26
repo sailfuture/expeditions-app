@@ -17,6 +17,10 @@ query review_periods verb=POST {
   }
 
   stack {
+    function.run expedition_app_guard {
+      input = {}
+    } as $app_guard
+
     db.get expeditions {
       field_name = "id"
       field_value = $input.expeditions_id

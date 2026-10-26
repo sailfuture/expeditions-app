@@ -1,12 +1,12 @@
 import NextAuth from "next-auth"
 import Google from "next-auth/providers/google"
 
-const XANO_BASE_URL = "https://xsc3-mvx7-r86m.n7e.xano.io/api:bXFdqx8y"
+import { XANO_DIRECT_URL as XANO_BASE_URL, xanoKeyHeaders } from "@/lib/xano-config"
 
 // Validate staff member by email using existing /teachers endpoint
 async function validateStaffByEmail(email: string) {
   try {
-    const res = await fetch(`${XANO_BASE_URL}/teachers`)
+    const res = await fetch(`${XANO_BASE_URL}/teachers`, { headers: xanoKeyHeaders() })
     if (!res.ok) {
       return null
     }

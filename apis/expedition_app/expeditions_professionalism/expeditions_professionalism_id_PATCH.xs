@@ -10,6 +10,10 @@ query "expeditions_professionalism/{expeditions_professionalism_id}" verb=PATCH 
   }
 
   stack {
+    function.run expedition_app_guard {
+      input = {}
+    } as $app_guard
+
     util.get_raw_input {
       encoding = "json"
       exclude_middleware = false

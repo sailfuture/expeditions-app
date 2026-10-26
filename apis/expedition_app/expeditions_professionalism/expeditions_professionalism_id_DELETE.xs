@@ -7,6 +7,10 @@ query "expeditions_professionalism/{expeditions_professionalism_id}" verb=DELETE
   }
 
   stack {
+    function.run expedition_app_guard {
+      input = {}
+    } as $app_guard
+
     db.get expeditions_professionalism {
       field_name = "id"
       field_value = $input.expeditions_professionalism_id

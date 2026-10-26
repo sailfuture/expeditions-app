@@ -2,13 +2,14 @@
 import type { ExpeditionType, ReasonCategory, ReviewPeriod, ReviewPeriodKind, ReviewPeriodsResponse, ReviewPeriodAwardPreview } from "@/lib/types"
 import type { VesselPositionResponse } from "@/lib/vessel-position"
 
-const XANO_BASE_URL = "https://xsc3-mvx7-r86m.n7e.xano.io/api:bXFdqx8y"
+import { XANO_BASE_URL, xanoKeyHeaders } from "@/lib/xano-config"
 
 async function xanoFetch<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${XANO_BASE_URL}${endpoint}`, {
     ...options,
     headers: {
       "Content-Type": "application/json",
+      ...xanoKeyHeaders(),
       ...options?.headers,
     },
   })
@@ -760,7 +761,7 @@ export async function deleteExpeditionDiscipline(id: number) {
 // ============ Staff Validation ============
 export async function validateStaffByEmail(email: string) {
   try {
-    const res = await fetch(`${XANO_BASE_URL}/validate_staff?email=${encodeURIComponent(email)}`)
+    const res = await fetch(`${XANO_BASE_URL}/validate_staff?email=${encodeURIComponent(email)}`, { headers: xanoKeyHeaders() })
     if (!res.ok) {
       return null
     }
@@ -1080,6 +1081,7 @@ export async function uploadImageToXano(file: File): Promise<any> {
   formData.append("content", file)
   const res = await fetch(`${XANO_BASE_URL}/upload/image`, {
     method: "POST",
+    headers: xanoKeyHeaders(),
     body: formData,
   })
   if (!res.ok) throw new Error(`Image upload failed: ${res.status}`)

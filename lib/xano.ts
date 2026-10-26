@@ -259,6 +259,20 @@ export async function calculateStudentEvaluation(studentsId: number, expeditions
   })
 }
 
+/**
+ * Recalculate every active student's whole-expedition evaluation in one call.
+ * Xano only writes students whose numbers changed; each keeps one row.
+ */
+export async function refreshExpeditionEvaluations(expeditionsId: number) {
+  return xanoFetch<{ students: number; created: number; updated: number; unchanged: number }>(
+    "/expedition_evaluations_refresh",
+    {
+      method: "POST",
+      body: JSON.stringify({ expeditions_id: expeditionsId }),
+    }
+  )
+}
+
 // ============ Review periods (weekly pay periods + final evaluation) ============
 // Every rule lives in Xano: dates inside the expedition, no overlapping weeks,
 // one final per expedition, one review per student per period, and finalized

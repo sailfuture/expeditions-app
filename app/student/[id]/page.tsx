@@ -55,7 +55,7 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart"
-import { getStudentById, updateStudent, calculateStudentEvaluation, getPerformanceReviewById, updatePerformanceReviewNotes, getProfessionalismByStudentAndDate, getEvaluationByStudentAll, createExpeditionAssignment, getExpeditionAssignments, updateExpeditionAssignment } from "@/lib/xano"
+import { getStudentById, updateStudent, calculateStudentEvaluation, getPerformanceReviewById, updatePerformanceReviewNotes, getProfessionalismByStudentAndDate, createExpeditionAssignment, getExpeditionAssignments, updateExpeditionAssignment } from "@/lib/xano"
 import { toast } from "sonner"
 import { mutate } from "swr"
 import { Spinner } from "@/components/ui/spinner"
@@ -112,11 +112,6 @@ export default function StudentDetailPage() {
       .sort((a: any, b: any) => (a.created_at || 0) - (b.created_at || 0))
   }, [allPerformanceReviews, studentId])
   
-  // Fetch all evaluation records for the chart
-  const { data: allEvaluationRecords } = useSWR(
-    expeditionId && studentId ? `evaluation_by_student_all_${studentId}_${expeditionId}` : null,
-    expeditionId && studentId ? () => getEvaluationByStudentAll(studentId, expeditionId) : null
-  )
   
   // Fetch assignment data for this student and expedition
   const { data: allAssignments } = useSWR(
@@ -156,25 +151,60 @@ export default function StudentDetailPage() {
     }
   }
   
-  // Transform evaluation data for the chart
+  // Score trend from the daily scores: for each scored day, the running
+  // average of every category up to and including that day, using the same
+  // rules as Xano's professionalism_averages (a category counts when it has a
+  // score and its isXUsed flag is not true; total = mean of the category averages).
   const chartData = useMemo(() => {
-    if (!allEvaluationRecords || allEvaluationRecords.length === 0) return []
-    return allEvaluationRecords
-      .sort((a: any, b: any) => (a.created_at || 0) - (b.created_at || 0))
-      .map((record: any) => {
-        // Treat 0 as "not scored" since scores are on a 1-5 scale
-        const scored = (val: any) => val != null && val > 0 ? Number(val.toFixed(2)) : undefined
-        return {
-          dateLabel: formatRelativeTimeForChart(record.created_at),
-          academics: scored(record.academics),
-          citizenship: scored(record.citizenship),
-          job: scored(record.job),
-          crew: scored(record.crew),
-          service: scored(record.service),
-          total: scored(record.total),
+    if (!allProfessionalismRecords || allProfessionalismRecords.length === 0) return []
+    const CATEGORIES = ["academics", "citizenship", "job", "crew", "service"] as const
+    const USED_KEY: Record<(typeof CATEGORIES)[number], string> = {
+      academics: "isAcademicsUsed",
+      citizenship: "isCitizenshipUsed",
+      job: "isJobUsed",
+      crew: "isCrewUsed",
+      service: "isServiceUsed",
+    }
+    const dayOf = (r: any): string => r.date || r._expedition_schedule?.date || ""
+    const rows = allProfessionalismRecords
+      .filter((r: any) => (r.students_id ?? r._students?.id) === studentId && dayOf(r))
+      .sort((a: any, b: any) => dayOf(a).localeCompare(dayOf(b)))
+
+    const sums: Record<string, number> = {}
+    const counts: Record<string, number> = {}
+    const points: any[] = []
+    let i = 0
+    while (i < rows.length) {
+      const day = dayOf(rows[i])
+      let scoredToday = false
+      while (i < rows.length && dayOf(rows[i]) === day) {
+        const row = rows[i]
+        for (const cat of CATEGORIES) {
+          const value = row[cat]
+          if (row[USED_KEY[cat]] === true || value === null || value === undefined) continue
+          sums[cat] = (sums[cat] ?? 0) + Number(value)
+          counts[cat] = (counts[cat] ?? 0) + 1
+          scoredToday = true
         }
-      })
-  }, [allEvaluationRecords])
+        i++
+      }
+      if (!scoredToday) continue
+      const point: Record<string, any> = {}
+      const averages: number[] = []
+      for (const cat of CATEGORIES) {
+        if (counts[cat]) {
+          const avg = sums[cat] / counts[cat]
+          point[cat] = Number(avg.toFixed(2))
+          averages.push(avg)
+        }
+      }
+      const [y, m, d] = day.split("-").map(Number)
+      point.dateLabel = format(new Date(y, m - 1, d), "MMM d")
+      point.total = averages.length ? Number((averages.reduce((a, b) => a + b, 0) / averages.length).toFixed(2)) : undefined
+      points.push(point)
+    }
+    return points
+  }, [allProfessionalismRecords, studentId])
   
   // Chart configuration
   const chartConfig = {
@@ -1131,7 +1161,7 @@ export default function StudentDetailPage() {
             <CardHeader className="border-b">
               <CardTitle>Evaluation Trends</CardTitle>
               <CardDescription>
-                Average scores across evaluations
+                Running average of each category, as of each scored day
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-6">
@@ -1261,7 +1291,7 @@ export default function StudentDetailPage() {
                 </div>
               </div>
               <div className="text-muted-foreground leading-none">
-                Showing {chartData.length} evaluation{chartData.length !== 1 ? 's' : ''} over time
+                Running averages across {chartData.length} scored day{chartData.length !== 1 ? 's' : ''}
               </div>
             </CardFooter>
           </Card>

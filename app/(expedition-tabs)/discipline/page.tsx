@@ -26,6 +26,8 @@ import {
   deleteExpeditionDiscipline
 } from "@/lib/xano"
 import { Spinner } from "@/components/ui/spinner"
+import { DisciplineReasonSelect, DisciplineConsequenceField, DisciplineSeverityBadge } from "@/components/discipline-fields"
+import { consequenceHasDays, formatConsequence, isCriticalReason, reasonForEdit, recordIsCritical } from "@/lib/discipline"
 import {
   Dialog,
   DialogContent,
@@ -103,7 +105,7 @@ async function generateDisciplinePDF(record: any, studentName: string, staffName
   const margin = 14
   const contentWidth = pageWidth - margin * 2
 
-  const docType = record.isReferral ? "Referral" : "Infraction"
+  const docType = recordIsCritical(record) ? "Critical Incident" : "Non-critical Incident"
 
   // Add school header
   let yPos = await addPDFHeader(doc)
@@ -143,7 +145,7 @@ async function generateDisciplinePDF(record: any, studentName: string, staffName
   doc.setFont("helvetica", "bold")
   doc.text("Consequence:", margin, yPos)
   doc.setFont("helvetica", "normal")
-  doc.text(record.consequence || "—", margin + 45, yPos)
+  doc.text(formatConsequence(record.consequence, record.consequence_days) || "—", margin + 45, yPos)
 
   // Summary section
   yPos += 15
@@ -212,6 +214,7 @@ function DisciplinePageContent() {
     reason: "",
     summary_of_incident: "",
     consequence: "",
+    consequence_days: "",
     expedition_staff_id: "",
     action_taken: "",
   })
@@ -224,6 +227,7 @@ function DisciplinePageContent() {
       reason: "",
       summary_of_incident: "",
       consequence: "",
+      consequence_days: "",
       expedition_staff_id: "",
       action_taken: "",
     })
@@ -235,9 +239,10 @@ function DisciplinePageContent() {
       students_id: record.students_id?.toString() || "",
       date: record.date || "",
       isReferral: record.isReferral || false,
-      reason: record.reason || "",
+      reason: reasonForEdit(record),
       summary_of_incident: record.summary_of_incident || "",
       consequence: record.consequence || "",
+      consequence_days: record.consequence_days ? String(record.consequence_days) : "",
       expedition_staff_id: record.expedition_staff_id?.toString() || "",
       action_taken: record.action_taken || "",
     })
@@ -264,15 +269,16 @@ function DisciplinePageContent() {
         expeditions_id: parseInt(expeditionId),
         students_id: parseInt(formData.students_id),
         date: formData.date,
-        isReferral: formData.isReferral,
+        isReferral: isCriticalReason(formData.reason),
         reason: formData.reason,
         summary_of_incident: formData.summary_of_incident,
         consequence: formData.consequence,
+        consequence_days: consequenceHasDays(formData.consequence) ? Math.max(1, parseInt(formData.consequence_days) || 1) : 0,
         expedition_staff_id: parseInt(formData.expedition_staff_id) || 0,
         action_taken: formData.action_taken,
       })
 
-      toast.success(`${formData.isReferral ? "Referral" : "Infraction"} created successfully`)
+      toast.success("Record created")
       mutate(`discipline_${expeditionId}`)
       setCreateModalOpen(false)
       resetForm()
@@ -292,10 +298,11 @@ function DisciplinePageContent() {
       await updateExpeditionDiscipline(selectedRecord.id, {
         students_id: parseInt(formData.students_id),
         date: formData.date,
-        isReferral: formData.isReferral,
+        isReferral: isCriticalReason(formData.reason),
         reason: formData.reason,
         summary_of_incident: formData.summary_of_incident,
         consequence: formData.consequence,
+        consequence_days: consequenceHasDays(formData.consequence) ? Math.max(1, parseInt(formData.consequence_days) || 1) : 0,
         expedition_staff_id: parseInt(formData.expedition_staff_id) || 0,
         action_taken: formData.action_taken,
       })
@@ -363,27 +370,6 @@ function DisciplinePageContent() {
     })
   }, [disciplineRecords])
 
-  // Reason options
-  const reasonOptions = [
-    "Physically Dangerous",
-    "Verbally Aggressive",
-    "Property Damage",
-    "Insubordination",
-    "Safety Violation",
-    "Academic Dishonesty",
-    "Substance Use",
-    "Unauthorized Absence",
-    "Other",
-  ]
-
-  // Consequence options
-  const consequenceOptions = [
-    "Shore Leave Revoked",
-    "Cell Phone Confiscated",
-    "Suspension from Activity",
-    "Other",
-  ]
-
   return (
     <div className="min-h-screen bg-gray-50/50">
 
@@ -392,7 +378,7 @@ function DisciplinePageContent() {
           <div>
             <h1 className="text-2xl font-bold mb-1">Discipline Records</h1>
             <p className="text-muted-foreground">
-              Track infractions and referrals for expedition students
+              Track critical and non-critical incidents for expedition students
             </p>
           </div>
           <Button onClick={handleOpenCreate} className="cursor-pointer">
@@ -447,19 +433,15 @@ function DisciplinePageContent() {
                       {formatRelativeTime(record.created_at)}
                     </TableCell>
                     <TableCell className="h-14 px-4">
-                      {record.isReferral ? (
-                        <Badge variant="destructive" className="text-xs">Referral</Badge>
-                      ) : (
-                        <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-200">Infraction</Badge>
-                      )}
+                      <DisciplineSeverityBadge critical={recordIsCritical(record)} />
                     </TableCell>
                     <TableCell className="h-14 px-4 font-medium text-sm text-gray-900">{getStudentName(record.students_id)}</TableCell>
                     <TableCell className="h-14 px-4 text-sm text-gray-700">{formatDate(record.date)}</TableCell>
                     <TableCell className="h-14 px-4 text-sm text-gray-700 truncate" title={record.reason}>
                       {record.reason}
                     </TableCell>
-                    <TableCell className="h-14 px-4 text-sm text-gray-700 truncate" title={record.consequence}>
-                      {record.consequence || "—"}
+                    <TableCell className="h-14 px-4 text-sm text-gray-700 truncate" title={formatConsequence(record.consequence, record.consequence_days)}>
+                      {formatConsequence(record.consequence, record.consequence_days) || "—"}
                     </TableCell>
                     <TableCell className="h-14 px-4 text-sm text-gray-700">{getStaffName(record.expedition_staff_id)}</TableCell>
                     <TableCell className="h-14 px-4 text-right">
@@ -503,11 +485,7 @@ function DisciplinePageContent() {
         <DialogContent className="w-full sm:max-w-2xl max-h-[90vh] flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              {selectedRecord?.isReferral ? (
-                <Badge variant="destructive">Referral</Badge>
-              ) : (
-                <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">Infraction</Badge>
-              )}
+              <DisciplineSeverityBadge critical={recordIsCritical(selectedRecord)} />
               <span>{getStudentName(selectedRecord?.students_id)}</span>
             </DialogTitle>
             <DialogDescription>
@@ -557,40 +535,21 @@ function DisciplinePageContent() {
                   </div>
                 </div>
 
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    checked={formData.isReferral}
-                    onCheckedChange={(v) => setFormData(prev => ({ ...prev, isReferral: v }))}
-                  />
-                  <Label>Referral (vs Infraction)</Label>
-                </div>
-
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Reason *</Label>
-                    <Select value={formData.reason} onValueChange={(v) => setFormData(prev => ({ ...prev, reason: v }))}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select reason" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {reasonOptions.map((r) => (
-                          <SelectItem key={r} value={r}>{r}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <DisciplineReasonSelect
+                      value={formData.reason}
+                      onChange={(reason, critical) => setFormData(prev => ({ ...prev, reason, isReferral: critical }))}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label>Consequence</Label>
-                    <Select value={formData.consequence} onValueChange={(v) => setFormData(prev => ({ ...prev, consequence: v }))}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select consequence" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {consequenceOptions.map((c) => (
-                          <SelectItem key={c} value={c}>{c}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <DisciplineConsequenceField
+                      value={formData.consequence}
+                      days={formData.consequence_days}
+                      onChange={(consequence, consequence_days) => setFormData(prev => ({ ...prev, consequence, consequence_days }))}
+                      />
                   </div>
                 </div>
 
@@ -637,7 +596,7 @@ function DisciplinePageContent() {
                   </div>
                   <div>
                     <Label className="text-muted-foreground text-sm">Consequence</Label>
-                    <p className="font-medium">{selectedRecord?.consequence || "—"}</p>
+                    <p className="font-medium">{formatConsequence(selectedRecord?.consequence, selectedRecord?.consequence_days) || "—"}</p>
                   </div>
                 </div>
 
@@ -703,7 +662,7 @@ function DisciplinePageContent() {
           <DialogHeader>
             <DialogTitle>Create New Record</DialogTitle>
             <DialogDescription>
-              Document a new infraction or referral for a student
+              Document an incident for a student. The reason sets whether it is critical.
             </DialogDescription>
           </DialogHeader>
 
@@ -747,40 +706,21 @@ function DisciplinePageContent() {
               </div>
             </div>
 
-            <div className="flex items-center space-x-2">
-              <Switch
-                checked={formData.isReferral}
-                onCheckedChange={(v) => setFormData(prev => ({ ...prev, isReferral: v }))}
-              />
-              <Label>Referral (vs Infraction)</Label>
-            </div>
-
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Reason *</Label>
-                <Select value={formData.reason} onValueChange={(v) => setFormData(prev => ({ ...prev, reason: v }))}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select reason" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {reasonOptions.map((r) => (
-                      <SelectItem key={r} value={r}>{r}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <DisciplineReasonSelect
+                      value={formData.reason}
+                      onChange={(reason, critical) => setFormData(prev => ({ ...prev, reason, isReferral: critical }))}
+                    />
               </div>
               <div className="space-y-2">
                 <Label>Consequence</Label>
-                <Select value={formData.consequence} onValueChange={(v) => setFormData(prev => ({ ...prev, consequence: v }))}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select consequence" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {consequenceOptions.map((c) => (
-                      <SelectItem key={c} value={c}>{c}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <DisciplineConsequenceField
+                      value={formData.consequence}
+                      days={formData.consequence_days}
+                      onChange={(consequence, consequence_days) => setFormData(prev => ({ ...prev, consequence, consequence_days }))}
+                      />
               </div>
             </div>
 
@@ -825,7 +765,7 @@ function DisciplinePageContent() {
             </Button>
             <Button className="cursor-pointer" onClick={handleCreate} disabled={isSaving}>
               {isSaving ? <Spinner className="mr-2" /> : null}
-              Create {formData.isReferral ? "Referral" : "Infraction"}
+              Create Record
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -837,7 +777,7 @@ function DisciplinePageContent() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Record</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this {selectedRecord?.isReferral ? "referral" : "infraction"} record?
+              Are you sure you want to delete this {recordIsCritical(selectedRecord) ? "critical" : "non-critical"} record?
               This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>

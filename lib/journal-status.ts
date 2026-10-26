@@ -18,12 +18,14 @@ export interface JournalStatusOption {
   /** expedition_journal_status.name written to the record. */
   storedName: string
   selectedClass: string
+  /** Ring colour of the control while this status is selected. */
+  ringClass: string
 }
 
 export const JOURNAL_STATUS_OPTIONS: ReadonlyArray<JournalStatusOption> = [
-  { key: "not_started", label: "Not Started", storedName: "Not Started", selectedClass: "bg-red-100 text-red-700 shadow-sm" },
-  { key: "incomplete", label: "Incomplete/Late", storedName: "Incomplete", selectedClass: "bg-yellow-100 text-yellow-700 shadow-sm" },
-  { key: "complete", label: "Complete", storedName: "Completed", selectedClass: "bg-green-100 text-green-700 shadow-sm" },
+  { key: "not_started", label: "Not Started", storedName: "Not Started", selectedClass: "bg-red-50 text-red-700", ringClass: "border-red-500" },
+  { key: "incomplete", label: "Incomplete/Late", storedName: "Incomplete", selectedClass: "bg-yellow-50 text-yellow-700", ringClass: "border-yellow-500" },
+  { key: "complete", label: "Complete", storedName: "Completed", selectedClass: "bg-green-50 text-green-700", ringClass: "border-green-500" },
 ]
 
 /** Map a stored journal status name (any casing, legacy names included) to the control's state. */

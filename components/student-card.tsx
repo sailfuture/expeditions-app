@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { X, Lock, LockOpen } from "lucide-react"
 import { ScoreControl } from "./score-control"
 import { ScoreReasonField } from "./score-reason-field"
+import { SegmentedControl, CARD_FIELD_BOX, CARD_FIELD_LABEL, type SegmentOption } from "./segmented-control"
 import { JournalStatusControl } from "./journal-status-control"
 import type {
   ExpeditionProfessionalism,
@@ -27,10 +28,10 @@ interface StudentCardProps {
 }
 
 // Fitness is tri-state for the expedition award: blank (not applicable), incomplete, complete.
-const FITNESS_OPTIONS: ReadonlyArray<{ label: string; value: number | null; selectedClass: string }> = [
-  { label: "N/A", value: null, selectedClass: "bg-white text-gray-700 shadow-sm border border-gray-200" },
-  { label: "Incomplete", value: 0, selectedClass: "bg-red-100 text-red-700 shadow-sm" },
-  { label: "Complete", value: 100, selectedClass: "bg-green-100 text-green-700 shadow-sm" },
+const FITNESS_OPTIONS: ReadonlyArray<SegmentOption<number | null>> = [
+  { label: "N/A", value: null, selectedClass: "bg-gray-50 text-gray-800", ringClass: "border-gray-300" },
+  { label: "Incomplete", value: 0, selectedClass: "bg-red-50 text-red-700", ringClass: "border-red-500" },
+  { label: "Complete", value: 100, selectedClass: "bg-green-50 text-green-700", ringClass: "border-green-500" },
 ]
 
 function getScoreCategories(isOffshore: boolean, isService: boolean): Array<{ key: ScoreKey; label: string }> {
@@ -311,50 +312,25 @@ export function StudentCard({
         )}
       </div>
 
-      <div className="px-3 sm:px-4 pb-4 space-y-2.5 relative">
+      <div className="px-3 sm:px-4 pb-4 space-y-3 relative">
         <JournalStatusControl
           value={record.journaling}
           onChange={handleJournalingChange}
           disabled={record.isLocked}
         />
 
-        <div className="w-full">
-          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">FITNESS</label>
-          <div
-            role="radiogroup"
-            aria-label="Fitness"
-            className={cn(
-              "mt-1 grid grid-cols-3 gap-1 rounded-lg border border-gray-200 bg-gray-50 p-1",
-              record.isLocked && "opacity-50"
-            )}
-          >
-            {FITNESS_OPTIONS.map((option) => {
-              const selected = (record.fitness ?? null) === option.value
-              return (
-                <button
-                  key={option.label}
-                  type="button"
-                  role="radio"
-                  aria-checked={selected}
-                  disabled={record.isLocked}
-                  onClick={() => handleFitnessChange(option.value)}
-                  className={cn(
-                    "h-7 rounded-md text-xs font-medium transition-colors",
-                    record.isLocked ? "cursor-not-allowed" : "cursor-pointer",
-                    selected ? option.selectedClass : "text-gray-500 hover:bg-white hover:text-gray-700"
-                  )}
-                >
-                  {option.label}
-                </button>
-              )
-            })}
-          </div>
-        </div>
+        <SegmentedControl<number | null>
+          label="FITNESS"
+          options={FITNESS_OPTIONS}
+          value={record.fitness ?? null}
+          onChange={(v) => handleFitnessChange(v ?? null)}
+          disabled={record.isLocked}
+        />
 
-        <div className="w-full">
-          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">NOTE</label>
+        <div className="flex w-full flex-col gap-1.5">
+          <label className={CARD_FIELD_LABEL}>NOTE</label>
           <Input
-            className="mt-1 h-9 w-full rounded-lg border-gray-200 cursor-text"
+            className={cn(CARD_FIELD_BOX, "h-10 w-full cursor-text border-gray-200 text-sm shadow-none focus-visible:border-gray-400 focus-visible:ring-0")}
             placeholder="Add a note..."
             value={record.note ?? ""}
             onChange={handleNoteChange}

@@ -733,6 +733,8 @@ export async function createExpeditionDiscipline(data: {
   reason: string
   summary_of_incident: string
   consequence: string
+  /** Days the consequence lasts (shore leave, activity suspension); 0 when not applicable. */
+  consequence_days?: number
   expedition_staff_id: number
   action_taken: string
 }) {

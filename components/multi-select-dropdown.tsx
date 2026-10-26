@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react"
 import { Check, ChevronDown } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { CARD_FIELD_BOX, CARD_FIELD_LABEL } from "./segmented-control"
 
 interface Option {
   id: number
@@ -57,32 +58,38 @@ export function MultiSelectDropdown({
     }
   }
 
+  // Same ring style as the score steppers: a 2px ring that takes the reason
+  // colour (green above 3, red below) once reasons are picked.
+  const ringColor = selectedOptions.length > 0 ? (isPenalty ? "border-red-500" : "border-green-500") : "border-gray-200"
+
   return (
-    <div className="w-full" ref={dropdownRef}>
-      <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</label>
+    <div className="flex w-full flex-col gap-1.5" ref={dropdownRef}>
+      <label className={CARD_FIELD_LABEL}>{label}</label>
       <button
         type="button"
         onClick={() => !disabled && setIsOpen(!isOpen)}
         disabled={disabled}
         className={cn(
-          "mt-1.5 h-11 w-full rounded-lg border border-gray-200 bg-background px-3 flex items-center justify-between gap-2 text-left cursor-pointer",
-          "hover:bg-gray-50 transition-colors outline-none",
-          // Inset ring and border only: this field often sits inside an
-          // overflow-hidden wrapper (the animated reason picker), which would
-          // clip a ring drawn outside the box.
+          CARD_FIELD_BOX,
+          ringColor,
+          "flex h-10 w-full cursor-pointer items-center justify-between gap-2 px-3 text-left",
+          "outline-none hover:bg-gray-50",
+          // Inset ring only: this field often sits inside an overflow-hidden
+          // wrapper (the animated reason picker), which would clip an outer ring.
           "focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-gray-300",
           disabled && "opacity-50 cursor-not-allowed",
-          isOpen && "border-gray-400 bg-gray-50",
+          isOpen && "bg-gray-50",
+          isOpen && selectedOptions.length === 0 && "border-gray-400",
         )}
       >
-        <span className={cn("truncate text-sm", selectedOptions.length === 0 && "text-muted-foreground")}>
+        <span className={cn("truncate text-sm font-medium", selectedOptions.length === 0 ? "text-muted-foreground font-normal" : "text-gray-900")}>
           {displayText}
         </span>
         <div className="flex items-center gap-2 shrink-0">
           {selectedOptions.length > 0 && (
             <span
               className={cn(
-                "inline-flex items-center justify-center h-6 min-w-6 px-1.5 rounded-md text-white text-xs font-semibold",
+                "inline-flex h-5 min-w-5 items-center justify-center rounded px-1.5 text-xs font-semibold text-white",
                 badgeColor,
               )}
             >

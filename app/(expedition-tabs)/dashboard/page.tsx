@@ -463,6 +463,7 @@ export default function DashboardPage() {
       mutate(`expedition_schedules_${activeExpeditionId}`)
       toast.success(`Deleted ${formatDate(scheduleToDelete.date)}`)
       setDeleteRowDialogOpen(false)
+      if (selectedSchedule?.id === scheduleToDelete.id) setDetailModalOpen(false)
       setScheduleToDelete(null)
     } catch (error) {
       console.error("Failed to delete date row:", error)
@@ -927,17 +928,17 @@ export default function DashboardPage() {
                       <div className={`absolute top-0 left-0 bottom-0 w-8 bg-gradient-to-r from-white to-transparent pointer-events-none z-10 transition-opacity ${scrollState[locationKey]?.left ? 'opacity-100' : 'opacity-0'}`} />
                       {/* Right scroll gradient indicator */}
                       <div className={`absolute top-0 right-0 bottom-0 w-8 bg-gradient-to-l from-white to-transparent pointer-events-none z-10 transition-opacity ${scrollState[locationKey]?.right !== false ? 'opacity-100' : 'opacity-0'}`} />
-                      <div className="overflow-x-auto" ref={handleScrollRef(locationKey)}>
-                    <Table className="table-fixed w-full min-w-[1310px]">
+                      <div className="overflow-hidden" ref={handleScrollRef(locationKey)}>
+                    <Table className="table-fixed w-full">
                       <TableHeader>
                         <TableRow className="border-b bg-gray-50/30 hover:bg-gray-50/30">
-                          <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600" style={{ width: "100px" }}>Date</TableHead>
-                          <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600" style={{ width: "230px" }}>Location</TableHead>
-                          <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600" style={{ width: "150px" }}>Type</TableHead>
-                          <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600" style={{ width: "230px" }}>Destination</TableHead>
-                          <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600" style={{ width: "200px" }}>Time Off</TableHead>
-                          <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600" style={{ width: "300px" }}>Notes</TableHead>
-                          <TableHead className="h-10 px-4 text-right text-xs font-semibold text-gray-600" style={{ width: "100px" }}>Actions</TableHead>
+                          <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600" style={{ width: "11%" }}>Date</TableHead>
+                          <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600" style={{ width: "19%" }}>Location</TableHead>
+                          <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600" style={{ width: "12%" }}>Type</TableHead>
+                          <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600" style={{ width: "19%" }}>Destination</TableHead>
+                          <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600" style={{ width: "15%" }}>Time Off</TableHead>
+                          <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600" style={{ width: "auto" }}>Notes</TableHead>
+                          <TableHead className="h-10 px-2 text-right text-xs font-semibold text-gray-600" style={{ width: "52px" }}><span className="sr-only">Actions</span></TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -951,19 +952,19 @@ export default function DashboardPage() {
                               onClick={() => handleRowClick(schedule)}
                             >
                               {/* Row content - reuse the same cells */}
-                              <TableCell className="h-14 px-4" style={{ width: "100px" }}>
+                              <TableCell className="h-14 px-2">
                                 <span className="font-semibold text-sm text-gray-900 underline decoration-gray-300 underline-offset-4 hover:decoration-gray-900">
                                   {formatDate(schedule.date)}
                                 </span>
                               </TableCell>
-                              <TableCell className="h-14 px-4" onClick={(e) => e.stopPropagation()} style={{ width: "230px" }}>
+                              <TableCell className="h-14 px-2" onClick={(e) => e.stopPropagation()}>
                                 <div className="relative">
                                   <Select
                                     value={schedule.current_location?.toString() || "1"}
                                     onValueChange={(value) => handleLocationChange(schedule, Number(value), false)}
                                     disabled={updatingLocationId === `${schedule.id}-location`}
                                   >
-                                    <SelectTrigger className={`w-full h-8 text-sm border-0 hover:bg-gray-100 cursor-pointer ${updatingLocationId === `${schedule.id}-location` ? 'opacity-50' : ''} [&>span]:truncate [&>span]:max-w-[180px]`}>
+                                    <SelectTrigger className={`w-full h-8 text-sm border-0 hover:bg-gray-100 cursor-pointer ${updatingLocationId === `${schedule.id}-location` ? 'opacity-50' : ''} [&>span]:truncate min-w-0`}>
                                       <SelectValue placeholder="Select location" />
                                     </SelectTrigger>
                                     <SelectContent className="min-w-[280px]">
@@ -986,8 +987,8 @@ export default function DashboardPage() {
                                   )}
                                 </div>
                               </TableCell>
-                              <TableCell className="h-14 px-4" onClick={(e) => e.stopPropagation()} style={{ width: "100px" }}>
-                                <div className="flex gap-1">
+                              <TableCell className="h-14 px-2" onClick={(e) => e.stopPropagation()}>
+                                <div className="flex gap-0.5">
                                   <button
                                     onClick={() => handleTypeChange(schedule, "anchored")}
                                     disabled={updatingTypeId === schedule.id}
@@ -1041,14 +1042,14 @@ export default function DashboardPage() {
                                   </button>
                                 </div>
                               </TableCell>
-                              <TableCell className="h-14 px-4" onClick={(e) => e.stopPropagation()} style={{ width: "230px" }}>
+                              <TableCell className="h-14 px-2" onClick={(e) => e.stopPropagation()}>
                                 <div className="relative">
                                   <Select
                                     value={schedule.destination?.toString() || "0"}
                                     onValueChange={(value) => handleLocationChange(schedule, Number(value), true)}
                                     disabled={!(schedule.isOffshore || schedule.is_offshore) || updatingLocationId === `${schedule.id}-destination`}
                                   >
-                                    <SelectTrigger className={`w-full h-8 text-sm border-0 ${(schedule.isOffshore || schedule.is_offshore) ? 'hover:bg-gray-100 cursor-pointer' : 'cursor-not-allowed'} ${updatingLocationId === `${schedule.id}-destination` ? 'opacity-50' : ''} [&>span]:truncate [&>span]:max-w-[180px]`}>
+                                    <SelectTrigger className={`w-full h-8 text-sm border-0 ${(schedule.isOffshore || schedule.is_offshore) ? 'hover:bg-gray-100 cursor-pointer' : 'cursor-not-allowed'} ${updatingLocationId === `${schedule.id}-destination` ? 'opacity-50' : ''} [&>span]:truncate min-w-0`}>
                                       <SelectValue placeholder="—" />
                                     </SelectTrigger>
                                     <SelectContent className="min-w-[280px]">
@@ -1072,7 +1073,7 @@ export default function DashboardPage() {
                                   )}
                                 </div>
                               </TableCell>
-                              <TableCell className="h-14 px-4" style={{ width: "200px" }} onClick={(e) => e.stopPropagation()}>
+                              <TableCell className="h-14 px-2" onClick={(e) => e.stopPropagation()}>
                                 <div className="relative">
                                   <StaffOffMultiSelect
                                     staff={staff || []}
@@ -1102,9 +1103,9 @@ export default function DashboardPage() {
                                   )}
                                 </div>
                               </TableCell>
-                              <TableCell className="h-14 px-4" style={{ width: "300px" }} onClick={(e) => e.stopPropagation()}>
+                              <TableCell className="h-14 px-2" onClick={(e) => e.stopPropagation()}>
                                 {editingNotesId === schedule.id ? (
-                                  <div className="flex items-center gap-1" style={{ maxWidth: "280px" }}>
+                                  <div className="flex min-w-0 items-center gap-1">
                                     <Input
                                       value={notesValues.hasOwnProperty(schedule.id) ? notesValues[schedule.id] : (schedule.notes ?? "")}
                                       onChange={(e) => handleNotesChange(schedule.id, e.target.value)}
@@ -1138,7 +1139,7 @@ export default function DashboardPage() {
                                   </div>
                                 ) : (
                                   <div
-                                    className="text-sm text-gray-700 cursor-text hover:bg-gray-50 px-2 py-1 rounded min-h-[32px] flex items-center max-w-[280px]"
+                                    className="text-sm text-gray-700 cursor-text hover:bg-gray-50 px-2 py-1 rounded min-h-[32px] flex min-w-0 items-center"
                                     onClick={() => {
                                       setEditingNotesId(schedule.id)
                                       setNotesValues((prev) => ({ ...prev, [schedule.id]: schedule.notes ?? "" }))
@@ -1149,20 +1150,12 @@ export default function DashboardPage() {
                                   </div>
                                 )}
                               </TableCell>
-                              <TableCell className="h-14 px-4" style={{ width: "100px" }}>
-                                <div className="flex items-center justify-end gap-2">
+                              <TableCell className="h-14 px-2">
+                                <div className="flex items-center justify-end">
                                   <Button
                                     variant="outline"
                                     size="icon"
-                                    onClick={(e) => handleDeleteRowClick(schedule, e)}
-                                    className="h-8 w-8 text-gray-500 hover:text-red-600 hover:bg-red-50 hover:border-red-300 cursor-pointer border-gray-300"
-                                    title="Delete date row"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                  <Button
-                                    variant="outline"
-                                    size="icon"
+                                    title="Open this day"
                                     onClick={(e) => handleViewSchedule(schedule, e)}
                                     className="h-8 w-8 text-gray-500 hover:text-gray-900 cursor-pointer border-gray-300"
                                   >
@@ -1187,17 +1180,17 @@ export default function DashboardPage() {
               <div className={`absolute top-0 left-0 bottom-0 w-8 bg-gradient-to-r from-white to-transparent pointer-events-none z-10 transition-opacity ${scrollState['main']?.left ? 'opacity-100' : 'opacity-0'}`} />
               {/* Right scroll gradient indicator */}
               <div className={`absolute top-0 right-0 bottom-0 w-8 bg-gradient-to-l from-white to-transparent pointer-events-none z-10 transition-opacity ${scrollState['main']?.right !== false ? 'opacity-100' : 'opacity-0'}`} />
-              <div className="overflow-x-auto" ref={handleScrollRef('main')}>
-                    <Table className="table-fixed w-full min-w-[1310px]">
+              <div className="overflow-hidden" ref={handleScrollRef('main')}>
+                    <Table className="table-fixed w-full">
                       <TableHeader>
                         <TableRow className="border-b bg-gray-50/30 hover:bg-gray-50/30">
-                          <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600" style={{ width: "100px" }}>Date</TableHead>
-                          <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600" style={{ width: "230px" }}>Location</TableHead>
-                          <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600" style={{ width: "150px" }}>Type</TableHead>
-                          <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600" style={{ width: "230px" }}>Destination</TableHead>
-                          <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600" style={{ width: "200px" }}>Time Off</TableHead>
-                          <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600" style={{ width: "300px" }}>Notes</TableHead>
-                          <TableHead className="h-10 px-4 text-right text-xs font-semibold text-gray-600" style={{ width: "100px" }}>Actions</TableHead>
+                          <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600" style={{ width: "11%" }}>Date</TableHead>
+                          <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600" style={{ width: "19%" }}>Location</TableHead>
+                          <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600" style={{ width: "12%" }}>Type</TableHead>
+                          <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600" style={{ width: "19%" }}>Destination</TableHead>
+                          <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600" style={{ width: "15%" }}>Time Off</TableHead>
+                          <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600" style={{ width: "auto" }}>Notes</TableHead>
+                          <TableHead className="h-10 px-2 text-right text-xs font-semibold text-gray-600" style={{ width: "52px" }}><span className="sr-only">Actions</span></TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -1210,19 +1203,19 @@ export default function DashboardPage() {
                               className="border-b last:border-0 transition-colors hover:bg-gray-50/50 cursor-pointer"
                               onClick={() => handleRowClick(schedule)}
                             >
-                              <TableCell className="h-14 px-4" style={{ width: "100px" }}>
+                              <TableCell className="h-14 px-2">
                                 <span className="font-semibold text-sm text-gray-900 underline decoration-gray-300 underline-offset-4 hover:decoration-gray-900">
                                   {formatDate(schedule.date)}
                                 </span>
                               </TableCell>
-                              <TableCell className="h-14 px-4" onClick={(e) => e.stopPropagation()} style={{ width: "230px" }}>
+                              <TableCell className="h-14 px-2" onClick={(e) => e.stopPropagation()}>
                                 <div className="relative">
                                   <Select
                                     value={schedule.current_location?.toString() || "1"}
                                     onValueChange={(value) => handleLocationChange(schedule, Number(value), false)}
                                     disabled={updatingLocationId === `${schedule.id}-location`}
                                   >
-                                    <SelectTrigger className={`w-full h-8 text-sm border-0 hover:bg-gray-100 cursor-pointer ${updatingLocationId === `${schedule.id}-location` ? 'opacity-50' : ''} [&>span]:truncate [&>span]:max-w-[180px]`}>
+                                    <SelectTrigger className={`w-full h-8 text-sm border-0 hover:bg-gray-100 cursor-pointer ${updatingLocationId === `${schedule.id}-location` ? 'opacity-50' : ''} [&>span]:truncate min-w-0`}>
                                       <SelectValue placeholder="Select location" />
                                     </SelectTrigger>
                                     <SelectContent className="min-w-[280px]">
@@ -1245,8 +1238,8 @@ export default function DashboardPage() {
                                   )}
                                 </div>
                               </TableCell>
-                              <TableCell className="h-14 px-4" onClick={(e) => e.stopPropagation()} style={{ width: "100px" }}>
-                                <div className="flex gap-1">
+                              <TableCell className="h-14 px-2" onClick={(e) => e.stopPropagation()}>
+                                <div className="flex gap-0.5">
                                   <button
                                     onClick={() => handleTypeChange(schedule, "anchored")}
                                     disabled={updatingTypeId === schedule.id}
@@ -1300,14 +1293,14 @@ export default function DashboardPage() {
                                   </button>
                                 </div>
                               </TableCell>
-                              <TableCell className="h-14 px-4" onClick={(e) => e.stopPropagation()} style={{ width: "230px" }}>
+                              <TableCell className="h-14 px-2" onClick={(e) => e.stopPropagation()}>
                                 <div className="relative">
                                   <Select
                                     value={schedule.destination?.toString() || "0"}
                                     onValueChange={(value) => handleLocationChange(schedule, Number(value), true)}
                                     disabled={!(schedule.isOffshore || schedule.is_offshore) || updatingLocationId === `${schedule.id}-destination`}
                                   >
-                                    <SelectTrigger className={`w-full h-8 text-sm border-0 ${(schedule.isOffshore || schedule.is_offshore) ? 'hover:bg-gray-100 cursor-pointer' : 'cursor-not-allowed'} ${updatingLocationId === `${schedule.id}-destination` ? 'opacity-50' : ''} [&>span]:truncate [&>span]:max-w-[180px]`}>
+                                    <SelectTrigger className={`w-full h-8 text-sm border-0 ${(schedule.isOffshore || schedule.is_offshore) ? 'hover:bg-gray-100 cursor-pointer' : 'cursor-not-allowed'} ${updatingLocationId === `${schedule.id}-destination` ? 'opacity-50' : ''} [&>span]:truncate min-w-0`}>
                                       <SelectValue placeholder="—" />
                                     </SelectTrigger>
                                     <SelectContent className="min-w-[280px]">
@@ -1331,7 +1324,7 @@ export default function DashboardPage() {
                                   )}
                                 </div>
                               </TableCell>
-                              <TableCell className="h-14 px-4" style={{ width: "200px" }} onClick={(e) => e.stopPropagation()}>
+                              <TableCell className="h-14 px-2" onClick={(e) => e.stopPropagation()}>
                                 <div className="relative">
                                   <StaffOffMultiSelect
                                     staff={staff || []}
@@ -1361,9 +1354,9 @@ export default function DashboardPage() {
                                   )}
                                 </div>
                               </TableCell>
-                              <TableCell className="h-14 px-4" style={{ width: "300px" }} onClick={(e) => e.stopPropagation()}>
+                              <TableCell className="h-14 px-2" onClick={(e) => e.stopPropagation()}>
                                 {editingNotesId === schedule.id ? (
-                                  <div className="flex items-center gap-1" style={{ maxWidth: "280px" }}>
+                                  <div className="flex min-w-0 items-center gap-1">
                                     <Input
                                       value={notesValues.hasOwnProperty(schedule.id) ? notesValues[schedule.id] : (schedule.notes ?? "")}
                                       onChange={(e) => handleNotesChange(schedule.id, e.target.value)}
@@ -1397,7 +1390,7 @@ export default function DashboardPage() {
                                   </div>
                                 ) : (
                                   <div
-                                    className="text-sm text-gray-700 cursor-text hover:bg-gray-50 px-2 py-1 rounded min-h-[32px] flex items-center max-w-[280px]"
+                                    className="text-sm text-gray-700 cursor-text hover:bg-gray-50 px-2 py-1 rounded min-h-[32px] flex min-w-0 items-center"
                                     onClick={() => {
                                       setEditingNotesId(schedule.id)
                                       setNotesValues((prev) => ({ ...prev, [schedule.id]: schedule.notes ?? "" }))
@@ -1408,20 +1401,12 @@ export default function DashboardPage() {
                                   </div>
                                 )}
                               </TableCell>
-                              <TableCell className="h-14 px-4" style={{ width: "100px" }}>
-                                <div className="flex items-center justify-end gap-2">
+                              <TableCell className="h-14 px-2">
+                                <div className="flex items-center justify-end">
                                   <Button
                                     variant="outline"
                                     size="icon"
-                                    onClick={(e) => handleDeleteRowClick(schedule, e)}
-                                    className="h-8 w-8 text-gray-500 hover:text-red-600 hover:bg-red-50 hover:border-red-300 cursor-pointer border-gray-300"
-                                    title="Delete date row"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                  <Button
-                                    variant="outline"
-                                    size="icon"
+                                    title="Open this day"
                                     onClick={(e) => handleViewSchedule(schedule, e)}
                                     className="h-8 w-8 text-gray-500 hover:text-gray-900 cursor-pointer border-gray-300"
                                   >
@@ -1660,6 +1645,19 @@ export default function DashboardPage() {
               >
                 <Users className="h-4 w-4 mr-2" />
                 Evaluate Students
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="shrink-0 cursor-pointer border-gray-300 text-gray-500 hover:border-red-300 hover:bg-red-50 hover:text-red-600"
+                title="Delete this day"
+                aria-label="Delete this day"
+                onClick={() => {
+                  setScheduleToDelete(selectedSchedule)
+                  setDeleteRowDialogOpen(true)
+                }}
+              >
+                <Trash2 className="h-4 w-4" />
               </Button>
             </div>
           )}

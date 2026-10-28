@@ -109,9 +109,9 @@ export function Navbar() {
     <header className="sticky top-0 z-50 w-full bg-background">
       {/* Main Navigation */}
       <div className="border-b">
-        <div className="container mx-auto flex h-14 items-center px-4 gap-4 sm:gap-6">
+        <div className="container mx-auto flex h-14 items-center px-4 gap-2">
           {/* Logo */}
-          <Link href="/home" className="flex items-center gap-2 cursor-pointer flex-shrink-0">
+          <Link href="/home" className="mr-2 flex items-center gap-2 cursor-pointer flex-shrink-0 sm:mr-4">
             <div className="h-9 w-9 rounded-full overflow-hidden">
               <Image
                 src="/sailfuture-square (8).webp"
@@ -129,8 +129,9 @@ export function Navbar() {
               href="/home"
               className={cn(
                 navigationMenuTriggerStyle(),
-                "cursor-pointer flex-shrink-0 bg-gray-100 hover:bg-gray-200",
-                pathname === "/home" && "text-foreground",
+                "border border-gray-200",
+                "cursor-pointer flex-shrink-0 hover:bg-gray-50",
+                pathname === "/home" && "text-foreground bg-gray-100 border-gray-300",
               )}
             >
               <LayoutDashboard className="h-4 w-4 sm:mr-1.5" />
@@ -143,8 +144,9 @@ export function Navbar() {
                 href="/expeditions"
                 className={cn(
                   navigationMenuTriggerStyle(),
-                  "cursor-pointer flex-shrink-0 bg-gray-100 hover:bg-gray-200",
-                  pathname === "/expeditions" && "text-foreground",
+                "border border-gray-200",
+                  "cursor-pointer flex-shrink-0 hover:bg-gray-50",
+                  pathname === "/expeditions" && "text-foreground bg-gray-100 border-gray-300",
                 )}
               >
                 All Expeditions
@@ -154,8 +156,9 @@ export function Navbar() {
                 href="/my-expeditions"
                 className={cn(
                   navigationMenuTriggerStyle(),
-                  "cursor-pointer flex-shrink-0 bg-gray-100 hover:bg-gray-200",
-                  pathname === "/my-expeditions" && "text-foreground",
+                "border border-gray-200",
+                  "cursor-pointer flex-shrink-0 hover:bg-gray-50",
+                  pathname === "/my-expeditions" && "text-foreground bg-gray-100 border-gray-300",
                 )}
               >
                 My Expeditions
@@ -172,7 +175,8 @@ export function Navbar() {
                     <DropdownMenu>
                       <DropdownMenuTrigger className={cn(
                         navigationMenuTriggerStyle(),
-                        "cursor-pointer flex items-center gap-1",
+                "border border-gray-200",
+                        "cursor-pointer flex items-center gap-1.5",
                         (pathname === "/students" || pathname === "/intake-records" || pathname === "/staff") && "text-foreground",
                       )}>
                         Records
@@ -208,7 +212,8 @@ export function Navbar() {
                     <DropdownMenu>
                       <DropdownMenuTrigger className={cn(
                         navigationMenuTriggerStyle(),
-                        "cursor-pointer flex items-center gap-1",
+                "border border-gray-200",
+                        "cursor-pointer flex items-center gap-1.5",
                         (pathname.startsWith("/public/passage-logs") || pathname === "/passage-logs") && "text-foreground",
                       )}>
                         Passage Planning
@@ -238,7 +243,8 @@ export function Navbar() {
                     <DropdownMenu>
                       <DropdownMenuTrigger className={cn(
                         navigationMenuTriggerStyle(),
-                        "cursor-pointer flex items-center gap-1",
+                "border border-gray-200",
+                        "cursor-pointer flex items-center gap-1.5",
                         (pathname === "/meal-planning" || pathname.startsWith("/meal-planning/") || pathname === "/inventory" || pathname === "/galley-equipment") && "text-foreground",
                       )}>
                         Galley
@@ -268,7 +274,8 @@ export function Navbar() {
                     <DropdownMenu>
                       <DropdownMenuTrigger className={cn(
                         navigationMenuTriggerStyle(),
-                        "cursor-pointer flex items-center gap-1",
+                "border border-gray-200",
+                        "cursor-pointer flex items-center gap-1.5",
                         (pathname === "/uniform-inventory" || pathname === "/linen-inventory" || pathname === "/supplies" || pathname === "/locations") && "text-foreground",
                       )}>
                         Ship Inventory
@@ -304,7 +311,8 @@ export function Navbar() {
                     <DropdownMenu>
                       <DropdownMenuTrigger className={cn(
                         navigationMenuTriggerStyle(),
-                        "cursor-pointer flex items-center gap-1",
+                "border border-gray-200",
+                        "cursor-pointer flex items-center gap-1.5",
                         (pathname.startsWith("/tv") || pathname === "/public/schedule") && "text-foreground",
                       )}>
                         Public Pages
@@ -337,7 +345,7 @@ export function Navbar() {
           {/* Spacer */}
           <div className="flex-1" />
 
-          <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+          <div className="ml-2 flex items-center gap-3 sm:gap-4 min-w-0">
             {/* Expedition name - hidden on mobile */}
             {expeditionIdFromUrl && displayedExpedition && (
               <div className="hidden sm:flex items-center gap-4">

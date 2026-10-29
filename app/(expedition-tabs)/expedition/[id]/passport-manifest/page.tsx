@@ -535,7 +535,7 @@ export default function PassportManifestPage({ params }: PageProps) {
                             </div>
                           </TableCell>
                           <TableCell className="h-16 px-6">
-                            <span className="text-sm text-gray-600 whitespace-nowrap">{person.crew_role || "—"}</span>
+                            <span className="block truncate text-sm text-gray-600" title={person.crew_role || undefined}>{person.crew_role || "—"}</span>
                           </TableCell>
                           <TableCell className="h-16 px-6">
                             <span className="text-sm text-gray-600 whitespace-nowrap">{person.dob || "—"}</span>
@@ -605,7 +605,7 @@ export default function PassportManifestPage({ params }: PageProps) {
                             </div>
                           </TableCell>
                           <TableCell className="h-16 px-6">
-                            <span className="text-sm text-gray-600 whitespace-nowrap">{person.crew_role || "—"}</span>
+                            <span className="block truncate text-sm text-gray-600" title={person.crew_role || undefined}>{person.crew_role || "—"}</span>
                           </TableCell>
                           <TableCell className="h-16 px-6">
                             <span className="text-sm text-gray-600 whitespace-nowrap">{person.dob || "—"}</span>

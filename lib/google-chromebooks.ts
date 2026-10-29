@@ -4,6 +4,10 @@ import "server-only"
 // the laptop (A-07); assigning sets that OU's allowlist to the student, unassigning hands the
 // setting back to the parent OU. Server only: it acts as a Workspace admin.
 //
+// The Chromebooks are managed in the sailfuture.org Workspace, so the service account's
+// domain-wide delegation is granted in sailfuture.org's Admin console and GOOGLE_ADMIN_SUBJECT is
+// a sailfuture.org admin (not the witexpeditions.org one the expeditions site uses for photos).
+//
 // Needs, in the environment:
 //   GOOGLE_SERVICE_ACCOUNT_KEY   the service account's JSON key (or GOOGLE_SERVICE_ACCOUNT_EMAIL +
 //                                GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY)
@@ -27,7 +31,7 @@ const SIGN_IN_SCHEMA = "chrome.devices.SignInRestriction"
 /** Why Chromebook sign-in can't be managed here, or null when it's set up. */
 export function chromebookSetupProblem(): string | null {
   if (!process.env.GOOGLE_SERVICE_ACCOUNT_KEY && !process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY) {
-    return "Google Admin isn't connected (no service account key)"
+    return "Google Admin isn't connected (GOOGLE_SERVICE_ACCOUNT_KEY is empty in this deploy)"
   }
   if (!process.env.GOOGLE_ADMIN_SUBJECT) return "Google Admin isn't connected (GOOGLE_ADMIN_SUBJECT is not set)"
   return null

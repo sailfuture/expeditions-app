@@ -3,22 +3,17 @@
 // laptop (A-07), and its allowlist names the student it's assigned to. Pure helpers here; the
 // Google calls are in google-chromebooks.ts.
 
-// The roster has name@sailfuture.org; students sign in to Google as name@witexpeditions.org.
-// Both addresses are the same person, so both go on the allowlist.
-const LINKED_EMAIL_DOMAINS = ["witexpeditions.org", "sailfuture.org"]
+// Chromebooks are managed in the sailfuture.org Workspace, where students sign in with the
+// roster address (studentEmail, name@sailfuture.org), so that is the one allowed.
 
-/** The student's address on every linked domain, plus anyone always allowed (comma-separated). */
+/** The student's email plus anyone always allowed (comma-separated), lowercased, no repeats. */
 export function signInAllowlist(studentEmail: string, alwaysAllowed = ""): string[] {
-  const email = studentEmail.trim().toLowerCase()
-  const at = email.lastIndexOf("@")
-  const name = email.slice(0, at)
-  const domain = email.slice(at + 1)
-  const own = LINKED_EMAIL_DOMAINS.includes(domain) ? LINKED_EMAIL_DOMAINS.map((d) => `${name}@${d}`) : [email]
+  const own = studentEmail.trim().toLowerCase()
   const extra = alwaysAllowed
     .split(",")
     .map((e) => e.trim().toLowerCase())
     .filter(Boolean)
-  return [...new Set([...own, ...extra])]
+  return [...new Set([own, ...extra].filter(Boolean))]
 }
 
 /** "/Expedition/" -> "/Expedition"; "Expedition" -> "/Expedition". */

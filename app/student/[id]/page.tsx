@@ -278,6 +278,7 @@ export default function StudentDetailPage() {
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
+    studentEmail: "",
     grade: "",
     expeditions_id: [] as number[],
     isArchived: false,
@@ -304,6 +305,7 @@ export default function StudentDetailPage() {
       setFormData({
         firstName: student.firstName || "",
         lastName: student.lastName || "",
+        studentEmail: student.studentEmail || "",
         grade: student.grade || "",
         expeditions_id: expeditionIds,
         isArchived: student.isArchived || false,
@@ -343,6 +345,8 @@ export default function StudentDetailPage() {
         students_id: studentId,
         firstName: formData.firstName,
         lastName: formData.lastName,
+        // The school email: the expeditions site links a signed-in student to their crew profile by it.
+        studentEmail: formData.studentEmail.trim().toLowerCase(),
         grade: formData.grade,
         expeditions_id: formData.expeditions_id,
         isArchived: formData.isArchived,
@@ -1982,6 +1986,17 @@ export default function StudentDetailPage() {
                     value={formData.lastName}
                     onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
                     placeholder="Last name"
+                    className="mt-1.5"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <Label htmlFor="student_email">Email</Label>
+                  <Input
+                    id="student_email"
+                    type="email"
+                    value={formData.studentEmail}
+                    onChange={(e) => setFormData(prev => ({ ...prev, studentEmail: e.target.value }))}
+                    placeholder="name@sailfuture.org"
                     className="mt-1.5"
                   />
                 </div>

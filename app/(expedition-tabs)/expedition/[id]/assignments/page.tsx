@@ -1,7 +1,7 @@
 "use client"
 
 import { use, Fragment } from "react"
-import { useRouter } from "next/navigation"
+import Link from "next/link"
 import useSWR from "swr"
 import {
   Table,
@@ -326,7 +326,6 @@ interface PageProps {
 }
 
 export default function AssignmentsPage({ params }: PageProps) {
-  const router = useRouter()
   const { id } = use(params)
   const expeditionId = parseInt(id)
 
@@ -634,16 +633,11 @@ export default function AssignmentsPage({ params }: PageProps) {
     
     const isStudent = assignment.type === "Student"
     
+    // No row-level click: dropdown options are portaled, but React still bubbles
+    // their clicks to the row, so picking a value used to open the student page.
+    // Only the student's name links there.
     return (
-      <TableRow 
-        key={assignment.id} 
-        className={isStudent ? "hover:bg-gray-50/50 cursor-pointer" : "hover:bg-gray-50/50"}
-        onClick={() => {
-          if (isStudent) {
-            router.push(`/student/${assignment.personId}?expedition=${expeditionId}`)
-          }
-        }}
-      >
+      <TableRow key={assignment.id} className="hover:bg-gray-50/50">
         <TableCell className="h-16 px-6">
           <div className="flex items-center gap-3">
             <Avatar className="h-8 w-8">
@@ -654,7 +648,16 @@ export default function AssignmentsPage({ params }: PageProps) {
                 {assignment.name?.split(" ").map((n: string) => n[0]).join("") || "?"}
               </AvatarFallback>
             </Avatar>
-            <span className="font-medium text-gray-900">{assignment.name || "—"}</span>
+            {isStudent ? (
+              <Link
+                href={`/student/${assignment.personId}?expedition=${expeditionId}`}
+                className="font-medium text-gray-900 hover:underline underline-offset-2"
+              >
+                {assignment.name || "—"}
+              </Link>
+            ) : (
+              <span className="font-medium text-gray-900">{assignment.name || "—"}</span>
+            )}
           </div>
         </TableCell>
         <TableCell className="h-16 px-6" onClick={(e) => e.stopPropagation()}>

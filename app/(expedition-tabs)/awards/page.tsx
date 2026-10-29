@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import useSWR from "swr"
 import { format } from "date-fns"
+import { AnimatePresence, motion, useReducedMotion } from "motion/react"
 import { ChevronDown, ChevronRight, Info, Lock, Printer, Trophy } from "lucide-react"
 import {
   Table,
@@ -82,6 +83,10 @@ function hasAnyScore(s: DailyScores) {
 }
 
 const CELL = "px-3 py-2 text-sm whitespace-nowrap"
+
+// A student's breakdown opens and closes over 220 ms; the chevron turns with it.
+const EXPAND_SECONDS = 0.22
+const EXPAND_EASE = [0, 0, 0.2, 1] as const
 const HEAD = "h-9 px-3 text-xs font-semibold text-gray-600 whitespace-nowrap"
 
 function ScoreCell({ value, earned }: { value: number | null; earned: number }) {
@@ -553,6 +558,7 @@ function AwardsPageContent() {
     })
 
   const isLoading = loadingStudents || loadingStatuses || loadingRows
+  const reduceMotion = useReducedMotion()
 
   if (!expeditionId) {
     return (
@@ -649,6 +655,8 @@ function AwardsPageContent() {
               {rows.map(({ student, summary, rowsByDate, paid, open, lockedByDate }) => {
                 const isOpen = expanded.has(student.id)
                 const keptPct = summary.earned > 0 ? summary.total / summary.earned : 0
+                // No scored day and nothing finalized: there is no award yet, not a $0 one.
+                const unscored = summary.daysScored === 0 && paid === 0
                 return (
                   <Fragment key={student.id}>
                     <TableRow
@@ -656,7 +664,12 @@ function AwardsPageContent() {
                       onClick={() => toggle(student.id)}
                     >
                       <TableCell className="h-14 px-3">
-                        {isOpen ? <ChevronDown className="h-4 w-4 text-gray-400" /> : <ChevronRight className="h-4 w-4 text-gray-400" />}
+                        <ChevronRight
+                          className={cn(
+                            "h-4 w-4 text-gray-400 transition-transform duration-[220ms] ease-out motion-reduce:transition-none",
+                            isOpen && "rotate-90"
+                          )}
+                        />
                       </TableCell>
                       <TableCell className="h-14 px-3 sm:px-6">
                         <div className="flex items-center gap-3">
@@ -670,7 +683,9 @@ function AwardsPageContent() {
                       <TableCell className="h-14 px-3 text-center">
                         <Badge variant="outline" className="bg-white">{summary.daysScored}</Badge>
                       </TableCell>
-                      <TableCell className="h-14 px-3 text-right text-sm text-gray-700">{formatAwardDollars(summary.earned)}</TableCell>
+                      <TableCell className="h-14 px-3 text-right text-sm text-gray-700">
+                        {unscored ? <span className="text-gray-300">—</span> : formatAwardDollars(summary.earned)}
+                      </TableCell>
                       <TableCell className="h-14 px-3 text-right text-sm text-gray-500">
                         {summary.withheld > 0 ? `-${formatAwardDollars(summary.withheld)}` : "—"}
                         {summary.earned > 0 && (
@@ -683,25 +698,39 @@ function AwardsPageContent() {
                         ) : "—"}
                       </TableCell>
                       <TableCell className="h-14 px-3 text-right sm:px-6">
-                        <span className={cn("text-base font-semibold", paid + open > 0 ? "text-green-700" : "text-gray-400")}>
-                          {formatAwardDollars(paid + open)}
-                        </span>
+                        {unscored ? (
+                          <span className="text-base text-gray-300">—</span>
+                        ) : (
+                          <span className={cn("text-base font-semibold", paid + open > 0 ? "text-green-700" : "text-gray-400")}>
+                            {formatAwardDollars(paid + open)}
+                          </span>
+                        )}
                         {paid > 0 && open > 0 && (
                           <span className="block text-[11px] text-gray-400">{formatAwardDollars(open)} not finalized</span>
                         )}
                       </TableCell>
                     </TableRow>
-                    {isOpen && (
-                      <TableRow className="hover:bg-transparent">
-                        <TableCell colSpan={7} className="p-0">
-                          {summary.days.length === 0 ? (
-                            <p className="border-t bg-gray-50/60 px-6 py-4 text-sm text-gray-500">No scored days in this range.</p>
-                          ) : (
-                            <DailyBreakdown days={summary.days} rowsByDate={rowsByDate} lockedByDate={lockedByDate} />
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    )}
+                    <AnimatePresence initial={false}>
+                      {isOpen && (
+                        <TableRow key="breakdown" className="hover:bg-transparent">
+                          <TableCell colSpan={7} className="p-0">
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: "auto", opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={{ duration: reduceMotion ? 0 : EXPAND_SECONDS, ease: EXPAND_EASE }}
+                              className="overflow-hidden"
+                            >
+                              {summary.days.length === 0 ? (
+                                <p className="border-t bg-gray-50/60 px-6 py-4 text-sm text-gray-500">No scored days in this range.</p>
+                              ) : (
+                                <DailyBreakdown days={summary.days} rowsByDate={rowsByDate} lockedByDate={lockedByDate} />
+                              )}
+                            </motion.div>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </AnimatePresence>
                   </Fragment>
                 )
               })}

@@ -63,15 +63,14 @@ export function SegmentedControl<V extends string | number | null>({
               title={isSelected && clearable ? "Click again to clear" : option.label}
               onClick={() => onChange(isSelected && clearable ? null : option.value)}
               className={cn(
-                "flex h-10 items-center justify-center px-1 font-medium leading-tight transition-colors",
-                // Long labels ("Incomplete/Late") step down a size so narrow cards don't cut them off.
-                option.label.length > 11 ? "text-xs" : "text-sm",
+                "flex h-10 min-w-0 items-center justify-center px-1 text-sm font-medium leading-tight transition-colors",
                 i > 0 && "border-l border-gray-200",
                 disabled ? "cursor-not-allowed" : "cursor-pointer",
                 isSelected ? option.selectedClass : "text-gray-500 hover:bg-gray-50 hover:text-gray-700"
               )}
             >
-              <span className="text-center">{option.label}</span>
+              {/* Long labels ("Incomplete/Late") truncate on narrow cards; the full text is in the title tooltip. */}
+              <span className="truncate text-center">{option.label}</span>
             </button>
           )
         })}

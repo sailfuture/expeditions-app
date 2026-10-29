@@ -35,7 +35,6 @@ const CATEGORY_LABELS: Record<AwardCategory, string> = {
   service: "Service",
   crew: "Crew",
   journaling: "Journaling",
-  fitness: "Fitness",
 }
 
 const CATEGORY_HOW: Record<AwardCategory, string> = {
@@ -44,7 +43,6 @@ const CATEGORY_HOW: Record<AwardCategory, string> = {
   service: `Score ${SETTINGS.ratedThreshold} or higher out of 5`,
   crew: `Score ${SETTINGS.ratedThreshold} or higher out of 5`,
   journaling: "Journal marked Complete",
-  fitness: "Fitness marked Complete",
 }
 
 // Worked examples, run through the real calculator so the math is always right.
@@ -55,7 +53,6 @@ const GREAT_DAY: DailyScores = {
   service: 3,
   crew: null,
   journaling: SETTINGS.completionValue,
-  fitness: SETTINGS.completionValue,
   citizenship: 5,
 }
 
@@ -66,7 +63,6 @@ const ROUGH_DAY: DailyScores = {
   service: 3,
   crew: null,
   journaling: 50,
-  fitness: SETTINGS.completionValue,
   citizenship: 3,
 }
 
@@ -111,7 +107,7 @@ function ExampleDay({ title, note, scores }: { title: string; note: string; scor
         </thead>
         <tbody>
           {[...RATED_CATEGORIES, ...COMPLETION_CATEGORIES].map(({ key }) => {
-            const completion = key === "journaling" || key === "fitness"
+            const completion = key === "journaling"
             const earned = day.earnedByCategory[key]
             return (
               <tr key={key}>
@@ -208,7 +204,7 @@ export default function AwardGuidePage() {
             <section className="avoid-break">
               <h2 className="text-lg font-bold">Step 1 · Earn your dollars</h2>
               <p className="mt-1 mb-2 text-sm">
-                There are six categories. Each one you hit is worth {DOLLARS}. Hit all six and you start the day with{" "}
+                There are five categories. Each one you hit is worth {DOLLARS}. Hit all five and you start the day with{" "}
                 {MAX_PER_DAY}. A category that is not part of your day (for example Crew on a day in port) is blank: it
                 earns nothing, but it does not hurt you either.
               </p>
@@ -230,7 +226,7 @@ export default function AwardGuidePage() {
                   ))}
                   <tr>
                     <td className={TD + " font-semibold"}>Most per day</td>
-                    <td className={TD}>All six categories</td>
+                    <td className={TD}>All five categories</td>
                     <td className={TD_NUM + " font-semibold"}>{MAX_PER_DAY}</td>
                   </tr>
                 </tbody>
@@ -312,7 +308,7 @@ export default function AwardGuidePage() {
               </div>
               <ExampleDay
                 title="A great day"
-                note="Strong scores, journal and fitness done, and a 5 in citizenship."
+                note="Strong scores, journal done, and a 5 in citizenship."
                 scores={GREAT_DAY}
               />
               <ExampleDay
@@ -329,7 +325,7 @@ export default function AwardGuidePage() {
                   Aim for {SETTINGS.ratedThreshold} or higher in every category. A {SETTINGS.ratedThreshold} means you met
                   expectations, and that is all it takes to earn the {DOLLARS}.
                 </li>
-                <li>Finish your journal and take part in fitness. Those are the two easiest {DOLLARS} on the list.</li>
+                <li>Finish your journal. That is the easiest {DOLLARS} on the list.</li>
                 <li>Citizenship multiplies everything. A 5 adds a bonus, a 3 costs you a quarter of the day, a 1 wipes the day out.</li>
                 <li>One low score drags your performance average down. If you slip in one area, make it up in the others.</li>
                 <li>Every day is a fresh start. Yesterday&apos;s award is already yours.</li>

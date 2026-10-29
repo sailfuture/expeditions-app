@@ -49,8 +49,7 @@ function scoreOf(row: any, field: ScoreField, blockedFlag: string): number | nul
 function isScored(row: any): boolean {
   return (
     SCORE_COLUMNS.some((c) => scoreOf(row, c.field, c.blockedFlag) !== null) ||
-    !!journalStatusFromName(row?.journaling) ||
-    (row?.fitness !== null && row?.fitness !== undefined)
+    !!journalStatusFromName(row?.journaling)
   )
 }
 
@@ -74,7 +73,7 @@ function ScorePill({ value }: { value: number | null }) {
 
 /**
  * How each student did on the previous expedition day: every category score,
- * citizenship, journaling, fitness and the reasons given, students with the
+ * citizenship, journaling and the reasons given, students with the
  * lowest scores first. Arrows step back through earlier days.
  */
 export function PreviousDayPerformance({
@@ -113,7 +112,6 @@ export function PreviousDayPerformance({
 
   // Only the categories that were scored that day.
   const columns = SCORE_COLUMNS.filter((c) => scored.some((r: any) => scoreOf(r, c.field, c.blockedFlag) !== null))
-  const showFitness = scored.some((r: any) => r.fitness !== null && r.fitness !== undefined)
 
   // Lowest score first, so the students who need attention are at the top.
   const ordered = useMemo(() => {
@@ -226,7 +224,6 @@ export function PreviousDayPerformance({
                     <th key={c.field} className="px-1 py-2 text-center">{c.label === "Citizenship" ? "Citz" : c.label}</th>
                   ))}
                   <th className="px-1 py-2 text-center">Jrnl</th>
-                  {showFitness && <th className="px-1 py-2 text-center">Fit</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -259,17 +256,6 @@ export function PreviousDayPerformance({
                           <span className="text-gray-300">—</span>
                         )}
                       </td>
-                      {showFitness && (
-                        <td className="px-1 py-2 text-center">
-                          {r.fitness === null || r.fitness === undefined ? (
-                            <span className="text-gray-300">—</span>
-                          ) : Number(r.fitness) >= 100 ? (
-                            <span className="inline-flex rounded-md bg-green-50 px-1.5 py-0.5 text-[11px] font-medium text-green-700">Done</span>
-                          ) : (
-                            <span className="inline-flex rounded-md bg-red-50 px-1.5 py-0.5 text-[11px] font-medium text-red-700">No</span>
-                          )}
-                        </td>
-                      )}
                     </tr>
                   )
                 })}

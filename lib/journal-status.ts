@@ -1,5 +1,5 @@
 // Daily journaling status: a three-state control (Not Started, Incomplete/Late,
-// Complete) that mirrors the Fitness control on the evaluation card.
+// Complete) on the evaluation card.
 //
 // Storage stays the `journaling` text column on expeditions_professionalism,
 // holding an expedition_journal_status name so the professionalism_averages

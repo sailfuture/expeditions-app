@@ -56,7 +56,7 @@ export function ScoreReasonField({
           transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
           className="overflow-hidden"
         >
-          <div className="pt-2">
+          <div className="pt-3">
             <MultiSelectDropdown
               label={type === "penalty" ? "Why below 3?" : "Why above 3?"}
               placeholder={type === "penalty" ? "Select penalty reasons" : "Select bonus reasons"}

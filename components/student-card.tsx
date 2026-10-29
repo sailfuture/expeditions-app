@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { X, Lock, LockOpen } from "lucide-react"
 import { ScoreControl } from "./score-control"
 import { ScoreReasonField } from "./score-reason-field"
-import { SegmentedControl, CARD_FIELD_BOX, CARD_FIELD_LABEL, type SegmentOption } from "./segmented-control"
+import { CARD_FIELD_BOX, CARD_FIELD_LABEL } from "./segmented-control"
 import { JournalStatusControl } from "./journal-status-control"
 import type {
   ExpeditionProfessionalism,
@@ -26,13 +26,6 @@ interface StudentCardProps {
   isService: boolean
   onUpdate: (updated: ExpeditionProfessionalism) => void
 }
-
-// Fitness is tri-state for the expedition award: blank (not applicable), incomplete, complete.
-const FITNESS_OPTIONS: ReadonlyArray<SegmentOption<number | null>> = [
-  { label: "N/A", value: null, selectedClass: "bg-gray-50 text-gray-800", ringClass: "border-gray-300" },
-  { label: "Incomplete", value: 0, selectedClass: "bg-red-50 text-red-700", ringClass: "border-red-500" },
-  { label: "Complete", value: 100, selectedClass: "bg-green-50 text-green-700", ringClass: "border-green-500" },
-]
 
 function getScoreCategories(isOffshore: boolean, isService: boolean): Array<{ key: ScoreKey; label: string }> {
   // Service Learning day (in port)
@@ -124,11 +117,6 @@ export function StudentCard({
 
   const handleJournalingChange = (status: JournalStatus | null) => {
     onUpdate({ ...record, journaling: status, isLocked: false })
-  }
-
-  // Fitness feeds the expedition award: 100 = complete ($5), 0 = incomplete, null = not applicable
-  const handleFitnessChange = (value: number | null) => {
-    onUpdate({ ...record, fitness: value })
   }
 
   // Toggle the isXUsed flag for a category
@@ -300,37 +288,22 @@ export function StudentCard({
         </div>
       </div>
 
-      <div className="px-3 sm:px-4 pb-3 mb-2">
-        {/* Performance categories, one full-width row each: CREW (offshore) or SCHOOL (in port), JOB, SERVICE (if applicable) */}
-        <div className="space-y-2.5">{performanceCategories.map(renderCategory)}</div>
+      {/* One even rhythm: every field is 44px tall with 12px between fields (the reason pickers carry their own pt-3) */}
+      <div className="px-3 sm:px-4 pb-4 space-y-3">
+        {/* Performance categories, one full-width row each: CREW (offshore) or SCHOOL (in port), JOB, SERVICE (if applicable), then CITIZENSHIP */}
+        {performanceCategories.map(renderCategory)}
+        {citizenshipCategory && renderCategory(citizenshipCategory)}
 
-        {/* Citizenship stands apart: it is scored every day and sets how much of the day is kept, not a category of work */}
-        {citizenshipCategory && (
-          <div className="mt-4 border-t border-dashed border-gray-200 pt-3">
-            {renderCategory(citizenshipCategory)}
-          </div>
-        )}
-      </div>
-
-      <div className="px-3 sm:px-4 pb-4 space-y-3 relative">
         <JournalStatusControl
           value={record.journaling}
           onChange={handleJournalingChange}
           disabled={record.isLocked}
         />
 
-        <SegmentedControl<number | null>
-          label="FITNESS"
-          options={FITNESS_OPTIONS}
-          value={record.fitness ?? null}
-          onChange={(v) => handleFitnessChange(v ?? null)}
-          disabled={record.isLocked}
-        />
-
         <div className="flex w-full flex-col gap-1.5">
           <label className={CARD_FIELD_LABEL}>NOTE</label>
           <Input
-            className={cn(CARD_FIELD_BOX, "h-10 w-full cursor-text border-gray-200 text-sm shadow-none focus-visible:border-gray-400 focus-visible:ring-0")}
+            className={cn(CARD_FIELD_BOX, "h-11 w-full cursor-text border-gray-200 text-sm shadow-none focus-visible:border-gray-400 focus-visible:ring-0")}
             placeholder="Add a note..."
             value={record.note ?? ""}
             onChange={handleNoteChange}

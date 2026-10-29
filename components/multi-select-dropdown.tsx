@@ -1,8 +1,9 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState } from "react"
 import { Check, ChevronDown } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { CARD_FIELD_BOX, CARD_FIELD_LABEL } from "./segmented-control"
 
 interface Option {
@@ -31,17 +32,6 @@ export function MultiSelectDropdown({
   variant = "bonus",
 }: MultiSelectDropdownProps) {
   const [isOpen, setIsOpen] = useState(false)
-  const dropdownRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false)
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside)
-    return () => document.removeEventListener("mousedown", handleClickOutside)
-  }, [])
 
   const selectedOptions = options.filter((opt) => selectedIds.includes(opt.id))
   const displayText = selectedOptions.length > 0 ? selectedOptions.map((opt) => opt.name).join(", ") : placeholder
@@ -63,46 +53,55 @@ export function MultiSelectDropdown({
   const ringColor = selectedOptions.length > 0 ? (isPenalty ? "border-red-500" : "border-green-500") : "border-gray-200"
 
   return (
-    <div className="flex w-full flex-col gap-1.5" ref={dropdownRef}>
+    <div className="flex w-full flex-col gap-1.5">
       <label className={CARD_FIELD_LABEL}>{label}</label>
-      <button
-        type="button"
-        onClick={() => !disabled && setIsOpen(!isOpen)}
-        disabled={disabled}
-        className={cn(
-          CARD_FIELD_BOX,
-          ringColor,
-          "flex h-10 w-full cursor-pointer items-center justify-between gap-2 px-3 text-left",
-          "outline-none hover:bg-gray-50",
-          // Inset ring only: this field often sits inside an overflow-hidden
-          // wrapper (the animated reason picker), which would clip an outer ring.
-          "focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-gray-300",
-          disabled && "opacity-50 cursor-not-allowed",
-          isOpen && "bg-gray-50",
-          isOpen && selectedOptions.length === 0 && "border-gray-400",
-        )}
-      >
-        <span className={cn("truncate text-sm font-medium", selectedOptions.length === 0 ? "text-muted-foreground font-normal" : "text-gray-900")}>
-          {displayText}
-        </span>
-        <div className="flex items-center gap-2 shrink-0">
-          {selectedOptions.length > 0 && (
-            <span
-              className={cn(
-                "inline-flex h-5 min-w-5 items-center justify-center rounded px-1.5 text-xs font-semibold text-white",
-                badgeColor,
-              )}
-            >
-              {selectedOptions.length}
+      <Popover open={isOpen && !disabled} onOpenChange={setIsOpen}>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            disabled={disabled}
+            className={cn(
+              CARD_FIELD_BOX,
+              ringColor,
+              // h-11 = the steppers' h-10 rows plus their 2px ring, so every field is the same height.
+              "flex h-11 w-full cursor-pointer items-center justify-between gap-2 px-3 text-left",
+              "outline-none hover:bg-gray-50",
+              // Inset ring only: this field often sits inside an overflow-hidden
+              // wrapper (the animated reason picker), which would clip an outer ring.
+              "focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-gray-300",
+              disabled && "opacity-50 cursor-not-allowed",
+              isOpen && "bg-gray-50",
+              isOpen && selectedOptions.length === 0 && "border-gray-400",
+            )}
+          >
+            {/* Same size and weight as the segmented controls (Journaling); the placeholder takes their unselected grey. */}
+            <span className={cn("truncate text-sm font-medium", selectedOptions.length === 0 ? "text-gray-500" : "text-gray-900")}>
+              {displayText}
             </span>
-          )}
-          <ChevronDown className={cn("h-4 w-4 text-gray-400 transition-transform", isOpen && "rotate-180")} />
-        </div>
-      </button>
+            <div className="flex items-center gap-2 shrink-0">
+              {selectedOptions.length > 0 && (
+                <span
+                  className={cn(
+                    "inline-flex h-5 min-w-5 items-center justify-center rounded px-1.5 text-xs font-semibold text-white",
+                    badgeColor,
+                  )}
+                >
+                  {selectedOptions.length}
+                </span>
+              )}
+              <ChevronDown className={cn("h-4 w-4 text-gray-400 transition-transform", isOpen && "rotate-180")} />
+            </div>
+          </button>
+        </PopoverTrigger>
 
-      {isOpen && (
-        <div className="absolute z-50 mt-1 w-full max-w-[calc(100%-3rem)] bg-background border border-gray-200 rounded-lg shadow-lg overflow-hidden">
-          <div className="max-h-60 overflow-y-auto py-1">
+        {/* Portaled and anchored to the trigger at its width; flips above when there's no room below.
+            overscroll-contain keeps wheel scrolling inside the list from scrolling the page. */}
+        <PopoverContent
+          align="start"
+          className="w-[var(--radix-popover-trigger-width)] overflow-hidden rounded-lg border-gray-200 bg-background p-0 shadow-lg"
+          onOpenAutoFocus={(e) => e.preventDefault()}
+        >
+          <div className="max-h-[min(15rem,var(--radix-popover-content-available-height))] overflow-y-auto overscroll-contain py-1">
             {options.map((option) => {
               const isSelected = selectedIds.includes(option.id)
               return (
@@ -120,13 +119,13 @@ export function MultiSelectDropdown({
                   >
                     {isSelected && <Check className="h-3 w-3 text-white" />}
                   </span>
-                  <span className="text-sm">{option.name}</span>
+                  <span className="text-sm font-medium text-gray-900">{option.name}</span>
                 </button>
               )
             })}
           </div>
-        </div>
-      )}
+        </PopoverContent>
+      </Popover>
     </div>
   )
 }

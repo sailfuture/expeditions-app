@@ -3,10 +3,11 @@
 import { useMemo, useState } from "react"
 import Link from "next/link"
 import { format } from "date-fns"
-import { ChevronLeft, ChevronRight, ClipboardList } from "lucide-react"
+import { ChevronLeft, ChevronRight, ClipboardList, ClipboardPen, User, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Skeleton } from "@/components/ui/skeleton"
-import { DayReasons } from "@/components/score-reasons"
+import { readStoredReasons, type ScoreKey } from "@/lib/evaluation-reasons"
 import { useExpeditionsProfessionalismByDate } from "@/lib/hooks/use-expeditions"
 import { journalStatusFromName } from "@/lib/journal-status"
 import { addDays } from "@/lib/review-periods"
@@ -14,13 +15,18 @@ import { cn } from "@/lib/utils"
 
 type ScoreField = "academics" | "crew" | "job" | "service" | "citizenship"
 
-const SCORE_COLUMNS: ReadonlyArray<{ field: ScoreField; blockedFlag: string; label: string }> = [
-  { field: "academics", blockedFlag: "isAcademicsUsed", label: "School" },
-  { field: "crew", blockedFlag: "isCrewUsed", label: "Crew" },
-  { field: "job", blockedFlag: "isJobUsed", label: "Job" },
-  { field: "service", blockedFlag: "isServiceUsed", label: "Service" },
-  { field: "citizenship", blockedFlag: "isCitizenshipUsed", label: "Citizenship" },
+const SCORE_COLUMNS: ReadonlyArray<{ field: ScoreField; blockedFlag: string; label: string; reasonKey: ScoreKey }> = [
+  { field: "academics", blockedFlag: "isAcademicsUsed", label: "School", reasonKey: "school" },
+  { field: "crew", blockedFlag: "isCrewUsed", label: "Crew", reasonKey: "crew" },
+  { field: "job", blockedFlag: "isJobUsed", label: "Job", reasonKey: "job" },
+  { field: "service", blockedFlag: "isServiceUsed", label: "Service", reasonKey: "service_learning" },
+  { field: "citizenship", blockedFlag: "isCitizenshipUsed", label: "Citizenship", reasonKey: "citizenship" },
 ]
+
+const REASON_CHIP = {
+  bonus: "bg-green-50 text-green-800 ring-1 ring-inset ring-green-200",
+  penalty: "bg-red-50 text-red-700 ring-1 ring-inset ring-red-200",
+} as const
 
 // Same scale the score steppers use on the evaluation card.
 const SCORE_TONE: Record<number, string> = {
@@ -63,6 +69,47 @@ function formatDay(day: string) {
   return format(new Date(y, m - 1, d), "EEEE, MMM d")
 }
 
+/** How many bonus and penalty reasons were given across all of a day's categories. */
+function reasonCounts(row: any) {
+  let bonus = 0
+  let penalty = 0
+  for (const reasons of Object.values(readStoredReasons(row))) {
+    for (const reason of reasons) {
+      if (reason.type === "bonus") bonus++
+      else penalty++
+    }
+  }
+  return { bonus, penalty }
+}
+
+function CountPill({ count, tone }: { count: number; tone: "bonus" | "penalty" }) {
+  if (count === 0) return <span className="text-gray-300 tabular-nums">0</span>
+  return (
+    <span className={cn("inline-flex h-6 min-w-6 items-center justify-center rounded-md px-1.5 text-xs font-semibold tabular-nums", REASON_CHIP[tone])}>
+      {count}
+    </span>
+  )
+}
+
+function JournalChip({ row }: { row: any }) {
+  const journal = journalStatusFromName(row?.journaling)
+  if (!journal) return <span className="text-gray-300">—</span>
+  return (
+    <span className={cn("inline-flex rounded-md px-1.5 py-0.5 text-[11px] font-medium", JOURNAL_TONE[journal])}>
+      {JOURNAL_LABEL[journal]}
+    </span>
+  )
+}
+
+function FitnessChip({ row }: { row: any }) {
+  if (row?.fitness === null || row?.fitness === undefined) return <span className="text-gray-300">—</span>
+  return Number(row.fitness) >= 100 ? (
+    <span className="inline-flex rounded-md bg-green-50 px-1.5 py-0.5 text-[11px] font-medium text-green-700">Done</span>
+  ) : (
+    <span className="inline-flex rounded-md bg-red-50 px-1.5 py-0.5 text-[11px] font-medium text-red-700">No</span>
+  )
+}
+
 function ScorePill({ value }: { value: number | null }) {
   if (value === null) return <span className="text-gray-300">—</span>
   return (
@@ -74,8 +121,9 @@ function ScorePill({ value }: { value: number | null }) {
 
 /**
  * How each student did on the previous expedition day: every category score,
- * citizenship, journaling, fitness and the reasons given, students with the
- * lowest scores first. Arrows step back through earlier days.
+ * citizenship, journaling, fitness and how many bonus and penalty reasons were
+ * given, students with the lowest scores first. A row opens that student's day
+ * in a sheet with the reasons. Arrows step back through earlier days.
  */
 export function PreviousDayPerformance({
   expeditionId,
@@ -99,6 +147,9 @@ export function PreviousDayPerformance({
   }, [today, endDate])
   const [date, setDate] = useState<string | null>(null)
   const day = date ?? latest
+  // The row whose breakdown is in the side sheet; kept after closing so the sheet can animate out.
+  const [selectedId, setSelectedId] = useState<number | null>(null)
+  const [sheetOpen, setSheetOpen] = useState(false)
   const beforeStart = !!startDate && day < startDate
 
   const { data: rows, isLoading } = useExpeditionsProfessionalismByDate(beforeStart ? null : day, expeditionId)
@@ -227,49 +278,51 @@ export function PreviousDayPerformance({
                   ))}
                   <th className="px-1 py-2 text-center">Jrnl</th>
                   {showFitness && <th className="px-1 py-2 text-center">Fit</th>}
+                  <th className="px-1 py-2 text-center">Bonus</th>
+                  <th className="px-1 py-2 text-center">Penalty</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {ordered.map((r: any) => {
                   const student = studentById.get(r.students_id)
-                  const journal = journalStatusFromName(r.journaling)
+                  const counts = reasonCounts(r)
+                  const open = () => {
+                    setSelectedId(r.id)
+                    setSheetOpen(true)
+                  }
                   return (
-                    <tr key={r.id} className="align-top hover:bg-gray-50/60">
-                      <td className="px-4 py-2">
-                        <Link
-                          href={`/student/${r.students_id}?expedition=${expeditionId}`}
-                          className="block truncate font-medium text-gray-900 hover:underline"
-                        >
-                          {studentName(student)}
-                        </Link>
-                        <DayReasons row={r} className="mt-1" />
-                        {r.note && <p className="mt-1 truncate text-xs text-gray-500" title={r.note}>{r.note}</p>}
-                      </td>
+                    <tr
+                      key={r.id}
+                      tabIndex={0}
+                      onClick={open}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault()
+                          open()
+                        }
+                      }}
+                      className="cursor-pointer hover:bg-gray-50/60 focus-visible:bg-gray-50 focus-visible:outline-none"
+                    >
+                      <td className="truncate px-4 py-2 font-medium text-gray-900">{studentName(student)}</td>
                       {columns.map((c) => (
                         <td key={c.field} className="px-1 py-2 text-center">
                           <ScorePill value={scoreOf(r, c.field, c.blockedFlag)} />
                         </td>
                       ))}
                       <td className="px-1 py-2 text-center">
-                        {journal ? (
-                          <span className={cn("inline-flex rounded-md px-1.5 py-0.5 text-[11px] font-medium", JOURNAL_TONE[journal])}>
-                            {JOURNAL_LABEL[journal]}
-                          </span>
-                        ) : (
-                          <span className="text-gray-300">—</span>
-                        )}
+                        <JournalChip row={r} />
                       </td>
                       {showFitness && (
                         <td className="px-1 py-2 text-center">
-                          {r.fitness === null || r.fitness === undefined ? (
-                            <span className="text-gray-300">—</span>
-                          ) : Number(r.fitness) >= 100 ? (
-                            <span className="inline-flex rounded-md bg-green-50 px-1.5 py-0.5 text-[11px] font-medium text-green-700">Done</span>
-                          ) : (
-                            <span className="inline-flex rounded-md bg-red-50 px-1.5 py-0.5 text-[11px] font-medium text-red-700">No</span>
-                          )}
+                          <FitnessChip row={r} />
                         </td>
                       )}
+                      <td className="px-1 py-2 text-center">
+                        <CountPill count={counts.bonus} tone="bonus" />
+                      </td>
+                      <td className="px-1 py-2 text-center">
+                        <CountPill count={counts.penalty} tone="penalty" />
+                      </td>
                     </tr>
                   )
                 })}
@@ -278,6 +331,137 @@ export function PreviousDayPerformance({
           </div>
         </>
       )}
+
+      <DayBreakdownSheet
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
+        row={scored.find((r: any) => r.id === selectedId) ?? null}
+        student={studentById.get(scored.find((r: any) => r.id === selectedId)?.students_id)}
+        day={day}
+        dayType={dayType}
+        expeditionId={expeditionId}
+      />
     </div>
+  )
+}
+
+/** One student's day in a side sheet: every score with the reasons behind it, journaling, fitness and the note. */
+function DayBreakdownSheet({
+  open,
+  onOpenChange,
+  row,
+  student,
+  day,
+  dayType,
+  expeditionId,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  row: any
+  student: any
+  day: string
+  dayType: string | null
+  expeditionId: number | null
+}) {
+  const reasons = readStoredReasons(row)
+  // A category shows when it was scored or has reasons; blocked (N/A) ones without either are left out.
+  const categories = SCORE_COLUMNS.map((c) => ({ ...c, score: scoreOf(row, c.field, c.blockedFlag), reasons: reasons[c.reasonKey] }))
+    .filter((c) => c.score !== null || c.reasons.length > 0)
+
+  return (
+    <Sheet open={open && !!row} onOpenChange={onOpenChange}>
+      <SheetContent className="w-full sm:w-[480px] sm:max-w-[90vw] p-0 flex flex-col h-full overflow-hidden gap-0">
+        <SheetHeader className="p-6 pb-4 border-b shrink-0">
+          <div className="flex items-center justify-between gap-3">
+            <SheetTitle className="text-xl truncate">{studentName(student)}</SheetTitle>
+            <button
+              type="button"
+              onClick={() => onOpenChange(false)}
+              className="rounded-full p-1.5 hover:bg-gray-100 transition-colors cursor-pointer shrink-0"
+              aria-label="Close"
+            >
+              <X className="h-5 w-5 text-gray-500" />
+            </button>
+          </div>
+          <SheetDescription>
+            {formatDay(day)}
+            {dayType && <span> · {dayType}</span>}
+          </SheetDescription>
+        </SheetHeader>
+
+        {row && (
+          <div className="flex-1 overflow-y-auto overscroll-contain px-6 py-5 space-y-5">
+            <div>
+              <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Scores</div>
+              <div className="divide-y rounded-lg border">
+                {categories.length === 0 ? (
+                  <p className="px-3 py-3 text-sm text-gray-500">No category scores this day.</p>
+                ) : (
+                  categories.map((c) => (
+                    <div key={c.field} className="flex items-start justify-between gap-3 px-3 py-2.5">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-gray-900">{c.label}</p>
+                        {c.reasons.length > 0 ? (
+                          <div className="mt-1 flex flex-wrap gap-1">
+                            {c.reasons.map((reason) => (
+                              <span
+                                key={`${reason.type}-${reason.id}`}
+                                className={cn("inline-flex rounded-md px-1.5 py-0.5 text-[11px] font-medium leading-4", REASON_CHIP[reason.type])}
+                              >
+                                {reason.name}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="mt-0.5 text-xs text-gray-400">No reasons given</p>
+                        )}
+                      </div>
+                      <ScorePill value={c.score} />
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-lg border px-3 py-2.5">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Journaling</p>
+                <JournalChip row={row} />
+              </div>
+              <div className="rounded-lg border px-3 py-2.5">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Fitness</p>
+                <FitnessChip row={row} />
+              </div>
+            </div>
+
+            <div>
+              <div className="text-xs uppercase tracking-wide text-muted-foreground mb-1.5">Note</div>
+              {row.note ? (
+                <p className="whitespace-pre-wrap text-sm text-gray-700">{row.note}</p>
+              ) : (
+                <span className="text-sm text-gray-400">No note</span>
+              )}
+            </div>
+          </div>
+        )}
+
+        {row && expeditionId && (
+          <div className="flex gap-2 p-4 border-t shrink-0 mt-auto">
+            <Button asChild variant="outline" className="flex-1 cursor-pointer">
+              <Link href={`/student/${row.students_id}?expedition=${expeditionId}`}>
+                <User className="h-4 w-4 mr-2" />
+                Student page
+              </Link>
+            </Button>
+            <Button asChild variant="outline" className="flex-1 cursor-pointer">
+              <Link href={`/evaluate/${day}?expedition=${expeditionId}`}>
+                <ClipboardPen className="h-4 w-4 mr-2" />
+                Edit scores
+              </Link>
+            </Button>
+          </div>
+        )}
+      </SheetContent>
+    </Sheet>
   )
 }

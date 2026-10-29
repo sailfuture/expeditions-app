@@ -1,12 +1,14 @@
 "use client"
 
-import { useMemo } from "react"
+import { useMemo, useState } from "react"
 import Link from "next/link"
-import { Anchor, ArrowRight, CalendarX, Clock, Ship, Wrench } from "lucide-react"
+import { Anchor, ArrowRight, Calendar, CalendarX, Clock, MapPin, Ship, Users, Wrench, X } from "lucide-react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Skeleton } from "@/components/ui/skeleton"
-import { useExpeditionScheduleItemsByDate } from "@/lib/hooks/use-expeditions"
+import { useExpeditionScheduleItemsByDate, useTeachers } from "@/lib/hooks/use-expeditions"
 import { cn } from "@/lib/utils"
 import { scheduleItemTitle } from "@/lib/schedule-item-title"
 
@@ -87,6 +89,7 @@ export function TodaySchedule({ expeditionId, date, isToday, className }: TodayS
   const location = schedule?._expedition_locations || schedule?._expedition_current_location
   const dayKind = schedule?.isOffshore ? "offshore" : schedule?.isService ? "service" : schedule ? "anchored" : null
   const dailyViewHref = expeditionId && date ? `/schedule/${date}?expedition=${expeditionId}` : null
+  const [sheetOpen, setSheetOpen] = useState(false)
 
   return (
     <div className={cn("rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden flex flex-col", className)}>
@@ -99,15 +102,31 @@ export function TodaySchedule({ expeditionId, date, isToday, className }: TodayS
           </p>
         </div>
         {dailyViewHref && (
-          <Link
-            href={dailyViewHref}
-            className="inline-flex flex-shrink-0 items-center gap-1 rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+          <button
+            type="button"
+            onClick={() => setSheetOpen(true)}
+            className="inline-flex flex-shrink-0 cursor-pointer items-center gap-1 rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
           >
             Daily view
             <ArrowRight className="h-3.5 w-3.5" />
-          </Link>
+          </button>
         )}
       </div>
+
+      {date && dailyViewHref && (
+        <DayScheduleSheet
+          open={sheetOpen}
+          onOpenChange={setSheetOpen}
+          date={date}
+          schedule={schedule}
+          items={[...timed, ...untimed]}
+          isLoading={isLoading && !data}
+          dayKind={dayKind}
+          location={location}
+          dailyViewHref={dailyViewHref}
+          evaluateHref={`/evaluate/${date}?expedition=${expeditionId}`}
+        />
+      )}
 
       {isLoading && !data ? (
         <div className="p-5 space-y-3">
@@ -126,19 +145,7 @@ export function TodaySchedule({ expeditionId, date, isToday, className }: TodayS
         <>
           {/* Day summary: where the boat is and what kind of day it is */}
           <div className="px-5 py-3 border-b flex flex-wrap items-center gap-2 text-sm">
-            {dayKind === "offshore" ? (
-              <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-200 gap-1">
-                <Ship className="h-3 w-3" /> Offshore
-              </Badge>
-            ) : dayKind === "service" ? (
-              <Badge variant="outline" className="bg-violet-50 text-violet-800 border-violet-200 gap-1">
-                <Wrench className="h-3 w-3" /> Service day
-              </Badge>
-            ) : (
-              <Badge variant="outline" className="bg-teal-50 text-teal-800 border-teal-200 gap-1">
-                <Anchor className="h-3 w-3" /> Anchored
-              </Badge>
-            )}
+            <DayKindBadge dayKind={dayKind} />
             <span className="text-gray-700 truncate">
               {location ? `${location.port}, ${location.country}` : "No location set"}
               {schedule.isOffshore && schedule._expedition_destination_location?.port && (
@@ -150,7 +157,9 @@ export function TodaySchedule({ expeditionId, date, isToday, className }: TodayS
           {timed.length === 0 && untimed.length === 0 ? (
             <div className="p-10 text-center text-sm text-muted-foreground">No activities scheduled for this day.</div>
           ) : (
-            <ul className="divide-y">
+            // The card has a max height on large screens, so the list scrolls inside it;
+            // overscroll-contain keeps the page from scrolling once the list hits its end.
+            <ul className="min-h-0 flex-1 divide-y overflow-y-auto overscroll-contain">
               {timed.map((item) => (
                 <ScheduleRow key={item.id} item={item} time={`${formatMilitaryTime(item.time_in)} – ${formatMilitaryTime(item.time_out)}`} />
               ))}
@@ -166,6 +175,225 @@ export function TodaySchedule({ expeditionId, date, isToday, className }: TodayS
           )}
         </>
       )}
+    </div>
+  )
+}
+
+function DayKindBadge({ dayKind }: { dayKind: string | null }) {
+  if (dayKind === "offshore") {
+    return (
+      <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-200 gap-1">
+        <Ship className="h-3 w-3" /> Offshore
+      </Badge>
+    )
+  }
+  if (dayKind === "service") {
+    return (
+      <Badge variant="outline" className="bg-violet-50 text-violet-800 border-violet-200 gap-1">
+        <Wrench className="h-3 w-3" /> Service day
+      </Badge>
+    )
+  }
+  return (
+    <Badge variant="outline" className="bg-teal-50 text-teal-800 border-teal-200 gap-1">
+      <Anchor className="h-3 w-3" /> Anchored
+    </Badge>
+  )
+}
+
+/**
+ * The day's schedule in a side sheet, laid out like the Schedule tab's day preview:
+ * every activity with its time and staff, who's off, and the day's notes.
+ */
+function DayScheduleSheet({
+  open,
+  onOpenChange,
+  date,
+  schedule,
+  items,
+  isLoading,
+  dayKind,
+  location,
+  dailyViewHref,
+  evaluateHref,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  date: string
+  schedule: any
+  items: any[]
+  isLoading: boolean
+  dayKind: string | null
+  location: any
+  dailyViewHref: string
+  evaluateHref: string
+}) {
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent className="w-full sm:w-[640px] sm:max-w-[90vw] p-0 flex flex-col h-full overflow-hidden gap-0">
+        <SheetHeader className="p-6 pb-4 border-b shrink-0">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <SheetTitle className="text-xl truncate">{formatScheduleDate(date)}</SheetTitle>
+              {schedule && <DayKindBadge dayKind={dayKind} />}
+            </div>
+            <button
+              type="button"
+              onClick={() => onOpenChange(false)}
+              className="rounded-full p-1.5 hover:bg-gray-100 transition-colors cursor-pointer shrink-0"
+              aria-label="Close"
+            >
+              <X className="h-5 w-5 text-gray-500" />
+            </button>
+          </div>
+          <SheetDescription className="flex items-center gap-2 pt-1">
+            <MapPin className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+            <span className="truncate">{location ? `${location.port}, ${location.country}` : "No location set"}</span>
+            {schedule?.isOffshore && schedule._expedition_destination_location?.port && (
+              <>
+                <Ship className="h-3.5 w-3.5 text-gray-400 shrink-0 ml-1" />
+                <span className="truncate">{schedule._expedition_destination_location.port}</span>
+              </>
+            )}
+          </SheetDescription>
+        </SheetHeader>
+
+        <div className="flex-1 overflow-y-auto overscroll-contain">
+          <div className="px-6 pt-5 pb-2">
+            <div className="flex items-center justify-between mb-3">
+              <div className="text-xs uppercase tracking-wide text-muted-foreground">Schedule</div>
+              {!isLoading && items.length > 0 && (
+                <span className="text-xs text-muted-foreground">
+                  {items.length} {items.length === 1 ? "activity" : "activities"}
+                </span>
+              )}
+            </div>
+            <div className="rounded-lg border overflow-hidden">
+              {isLoading ? (
+                <div className="space-y-2 p-3">
+                  {[0, 1, 2, 3].map((i) => (
+                    <Skeleton key={i} className="h-8 w-full" />
+                  ))}
+                </div>
+              ) : items.length === 0 ? (
+                <div className="px-3 py-8 text-center">
+                  <Clock className="h-6 w-6 mx-auto text-gray-300 mb-2" />
+                  <p className="text-sm text-muted-foreground">
+                    {schedule ? "No activities scheduled for this day" : "No schedule has been created for this day yet"}
+                  </p>
+                </div>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b bg-gray-50/50 text-left text-xs font-medium text-muted-foreground">
+                      <th className="h-9 px-3 w-[120px]">Time</th>
+                      <th className="h-9 px-3">Activity</th>
+                      <th className="h-9 px-3 w-[150px]">Staff</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {items.map((item) => {
+                      const { title, subtitle } = scheduleItemTitle(item)
+                      const staff = item._expedition_staff
+                      return (
+                        <tr key={item.id}>
+                          <td className="px-3 py-2.5 align-top whitespace-nowrap">
+                            {!item.time_in || !item.time_out ? (
+                              <span className="text-xs text-gray-400 italic">Anytime</span>
+                            ) : (
+                              <div className="text-xs leading-tight">
+                                <div className="font-medium text-gray-900">{formatMilitaryTime(item.time_in)}</div>
+                                <div className="text-gray-400">{formatMilitaryTime(item.time_out)}</div>
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-3 py-2.5 align-top">
+                            <div className="flex gap-2.5">
+                              <span className={cn("w-1 rounded-full shrink-0 self-stretch", itemColor(item))} />
+                              <div className="min-w-0">
+                                <div className="text-sm font-medium text-gray-900 leading-tight">{title}</div>
+                                {subtitle && <div className="text-xs text-gray-500 mt-0.5 line-clamp-1">{subtitle}</div>}
+                                {item.notes && <div className="text-xs text-gray-500 mt-0.5 line-clamp-2">{item.notes}</div>}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-3 py-2.5 align-top">
+                            {staff ? (
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <Avatar className="h-5 w-5 shrink-0">
+                                  <AvatarFallback className="text-[8px] bg-gray-200 text-gray-600">{initials(staff.name)}</AvatarFallback>
+                                </Avatar>
+                                <span className="text-xs text-gray-700 truncate">{staff.name}</span>
+                              </div>
+                            ) : (
+                              <span className="text-xs text-gray-400">—</span>
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+
+          {schedule && <DayStaffOffAndNotes schedule={schedule} />}
+        </div>
+
+        <div className="flex gap-2 p-4 border-t shrink-0">
+          <Button asChild variant="outline" className="flex-1 cursor-pointer">
+            <Link href={dailyViewHref}>
+              <Calendar className="h-4 w-4 mr-2" />
+              Open full schedule
+            </Link>
+          </Button>
+          <Button asChild variant="outline" className="flex-1 cursor-pointer">
+            <Link href={evaluateHref}>
+              <Users className="h-4 w-4 mr-2" />
+              Evaluate students
+            </Link>
+          </Button>
+        </div>
+      </SheetContent>
+    </Sheet>
+  )
+}
+
+/** Staff off and the day's notes. Only mounted while the sheet is open, so staff load on demand. */
+function DayStaffOffAndNotes({ schedule }: { schedule: any }) {
+  const { data: staff } = useTeachers()
+  const staffOff: number[] = Array.isArray(schedule.staff_off) ? schedule.staff_off : []
+  return (
+    <div className="px-6 py-5 space-y-5">
+      <div>
+        <div className="text-xs uppercase tracking-wide text-muted-foreground mb-1.5">Staff Off</div>
+        {staffOff.length > 0 ? (
+          <div className="flex flex-wrap gap-2">
+            {staffOff.map((staffId) => {
+              const member = (staff as any[] | undefined)?.find((s: any) => s.id === staffId)
+              return (
+                <div key={staffId} className="flex items-center gap-2 bg-gray-100 rounded-full px-3 py-1">
+                  <Avatar className="h-5 w-5">
+                    <AvatarFallback className="text-[8px] bg-gray-200 text-gray-600">{initials(member?.name)}</AvatarFallback>
+                  </Avatar>
+                  <span className="text-sm text-gray-700">{member?.name || "Unknown"}</span>
+                </div>
+              )
+            })}
+          </div>
+        ) : (
+          <span className="text-sm text-gray-400">No staff off</span>
+        )}
+      </div>
+      <div>
+        <div className="text-xs uppercase tracking-wide text-muted-foreground mb-1.5">Notes</div>
+        {schedule.notes ? (
+          <p className="whitespace-pre-wrap text-sm text-gray-700">{schedule.notes}</p>
+        ) : (
+          <span className="text-sm text-gray-400">No notes for this day</span>
+        )}
+      </div>
     </div>
   )
 }

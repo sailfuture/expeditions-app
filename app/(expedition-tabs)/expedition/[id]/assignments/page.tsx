@@ -464,13 +464,33 @@ export default function AssignmentsPage({ params }: PageProps) {
       updateData[field] = apiValue
       
       console.log(`Updating assignment ${assignmentId}, field ${field} to:`, apiValue)
-      
+
+      if (field === "laptop") {
+        // Saved on the server, which also locks the Chromebook's sign-in to the student in Google Admin
+        const res = await fetch("/api/laptop-assignment", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ assignmentId, laptop: apiValue }),
+        })
+        const result = await res.json().catch(() => ({}))
+        if (!res.ok) throw new Error(result.message || `Laptop assignment failed (${res.status})`)
+        const google = result.google as { status: string; message: string } | undefined
+        if (google?.status === "error") {
+          toast.error("Laptop saved, but Chromebook sign-in wasn't updated", { description: google.message, duration: 15000 })
+        } else if (google?.status === "skipped") {
+          toast.warning("Laptop saved", { description: google.message, duration: 10000 })
+        } else {
+          toast.success(apiValue ? `Laptop ${apiValue} assigned` : "Laptop unassigned", { description: google?.message })
+        }
+        return
+      }
+
       await updateExpeditionAssignment(assignmentId, updateData)
-      
+
       toast.success(`Department updated`)
     } catch (error) {
       console.error(`Failed to update ${field}:`, error)
-      toast.error(`Failed to update department`)
+      toast.error(field === "laptop" ? "Failed to update laptop" : `Failed to update department`)
       // Revert on error by refetching
       mutate(`expedition_assignments_${expeditionId}`)
     } finally {

@@ -5,13 +5,19 @@ import { test } from "node:test"
 import assert from "node:assert/strict"
 import { findLaptopOu, normalizeOuPath, signInAllowlist } from "../chromebook-signin.js"
 
-test("allowlist is the student's own email, trimmed and lowercased", () => {
-  assert.deepEqual(signInAllowlist(" Jane.Doe25@SailFuture.org "), ["jane.doe25@sailfuture.org"])
-  assert.deepEqual(signInAllowlist(""), [])
+const ADMINS = ["admin@sailfuture.org", "hthompson@sailfuture.org", "whateverittakes@sailfuture.org", "mlong@sailfuture.org"]
+
+test("allowlist is the student's own email first, then the four admins", () => {
+  assert.deepEqual(signInAllowlist(" Jane.Doe25@SailFuture.org "), ["jane.doe25@sailfuture.org", ...ADMINS])
+  assert.deepEqual(signInAllowlist(""), ADMINS)
 })
 
 test("allowlist adds always-allowed accounts once", () => {
-  assert.deepEqual(signInAllowlist("jane.doe25@sailfuture.org", "admin@sailfuture.org, Jane.Doe25@sailfuture.org,"), ["jane.doe25@sailfuture.org", "admin@sailfuture.org"])
+  assert.deepEqual(signInAllowlist("jane.doe25@sailfuture.org", "it@sailfuture.org, Jane.Doe25@sailfuture.org, MLong@sailfuture.org,"), [
+    "jane.doe25@sailfuture.org",
+    ...ADMINS,
+    "it@sailfuture.org",
+  ])
 })
 
 const units = [

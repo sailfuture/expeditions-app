@@ -6,14 +6,25 @@
 // Chromebooks are managed in the sailfuture.org Workspace, where students sign in with the
 // roster address (studentEmail, name@sailfuture.org), so that is the one allowed.
 
-/** The student's email plus anyone always allowed (comma-separated), lowercased, no repeats. */
+/** Admin accounts that may sign in to every student laptop, on top of the student. */
+export const ADMINS_ALWAYS_ALLOWED = [
+  "admin@sailfuture.org",
+  "hthompson@sailfuture.org",
+  "whateverittakes@sailfuture.org",
+  "mlong@sailfuture.org",
+]
+
+/**
+ * The student's email first, then the admins above and anyone in `alwaysAllowed`
+ * (comma-separated, from CHROMEBOOK_ALWAYS_ALLOWED), lowercased, no repeats.
+ */
 export function signInAllowlist(studentEmail: string, alwaysAllowed = ""): string[] {
   const own = studentEmail.trim().toLowerCase()
   const extra = alwaysAllowed
     .split(",")
     .map((e) => e.trim().toLowerCase())
     .filter(Boolean)
-  return [...new Set([own, ...extra].filter(Boolean))]
+  return [...new Set([own, ...ADMINS_ALWAYS_ALLOWED, ...extra].filter(Boolean))]
 }
 
 /** "/Expedition/" -> "/Expedition"; "Expedition" -> "/Expedition". */

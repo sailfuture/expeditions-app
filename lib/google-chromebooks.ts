@@ -15,7 +15,8 @@ import "server-only"
 //   CHROMEBOOK_OU                optional: the OU that holds the laptop OUs, as a name found
 //                                anywhere (Expeditions) or a full path (/Students/Expeditions);
 //                                needed only when another OU elsewhere has a laptop's name too
-//   CHROMEBOOK_ALWAYS_ALLOWED    optional, comma-separated accounts allowed on every student laptop
+//   CHROMEBOOK_ALWAYS_ALLOWED    optional, comma-separated accounts allowed on every student laptop,
+//                                on top of ADMINS_ALWAYS_ALLOWED in chromebook-signin.ts
 // and these scopes granted to the service account's client ID under domain-wide delegation:
 //   https://www.googleapis.com/auth/chrome.management.policy
 //   https://www.googleapis.com/auth/admin.directory.orgunit.readonly
@@ -73,7 +74,7 @@ async function laptopOu(directory: Clients["directory"], laptop: string) {
   return { path: ou.orgUnitPath ?? "", id: (ou.orgUnitId ?? "").replace(/^id:/, "") }
 }
 
-/** Lets only this student (and CHROMEBOOK_ALWAYS_ALLOWED) sign in to the laptop. */
+/** Lets only this student (and the always-allowed admins) sign in to the laptop. */
 export async function lockChromebookToStudent(args: { laptop: string; studentEmail: string }) {
   const { directory, policy } = clients()
   const ou = await laptopOu(directory, args.laptop)
@@ -142,8 +143,8 @@ export async function clearChromebookSignIn(args: { laptop: string; studentEmail
   })
   const own = resolved.data.resolvedPolicies?.find((p) => p.sourceKey?.targetResource === target)
   const listed = ((own?.value?.value?.userAllowlist as string[] | undefined) ?? []).map((e) => e.toLowerCase())
-  const student = signInAllowlist(args.studentEmail)
-  if (!student.some((e) => listed.includes(e))) return { cleared: false, ouPath: ou.path }
+  // Only the student's own address counts: the admins are on every laptop's list
+  if (!listed.includes(args.studentEmail.trim().toLowerCase())) return { cleared: false, ouPath: ou.path }
 
   await policy.customers.policies.orgunits.batchInherit({
     customer: `customers/${CUSTOMER}`,

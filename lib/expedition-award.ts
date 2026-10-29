@@ -2,7 +2,7 @@
 // professionalism scores. Mirrors the "Expedition award" spreadsheet:
 //
 //   Step 1  earned $      = $5 per category that qualifies (School, Job Duties,
-//                          Service, Crew scored >= 3; Journaling == 100)
+//                          Service, Crew scored >= 3; Journaling == 100; Fitness == 100)
 //   Step 2  performance   = mean of the rated categories entered that day
 //           perf percent  = first matching row of the performance tier table
 //           cit percent   = exact lookup of the citizenship score
@@ -18,7 +18,7 @@
 // run with plain tsc + node.
 
 export type RatedCategory = "school" | "job" | "service" | "crew"
-export type CompletionCategory = "journaling"
+export type CompletionCategory = "journaling" | "fitness"
 export type AwardCategory = RatedCategory | CompletionCategory
 
 export interface PerformanceTier {
@@ -34,7 +34,7 @@ export interface AwardSettings {
   dollarsPerCategory: number
   /** A rated category (1 to 5) earns when its score is at least this. */
   ratedThreshold: number
-  /** A completion category (Journaling) earns only when equal to this. */
+  /** A completion category (Journaling, Fitness) earns only when equal to this. */
   completionValue: number
   /** Checked from the top; the first row that matches sets the percent. Nothing matching keeps 0%. */
   performanceTiers: PerformanceTier[]
@@ -64,6 +64,7 @@ export const RATED_CATEGORIES: ReadonlyArray<{ key: RatedCategory; label: string
 
 export const COMPLETION_CATEGORIES: ReadonlyArray<{ key: CompletionCategory; label: string }> = [
   { key: "journaling", label: "Journaling" },
+  { key: "fitness", label: "Fitness" },
 ]
 
 /** One student's scores for one day. `null` means blank (not scored / not applicable). */
@@ -75,6 +76,8 @@ export interface DailyScores {
   crew: number | null
   /** 100 (complete), 50 (partial), 0, or null when not applicable. */
   journaling: number | null
+  /** 100 (complete), 0, or null when not applicable. */
+  fitness: number | null
   /** 1 to 5; null is treated as 0 and keeps 0%. */
   citizenship: number | null
 }
@@ -192,6 +195,8 @@ export interface ProfessionalismRowLike {
   isCitizenshipUsed?: boolean | null
   /** Journal status name, e.g. "Completed", "Incomplete", "Late Entry", "Not Started", "Excused", or "". */
   journaling?: string | null
+  /** 100, 0 or null. */
+  fitness?: number | null
 }
 
 export interface JournalStatusLike {
@@ -233,6 +238,7 @@ export function dailyScoresFromProfessionalism(
     service: ratedScore(row.service, row.isServiceUsed),
     crew: ratedScore(row.crew, row.isCrewUsed),
     journaling: journalingScoreFromStatus(row.journaling, statuses),
+    fitness: row.fitness === null || row.fitness === undefined ? null : Number(row.fitness),
     citizenship: ratedScore(row.citizenship, row.isCitizenshipUsed),
   }
 }

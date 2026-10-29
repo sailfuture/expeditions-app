@@ -214,6 +214,7 @@ export function EvaluateClient({ date, expeditionId }: EvaluateClientProps) {
             journaling: journalStatusFromName(existing.journaling),
             // Per-category reason columns (academics_reason, job_reason, ...)
             reasons: readStoredReasons(existing),
+            fitness: existing.fitness ?? null,
             // Boolean flags for disabling categories (true = disabled)
             isAcademicsUsed: existing.isAcademicsUsed ?? false,
             isJobUsed: existing.isJobUsed ?? false,
@@ -236,6 +237,7 @@ export function EvaluateClient({ date, expeditionId }: EvaluateClientProps) {
             note: null,
             journaling: null,
             reasons: emptyReasons(),
+            fitness: null,
             // Boolean flags for disabling categories (default to false = enabled)
             isAcademicsUsed: false,
             isJobUsed: false,
@@ -437,6 +439,8 @@ export function EvaluateClient({ date, expeditionId }: EvaluateClientProps) {
           bonus,
           penalty,
           journaling: journalingValue,
+          // Fitness for the expedition award: 100 = complete, 0 = incomplete, null = not applicable
+          fitness: record.fitness ?? null,
         }
 
         if (isOffshore) {

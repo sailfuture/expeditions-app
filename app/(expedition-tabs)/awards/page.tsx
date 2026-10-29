@@ -77,7 +77,7 @@ function initials(student: any) {
 function hasAnyScore(s: DailyScores) {
   return (
     s.school !== null || s.job !== null || s.service !== null || s.crew !== null ||
-    s.journaling !== null || s.citizenship !== null
+    s.journaling !== null || s.fitness !== null || s.citizenship !== null
   )
 }
 
@@ -254,6 +254,7 @@ const WORKED_EXAMPLE = computeDailyAward({
   service: 3,
   crew: 3,
   journaling: 100,
+  fitness: 0,
   citizenship: 3,
 })
 

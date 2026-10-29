@@ -126,6 +126,8 @@ export interface ExpeditionProfessionalism {
   journaling: JournalStatus | null
   // One reason per score category, required whenever that score is above or below 3
   reasons: CategoryReasons
+  // Fitness for the expedition award: 100 = complete, 0 = incomplete, null = not applicable that day
+  fitness?: number | null
   // Boolean flags to disable categories (true = disabled/inactive)
   isAcademicsUsed?: boolean
   isJobUsed?: boolean

@@ -34,7 +34,7 @@ function review_period_award {
           citizenshipPercents: { 5: 1.1, 4: 1.0, 3: 0.75, 2: 0.4, 1: 0 }
         };
         const RATED = ["school", "job", "service", "crew"];
-        const COMPLETION = ["journaling"];
+        const COMPLETION = ["journaling", "fitness"];
 
         const journalValue = {};
         ($var.statuses || []).forEach((s) => {
@@ -66,6 +66,7 @@ function review_period_award {
             service: rated(row.service, row.isServiceUsed),
             crew: rated(row.crew, row.isCrewUsed),
             journaling: journaling(row.journaling),
+            fitness: row.fitness === null || row.fitness === undefined ? null : Number(row.fitness),
             citizenship: rated(row.citizenship, row.isCitizenshipUsed)
           };
           const anyScore = Object.values(s).some((v) => v !== null);

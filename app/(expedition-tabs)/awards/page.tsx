@@ -37,6 +37,7 @@ import {
   formatAwardDollars,
   formatAwardPercent,
   computeDailyAward,
+  type AwardCategory,
   type DailyAward,
   type DailyScores,
   type StudentAwardSummary,
@@ -101,6 +102,32 @@ function ScoreCell({ value, earned }: { value: number | null; earned: number }) 
   )
 }
 
+// The day's score columns, in the Student Evaluations table's order.
+const BREAKDOWN_COLUMNS: ReadonlyArray<AwardCategory | "citizenship"> = [
+  "school", "citizenship", "job", "crew", "service", "journaling", "fitness",
+]
+const CATEGORY_LABEL: Record<AwardCategory | "citizenship", string> = {
+  ...(Object.fromEntries([...RATED_CATEGORIES, ...COMPLETION_CATEGORIES].map((c) => [c.key, c.label])) as Record<AwardCategory, string>),
+  citizenship: "Citizenship",
+}
+
+function CitizenshipCell({ day }: { day: DailyAward }) {
+  return (
+    <TableCell className={cn(CELL, "text-center")}>
+      {day.scores.citizenship === null ? (
+        <span className="text-gray-300">—</span>
+      ) : (
+        <span className={cn("inline-flex min-w-[2.25rem] justify-center rounded-md px-1.5 py-0.5 text-xs font-medium",
+          day.citizenshipPercent >= 1 ? "bg-green-50 text-green-700"
+            : day.citizenshipPercent > 0 ? "bg-amber-50 text-amber-700"
+            : "bg-red-50 text-red-700")}>
+          {day.scores.citizenship}
+        </span>
+      )}
+    </TableCell>
+  )
+}
+
 function DailyBreakdown({
   days,
   rowsByDate,
@@ -118,13 +145,9 @@ function DailyBreakdown({
           <TableHeader>
             <TableRow className="border-b bg-gray-50 hover:bg-gray-50">
               <TableHead className={HEAD}>Day</TableHead>
-              {RATED_CATEGORIES.map((c) => (
-                <TableHead key={c.key} className={cn(HEAD, "text-center")}>{c.label}</TableHead>
+              {BREAKDOWN_COLUMNS.map((key) => (
+                <TableHead key={key} className={cn(HEAD, "text-center")}>{CATEGORY_LABEL[key]}</TableHead>
               ))}
-              {COMPLETION_CATEGORIES.map((c) => (
-                <TableHead key={c.key} className={cn(HEAD, "text-center")}>{c.label}</TableHead>
-              ))}
-              <TableHead className={cn(HEAD, "text-center")}>Citizenship</TableHead>
               <TableHead className={cn(HEAD, "text-right")}>Earned</TableHead>
               <TableHead className={cn(HEAD, "text-right")}>Perf. score</TableHead>
               <TableHead className={cn(HEAD, "text-right")}>Perf. %</TableHead>
@@ -147,24 +170,13 @@ function DailyBreakdown({
                     )}
                   </span>
                 </TableCell>
-                {RATED_CATEGORIES.map((c) => (
-                  <ScoreCell key={c.key} value={d.scores[c.key]} earned={d.earnedByCategory[c.key]} />
-                ))}
-                {COMPLETION_CATEGORIES.map((c) => (
-                  <ScoreCell key={c.key} value={d.scores[c.key]} earned={d.earnedByCategory[c.key]} />
-                ))}
-                <TableCell className={cn(CELL, "text-center")}>
-                  {d.scores.citizenship === null ? (
-                    <span className="text-gray-300">—</span>
+                {BREAKDOWN_COLUMNS.map((key) =>
+                  key === "citizenship" ? (
+                    <CitizenshipCell key={key} day={d} />
                   ) : (
-                    <span className={cn("inline-flex min-w-[2.25rem] justify-center rounded-md px-1.5 py-0.5 text-xs font-medium",
-                      d.citizenshipPercent >= 1 ? "bg-green-50 text-green-700"
-                        : d.citizenshipPercent > 0 ? "bg-amber-50 text-amber-700"
-                        : "bg-red-50 text-red-700")}>
-                      {d.scores.citizenship}
-                    </span>
-                  )}
-                </TableCell>
+                    <ScoreCell key={key} value={d.scores[key]} earned={d.earnedByCategory[key]} />
+                  )
+                )}
                 <TableCell className={cn(CELL, "text-right text-gray-700")}>{formatAwardDollars(d.earned)}</TableCell>
                 <TableCell className={cn(CELL, "text-right text-gray-700")}>
                   {d.ratedCount > 0 ? d.performanceScore.toFixed(2) : <span className="text-gray-300">—</span>}

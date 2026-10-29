@@ -56,7 +56,7 @@ export const DEFAULT_AWARD_SETTINGS: AwardSettings = {
 }
 
 export const RATED_CATEGORIES: ReadonlyArray<{ key: RatedCategory; label: string }> = [
-  { key: "school", label: "School" },
+  { key: "school", label: "Academics" },
   { key: "job", label: "Job Duties" },
   { key: "service", label: "Service" },
   { key: "crew", label: "Crew" },

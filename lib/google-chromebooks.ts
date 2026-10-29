@@ -28,6 +28,8 @@ const SCOPES = [
 ]
 const CUSTOMER = "my_customer"
 const SIGN_IN_SCHEMA = "chrome.devices.SignInRestriction"
+// The API takes the full enum name; GAM and the docs show only the part after "_ENUM_".
+const RESTRICTED_LIST = "ALLOW_NEW_USERS_ENUM_RESTRICTED_LIST"
 
 /** Why Chromebook sign-in can't be managed here, or null when it's set up. */
 export function chromebookSetupProblem(): string | null {
@@ -82,7 +84,7 @@ export async function lockChromebookToStudent(args: { laptop: string; studentEma
       requests: [
         {
           policyTargetKey: { targetResource: `orgunits/${ou.id}` },
-          policyValue: { policySchema: SIGN_IN_SCHEMA, value: { deviceAllowNewUsers: "RESTRICTED_LIST", userAllowlist: allowlist } },
+          policyValue: { policySchema: SIGN_IN_SCHEMA, value: { deviceAllowNewUsers: RESTRICTED_LIST, userAllowlist: allowlist } },
           updateMask: "deviceAllowNewUsers,userAllowlist",
         },
       ],

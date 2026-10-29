@@ -12,7 +12,8 @@ import "server-only"
 //   GOOGLE_SERVICE_ACCOUNT_KEY   the service account's JSON key (or GOOGLE_SERVICE_ACCOUNT_EMAIL +
 //                                GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY)
 //   GOOGLE_ADMIN_SUBJECT         the admin the service account acts as (domain-wide delegation)
-//   CHROMEBOOK_OU                optional: the OU that holds the laptop OUs, e.g. /Expedition;
+//   CHROMEBOOK_OU                optional: the OU that holds the laptop OUs, as a name found
+//                                anywhere (Expeditions) or a full path (/Students/Expeditions);
 //                                needed only when another OU elsewhere has a laptop's name too
 //   CHROMEBOOK_ALWAYS_ALLOWED    optional, comma-separated accounts allowed on every student laptop
 // and these scopes granted to the service account's client ID under domain-wide delegation:
@@ -64,11 +65,8 @@ type Clients = ReturnType<typeof clients>
 /** The laptop's own OU: its path, and its ID as the Chrome Policy API wants it (no "id:" prefix). */
 async function laptopOu(directory: Clients["directory"], laptop: string) {
   const parent = process.env.CHROMEBOOK_OU || undefined
-  const res = await directory.orgunits.list({
-    customerId: CUSTOMER,
-    type: "all",
-    orgUnitPath: parent ? parent.replace(/^\/+/, "") : undefined,
-  })
+  // Every OU in the account; CHROMEBOOK_OU narrows the match, so it can be a name or a path
+  const res = await directory.orgunits.list({ customerId: CUSTOMER, type: "all" })
   const ou = findLaptopOu(res.data.organizationUnits ?? [], laptop, parent)
   return { path: ou.orgUnitPath ?? "", id: (ou.orgUnitId ?? "").replace(/^id:/, "") }
 }
@@ -100,7 +98,7 @@ export async function lockChromebookToStudent(args: { laptop: string; studentEma
 export async function chromebookSignInStatus(laptops: string[]) {
   const { directory, policy } = clients()
   const parent = process.env.CHROMEBOOK_OU || undefined
-  const res = await directory.orgunits.list({ customerId: CUSTOMER, type: "all", orgUnitPath: parent ? parent.replace(/^\/+/, "") : undefined })
+  const res = await directory.orgunits.list({ customerId: CUSTOMER, type: "all" })
   const units = res.data.organizationUnits ?? []
   const schema = await policy.customers.policySchemas.get({ name: `customers/${CUSTOMER}/policySchemas/${SIGN_IN_SCHEMA}` })
   const fields = (schema.data.definition?.messageType?.[0]?.field ?? []).map((f) => ({

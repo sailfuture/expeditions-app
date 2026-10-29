@@ -25,20 +25,31 @@ export function normalizeOuPath(path: string): string {
 type OrgUnit = { name?: string | null; orgUnitPath?: string | null; orgUnitId?: string | null }
 
 /**
+ * Whether an OU sits inside `parent`: a path starting with "/" (/Students/Expeditions) means
+ * exactly that OU; a bare name (Expeditions) means any OU of that name, wherever it is.
+ */
+function isInside(orgUnitPath: string, parent: string): boolean {
+  const path = normalizeOuPath(orgUnitPath).toLowerCase()
+  const wanted = parent.trim().replace(/\/+$/, "").toLowerCase()
+  if (wanted.startsWith("/")) return path.startsWith(`${wanted}/`)
+  return path.split("/").slice(1, -1).includes(wanted)
+}
+
+/**
  * The laptop's OU among all of the account's OUs: the one named like the laptop (any case),
  * inside `parentOu` when that's given. More than one match is an error, so nothing is guessed.
  */
 export function findLaptopOu<T extends OrgUnit>(units: T[], laptop: string, parentOu?: string): T {
   const label = laptop.trim().toLowerCase()
-  const parent = parentOu ? normalizeOuPath(parentOu).toLowerCase() : null
-  const matches = units.filter((u) => {
-    if ((u.name ?? "").trim().toLowerCase() !== label) return false
-    if (!parent) return true
-    return normalizeOuPath(u.orgUnitPath ?? "").toLowerCase().startsWith(`${parent}/`)
-  })
-  if (matches.length === 0) throw new Error(`No org unit named ${laptop}${parentOu ? ` inside ${normalizeOuPath(parentOu)}` : ""}`)
+  const parent = parentOu?.trim() || null
+  const named = units.filter((u) => (u.name ?? "").trim().toLowerCase() === label)
+  const matches = parent ? named.filter((u) => isInside(u.orgUnitPath ?? "", parent)) : named
+  if (matches.length === 0) {
+    const elsewhere = parent && named.length ? ` (there is one at ${named.map((m) => m.orgUnitPath).join(", ")})` : ""
+    throw new Error(`No org unit named ${laptop}${parent ? ` inside ${parent}` : ""}${elsewhere}`)
+  }
   if (matches.length > 1) {
-    throw new Error(`More than one org unit is named ${laptop} (${matches.map((m) => m.orgUnitPath).join(", ")}); set CHROMEBOOK_OU to the one that holds the laptops`)
+    throw new Error(`More than one org unit is named ${laptop} (${matches.map((m) => m.orgUnitPath).join(", ")}); set CHROMEBOOK_OU to the full path of the one that holds the laptops`)
   }
   return matches[0]
 }

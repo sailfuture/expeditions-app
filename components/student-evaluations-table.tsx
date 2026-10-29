@@ -42,9 +42,16 @@ export function getJournalStringColor(value: string | null | undefined) {
 
 const HEAD_CLASS = "h-10 px-4 text-xs font-semibold text-gray-600"
 
-function ScoreCell({ score }: { score: number | null | undefined }) {
+// The evaluation row stores an unscored category as 0 with an empty label, so
+// the label (not the number) says whether there is an average to show.
+function hasScore(value: number | null | undefined, label: string | null | undefined) {
+  return value !== null && value !== undefined && Boolean(label)
+}
+
+function ScoreCell({ score: value, label }: { score: number | null | undefined; label: string | null | undefined }) {
+  const score = hasScore(value, label) ? value : null
   return (
-    <TableCell className={`h-14 px-4 text-center ${getEvaluationColorClass(score)}`}>
+    <TableCell className={`h-14 px-4 text-center ${score === null ? "" : getEvaluationColorClass(score)}`}>
       {score !== null && score !== undefined ? (
         <span className="text-xs font-medium text-gray-700">{score.toFixed(2)}</span>
       ) : (
@@ -66,7 +73,7 @@ function StudentEvaluationRow({
   const router = useRouter()
   const { data: evaluation } = useEvaluationByStudent(student.id, expeditionId)
   const fullName = `${student.firstName || ""} ${student.lastName || ""}`.trim()
-  const journal = evaluation?.journal
+  const journal = hasScore(evaluation?.journal, evaluation?.journal_evaluation) ? evaluation.journal : null
 
   return (
     <TableRow className="border-b last:border-0 hover:bg-gray-50/50">
@@ -86,12 +93,12 @@ function StudentEvaluationRow({
           </span>
         </div>
       </TableCell>
-      <ScoreCell score={evaluation?.academics} />
-      <ScoreCell score={evaluation?.citizenship} />
-      <ScoreCell score={evaluation?.job} />
-      <ScoreCell score={evaluation?.crew} />
-      <ScoreCell score={evaluation?.service} />
-      <TableCell className={`h-14 px-4 text-center ${getJournalColorClass(journal)}`}>
+      <ScoreCell score={evaluation?.academics} label={evaluation?.academics_evaluation} />
+      <ScoreCell score={evaluation?.citizenship} label={evaluation?.citizenship_evaluation} />
+      <ScoreCell score={evaluation?.job} label={evaluation?.job_evaluation} />
+      <ScoreCell score={evaluation?.crew} label={evaluation?.crew_evaluation} />
+      <ScoreCell score={evaluation?.service} label={evaluation?.service_evaluation} />
+      <TableCell className={`h-14 px-4 text-center ${journal === null ? "" : getJournalColorClass(journal)}`}>
         {journal !== null && journal !== undefined ? (
           <span className="text-xs font-medium text-gray-700">
             {`${(journal <= 1 ? journal * 100 : journal).toFixed(2)}%`}

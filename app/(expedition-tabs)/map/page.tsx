@@ -4,7 +4,7 @@ import { Suspense, useEffect, useMemo, useState } from "react"
 import dynamic from "next/dynamic"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
-import { Anchor, MapPinOff, Navigation, Ship } from "lucide-react"
+import { MapPinOff } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useExpeditions, useExpeditionLocations, useExpeditionSchedules } from "@/lib/hooks/use-expeditions"
@@ -95,63 +95,19 @@ function RouteMapContent() {
   const isLoading = Boolean(expeditionId) && (loadingSchedules || loadingLocations) && !schedules && !locations
   const error = schedulesError || locationsError
   const hasToken = MAPBOX_TOKEN.length > 0
-  const current = route.current
   const unmapped = route.stops.filter((s) => s.lng === null && s.status !== "unscheduled")
 
   return (
     <div className="container mx-auto px-4 py-6 space-y-4">
-      {/* Title + status */}
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight">Route Map</h1>
-          <p className="text-sm text-muted-foreground">
-            {expedition?.name ?? (isLoading ? "Loading expedition…" : "No expedition selected")}
-            {route.firstDate && route.lastDate && (
-              <> · {formatDate(route.firstDate)} – {formatDate(route.lastDate)}</>
-            )}
-          </p>
-        </div>
-
-        {isLoading ? (
-          <Skeleton className="h-16 w-full lg:w-96" />
-        ) : current ? (
-          <div className="flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 shadow-sm lg:min-w-[22rem]">
-            <span className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white">
-              {current.underway ? <Ship className="h-4 w-4" /> : <Anchor className="h-4 w-4" />}
-            </span>
-            <div className="min-w-0 text-sm">
-              <div className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700">
-                {current.underway ? "Underway today" : "You are here"}
-              </div>
-              <div className="font-semibold text-emerald-950">
-                {current.stop.port}
-                <span className="font-normal text-emerald-800"> · {current.stop.country}</span>
-              </div>
-              <div className="text-emerald-800">{formatDateRange(current.range)}</div>
-              {current.next && (
-                <div className="mt-1 flex items-center gap-1 text-emerald-900">
-                  <Navigation className="h-3.5 w-3.5" />
-                  Next: <span className="font-medium">{current.next.port}</span>
-                  {current.nextDate && <span className="text-emerald-700">· {formatDate(current.nextDate)}</span>}
-                </div>
-              )}
-            </div>
-          </div>
-        ) : route.phase === "before" && route.stops[0] ? (
-          <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm">
-            <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Departs</div>
-            <div className="font-medium">
-              {formatDate(route.firstDate)} from {route.stops[0].port}
-            </div>
-          </div>
-        ) : route.phase === "after" && route.stops.length > 0 ? (
-          <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm">
-            <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Expedition complete</div>
-            <div className="font-medium">
-              Ended {formatDate(route.lastDate)} in {route.stops[route.stops.length - 1].port}
-            </div>
-          </div>
-        ) : null}
+      {/* Title */}
+      <div>
+        <h1 className="text-xl font-semibold tracking-tight">Route Map</h1>
+        <p className="text-sm text-muted-foreground">
+          {expedition?.name ?? (isLoading ? "Loading expedition…" : "No expedition selected")}
+          {route.firstDate && route.lastDate && (
+            <> · {formatDate(route.firstDate)} – {formatDate(route.lastDate)}</>
+          )}
+        </p>
       </div>
 
       {error && (

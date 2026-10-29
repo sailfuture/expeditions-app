@@ -328,14 +328,6 @@ export default function ExpeditionRouteMap({
       markersRef.current.set(stop.id, marker)
     }
 
-    // Keep the current stop's popup open so "You are here" reads at a glance,
-    // unless the live boat marker already answers that question.
-    const currentId = route.current?.stop.id
-    if (!vessel && currentId && markersRef.current.has(currentId)) {
-      const marker = markersRef.current.get(currentId)!
-      if (!marker.getPopup()?.isOpen()) marker.togglePopup()
-    }
-
     // Fit to the route (and the boat) the first time this set of points shows up.
     const key = route.mappable.map((s) => s.id).join(",") + (vessel ? "|vessel" : "")
     if (key && key !== fittedKeyRef.current) {
@@ -350,7 +342,7 @@ export default function ExpeditionRouteMap({
         map.fitBounds(bounds, { padding: { top: 80, bottom: 60, left: 60, right: 60 }, maxZoom: 9, duration: 0 })
       }
     }
-    // `vessel` only matters here for the initial fit and the popup default.
+    // `vessel` only matters here for the initial fit.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [route, isReady])
 
@@ -382,7 +374,6 @@ export default function ExpeditionRouteMap({
         .setPopup(new mapboxgl.Popup({ ...POPUP_OPTIONS, offset: 24 }).setHTML(vesselPopupHtml(vessel, name)))
         .addTo(map)
       vesselMarkerRef.current = marker
-      if (!marker.getPopup()?.isOpen()) marker.togglePopup()
       // First fix: bring the boat into view alongside the route.
       const bounds = new mapboxgl.LngLatBounds([vessel.lng, vessel.lat], [vessel.lng, vessel.lat])
       for (const stop of routeRef.current.mappable) bounds.extend([stop.lng!, stop.lat!])

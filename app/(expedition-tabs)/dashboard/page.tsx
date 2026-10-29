@@ -932,13 +932,13 @@ export default function DashboardPage() {
                     <Table className="table-fixed w-full">
                       <TableHeader>
                         <TableRow className="border-b bg-gray-50/30 hover:bg-gray-50/30">
-                          <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600" style={{ width: "11%" }}>Date</TableHead>
+                          <TableHead className="h-10 pl-6 pr-2 text-xs font-semibold text-gray-600" style={{ width: "12%" }}>Date</TableHead>
                           <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600" style={{ width: "19%" }}>Location</TableHead>
                           <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600" style={{ width: "12%" }}>Type</TableHead>
                           <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600" style={{ width: "19%" }}>Destination</TableHead>
                           <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600" style={{ width: "15%" }}>Time Off</TableHead>
                           <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600" style={{ width: "auto" }}>Notes</TableHead>
-                          <TableHead className="h-10 px-2 text-right text-xs font-semibold text-gray-600" style={{ width: "52px" }}><span className="sr-only">Actions</span></TableHead>
+                          <TableHead className="h-10 pl-2 pr-6 text-right text-xs font-semibold text-gray-600" style={{ width: "68px" }}><span className="sr-only">Actions</span></TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -952,7 +952,7 @@ export default function DashboardPage() {
                               onClick={() => handleRowClick(schedule)}
                             >
                               {/* Row content - reuse the same cells */}
-                              <TableCell className="h-14 px-2">
+                              <TableCell className="h-14 pl-6 pr-2">
                                 <span className="font-semibold text-sm text-gray-900 underline decoration-gray-300 underline-offset-4 hover:decoration-gray-900">
                                   {formatDate(schedule.date)}
                                 </span>
@@ -1150,7 +1150,7 @@ export default function DashboardPage() {
                                   </div>
                                 )}
                               </TableCell>
-                              <TableCell className="h-14 px-2">
+                              <TableCell className="h-14 pl-2 pr-6">
                                 <div className="flex items-center justify-end">
                                   <Button
                                     variant="outline"
@@ -1184,13 +1184,13 @@ export default function DashboardPage() {
                     <Table className="table-fixed w-full">
                       <TableHeader>
                         <TableRow className="border-b bg-gray-50/30 hover:bg-gray-50/30">
-                          <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600" style={{ width: "11%" }}>Date</TableHead>
+                          <TableHead className="h-10 pl-6 pr-2 text-xs font-semibold text-gray-600" style={{ width: "12%" }}>Date</TableHead>
                           <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600" style={{ width: "19%" }}>Location</TableHead>
                           <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600" style={{ width: "12%" }}>Type</TableHead>
                           <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600" style={{ width: "19%" }}>Destination</TableHead>
                           <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600" style={{ width: "15%" }}>Time Off</TableHead>
                           <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600" style={{ width: "auto" }}>Notes</TableHead>
-                          <TableHead className="h-10 px-2 text-right text-xs font-semibold text-gray-600" style={{ width: "52px" }}><span className="sr-only">Actions</span></TableHead>
+                          <TableHead className="h-10 pl-2 pr-6 text-right text-xs font-semibold text-gray-600" style={{ width: "68px" }}><span className="sr-only">Actions</span></TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -1203,7 +1203,7 @@ export default function DashboardPage() {
                               className="border-b last:border-0 transition-colors hover:bg-gray-50/50 cursor-pointer"
                               onClick={() => handleRowClick(schedule)}
                             >
-                              <TableCell className="h-14 px-2">
+                              <TableCell className="h-14 pl-6 pr-2">
                                 <span className="font-semibold text-sm text-gray-900 underline decoration-gray-300 underline-offset-4 hover:decoration-gray-900">
                                   {formatDate(schedule.date)}
                                 </span>
@@ -1401,7 +1401,7 @@ export default function DashboardPage() {
                                   </div>
                                 )}
                               </TableCell>
-                              <TableCell className="h-14 px-2">
+                              <TableCell className="h-14 pl-2 pr-6">
                                 <div className="flex items-center justify-end">
                                   <Button
                                     variant="outline"

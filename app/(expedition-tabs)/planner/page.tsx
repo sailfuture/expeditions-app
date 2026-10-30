@@ -56,7 +56,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command"
-import { useExpeditionScheduleItemsByDate, useExpeditionSchedules, useTeachers, useExpeditionScheduleTemplates, useStudentsByExpedition } from "@/lib/hooks/use-expeditions"
+import { useExpeditionScheduleItemsRange, revalidateScheduleItemRanges, useExpeditionSchedules, useTeachers, useExpeditionScheduleTemplates, useStudentsByExpedition } from "@/lib/hooks/use-expeditions"
 import { useExpeditionContext } from "@/lib/contexts/expedition-context"
 import { cn, isDateWithinExpeditionRange, getExpeditionFirstDate, getPhotoUrl } from "@/lib/utils"
 import { AddScheduleItemSheet } from "@/components/add-schedule-item-sheet"
@@ -712,11 +712,7 @@ function PlannerPageContent() {
     setUpdatingMealPlan({ key, cookbookId })
     try {
       await updateExpeditionScheduleItem(itemId, { expedition_cookbook_id: cookbookId })
-      await Promise.all(
-        dateStrings.map(date =>
-          mutate(`expedition_schedule_items_date_${date}_${effectiveExpeditionId || 'all'}`)
-        )
-      )
+      await revalidateScheduleItemRanges()
     } catch (error) {
       console.error("Failed to update meal plan:", error)
       toast.error("Failed to update meal plan")
@@ -799,11 +795,8 @@ function PlannerPageContent() {
 
       // Refresh only the specific schedule data that was updated (not all schedule items)
       await mutate(`expedition_schedules_${effectiveExpeditionId}`)
-      // Also refresh the specific day's items since they include schedule info
-      const scheduleDate = allSchedules?.find((s: any) => s.id === scheduleId)?.date
-      if (scheduleDate) {
-        await mutate(`expedition_schedule_items_date_${scheduleDate}_${effectiveExpeditionId || 'all'}`)
-      }
+      // Also refresh the week's items since each day carries its schedule info
+      await revalidateScheduleItemRanges()
 
       toast.success(`${field === 'expedition_dish_days_id' ? 'Dish Team' : 'Galley Team'} updated`)
     } catch (error) {
@@ -845,17 +838,24 @@ function PlannerPageContent() {
     return allSchedules.find((s: any) => s.date === dateString)
   }
 
-  // Fetch items for each day - now returns { items, schedule }
-  const { data: data0, isLoading: loading0 } = useExpeditionScheduleItemsByDate(dateStrings[0], effectiveExpeditionId)
-  const { data: data1, isLoading: loading1 } = useExpeditionScheduleItemsByDate(dateStrings[1], effectiveExpeditionId)
-  const { data: data2, isLoading: loading2 } = useExpeditionScheduleItemsByDate(dateStrings[2], effectiveExpeditionId)
-  const { data: data3, isLoading: loading3 } = useExpeditionScheduleItemsByDate(dateStrings[3], effectiveExpeditionId)
-  const { data: data4, isLoading: loading4 } = useExpeditionScheduleItemsByDate(dateStrings[4], effectiveExpeditionId)
+  // One request for the whole visible week; each day is { items, schedule } like the per-day endpoint
+  const { data: weekData, isLoading: weekLoading } = useExpeditionScheduleItemsRange(
+    dateStrings[0],
+    dateStrings[dateStrings.length - 1],
+    effectiveExpeditionId
+  )
 
-  // Extract items arrays for backward compatibility
-  const allData = [data0, data1, data2, data3, data4]
-  const allItems = allData.map(d => d?.items || d || [])
-  const allLoading = [loading0, loading1, loading2, loading3, loading4]
+  // Per-day view of the week response: undefined until it arrives, then { items, schedule } per day
+  // (a day with no schedule row gets empty items and a null schedule)
+  const allData = useMemo(() => {
+    if (!weekData) return dateStrings.map(() => undefined)
+    return dateStrings.map(date => {
+      const day = weekData.days.find(d => d.date === date)
+      return { items: day?.items || [], schedule: day?.schedule || null }
+    })
+  }, [weekData, dateStrings])
+  const allItems = allData.map(d => d?.items || [])
+  const allLoading = dateStrings.map(() => weekLoading)
 
   const formatMilitaryTime = (time: number) => {
     if (!time && time !== 0) return ""
@@ -1022,9 +1022,7 @@ function PlannerPageContent() {
     setDeleting(true)
     try {
       await deleteExpeditionScheduleItem(itemToDelete.id)
-      dateStrings.forEach(date => {
-        mutate(`expedition_schedule_items_date_${date}_${effectiveExpeditionId || 'all'}`)
-      })
+      revalidateScheduleItemRanges()
       toast.success("Activity deleted")
       setDeleteConfirmOpen(false)
       setDialogOpen(false)
@@ -1047,7 +1045,7 @@ function PlannerPageContent() {
     setAddingTemplate(dateString)
     try {
       await addExpeditionScheduleTemplate(dateString, templateId)
-      mutate(`expedition_schedule_items_date_${dateString}_${effectiveExpeditionId || 'all'}`)
+      revalidateScheduleItemRanges()
       toast.success("Template added successfully")
       setSelectedTemplates(prev => {
         const newState = { ...prev }

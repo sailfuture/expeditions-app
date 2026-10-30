@@ -1,12 +1,13 @@
 "use client"
 
-import useSWR from "swr"
+import useSWR, { mutate } from "swr"
 import {
   getExpeditions,
   getActiveExpedition,
   getExpeditionSchedules,
   getExpeditionScheduleItems,
   getExpeditionScheduleItemsByDate,
+  getExpeditionScheduleItemsRange,
   getExpeditionScheduleItemTypes,
   getStudents,
   getStudentsByExpedition,
@@ -70,6 +71,26 @@ export function useExpeditionScheduleItemsByDate(date: string | null, expedition
     date ? () => getExpeditionScheduleItemsByDate(date, expeditionsId) : null,
     options
   )
+}
+
+const SCHEDULE_ITEMS_RANGE_PREFIX = "expedition_schedule_items_range_"
+
+export function scheduleItemsRangeKey(startDate: string, endDate: string, expeditionsId?: number) {
+  return `${SCHEDULE_ITEMS_RANGE_PREFIX}${startDate}_${endDate}_${expeditionsId || "all"}`
+}
+
+// Every schedule day in [startDate, endDate] with its items, in one request (the weekly planner).
+export function useExpeditionScheduleItemsRange(startDate: string | null, endDate: string | null, expeditionsId?: number) {
+  const ready = Boolean(startDate && endDate)
+  return useSWR(
+    ready ? scheduleItemsRangeKey(startDate!, endDate!, expeditionsId) : null,
+    ready ? () => getExpeditionScheduleItemsRange(startDate!, endDate!, expeditionsId) : null
+  )
+}
+
+// Refetch every mounted range (week) cache after a schedule item or schedule day changes.
+export function revalidateScheduleItemRanges() {
+  return mutate((key) => typeof key === "string" && key.startsWith(SCHEDULE_ITEMS_RANGE_PREFIX))
 }
 
 export function useStudents() {

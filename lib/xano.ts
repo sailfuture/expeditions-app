@@ -128,6 +128,22 @@ export async function getExpeditionScheduleItemsByDate(date: string, expeditions
   }
 }
 
+export type ScheduleItemsRangeDay = {
+  date: string
+  // The expedition_schedule row with expanded _expedition_dish_days and _expeditions_galley_team
+  schedule: any
+  items: any[]
+}
+
+// One call for every schedule day between startDate and endDate (inclusive); each day has the same
+// shape as getExpeditionScheduleItemsByDate. Days without a schedule row are simply absent.
+export async function getExpeditionScheduleItemsRange(startDate: string, endDate: string, expeditionsId?: number) {
+  const params = new URLSearchParams({ start_date: startDate, end_date: endDate })
+  if (expeditionsId) params.set("expeditions_id", String(expeditionsId))
+  const response = await xanoFetch<{ days?: ScheduleItemsRangeDay[] }>(`/expedition_schedule_items_range?${params.toString()}`)
+  return { days: Array.isArray(response?.days) ? response.days : [] }
+}
+
 export async function createExpeditionScheduleItem(data: Record<string, any>) {
   return xanoFetch<any>("/expedition_schedule_items", {
     method: "POST",

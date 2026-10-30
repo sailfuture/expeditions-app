@@ -27,7 +27,7 @@ import { Spinner } from "@/components/ui/spinner"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Check, ChevronDown, X, Trash2, ExternalLink, Search } from "lucide-react"
 import { createExpeditionScheduleItem, updateExpeditionScheduleItem, deleteExpeditionScheduleItem, getExpeditionCookbook } from "@/lib/xano"
-import { useExpeditionScheduleItemTypes } from "@/lib/hooks/use-expeditions"
+import { useExpeditionScheduleItemTypes, revalidateScheduleItemRanges } from "@/lib/hooks/use-expeditions"
 import useSWR, { mutate } from "swr"
 import { toast } from "sonner"
 import { cn, getPhotoUrl } from "@/lib/utils"
@@ -1066,8 +1066,9 @@ export function AddScheduleItemSheet({
       }
       
       await mutate(`expedition_schedule_items_date_${date}_${expeditionsId || 'all'}`)
+      await revalidateScheduleItemRanges()
       onOpenChange(false)
-      
+
       // Reset form
       setFormData({
         name: "",
@@ -1105,6 +1106,7 @@ export function AddScheduleItemSheet({
     try {
       await deleteExpeditionScheduleItem(editItem.id)
       await mutate(`expedition_schedule_items_date_${date}_${expeditionsId || 'all'}`)
+      await revalidateScheduleItemRanges()
       toast.success("Activity deleted")
       onOpenChange(false)
     } catch (error) {

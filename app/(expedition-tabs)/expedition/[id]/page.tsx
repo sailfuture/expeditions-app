@@ -658,7 +658,11 @@ export default function ExpeditionDetailPage({ params }: PageProps) {
               All Evaluation Records
             </DialogTitle>
             <DialogDescription>
-              {`${selectedStudent?.firstName || ""} ${selectedStudent?.lastName || ""}`.trim()} • {expedition?._schoolterms?.short_name || 'Term'} • {expedition?._schoolyears?.name || ''}
+              {[
+                `${selectedStudent?.firstName || ""} ${selectedStudent?.lastName || ""}`.trim(),
+                expedition?._schoolterms?.short_name,
+                expedition?._schoolyears?.name,
+              ].filter(Boolean).join(" • ")}
             </DialogDescription>
           </DialogHeader>
           

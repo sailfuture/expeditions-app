@@ -2328,7 +2328,11 @@ export default function StudentDetailPage() {
               All Evaluation Records
             </DialogTitle>
             <DialogDescription>
-              {student?.name} • {currentExpedition?._schoolterms?.short_name || 'Term'} • {currentExpedition?._schoolyears?.name || ''}
+              {[
+                `${student?.firstName || ""} ${student?.lastName || ""}`.trim(),
+                currentExpedition?._schoolterms?.short_name,
+                currentExpedition?._schoolyears?.name,
+              ].filter(Boolean).join(" • ")}
             </DialogDescription>
           </DialogHeader>
           

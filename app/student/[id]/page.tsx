@@ -1999,6 +1999,12 @@ export default function StudentDetailPage() {
                     placeholder="name@sailfuture.org"
                     className="mt-1.5"
                   />
+                  {/* The Toddle sync fills this in, and links a hand-added student to their Toddle record by it */}
+                  <div className="text-xs text-gray-500 mt-1">
+                    {student?.toddleID
+                      ? "Synced from Toddle. A Toddle sync replaces it with the email in Toddle, if Toddle has one."
+                      : "Added by hand. The next Toddle sync links this student to their Toddle record by this email."}
+                  </div>
                 </div>
                 <div>
                   <Label htmlFor="grade">Grade</Label>

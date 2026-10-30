@@ -330,7 +330,7 @@ function StudentsPageContent() {
       const newStudent = await createStudent({
         firstName: addForm.firstName.trim(),
         lastName: addForm.lastName.trim(),
-        studentEmail: addForm.studentEmail.trim(),
+        studentEmail: addForm.studentEmail.trim().toLowerCase(),
         yearGroup: addForm.yearGroup.trim(),
         grade: addForm.grade.trim(),
         gender: addForm.gender.trim(),
@@ -889,6 +889,7 @@ function StudentsPageContent() {
                 onChange={(e) => setAddForm({ ...addForm, studentEmail: e.target.value })}
                 placeholder="name@sailfuture.org"
               />
+              <p className="text-xs text-gray-500">The next Toddle sync links this student to their Toddle record by this email.</p>
             </div>
 
             <div className="grid grid-cols-2 gap-3">

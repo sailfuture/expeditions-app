@@ -1,0 +1,207 @@
+[B1] created #42: Scrambled Eggs, Buttered Toast & Apple Slices
+    9 ingredients added
+    6 steps added
+[B2] created #43: Buttermilk Pancakes, Fried Eggs & Chicken Sausage
+    7 ingredients added
+    6 steps added
+[B3] created #44: Breakfast Burritos (egg, chicken sausage, peppers, cheddar)
+    10 ingredients added
+    6 steps added
+[B4] created #45: Oatmeal, Hard-Boiled Eggs & PB Toast
+    7 ingredients added
+    7 steps added
+[B5] created #46: Egg, Bacon & Cheese Toast Sandwiches
+    8 ingredients added
+    6 steps added
+[B6] created #47: Potato, Pepper & Egg Hash with Hot Dog Bits
+    11 ingredients added
+    6 steps added
+[B7] created #48: French Toast, Scrambled Eggs & PB/Jelly
+    10 ingredients added
+    5 steps added
+[L1] created #49: Shredded Chicken Burrito Bowls with Peppers, Onions & Corn Salsa
+    12 ingredients added
+    6 steps added
+[L2] created #50: Chicken & Bean Chili over Rice
+    12 ingredients added
+    6 steps added
+[L3] created #51: Cheeseburgers, Fries & Coleslaw
+    15 ingredients added
+    6 steps added
+[L4] created #52: Chicken Quesadillas & Spanish Rice
+    12 ingredients added
+    5 steps added
+[L5] created #53: Bean Chili Dogs, Fries & Buttered Corn
+    13 ingredients added
+    5 steps added
+[L6] created #54: Chicken Fried Rice
+    11 ingredients added
+    6 steps added
+[L7] created #55: BBQ Pulled Chicken Sandwiches, Potato Wedges & Slaw
+    13 ingredients added
+    5 steps added
+[L8] created #56: Shredded Beef Soft Tacos with Cabbage Slaw
+    13 ingredients added
+    6 steps added
+[L9] created #57: Sausage, Peppers & Onions with Boxed Mac and Cheese
+    13 ingredients added
+    6 steps added
+[L10] created #58: Chicken Ranch Pasta Salad
+    14 ingredients added
+    6 steps added
+[D1] created #59: Spaghetti & Beef Ragu, Garlic Buttered Carrots
+    12 ingredients added
+    5 steps added
+[D2] created #60: BBQ Baked Chicken Leg Quarters, Boxed Mashed Potatoes, Corn & Carrots
+    11 ingredients added
+    6 steps added
+[D3] created #61: Caribbean Stew Chicken, Rice & Peas, Stewed Carrots
+    15 ingredients added
+    6 steps added
+[D4] created #62: Beef Tips in Onion Gravy, White Rice, Peas & Carrots
+    12 ingredients added
+    6 steps added
+[D5] created #63: Chicken Alfredo Penne with Broccoli
+    11 ingredients added
+    6 steps added
+[D6] created #64: Braised Beef Shepherd's Pie (boxed mashed potato topping)
+    14 ingredients added
+    6 steps added
+[D7] created #65: Curry Chicken (bone-in) over Rice with Vegetables
+    12 ingredients added
+    7 steps added
+[D8] created #66: Baked Chicken & Rice (Arroz con Pollo) with Coleslaw
+    15 ingredients added
+    6 steps added
+[D9] created #67: Garlic Roast Chicken Legs, Roast Potatoes, Peas & Carrots
+    12 ingredients added
+    5 steps added
+[D10] created #68: Baked Chicken & Pepper Penne
+    11 ingredients added
+    6 steps added
+2026-11-01 Breakfast B7   -> #48 (set)
+2026-11-01 Lunch     L7   -> #55 (set)
+2026-11-01 Dinner    D7   -> #65 (set)
+2026-11-02 Breakfast B1   -> #42 (set)
+2026-11-02 Lunch     L8   -> #56 (set)
+2026-11-02 Dinner    D9   -> #67 (set)
+2026-11-03 Breakfast B2   -> #43 (set)
+2026-11-03 Lunch     L9   -> #57 (set)
+2026-11-03 Dinner    D10  -> #68 (set)
+2026-11-04 Breakfast B3   -> #44 (create)
+2026-11-04 Lunch     L10  -> #58 (create)
+2026-11-04 Dinner    D8   -> #66 (create)
+2026-11-05 Breakfast B4   -> #45 (create)
+2026-11-05 Lunch     L1   -> #49 (create)
+2026-11-05 Dinner    D1   -> #59 (create)
+2026-11-06 Breakfast B5   -> #46 (create)
+2026-11-06 Lunch     L2   -> #50 (create)
+2026-11-06 Dinner    D2   -> #60 (create)
+2026-11-07 Breakfast B6   -> #47 (create)
+2026-11-07 Lunch     L3   -> #51 (create)
+2026-11-07 Dinner    D3   -> #61 (create)
+2026-11-08 Breakfast B7   -> #48 (create)
+2026-11-08 Lunch     L4   -> #52 (create)
+2026-11-08 Dinner    D4   -> #62 (create)
+2026-11-09 Breakfast B1   -> #42 (create)
+2026-11-09 Lunch     L5   -> #53 (create)
+2026-11-09 Dinner    D5   -> #63 (create)
+2026-11-10 Breakfast B2   -> #43 (create)
+2026-11-10 Lunch     L6   -> #54 (create)
+2026-11-10 Dinner    D6   -> #64 (create)
+2026-11-11 Breakfast B3   -> #44 (create)
+2026-11-11 Lunch     L7   -> #55 (create)
+2026-11-11 Dinner    D7   -> #65 (create)
+2026-11-12 Breakfast B4   -> #45 (create)
+2026-11-12 Lunch     L8   -> #56 (create)
+2026-11-12 Dinner    D9   -> #67 (create)
+2026-11-13 Breakfast B5   -> #46 (create)
+2026-11-13 Lunch     L9   -> #57 (create)
+2026-11-13 Dinner    D10  -> #68 (create)
+2026-11-14 Breakfast B6   -> #47 (create)
+2026-11-14 Lunch     L10  -> #58 (create)
+2026-11-14 Dinner    D8   -> #66 (create)
+2026-11-15 Breakfast B7   -> #48 (create)
+2026-11-15 Lunch     L1   -> #49 (create)
+2026-11-15 Dinner    D1   -> #59 (create)
+2026-11-16 Breakfast B1   -> #42 (create)
+2026-11-16 Lunch     L2   -> #50 (create)
+2026-11-16 Dinner    D2   -> #60 (create)
+2026-11-17 Breakfast B2   -> #43 (create)
+2026-11-17 Lunch     L3   -> #51 (create)
+2026-11-17 Dinner    D3   -> #61 (create)
+2026-11-18 Breakfast B3   -> #44 (create)
+2026-11-18 Lunch     L4   -> #52 (create)
+2026-11-18 Dinner    D4   -> #62 (create)
+2026-11-19 Breakfast B4   -> #45 (create)
+2026-11-19 Lunch     L5   -> #53 (create)
+2026-11-19 Dinner    D5   -> #63 (create)
+2026-11-20 Breakfast B5   -> #46 (create)
+2026-11-20 Lunch     L6   -> #54 (create)
+2026-11-20 Dinner    D6   -> #64 (create)
+2026-11-21 Breakfast B6   -> #47 (create)
+2026-11-21 Lunch     L7   -> #55 (create)
+2026-11-21 Dinner    D7   -> #65 (create)
+2026-11-22 Breakfast B7   -> #48 (create)
+2026-11-22 Lunch     L8   -> #56 (create)
+2026-11-22 Dinner    D9   -> #67 (create)
+2026-11-23 Breakfast B1   -> #42 (create)
+2026-11-23 Lunch     L9   -> #57 (create)
+2026-11-23 Dinner    D10  -> #68 (create)
+2026-11-24 Breakfast B2   -> #43 (create)
+2026-11-24 Lunch     L10  -> #58 (create)
+2026-11-24 Dinner    D8   -> #66 (create)
+2026-11-25 Breakfast B3   -> #44 (create)
+2026-11-25 Lunch     L1   -> #49 (create)
+2026-11-25 Dinner    D1   -> #59 (create)
+2026-11-26 Breakfast B4   -> #45 (create)
+2026-11-26 Lunch     L2   -> #50 (create)
+2026-11-26 Dinner    D2   -> #60 (create)
+2026-11-27 Breakfast B5   -> #46 (create)
+2026-11-27 Lunch     L3   -> #51 (create)
+2026-11-27 Dinner    D3   -> #61 (create)
+2026-11-28 Breakfast B6   -> #47 (create)
+2026-11-28 Lunch     L4   -> #52 (create)
+2026-11-28 Dinner    D4   -> #62 (create)
+2026-11-29 Breakfast B7   -> #48 (create)
+2026-11-29 Lunch     L5   -> #53 (create)
+2026-11-29 Dinner    D5   -> #63 (create)
+2026-11-30 Breakfast B1   -> #42 (create)
+2026-11-30 Lunch     L6   -> #54 (create)
+2026-11-30 Dinner    D6   -> #64 (create)
+2026-12-01 Breakfast B2   -> #43 (create)
+2026-12-01 Lunch     L7   -> #55 (create)
+2026-12-01 Dinner    D7   -> #65 (create)
+2026-12-02 Breakfast B3   -> #44 (create)
+2026-12-02 Lunch     L8   -> #56 (create)
+2026-12-02 Dinner    D9   -> #67 (create)
+2026-12-03 Breakfast B4   -> #45 (create)
+2026-12-03 Lunch     L9   -> #57 (create)
+2026-12-03 Dinner    D10  -> #68 (create)
+2026-12-04 Breakfast B5   -> #46 (create)
+2026-12-04 Lunch     L10  -> #58 (create)
+2026-12-04 Dinner    D8   -> #66 (create)
+2026-12-05 Breakfast B6   -> #47 (create)
+2026-12-05 Lunch     L1   -> #49 (create)
+2026-12-05 Dinner    D1   -> #59 (create)
+2026-12-06 Breakfast B7   -> #48 (create)
+2026-12-06 Lunch     L2   -> #50 (create)
+2026-12-06 Dinner    D2   -> #60 (create)
+2026-12-07 Breakfast B1   -> #42 (create)
+2026-12-07 Lunch     L3   -> #51 (create)
+2026-12-07 Dinner    D3   -> #61 (create)
+2026-12-08 Breakfast B2   -> #43 (create)
+2026-12-08 Lunch     L4   -> #52 (create)
+2026-12-08 Dinner    D4   -> #62 (create)
+2026-12-09 Breakfast B3   -> #44 (create)
+2026-12-09 Lunch     L5   -> #53 (create)
+2026-12-09 Dinner    D5   -> #63 (create)
+2026-12-10 Breakfast B4   -> #45 (create)
+2026-12-10 Lunch     L6   -> #54 (create)
+2026-12-10 Dinner    D6   -> #64 (create)
+2026-12-11 Breakfast B5   -> #46 (create)
+2026-12-11 Lunch     L7   -> #55 (create)
+2026-12-11 Dinner    D7   -> #65 (create)
+
+Done in 663 API calls. Log: C:\Users\hunte\GitHub\expeditions-app\scripts\wit-menu\load-log.json
+exit 0

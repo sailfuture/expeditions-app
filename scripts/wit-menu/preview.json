@@ -1,0 +1,6152 @@
+{
+ "recipes": [
+  {
+   "code": "B1",
+   "cookbook": {
+    "recipe_name": "Scrambled Eggs, Buttered Toast & Apple Slices",
+    "recipe_photo": null,
+    "type": "Breakfast",
+    "types": [
+     "Breakfast"
+    ],
+    "summary": "WIT 7-week menu B1 · serves 16. Per person: protein 2.5 eggs (4.4 oz); starch 2 slices toast; veg 1/2 apple (fruit). Prep 10 min, cook 15 min. Equipment: Large non-stick pan or griddle, big bowl, whisk, sheet pans, oven. Est. cost $23.91 ($1.49 per person). Galley notes: Cook eggs in two batches so they stay soft. In rough seas use a deep pot instead of a flat pan.",
+    "duration_minutes": "25",
+    "expeditions_id": [
+     14
+    ]
+   },
+   "ingredients": [
+    {
+     "ingredient": "Eggs",
+     "type": "Protein",
+     "expeditions_ingredient_types_id": 1,
+     "oz_per_meal": 4.4,
+     "prep_notes": "16 crew: 40 ea",
+     "_source": "Eggs",
+     "_total_oz": 70.4
+    },
+    {
+     "ingredient": "Sliced Bread",
+     "type": "Starch",
+     "expeditions_ingredient_types_id": 2,
+     "oz_per_meal": 2.08,
+     "prep_notes": "16 crew: 1.6 loaf",
+     "_source": "Sandwich bread loaf",
+     "_total_oz": 33.3
+    },
+    {
+     "ingredient": "Margarine",
+     "type": "Dairy",
+     "expeditions_ingredient_types_id": 7,
+     "oz_per_meal": 0.22,
+     "prep_notes": "16 crew: 100 g",
+     "_source": "Margarine",
+     "_total_oz": 3.5
+    },
+    {
+     "ingredient": "Milk (long-life)",
+     "type": "Dairy",
+     "expeditions_ingredient_types_id": 7,
+     "oz_per_meal": 0.53,
+     "prep_notes": "16 crew: 250 mL (~1.1 cups)",
+     "_source": "Long-life milk 1 L",
+     "_total_oz": 8.5
+    },
+    {
+     "ingredient": "Apples",
+     "type": "Veg",
+     "expeditions_ingredient_types_id": 3,
+     "oz_per_meal": 3.0,
+     "prep_notes": "16 crew: 3 lb",
+     "_source": "Apples",
+     "_total_oz": 48.0
+    },
+    {
+     "ingredient": "Salt",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.02,
+     "prep_notes": "16 crew: 10 g (~1.7 tsp)",
+     "_source": "Salt",
+     "_total_oz": 0.4
+    },
+    {
+     "ingredient": "Ground Black Pepper",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.01,
+     "prep_notes": "16 crew: 3 g (~1.3 tsp)",
+     "_source": "Black pepper, ground",
+     "_total_oz": 0.1
+    },
+    {
+     "ingredient": "Ketchup",
+     "type": "Dry Goods",
+     "expeditions_ingredient_types_id": 4,
+     "oz_per_meal": 0.16,
+     "prep_notes": "16 crew: 0.1 bottle",
+     "_source": "Ketchup 750 mL",
+     "_total_oz": 2.5
+    },
+    {
+     "ingredient": "Hot Sauce (pepper sauce)",
+     "type": "Dry Goods",
+     "expeditions_ingredient_types_id": 4,
+     "oz_per_meal": 0.08,
+     "prep_notes": "16 crew: 0.05 bottle",
+     "_source": "Pepper sauce 750 mL",
+     "_total_oz": 1.3
+    }
+   ],
+   "instructions": [
+    {
+     "step": 1,
+     "instructions": "Crack 40 eggs into a large bowl. Add 1 cup long-life milk, 2 tsp salt and 1 tsp black pepper. Whisk until smooth.",
+     "duration": "5",
+     "expedition_galley_equipment_id": [
+      2,
+      21
+     ]
+    },
+    {
+     "step": 2,
+     "instructions": "Heat oven to 400°F. Lay bread on sheet pans and spread lightly with margarine.",
+     "duration": "5",
+     "expedition_galley_equipment_id": [
+      15,
+      9
+     ]
+    },
+    {
+     "step": 3,
+     "instructions": "Toast bread 4–6 min until golden. Keep warm.",
+     "duration": "5",
+     "expedition_galley_equipment_id": []
+    },
+    {
+     "step": 4,
+     "instructions": "Melt 2 tbsp margarine in the pan over medium-low. Cook eggs in two batches, pushing slowly from the edges to the centre. Pull off the heat while still slightly wet.",
+     "duration": "10",
+     "expedition_galley_equipment_id": [
+      10,
+      19
+     ]
+    },
+    {
+     "step": 5,
+     "instructions": "Core apples and cut into slices; serve right away.",
+     "duration": "3",
+     "expedition_galley_equipment_id": [
+      4,
+      7,
+      14
+     ]
+    },
+    {
+     "step": 6,
+     "instructions": "Plate: ~2/3 cup eggs, 2 slices toast, 1/2 apple. Ketchup and pepper sauce on the table.",
+     "duration": "",
+     "expedition_galley_equipment_id": [
+      14
+     ]
+    }
+   ]
+  },
+  {
+   "code": "B2",
+   "cookbook": {
+    "recipe_name": "Buttermilk Pancakes, Fried Eggs & Chicken Sausage",
+    "recipe_photo": null,
+    "type": "Breakfast",
+    "types": [
+     "Breakfast"
+    ],
+    "summary": "WIT 7-week menu B2 · serves 16. Per person: protein 2 eggs + 1.5 oz sausage (5 oz); starch 3 pancakes; veg -. Prep 10 min, cook 30 min. Equipment: Griddle or 2 large pans, mixing bowl, ladle, sheet pan, oven. Est. cost $24.45 ($1.53 per person). Galley notes: Use a high-sided bowl for batter — it sloshes under way. Leftover pancakes freeze well for snacks.",
+    "duration_minutes": "40",
+    "expeditions_id": [
+     14
+    ]
+   },
+   "ingredients": [
+    {
+     "ingredient": "Eggs",
+     "type": "Protein",
+     "expeditions_ingredient_types_id": 1,
+     "oz_per_meal": 3.52,
+     "prep_notes": "16 crew: 32 ea",
+     "_source": "Eggs",
+     "_total_oz": 56.3
+    },
+    {
+     "ingredient": "Chicken Sausage",
+     "type": "Protein",
+     "expeditions_ingredient_types_id": 1,
+     "oz_per_meal": 1.5,
+     "prep_notes": "16 crew: 1.5 lb · Prep: Whole links (bag label B2)",
+     "_source": "Chicken sausages",
+     "_total_oz": 24.0
+    },
+    {
+     "ingredient": "Pancake Mix",
+     "type": "Starch",
+     "expeditions_ingredient_types_id": 2,
+     "oz_per_meal": 3.31,
+     "prep_notes": "16 crew: 1.5 kg",
+     "_source": "Pancake mix",
+     "_total_oz": 52.9
+    },
+    {
+     "ingredient": "Syrup",
+     "type": "Dry Goods",
+     "expeditions_ingredient_types_id": 4,
+     "oz_per_meal": 1.2,
+     "prep_notes": "16 crew: 0.3 bottle",
+     "_source": "Pancake syrup 1.89 L",
+     "_total_oz": 19.2
+    },
+    {
+     "ingredient": "Margarine",
+     "type": "Dairy",
+     "expeditions_ingredient_types_id": 7,
+     "oz_per_meal": 0.33,
+     "prep_notes": "16 crew: 150 g",
+     "_source": "Margarine",
+     "_total_oz": 5.3
+    },
+    {
+     "ingredient": "Vegetable Oil",
+     "type": "Dry Goods",
+     "expeditions_ingredient_types_id": 4,
+     "oz_per_meal": 0.21,
+     "prep_notes": "16 crew: 100 mL (~0.4 cups)",
+     "_source": "Vegetable (soybean) oil",
+     "_total_oz": 3.4
+    },
+    {
+     "ingredient": "Salt",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.01,
+     "prep_notes": "16 crew: 5 g (~0.8 tsp)",
+     "_source": "Salt",
+     "_total_oz": 0.2
+    }
+   ],
+   "instructions": [
+    {
+     "step": 1,
+     "instructions": "Heat oven to 350°F. Lay sausages on a sheet pan.",
+     "duration": "5",
+     "expedition_galley_equipment_id": [
+      15,
+      9
+     ]
+    },
+    {
+     "step": 2,
+     "instructions": "Bake sausages 15–18 min, turning once, until 165°F inside. Hold at 200°F.",
+     "duration": "15",
+     "expedition_galley_equipment_id": [
+      9,
+      20
+     ]
+    },
+    {
+     "step": 3,
+     "instructions": "Whisk 1.5 kg pancake mix with water per the bag (~7 cups) until just combined. Rest 5 min.",
+     "duration": "5",
+     "expedition_galley_equipment_id": [
+      21
+     ]
+    },
+    {
+     "step": 4,
+     "instructions": "Grease the griddle lightly. Pour 1/4 cup batter per pancake; flip when bubbles pop (~2 min), cook 1 min more. Hold in the warm oven.",
+     "duration": "15",
+     "expedition_galley_equipment_id": [
+      17,
+      9,
+      5
+     ]
+    },
+    {
+     "step": 5,
+     "instructions": "Fry eggs 6–8 at a time in a little oil, 2–3 min.",
+     "duration": "10",
+     "expedition_galley_equipment_id": [
+      19
+     ]
+    },
+    {
+     "step": 6,
+     "instructions": "Plate: 3 pancakes with margarine and syrup, 2 eggs, ~1.5 oz sausage.",
+     "duration": "",
+     "expedition_galley_equipment_id": [
+      14
+     ]
+    }
+   ]
+  },
+  {
+   "code": "B3",
+   "cookbook": {
+    "recipe_name": "Breakfast Burritos (egg, chicken sausage, peppers, cheddar)",
+    "recipe_photo": null,
+    "type": "Breakfast",
+    "types": [
+     "Breakfast"
+    ],
+    "summary": "WIT 7-week menu B3 · serves 16. Per person: protein 2 eggs + 1 oz sausage + 0.5 oz cheese (5 oz); starch 1 large tortilla; veg 1 oz peppers + 1 oz onion. Prep 15 min, cook 20 min. Equipment: Large pan or wok, whisk, bowl, foil. Est. cost $27.48 ($1.72 per person). Galley notes: Foil-wrapped burritos are easy to eat on watch. Reheat in a 325°F oven for 15 min.",
+    "duration_minutes": "35",
+    "expeditions_id": [
+     14
+    ]
+   },
+   "ingredients": [
+    {
+     "ingredient": "Eggs",
+     "type": "Protein",
+     "expeditions_ingredient_types_id": 1,
+     "oz_per_meal": 3.52,
+     "prep_notes": "16 crew: 32 ea",
+     "_source": "Eggs",
+     "_total_oz": 56.3
+    },
+    {
+     "ingredient": "Chicken Sausage",
+     "type": "Protein",
+     "expeditions_ingredient_types_id": 1,
+     "oz_per_meal": 1.0,
+     "prep_notes": "16 crew: 1 lb · Prep: Whole links (bag label B3)",
+     "_source": "Chicken sausages",
+     "_total_oz": 16.0
+    },
+    {
+     "ingredient": "Cheddar Cheese (shredded)",
+     "type": "Dairy",
+     "expeditions_ingredient_types_id": 7,
+     "oz_per_meal": 0.5,
+     "prep_notes": "16 crew: 0.5 lb",
+     "_source": "Cheddar cheese, shredded",
+     "_total_oz": 8.0
+    },
+    {
+     "ingredient": "Tortillas",
+     "type": "Starch",
+     "expeditions_ingredient_types_id": 2,
+     "oz_per_meal": 2.5,
+     "prep_notes": "16 crew: 2.5 lb",
+     "_source": "Flour tortillas",
+     "_total_oz": 40.0
+    },
+    {
+     "ingredient": "Bell Pepper",
+     "type": "Veg",
+     "expeditions_ingredient_types_id": 3,
+     "oz_per_meal": 1.0,
+     "prep_notes": "16 crew: 1 lb",
+     "_source": "Bell peppers",
+     "_total_oz": 16.0
+    },
+    {
+     "ingredient": "Onion",
+     "type": "Veg",
+     "expeditions_ingredient_types_id": 3,
+     "oz_per_meal": 1.0,
+     "prep_notes": "16 crew: 1 lb",
+     "_source": "Onions, yellow",
+     "_total_oz": 16.0
+    },
+    {
+     "ingredient": "Vegetable Oil",
+     "type": "Dry Goods",
+     "expeditions_ingredient_types_id": 4,
+     "oz_per_meal": 0.11,
+     "prep_notes": "16 crew: 50 mL (~0.2 cups)",
+     "_source": "Vegetable (soybean) oil",
+     "_total_oz": 1.7
+    },
+    {
+     "ingredient": "Hot Sauce (pepper sauce)",
+     "type": "Dry Goods",
+     "expeditions_ingredient_types_id": 4,
+     "oz_per_meal": 0.4,
+     "prep_notes": "16 crew: 0.25 bottle",
+     "_source": "Pepper sauce 750 mL",
+     "_total_oz": 6.3
+    },
+    {
+     "ingredient": "Salt",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.02,
+     "prep_notes": "16 crew: 8 g (~1.3 tsp)",
+     "_source": "Salt",
+     "_total_oz": 0.3
+    },
+    {
+     "ingredient": "Ground Black Pepper",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.01,
+     "prep_notes": "16 crew: 3 g (~1.3 tsp)",
+     "_source": "Black pepper, ground",
+     "_total_oz": 0.1
+    }
+   ],
+   "instructions": [
+    {
+     "step": 1,
+     "instructions": "Dice 1 lb peppers and 1 lb onions. Slice sausages into coins.",
+     "duration": "10",
+     "expedition_galley_equipment_id": [
+      4,
+      7
+     ]
+    },
+    {
+     "step": 2,
+     "instructions": "Heat oil over medium-high. Brown sausage 4–5 min, add peppers and onions; cook 4 min until soft.",
+     "duration": "8",
+     "expedition_galley_equipment_id": [
+      19
+     ]
+    },
+    {
+     "step": 3,
+     "instructions": "Whisk 32 eggs with 1.5 tsp salt and 1/2 tsp black pepper.",
+     "duration": "3",
+     "expedition_galley_equipment_id": [
+      21
+     ]
+    },
+    {
+     "step": 4,
+     "instructions": "Lower heat, pour eggs over the sausage mix and stir gently until just set.",
+     "duration": "5",
+     "expedition_galley_equipment_id": [
+      22
+     ]
+    },
+    {
+     "step": 5,
+     "instructions": "Warm tortillas in a dry pan or wrapped in foil in a 300°F oven.",
+     "duration": "3",
+     "expedition_galley_equipment_id": [
+      10,
+      9
+     ]
+    },
+    {
+     "step": 6,
+     "instructions": "Fill each tortilla with ~3/4 cup filling and a sprinkle of shredded cheddar; fold, roll tight and wrap in foil.",
+     "duration": "10",
+     "expedition_galley_equipment_id": []
+    }
+   ]
+  },
+  {
+   "code": "B4",
+   "cookbook": {
+    "recipe_name": "Oatmeal, Hard-Boiled Eggs & PB Toast",
+    "recipe_photo": null,
+    "type": "Breakfast",
+    "types": [
+     "Breakfast"
+    ],
+    "summary": "WIT 7-week menu B4 · serves 16. Per person: protein 2 eggs + 1 oz peanut butter (4.5 oz); starch 1 cup oatmeal + 1 slice toast; veg -. Prep 10 min, cook 20 min. Equipment: Large pot (oats), medium pot (eggs), bowl of cold water, oven or toaster. Est. cost $19.42 ($1.21 per person). Galley notes: Eggs a few days old peel more easily. Leftover hard-boiled eggs keep 5 days chilled.",
+    "duration_minutes": "30",
+    "expeditions_id": [
+     14
+    ]
+   },
+   "ingredients": [
+    {
+     "ingredient": "Eggs",
+     "type": "Protein",
+     "expeditions_ingredient_types_id": 1,
+     "oz_per_meal": 3.52,
+     "prep_notes": "16 crew: 32 ea",
+     "_source": "Eggs",
+     "_total_oz": 56.3
+    },
+    {
+     "ingredient": "Oats",
+     "type": "Starch",
+     "expeditions_ingredient_types_id": 2,
+     "oz_per_meal": 2.65,
+     "prep_notes": "16 crew: 1.2 kg",
+     "_source": "Rolled oats",
+     "_total_oz": 42.3
+    },
+    {
+     "ingredient": "Milk (long-life)",
+     "type": "Dairy",
+     "expeditions_ingredient_types_id": 7,
+     "oz_per_meal": 2.11,
+     "prep_notes": "16 crew: 1 L",
+     "_source": "Long-life milk 1 L",
+     "_total_oz": 33.8
+    },
+    {
+     "ingredient": "Sugar",
+     "type": "Dry Goods",
+     "expeditions_ingredient_types_id": 4,
+     "oz_per_meal": 0.66,
+     "prep_notes": "16 crew: 300 g",
+     "_source": "Sugar, white",
+     "_total_oz": 10.6
+    },
+    {
+     "ingredient": "Cinnamon",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.02,
+     "prep_notes": "16 crew: 10 g (~1.2 tbsp)",
+     "_source": "Cinnamon, ground",
+     "_total_oz": 0.4
+    },
+    {
+     "ingredient": "Peanut Butter",
+     "type": "Dry Goods",
+     "expeditions_ingredient_types_id": 4,
+     "oz_per_meal": 1.0,
+     "prep_notes": "16 crew: 0.4 jar",
+     "_source": "Peanut butter 1.13 kg",
+     "_total_oz": 16.0
+    },
+    {
+     "ingredient": "Sliced Bread",
+     "type": "Starch",
+     "expeditions_ingredient_types_id": 2,
+     "oz_per_meal": 1.3,
+     "prep_notes": "16 crew: 1 loaf",
+     "_source": "Sandwich bread loaf",
+     "_total_oz": 20.8
+    }
+   ],
+   "instructions": [
+    {
+     "step": 1,
+     "instructions": "Put 32 eggs in a pot, cover with cold water by 1 inch, bring to a boil.",
+     "duration": "2",
+     "expedition_galley_equipment_id": [
+      12,
+      19
+     ]
+    },
+    {
+     "step": 2,
+     "instructions": "Cover, turn off the heat and leave 10 min. Move to cold water for 5 min.",
+     "duration": "10",
+     "expedition_galley_equipment_id": [
+      8
+     ]
+    },
+    {
+     "step": 3,
+     "instructions": "Bring 14 cups water and 1 tsp salt to a boil in the large pot.",
+     "duration": "5",
+     "expedition_galley_equipment_id": [
+      12,
+      19
+     ]
+    },
+    {
+     "step": 4,
+     "instructions": "Stir in 1.2 kg oats; simmer 5–8 min, stirring, until thick. Stir in 4 cups milk.",
+     "duration": "8",
+     "expedition_galley_equipment_id": [
+      12,
+      19,
+      22
+     ]
+    },
+    {
+     "step": 5,
+     "instructions": "Toast 16 slices bread; spread each with ~2 tbsp peanut butter (1 oz).",
+     "duration": "5",
+     "expedition_galley_equipment_id": []
+    },
+    {
+     "step": 6,
+     "instructions": "Stir the sugar and cinnamon into the oatmeal; thin with a splash of milk if needed.",
+     "duration": "3",
+     "expedition_galley_equipment_id": [
+      22
+     ]
+    },
+    {
+     "step": 7,
+     "instructions": "Serve 1 cup oatmeal, 2 eggs and 1 slice PB toast per person.",
+     "duration": "",
+     "expedition_galley_equipment_id": [
+      14
+     ]
+    }
+   ]
+  },
+  {
+   "code": "B5",
+   "cookbook": {
+    "recipe_name": "Egg, Bacon & Cheese Toast Sandwiches",
+    "recipe_photo": null,
+    "type": "Breakfast",
+    "types": [
+     "Breakfast"
+    ],
+    "summary": "WIT 7-week menu B5 · serves 16. Per person: protein 2 eggs + 1 oz bacon (4.5 oz); starch 2 slices toast; veg -. Prep 10 min, cook 25 min. Equipment: Sheet pans, oven, griddle or large pan. Est. cost $23.93 ($1.50 per person). Galley notes: Save bacon fat to fry eggs or potatoes later. Baking bacon means no splatter under way.",
+    "duration_minutes": "35",
+    "expeditions_id": [
+     14
+    ]
+   },
+   "ingredients": [
+    {
+     "ingredient": "Eggs",
+     "type": "Protein",
+     "expeditions_ingredient_types_id": 1,
+     "oz_per_meal": 3.52,
+     "prep_notes": "16 crew: 32 ea",
+     "_source": "Eggs",
+     "_total_oz": 56.3
+    },
+    {
+     "ingredient": "Bacon",
+     "type": "Protein",
+     "expeditions_ingredient_types_id": 1,
+     "oz_per_meal": 1.1,
+     "prep_notes": "16 crew: 1.1 lb",
+     "_source": "Bacon, streaky",
+     "_total_oz": 17.6
+    },
+    {
+     "ingredient": "Sliced Bread",
+     "type": "Starch",
+     "expeditions_ingredient_types_id": 2,
+     "oz_per_meal": 2.6,
+     "prep_notes": "16 crew: 2 loaf",
+     "_source": "Sandwich bread loaf",
+     "_total_oz": 41.6
+    },
+    {
+     "ingredient": "American Cheese (sliced)",
+     "type": "Dairy",
+     "expeditions_ingredient_types_id": 7,
+     "oz_per_meal": 0.66,
+     "prep_notes": "16 crew: 0.33 pk",
+     "_source": "American cheese slices",
+     "_total_oz": 10.6
+    },
+    {
+     "ingredient": "Margarine",
+     "type": "Dairy",
+     "expeditions_ingredient_types_id": 7,
+     "oz_per_meal": 0.22,
+     "prep_notes": "16 crew: 100 g",
+     "_source": "Margarine",
+     "_total_oz": 3.5
+    },
+    {
+     "ingredient": "Ketchup",
+     "type": "Dry Goods",
+     "expeditions_ingredient_types_id": 4,
+     "oz_per_meal": 0.16,
+     "prep_notes": "16 crew: 0.1 bottle",
+     "_source": "Ketchup 750 mL",
+     "_total_oz": 2.5
+    },
+    {
+     "ingredient": "Salt",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.01,
+     "prep_notes": "16 crew: 5 g (~0.8 tsp)",
+     "_source": "Salt",
+     "_total_oz": 0.2
+    },
+    {
+     "ingredient": "Ground Black Pepper",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.01,
+     "prep_notes": "16 crew: 3 g (~1.3 tsp)",
+     "_source": "Black pepper, ground",
+     "_total_oz": 0.1
+    }
+   ],
+   "instructions": [
+    {
+     "step": 1,
+     "instructions": "Heat oven to 400°F. Lay bacon in one layer on a sheet pan.",
+     "duration": "2",
+     "expedition_galley_equipment_id": [
+      15,
+      9
+     ]
+    },
+    {
+     "step": 2,
+     "instructions": "Bake 12–15 min until crisp. Drain and cut strips in half.",
+     "duration": "15",
+     "expedition_galley_equipment_id": [
+      4,
+      7,
+      9,
+      18
+     ]
+    },
+    {
+     "step": 3,
+     "instructions": "Spread bread with margarine and toast on sheet pans 4–6 min.",
+     "duration": "5",
+     "expedition_galley_equipment_id": [
+      15
+     ]
+    },
+    {
+     "step": 4,
+     "instructions": "Fry eggs 8 at a time; break the yolks and cook through. Season.",
+     "duration": "10",
+     "expedition_galley_equipment_id": [
+      19
+     ]
+    },
+    {
+     "step": 5,
+     "instructions": "Build: toast, 2 eggs, 1 cheese slice, bacon, toast.",
+     "duration": "5",
+     "expedition_galley_equipment_id": []
+    },
+    {
+     "step": 6,
+     "instructions": "Cut in half; serve with ketchup or pepper sauce.",
+     "duration": "",
+     "expedition_galley_equipment_id": [
+      4,
+      7,
+      14
+     ]
+    }
+   ]
+  },
+  {
+   "code": "B6",
+   "cookbook": {
+    "recipe_name": "Potato, Pepper & Egg Hash with Hot Dog Bits",
+    "recipe_photo": null,
+    "type": "Breakfast",
+    "types": [
+     "Breakfast"
+    ],
+    "summary": "WIT 7-week menu B6 · serves 16. Per person: protein 2 eggs + 1 oz hot dog (4.5 oz); starch ~5 oz fresh potato hash; veg 1.5 oz peppers + 1 oz onion. Prep 15 min, cook 30 min. Equipment: Large pot, 2 large pans or sheet pans, knife and board. Est. cost $20.15 ($1.26 per person). Galley notes: Par-boil potatoes the night before to save propane in the morning.",
+    "duration_minutes": "45",
+    "expeditions_id": [
+     14
+    ]
+   },
+   "ingredients": [
+    {
+     "ingredient": "Eggs",
+     "type": "Protein",
+     "expeditions_ingredient_types_id": 1,
+     "oz_per_meal": 3.52,
+     "prep_notes": "16 crew: 32 ea",
+     "_source": "Eggs",
+     "_total_oz": 56.3
+    },
+    {
+     "ingredient": "Hot Dogs (jumbo)",
+     "type": "Protein",
+     "expeditions_ingredient_types_id": 1,
+     "oz_per_meal": 1.1,
+     "prep_notes": "16 crew: 1.1 lb",
+     "_source": "Hot dogs, jumbo",
+     "_total_oz": 17.6
+    },
+    {
+     "ingredient": "Potato",
+     "type": "Starch",
+     "expeditions_ingredient_types_id": 2,
+     "oz_per_meal": 5.0,
+     "prep_notes": "16 crew: 5 lb",
+     "_source": "Potatoes",
+     "_total_oz": 80.0
+    },
+    {
+     "ingredient": "Bell Pepper",
+     "type": "Veg",
+     "expeditions_ingredient_types_id": 3,
+     "oz_per_meal": 1.5,
+     "prep_notes": "16 crew: 1.5 lb",
+     "_source": "Bell peppers",
+     "_total_oz": 24.0
+    },
+    {
+     "ingredient": "Onion",
+     "type": "Veg",
+     "expeditions_ingredient_types_id": 3,
+     "oz_per_meal": 1.0,
+     "prep_notes": "16 crew: 1 lb",
+     "_source": "Onions, yellow",
+     "_total_oz": 16.0
+    },
+    {
+     "ingredient": "Cheddar Cheese (shredded)",
+     "type": "Dairy",
+     "expeditions_ingredient_types_id": 7,
+     "oz_per_meal": 0.25,
+     "prep_notes": "16 crew: 0.25 lb",
+     "_source": "Cheddar cheese, shredded",
+     "_total_oz": 4.0
+    },
+    {
+     "ingredient": "Vegetable Oil",
+     "type": "Dry Goods",
+     "expeditions_ingredient_types_id": 4,
+     "oz_per_meal": 0.32,
+     "prep_notes": "16 crew: 150 mL (~0.6 cups)",
+     "_source": "Vegetable (soybean) oil",
+     "_total_oz": 5.1
+    },
+    {
+     "ingredient": "Ketchup",
+     "type": "Dry Goods",
+     "expeditions_ingredient_types_id": 4,
+     "oz_per_meal": 0.32,
+     "prep_notes": "16 crew: 0.2 bottle",
+     "_source": "Ketchup 750 mL",
+     "_total_oz": 5.1
+    },
+    {
+     "ingredient": "Paprika",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.01,
+     "prep_notes": "16 crew: 5 g (~2.1 tsp)",
+     "_source": "Paprika",
+     "_total_oz": 0.2
+    },
+    {
+     "ingredient": "Salt",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.02,
+     "prep_notes": "16 crew: 8 g (~1.3 tsp)",
+     "_source": "Salt",
+     "_total_oz": 0.3
+    },
+    {
+     "ingredient": "Ground Black Pepper",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.01,
+     "prep_notes": "16 crew: 3 g (~1.3 tsp)",
+     "_source": "Black pepper, ground",
+     "_total_oz": 0.1
+    }
+   ],
+   "instructions": [
+    {
+     "step": 1,
+     "instructions": "Scrub 5 lb potatoes and cut into 1/2-inch cubes. Dice peppers and onions. Slice hot dogs into coins.",
+     "duration": "10",
+     "expedition_galley_equipment_id": [
+      4,
+      7
+     ]
+    },
+    {
+     "step": 2,
+     "instructions": "Boil potatoes in salted water 6–8 min until just tender. Drain and steam-dry 2 min.",
+     "duration": "8",
+     "expedition_galley_equipment_id": [
+      12,
+      19,
+      18
+     ]
+    },
+    {
+     "step": 3,
+     "instructions": "Fry potatoes in oil over medium-high until browned (or roast at 425°F for 20 min).",
+     "duration": "12",
+     "expedition_galley_equipment_id": [
+      9,
+      19
+     ]
+    },
+    {
+     "step": 4,
+     "instructions": "Add onions, peppers and hot dogs; cook 5 min. Season with paprika, salt and pepper; top with cheddar.",
+     "duration": "6",
+     "expedition_galley_equipment_id": []
+    },
+    {
+     "step": 5,
+     "instructions": "Fry or scramble 32 eggs and serve 2 per person over the hash.",
+     "duration": "6",
+     "expedition_galley_equipment_id": [
+      19,
+      14
+     ]
+    },
+    {
+     "step": 6,
+     "instructions": "Serve with ketchup or pepper sauce.",
+     "duration": "",
+     "expedition_galley_equipment_id": [
+      14
+     ]
+    }
+   ]
+  },
+  {
+   "code": "B7",
+   "cookbook": {
+    "recipe_name": "French Toast, Scrambled Eggs & PB/Jelly",
+    "recipe_photo": null,
+    "type": "Breakfast",
+    "types": [
+     "Breakfast"
+    ],
+    "summary": "WIT 7-week menu B7 · serves 16. Per person: protein 1 egg in batter + 1.5 scrambled (4.4 oz); starch 2 slices French toast; veg -. Prep 10 min, cook 30 min. Equipment: Griddle or large pans, shallow dish, whisk, sheet pan, oven. Est. cost $23.75 ($1.48 per person). Galley notes: Slightly stale bread works best.",
+    "duration_minutes": "40",
+    "expeditions_id": [
+     14
+    ]
+   },
+   "ingredients": [
+    {
+     "ingredient": "Eggs",
+     "type": "Protein",
+     "expeditions_ingredient_types_id": 1,
+     "oz_per_meal": 4.4,
+     "prep_notes": "16 crew: 40 ea",
+     "_source": "Eggs",
+     "_total_oz": 70.4
+    },
+    {
+     "ingredient": "Sliced Bread",
+     "type": "Starch",
+     "expeditions_ingredient_types_id": 2,
+     "oz_per_meal": 2.6,
+     "prep_notes": "16 crew: 2 loaf",
+     "_source": "Sandwich bread loaf",
+     "_total_oz": 41.6
+    },
+    {
+     "ingredient": "Milk (long-life)",
+     "type": "Dairy",
+     "expeditions_ingredient_types_id": 7,
+     "oz_per_meal": 2.11,
+     "prep_notes": "16 crew: 1 L",
+     "_source": "Long-life milk 1 L",
+     "_total_oz": 33.8
+    },
+    {
+     "ingredient": "Sugar",
+     "type": "Dry Goods",
+     "expeditions_ingredient_types_id": 4,
+     "oz_per_meal": 0.22,
+     "prep_notes": "16 crew: 100 g",
+     "_source": "Sugar, white",
+     "_total_oz": 3.5
+    },
+    {
+     "ingredient": "Cinnamon",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.01,
+     "prep_notes": "16 crew: 5 g (~1.9 tsp)",
+     "_source": "Cinnamon, ground",
+     "_total_oz": 0.2
+    },
+    {
+     "ingredient": "Syrup",
+     "type": "Dry Goods",
+     "expeditions_ingredient_types_id": 4,
+     "oz_per_meal": 0.8,
+     "prep_notes": "16 crew: 0.2 bottle",
+     "_source": "Pancake syrup 1.89 L",
+     "_total_oz": 12.8
+    },
+    {
+     "ingredient": "Margarine",
+     "type": "Dairy",
+     "expeditions_ingredient_types_id": 7,
+     "oz_per_meal": 0.44,
+     "prep_notes": "16 crew: 200 g",
+     "_source": "Margarine",
+     "_total_oz": 7.1
+    },
+    {
+     "ingredient": "Peanut Butter",
+     "type": "Dry Goods",
+     "expeditions_ingredient_types_id": 4,
+     "oz_per_meal": 0.37,
+     "prep_notes": "16 crew: 0.15 jar",
+     "_source": "Peanut butter 1.13 kg",
+     "_total_oz": 6.0
+    },
+    {
+     "ingredient": "Jelly",
+     "type": "Dry Goods",
+     "expeditions_ingredient_types_id": 4,
+     "oz_per_meal": 0.38,
+     "prep_notes": "16 crew: 0.2 jar",
+     "_source": "Grape jelly 850 g",
+     "_total_oz": 6.0
+    },
+    {
+     "ingredient": "Salt",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.01,
+     "prep_notes": "16 crew: 5 g (~0.8 tsp)",
+     "_source": "Salt",
+     "_total_oz": 0.2
+    }
+   ],
+   "instructions": [
+    {
+     "step": 1,
+     "instructions": "Heat oven to 200°F for holding. Whisk 16 eggs, 4 cups milk, sugar and 1 tsp cinnamon in a shallow dish.",
+     "duration": "3",
+     "expedition_galley_equipment_id": [
+      21,
+      9
+     ]
+    },
+    {
+     "step": 2,
+     "instructions": "Grease the griddle with margarine. Dip bread 2–3 sec per side; cook 2–3 min per side until golden. Hold in the oven.",
+     "duration": "20",
+     "expedition_galley_equipment_id": [
+      9,
+      19,
+      5
+     ]
+    },
+    {
+     "step": 3,
+     "instructions": "Whisk 24 eggs with salt and pepper; scramble over medium-low in margarine.",
+     "duration": "8",
+     "expedition_galley_equipment_id": [
+      21,
+      19
+     ]
+    },
+    {
+     "step": 4,
+     "instructions": "Set out peanut butter, jelly and syrup.",
+     "duration": "2",
+     "expedition_galley_equipment_id": []
+    },
+    {
+     "step": 5,
+     "instructions": "Plate: 2 slices French toast and ~1/3 cup scrambled egg.",
+     "duration": "",
+     "expedition_galley_equipment_id": [
+      19,
+      14
+     ]
+    }
+   ]
+  },
+  {
+   "code": "L1",
+   "cookbook": {
+    "recipe_name": "Shredded Chicken Burrito Bowls with Peppers, Onions & Corn Salsa",
+    "recipe_photo": null,
+    "type": "Lunch",
+    "types": [
+     "Lunch"
+    ],
+    "summary": "WIT 7-week menu L1 · serves 16. Per person: protein Leg quarter 10 oz bone-in (~6.5 oz meat); starch Rice 6 oz cooked; veg Peppers 1.5 oz + onion 1 oz + corn 2.1 oz + tomato 0.9 oz. Prep 15 min, cook 60 min. Equipment: Roasting pans, rice pot, large pan, forks for shredding. Est. cost $32.53 ($2.03 per person). Galley notes: Leg quarters: 12 oz raw bone-in yields ~8 oz meat.",
+    "duration_minutes": "75",
+    "expeditions_id": [
+     14
+    ]
+   },
+   "ingredients": [
+    {
+     "ingredient": "Chicken Leg Quarters",
+     "type": "Protein",
+     "expeditions_ingredient_types_id": 1,
+     "oz_per_meal": 10.0,
+     "prep_notes": "16 crew: 10 lb · Prep: Debone + skin off, leave thigh/leg meat in whole pieces (bag label L1)",
+     "_source": "Chicken leg quarters, bone-in",
+     "_total_oz": 160.0
+    },
+    {
+     "ingredient": "Rice",
+     "type": "Starch",
+     "expeditions_ingredient_types_id": 2,
+     "oz_per_meal": 2.0,
+     "prep_notes": "16 crew: 2 lb",
+     "_source": "Rice, white (dry)",
+     "_total_oz": 32.0
+    },
+    {
+     "ingredient": "Bell Pepper",
+     "type": "Veg",
+     "expeditions_ingredient_types_id": 3,
+     "oz_per_meal": 1.5,
+     "prep_notes": "16 crew: 1.5 lb",
+     "_source": "Bell peppers",
+     "_total_oz": 24.0
+    },
+    {
+     "ingredient": "Onion",
+     "type": "Veg",
+     "expeditions_ingredient_types_id": 3,
+     "oz_per_meal": 1.0,
+     "prep_notes": "16 crew: 1 lb",
+     "_source": "Onions, yellow",
+     "_total_oz": 16.0
+    },
+    {
+     "ingredient": "Canned Corn",
+     "type": "Veg",
+     "expeditions_ingredient_types_id": 3,
+     "oz_per_meal": 3.31,
+     "prep_notes": "16 crew: 0.5 can",
+     "_source": "Whole kernel corn, canned 3 kg",
+     "_total_oz": 52.9
+    },
+    {
+     "ingredient": "Canned Tomatoes (diced)",
+     "type": "Veg",
+     "expeditions_ingredient_types_id": 3,
+     "oz_per_meal": 0.91,
+     "prep_notes": "16 crew: 1 can",
+     "_source": "Diced tomatoes, canned 411 g",
+     "_total_oz": 14.5
+    },
+    {
+     "ingredient": "Cheddar Cheese (shredded)",
+     "type": "Dairy",
+     "expeditions_ingredient_types_id": 7,
+     "oz_per_meal": 0.25,
+     "prep_notes": "16 crew: 0.25 lb",
+     "_source": "Cheddar cheese, shredded",
+     "_total_oz": 4.0
+    },
+    {
+     "ingredient": "Hot Sauce (pepper sauce)",
+     "type": "Dry Goods",
+     "expeditions_ingredient_types_id": 4,
+     "oz_per_meal": 0.24,
+     "prep_notes": "16 crew: 0.15 bottle",
+     "_source": "Pepper sauce 750 mL",
+     "_total_oz": 3.8
+    },
+    {
+     "ingredient": "Vegetable Oil",
+     "type": "Dry Goods",
+     "expeditions_ingredient_types_id": 4,
+     "oz_per_meal": 0.21,
+     "prep_notes": "16 crew: 100 mL (~0.4 cups)",
+     "_source": "Vegetable (soybean) oil",
+     "_total_oz": 3.4
+    },
+    {
+     "ingredient": "Minced Garlic",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.1,
+     "prep_notes": "16 crew: 45 g (~3 tbsp)",
+     "_source": "Minced garlic",
+     "_total_oz": 1.6
+    },
+    {
+     "ingredient": "Complete Seasoning",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.07,
+     "prep_notes": "16 crew: 30 g (~3.8 tbsp)",
+     "_source": "All-purpose seasoning (taco/chili blend)",
+     "_total_oz": 1.1
+    },
+    {
+     "ingredient": "Salt",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.03,
+     "prep_notes": "16 crew: 15 g (~2.5 tsp)",
+     "_source": "Salt",
+     "_total_oz": 0.5
+    }
+   ],
+   "instructions": [
+    {
+     "step": 1,
+     "instructions": "Heat oven to 400°F. Rub 10 lb leg quarters with oil, 2 tbsp complete seasoning and salt.",
+     "duration": "5",
+     "expedition_galley_equipment_id": [
+      9
+     ]
+    },
+    {
+     "step": 2,
+     "instructions": "Roast 45 min to 175°F. Cool 10 min, pull the meat off the bones and shred.",
+     "duration": "45",
+     "expedition_galley_equipment_id": [
+      9,
+      6
+     ]
+    },
+    {
+     "step": 3,
+     "instructions": "Cook 2 lb rice with 1:1.5 water and 1 tsp salt, covered, 18 min.",
+     "duration": "20",
+     "expedition_galley_equipment_id": [
+      12,
+      8,
+      19
+     ]
+    },
+    {
+     "step": 4,
+     "instructions": "Slice 1.5 lb peppers and 1 lb onions; sauté in oil with garlic and 1 tbsp complete seasoning until soft.",
+     "duration": "8",
+     "expedition_galley_equipment_id": [
+      13,
+      4,
+      7,
+      19
+     ]
+    },
+    {
+     "step": 5,
+     "instructions": "Salsa: mix half a can of drained corn with 1 can diced tomatoes and a dash of pepper sauce.",
+     "duration": "3",
+     "expedition_galley_equipment_id": [
+      4,
+      7,
+      18
+     ]
+    },
+    {
+     "step": 6,
+     "instructions": "Bowl: 6 oz rice, chicken, peppers & onions, corn salsa, sprinkle of cheddar.",
+     "duration": "",
+     "expedition_galley_equipment_id": [
+      2
+     ]
+    }
+   ]
+  },
+  {
+   "code": "L2",
+   "cookbook": {
+    "recipe_name": "Chicken & Bean Chili over Rice",
+    "recipe_photo": null,
+    "type": "Lunch",
+    "types": [
+     "Lunch"
+    ],
+    "summary": "WIT 7-week menu L2 · serves 16. Per person: protein Leg quarter 10 oz bone-in (~6.5 oz meat); starch Rice 6 oz cooked; veg Tomato 3.6 oz + peppers 0.5 oz + onion 1 oz. Prep 15 min, cook 60 min. Equipment: Roasting pans, heavy pot, rice pot. Est. cost $32.86 ($2.05 per person). Galley notes: Chili reheats well under way.",
+    "duration_minutes": "75",
+    "expeditions_id": [
+     14
+    ]
+   },
+   "ingredients": [
+    {
+     "ingredient": "Chicken Leg Quarters",
+     "type": "Protein",
+     "expeditions_ingredient_types_id": 1,
+     "oz_per_meal": 10.0,
+     "prep_notes": "16 crew: 10 lb · Prep: Debone + skin off, 1\" dice (bag label L2)",
+     "_source": "Chicken leg quarters, bone-in",
+     "_total_oz": 160.0
+    },
+    {
+     "ingredient": "Rice",
+     "type": "Starch",
+     "expeditions_ingredient_types_id": 2,
+     "oz_per_meal": 2.0,
+     "prep_notes": "16 crew: 2 lb",
+     "_source": "Rice, white (dry)",
+     "_total_oz": 32.0
+    },
+    {
+     "ingredient": "Kidney Beans (canned)",
+     "type": "Dry Goods",
+     "expeditions_ingredient_types_id": 4,
+     "oz_per_meal": 1.76,
+     "prep_notes": "16 crew: 2 can",
+     "_source": "Red kidney beans, canned 400 g",
+     "_total_oz": 28.2
+    },
+    {
+     "ingredient": "Canned Tomatoes (diced)",
+     "type": "Veg",
+     "expeditions_ingredient_types_id": 3,
+     "oz_per_meal": 3.62,
+     "prep_notes": "16 crew: 4 can",
+     "_source": "Diced tomatoes, canned 411 g",
+     "_total_oz": 58.0
+    },
+    {
+     "ingredient": "Bell Pepper",
+     "type": "Veg",
+     "expeditions_ingredient_types_id": 3,
+     "oz_per_meal": 0.5,
+     "prep_notes": "16 crew: 0.5 lb",
+     "_source": "Bell peppers",
+     "_total_oz": 8.0
+    },
+    {
+     "ingredient": "Onion",
+     "type": "Veg",
+     "expeditions_ingredient_types_id": 3,
+     "oz_per_meal": 1.0,
+     "prep_notes": "16 crew: 1 lb",
+     "_source": "Onions, yellow",
+     "_total_oz": 16.0
+    },
+    {
+     "ingredient": "Cheddar Cheese (shredded)",
+     "type": "Dairy",
+     "expeditions_ingredient_types_id": 7,
+     "oz_per_meal": 0.25,
+     "prep_notes": "16 crew: 0.25 lb",
+     "_source": "Cheddar cheese, shredded",
+     "_total_oz": 4.0
+    },
+    {
+     "ingredient": "Minced Garlic",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.1,
+     "prep_notes": "16 crew: 45 g (~3 tbsp)",
+     "_source": "Minced garlic",
+     "_total_oz": 1.6
+    },
+    {
+     "ingredient": "Complete Seasoning",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.07,
+     "prep_notes": "16 crew: 30 g (~3.8 tbsp)",
+     "_source": "All-purpose seasoning (taco/chili blend)",
+     "_total_oz": 1.1
+    },
+    {
+     "ingredient": "Cayenne",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.01,
+     "prep_notes": "16 crew: 4 g (~2.0 tsp)",
+     "_source": "Cayenne pepper",
+     "_total_oz": 0.1
+    },
+    {
+     "ingredient": "Vegetable Oil",
+     "type": "Dry Goods",
+     "expeditions_ingredient_types_id": 4,
+     "oz_per_meal": 0.11,
+     "prep_notes": "16 crew: 50 mL (~0.2 cups)",
+     "_source": "Vegetable (soybean) oil",
+     "_total_oz": 1.7
+    },
+    {
+     "ingredient": "Salt",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.02,
+     "prep_notes": "16 crew: 10 g (~1.7 tsp)",
+     "_source": "Salt",
+     "_total_oz": 0.4
+    }
+   ],
+   "instructions": [
+    {
+     "step": 1,
+     "instructions": "Roast 10 lb leg quarters at 400°F for 45 min. Pull meat off the bones.",
+     "duration": "45",
+     "expedition_galley_equipment_id": [
+      9
+     ]
+    },
+    {
+     "step": 2,
+     "instructions": "In a heavy pot heat oil; add 1 lb diced onions, 0.5 lb diced peppers and garlic; cook 5 min.",
+     "duration": "6",
+     "expedition_galley_equipment_id": [
+      12,
+      4,
+      7,
+      19
+     ]
+    },
+    {
+     "step": 3,
+     "instructions": "Add 2 tbsp complete seasoning and 1/2 tsp cayenne; stir 1 min.",
+     "duration": "2",
+     "expedition_galley_equipment_id": [
+      22
+     ]
+    },
+    {
+     "step": 4,
+     "instructions": "Add 4 cans diced tomatoes, 2 cans drained kidney beans, chicken and 1 cup water. Simmer 20–25 min.",
+     "duration": "25",
+     "expedition_galley_equipment_id": [
+      12,
+      4,
+      7,
+      19,
+      18
+     ]
+    },
+    {
+     "step": 5,
+     "instructions": "Cook 2 lb rice.",
+     "duration": "20",
+     "expedition_galley_equipment_id": [
+      12,
+      19
+     ]
+    },
+    {
+     "step": 6,
+     "instructions": "Serve 6 oz rice topped with chili and cheddar.",
+     "duration": "",
+     "expedition_galley_equipment_id": [
+      14
+     ]
+    }
+   ]
+  },
+  {
+   "code": "L3",
+   "cookbook": {
+    "recipe_name": "Cheeseburgers, Fries & Coleslaw",
+    "recipe_photo": null,
+    "type": "Lunch",
+    "types": [
+     "Lunch"
+    ],
+    "summary": "WIT 7-week menu L3 · serves 16. Per person: protein 2 x 4 oz beef patties (8 oz); starch Bun 2.2 oz + fries 4 oz; veg Coleslaw: cabbage 2 oz + carrots 2 oz. Prep 20 min, cook 30 min. Equipment: Sheet pans or griddle, oven, big bowl, grater. Est. cost $59.32 ($3.71 per person). Galley notes: Make the slaw first so it has time to chill.",
+    "duration_minutes": "50",
+    "expeditions_id": [
+     14
+    ]
+   },
+   "ingredients": [
+    {
+     "ingredient": "Hamburger Patties (4 oz)",
+     "type": "Protein",
+     "expeditions_ingredient_types_id": 1,
+     "oz_per_meal": 8.0,
+     "prep_notes": "16 crew: 32 patties (8 lb) · Prep: No cutting. Repack 16 per bag with paper between (bag label L3)",
+     "_source": "Beef patties, 4 oz (frozen)",
+     "_total_oz": 128.0
+    },
+    {
+     "ingredient": "Hamburger Buns",
+     "type": "Starch",
+     "expeditions_ingredient_types_id": 2,
+     "oz_per_meal": 2.2,
+     "prep_notes": "16 crew: 2 pk",
+     "_source": "Hamburger buns 8 ct",
+     "_total_oz": 35.2
+    },
+    {
+     "ingredient": "French Fries",
+     "type": "Frozen",
+     "expeditions_ingredient_types_id": 6,
+     "oz_per_meal": 4.0,
+     "prep_notes": "16 crew: 4 lb",
+     "_source": "French fries, frozen",
+     "_total_oz": 64.0
+    },
+    {
+     "ingredient": "American Cheese (sliced)",
+     "type": "Dairy",
+     "expeditions_ingredient_types_id": 7,
+     "oz_per_meal": 0.66,
+     "prep_notes": "16 crew: 0.33 pk",
+     "_source": "American cheese slices",
+     "_total_oz": 10.6
+    },
+    {
+     "ingredient": "Cabbage",
+     "type": "Veg",
+     "expeditions_ingredient_types_id": 3,
+     "oz_per_meal": 2.0,
+     "prep_notes": "16 crew: 2 lb",
+     "_source": "Green cabbage",
+     "_total_oz": 32.0
+    },
+    {
+     "ingredient": "Carrot",
+     "type": "Veg",
+     "expeditions_ingredient_types_id": 3,
+     "oz_per_meal": 2.0,
+     "prep_notes": "16 crew: 2 lb",
+     "_source": "Carrots",
+     "_total_oz": 32.0
+    },
+    {
+     "ingredient": "Mayo",
+     "type": "Dry Goods",
+     "expeditions_ingredient_types_id": 4,
+     "oz_per_meal": 0.95,
+     "prep_notes": "16 crew: 450 mL (~1.9 cups)",
+     "_source": "Mayonnaise",
+     "_total_oz": 15.2
+    },
+    {
+     "ingredient": "Sugar",
+     "type": "Dry Goods",
+     "expeditions_ingredient_types_id": 4,
+     "oz_per_meal": 0.07,
+     "prep_notes": "16 crew: 30 g",
+     "_source": "Sugar, white",
+     "_total_oz": 1.1
+    },
+    {
+     "ingredient": "Ketchup",
+     "type": "Dry Goods",
+     "expeditions_ingredient_types_id": 4,
+     "oz_per_meal": 0.4,
+     "prep_notes": "16 crew: 0.25 bottle",
+     "_source": "Ketchup 750 mL",
+     "_total_oz": 6.3
+    },
+    {
+     "ingredient": "Mustard",
+     "type": "Dry Goods",
+     "expeditions_ingredient_types_id": 4,
+     "oz_per_meal": 0.3,
+     "prep_notes": "16 crew: 0.3 bottle",
+     "_source": "Mustard 454 g",
+     "_total_oz": 4.8
+    },
+    {
+     "ingredient": "Garlic Powder",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.02,
+     "prep_notes": "16 crew: 10 g (~1.1 tbsp)",
+     "_source": "Garlic, granulated",
+     "_total_oz": 0.4
+    },
+    {
+     "ingredient": "Onion Powder",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.02,
+     "prep_notes": "16 crew: 10 g (~1.2 tbsp)",
+     "_source": "Onion, granulated",
+     "_total_oz": 0.4
+    },
+    {
+     "ingredient": "Salt",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.02,
+     "prep_notes": "16 crew: 10 g (~1.7 tsp)",
+     "_source": "Salt",
+     "_total_oz": 0.4
+    },
+    {
+     "ingredient": "Ground Black Pepper",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.01,
+     "prep_notes": "16 crew: 5 g (~2.1 tsp)",
+     "_source": "Black pepper, ground",
+     "_total_oz": 0.2
+    },
+    {
+     "ingredient": "Vegetable Oil",
+     "type": "Dry Goods",
+     "expeditions_ingredient_types_id": 4,
+     "oz_per_meal": 0.11,
+     "prep_notes": "16 crew: 50 mL (~0.2 cups)",
+     "_source": "Vegetable (soybean) oil",
+     "_total_oz": 1.7
+    }
+   ],
+   "instructions": [
+    {
+     "step": 1,
+     "instructions": "Coleslaw: finely shred the cabbage and grate the carrots. Toss with mayo, 1 tbsp sugar, salt and pepper. Chill until serving.",
+     "duration": "10",
+     "expedition_galley_equipment_id": [
+      3,
+      4,
+      7
+     ]
+    },
+    {
+     "step": 2,
+     "instructions": "Lay out 32 frozen 4 oz patties; season both sides with granulated garlic and onion, 2 tsp salt and 1 tsp pepper. No need to thaw.",
+     "duration": "10",
+     "expedition_galley_equipment_id": []
+    },
+    {
+     "step": 3,
+     "instructions": "Bake 4 lb fries at 425°F 20–25 min, turning once.",
+     "duration": "25",
+     "expedition_galley_equipment_id": [
+      9,
+      20
+     ]
+    },
+    {
+     "step": 4,
+     "instructions": "Cook patties from frozen 4–5 min per side to 160°F; top with cheese in the last minute. 2 patties per burger.",
+     "duration": "12",
+     "expedition_galley_equipment_id": [
+      19
+     ]
+    },
+    {
+     "step": 5,
+     "instructions": "Toast buns cut-side down.",
+     "duration": "3",
+     "expedition_galley_equipment_id": [
+      4,
+      7
+     ]
+    },
+    {
+     "step": 6,
+     "instructions": "Burger, 4 oz fries and ~4 oz coleslaw, with ketchup and mustard.",
+     "duration": "",
+     "expedition_galley_equipment_id": []
+    }
+   ]
+  },
+  {
+   "code": "L4",
+   "cookbook": {
+    "recipe_name": "Chicken Quesadillas & Spanish Rice",
+    "recipe_photo": null,
+    "type": "Lunch",
+    "types": [
+     "Lunch"
+    ],
+    "summary": "WIT 7-week menu L4 · serves 16. Per person: protein Leg quarter 10 oz bone-in (~6.5 oz meat); starch Tortilla 2.5 oz + rice 3.6 oz; veg Peppers 1.5 oz + onion 1 oz + tomato 1.8 oz. Prep 20 min, cook 60 min. Equipment: Roasting pans, griddle, rice pot, oven. Est. cost $37.53 ($2.35 per person). Galley notes: Hold finished quesadillas in a 250°F oven.",
+    "duration_minutes": "80",
+    "expeditions_id": [
+     14
+    ]
+   },
+   "ingredients": [
+    {
+     "ingredient": "Chicken Leg Quarters",
+     "type": "Protein",
+     "expeditions_ingredient_types_id": 1,
+     "oz_per_meal": 10.0,
+     "prep_notes": "16 crew: 10 lb · Prep: Debone + skin off, leave thigh/leg meat in whole pieces (bag label L4)",
+     "_source": "Chicken leg quarters, bone-in",
+     "_total_oz": 160.0
+    },
+    {
+     "ingredient": "Tortillas",
+     "type": "Starch",
+     "expeditions_ingredient_types_id": 2,
+     "oz_per_meal": 2.5,
+     "prep_notes": "16 crew: 2.5 lb",
+     "_source": "Flour tortillas",
+     "_total_oz": 40.0
+    },
+    {
+     "ingredient": "Rice",
+     "type": "Starch",
+     "expeditions_ingredient_types_id": 2,
+     "oz_per_meal": 1.2,
+     "prep_notes": "16 crew: 1.2 lb",
+     "_source": "Rice, white (dry)",
+     "_total_oz": 19.2
+    },
+    {
+     "ingredient": "Canned Tomatoes (diced)",
+     "type": "Veg",
+     "expeditions_ingredient_types_id": 3,
+     "oz_per_meal": 1.81,
+     "prep_notes": "16 crew: 2 can",
+     "_source": "Diced tomatoes, canned 411 g",
+     "_total_oz": 29.0
+    },
+    {
+     "ingredient": "Bell Pepper",
+     "type": "Veg",
+     "expeditions_ingredient_types_id": 3,
+     "oz_per_meal": 1.5,
+     "prep_notes": "16 crew: 1.5 lb",
+     "_source": "Bell peppers",
+     "_total_oz": 24.0
+    },
+    {
+     "ingredient": "Onion",
+     "type": "Veg",
+     "expeditions_ingredient_types_id": 3,
+     "oz_per_meal": 1.0,
+     "prep_notes": "16 crew: 1 lb",
+     "_source": "Onions, yellow",
+     "_total_oz": 16.0
+    },
+    {
+     "ingredient": "Cheddar Cheese (shredded)",
+     "type": "Dairy",
+     "expeditions_ingredient_types_id": 7,
+     "oz_per_meal": 0.75,
+     "prep_notes": "16 crew: 0.75 lb",
+     "_source": "Cheddar cheese, shredded",
+     "_total_oz": 12.0
+    },
+    {
+     "ingredient": "Vegetable Oil",
+     "type": "Dry Goods",
+     "expeditions_ingredient_types_id": 4,
+     "oz_per_meal": 0.21,
+     "prep_notes": "16 crew: 100 mL (~0.4 cups)",
+     "_source": "Vegetable (soybean) oil",
+     "_total_oz": 3.4
+    },
+    {
+     "ingredient": "Complete Seasoning",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.07,
+     "prep_notes": "16 crew: 30 g (~3.8 tbsp)",
+     "_source": "All-purpose seasoning (taco/chili blend)",
+     "_total_oz": 1.1
+    },
+    {
+     "ingredient": "Paprika",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.01,
+     "prep_notes": "16 crew: 5 g (~2.1 tsp)",
+     "_source": "Paprika",
+     "_total_oz": 0.2
+    },
+    {
+     "ingredient": "Chicken Bouillon Cubes",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.03,
+     "prep_notes": "16 crew: 3 ea",
+     "_source": "Chicken bouillon cubes",
+     "_total_oz": 0.4
+    },
+    {
+     "ingredient": "Salt",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.02,
+     "prep_notes": "16 crew: 8 g (~1.3 tsp)",
+     "_source": "Salt",
+     "_total_oz": 0.3
+    }
+   ],
+   "instructions": [
+    {
+     "step": 1,
+     "instructions": "Roast 10 lb leg quarters at 400°F with oil, paprika and salt. Pull the meat.",
+     "duration": "45",
+     "expedition_galley_equipment_id": [
+      9,
+      6
+     ]
+    },
+    {
+     "step": 2,
+     "instructions": "Spanish rice: fry 1.2 lb rice in oil 3 min, add 1 can diced tomatoes, 3 bouillon cubes and water to 1:1.75. Cover and simmer 20 min.",
+     "duration": "25",
+     "expedition_galley_equipment_id": [
+      12,
+      8,
+      4,
+      7,
+      19
+     ]
+    },
+    {
+     "step": 3,
+     "instructions": "Sauté 1.5 lb sliced peppers and 1 lb onions until soft; mix with chicken, 1 can drained diced tomatoes and 2 tbsp complete seasoning.",
+     "duration": "8",
+     "expedition_galley_equipment_id": [
+      13,
+      4,
+      7,
+      19,
+      18
+     ]
+    },
+    {
+     "step": 4,
+     "instructions": "Fill tortillas with filling and cheddar; fold and toast on the griddle 2 min per side.",
+     "duration": "15",
+     "expedition_galley_equipment_id": [
+      19,
+      5
+     ]
+    },
+    {
+     "step": 5,
+     "instructions": "Quesadilla wedges with 3.5 oz Spanish rice; pepper sauce on the side.",
+     "duration": "",
+     "expedition_galley_equipment_id": []
+    }
+   ]
+  },
+  {
+   "code": "L5",
+   "cookbook": {
+    "recipe_name": "Bean Chili Dogs, Fries & Buttered Corn",
+    "recipe_photo": null,
+    "type": "Lunch",
+    "types": [
+     "Lunch"
+    ],
+    "summary": "WIT 7-week menu L5 · serves 16. Per person: protein Jumbo hot dogs 8 oz (with bean chili); starch 2 buns 3 oz + fries 3 oz; veg Corn 4.2 oz + tomato 0.9 oz + onion 1 oz. Prep 10 min, cook 30 min. Equipment: Sheet pans, oven, pot, pan. Est. cost $45.28 ($2.83 per person). Galley notes: Warm buns wrapped in foil in the oven.",
+    "duration_minutes": "40",
+    "expeditions_id": [
+     14
+    ]
+   },
+   "ingredients": [
+    {
+     "ingredient": "Hot Dogs (jumbo)",
+     "type": "Protein",
+     "expeditions_ingredient_types_id": 1,
+     "oz_per_meal": 8.0,
+     "prep_notes": "16 crew: 8 lb",
+     "_source": "Hot dogs, jumbo",
+     "_total_oz": 128.0
+    },
+    {
+     "ingredient": "Kidney Beans (canned)",
+     "type": "Dry Goods",
+     "expeditions_ingredient_types_id": 4,
+     "oz_per_meal": 0.88,
+     "prep_notes": "16 crew: 1 can",
+     "_source": "Red kidney beans, canned 400 g",
+     "_total_oz": 14.1
+    },
+    {
+     "ingredient": "Canned Tomatoes (diced)",
+     "type": "Veg",
+     "expeditions_ingredient_types_id": 3,
+     "oz_per_meal": 0.91,
+     "prep_notes": "16 crew: 1 can",
+     "_source": "Diced tomatoes, canned 411 g",
+     "_total_oz": 14.5
+    },
+    {
+     "ingredient": "Onion",
+     "type": "Veg",
+     "expeditions_ingredient_types_id": 3,
+     "oz_per_meal": 1.0,
+     "prep_notes": "16 crew: 1 lb",
+     "_source": "Onions, yellow",
+     "_total_oz": 16.0
+    },
+    {
+     "ingredient": "Hot Dog Buns",
+     "type": "Starch",
+     "expeditions_ingredient_types_id": 2,
+     "oz_per_meal": 3.0,
+     "prep_notes": "16 crew: 4 pk",
+     "_source": "Hot dog buns 8 ct",
+     "_total_oz": 48.0
+    },
+    {
+     "ingredient": "French Fries",
+     "type": "Frozen",
+     "expeditions_ingredient_types_id": 6,
+     "oz_per_meal": 3.0,
+     "prep_notes": "16 crew: 3 lb",
+     "_source": "French fries, frozen",
+     "_total_oz": 48.0
+    },
+    {
+     "ingredient": "Canned Corn",
+     "type": "Veg",
+     "expeditions_ingredient_types_id": 3,
+     "oz_per_meal": 6.61,
+     "prep_notes": "16 crew: 1 can",
+     "_source": "Whole kernel corn, canned 3 kg",
+     "_total_oz": 105.8
+    },
+    {
+     "ingredient": "Mustard",
+     "type": "Dry Goods",
+     "expeditions_ingredient_types_id": 4,
+     "oz_per_meal": 0.3,
+     "prep_notes": "16 crew: 0.3 bottle",
+     "_source": "Mustard 454 g",
+     "_total_oz": 4.8
+    },
+    {
+     "ingredient": "Ketchup",
+     "type": "Dry Goods",
+     "expeditions_ingredient_types_id": 4,
+     "oz_per_meal": 0.4,
+     "prep_notes": "16 crew: 0.25 bottle",
+     "_source": "Ketchup 750 mL",
+     "_total_oz": 6.3
+    },
+    {
+     "ingredient": "Margarine",
+     "type": "Dairy",
+     "expeditions_ingredient_types_id": 7,
+     "oz_per_meal": 0.22,
+     "prep_notes": "16 crew: 100 g",
+     "_source": "Margarine",
+     "_total_oz": 3.5
+    },
+    {
+     "ingredient": "Complete Seasoning",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.03,
+     "prep_notes": "16 crew: 15 g (~1.9 tbsp)",
+     "_source": "All-purpose seasoning (taco/chili blend)",
+     "_total_oz": 0.5
+    },
+    {
+     "ingredient": "Cayenne",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.01,
+     "prep_notes": "16 crew: 2 g (~1.0 tsp)",
+     "_source": "Cayenne pepper",
+     "_total_oz": 0.1
+    },
+    {
+     "ingredient": "Salt",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.01,
+     "prep_notes": "16 crew: 5 g (~0.8 tsp)",
+     "_source": "Salt",
+     "_total_oz": 0.2
+    }
+   ],
+   "instructions": [
+    {
+     "step": 1,
+     "instructions": "Bake 3 lb fries at 425°F 20–25 min.",
+     "duration": "25",
+     "expedition_galley_equipment_id": [
+      9
+     ]
+    },
+    {
+     "step": 2,
+     "instructions": "Chili: soften 1 lb diced onions in a little oil, add 1 can drained kidney beans (lightly mashed), 1 can diced tomatoes, 1 tbsp complete seasoning and 1/4 tsp cayenne; simmer 10 min.",
+     "duration": "15",
+     "expedition_galley_equipment_id": [
+      12,
+      4,
+      7,
+      19,
+      18
+     ]
+    },
+    {
+     "step": 3,
+     "instructions": "Simmer or griddle 8 lb hot dogs until hot through.",
+     "duration": "10",
+     "expedition_galley_equipment_id": [
+      12,
+      19,
+      5
+     ]
+    },
+    {
+     "step": 4,
+     "instructions": "Heat 1 can drained corn with margarine.",
+     "duration": "5",
+     "expedition_galley_equipment_id": [
+      18
+     ]
+    },
+    {
+     "step": 5,
+     "instructions": "2 hot dogs in buns with chili, mustard and ketchup; fries and corn.",
+     "duration": "",
+     "expedition_galley_equipment_id": []
+    }
+   ]
+  },
+  {
+   "code": "L6",
+   "cookbook": {
+    "recipe_name": "Chicken Fried Rice",
+    "recipe_photo": null,
+    "type": "Lunch",
+    "types": [
+     "Lunch"
+    ],
+    "summary": "WIT 7-week menu L6 · serves 16. Per person: protein Leg quarter 10 oz bone-in (~6.5 oz meat); starch Rice 6 oz cooked; veg Mixed veg 3 oz + onion 1 oz. Prep 20 min, cook 60 min. Equipment: Roasting pans, rice pot, wok or largest pan. Est. cost $33.28 ($2.08 per person). Galley notes: Fry in 2–3 batches so the rice fries instead of steaming.",
+    "duration_minutes": "80",
+    "expeditions_id": [
+     14
+    ]
+   },
+   "ingredients": [
+    {
+     "ingredient": "Chicken Leg Quarters",
+     "type": "Protein",
+     "expeditions_ingredient_types_id": 1,
+     "oz_per_meal": 10.0,
+     "prep_notes": "16 crew: 10 lb · Prep: Debone + skin off, 1/2\" dice (bag label L6)",
+     "_source": "Chicken leg quarters, bone-in",
+     "_total_oz": 160.0
+    },
+    {
+     "ingredient": "Rice",
+     "type": "Starch",
+     "expeditions_ingredient_types_id": 2,
+     "oz_per_meal": 2.0,
+     "prep_notes": "16 crew: 2 lb",
+     "_source": "Rice, white (dry)",
+     "_total_oz": 32.0
+    },
+    {
+     "ingredient": "Vegetable Mix (frozen)",
+     "type": "Frozen",
+     "expeditions_ingredient_types_id": 6,
+     "oz_per_meal": 3.0,
+     "prep_notes": "16 crew: 3 lb",
+     "_source": "Frozen mixed vegetables",
+     "_total_oz": 48.0
+    },
+    {
+     "ingredient": "Onion",
+     "type": "Veg",
+     "expeditions_ingredient_types_id": 3,
+     "oz_per_meal": 1.0,
+     "prep_notes": "16 crew: 1 lb",
+     "_source": "Onions, yellow",
+     "_total_oz": 16.0
+    },
+    {
+     "ingredient": "Eggs",
+     "type": "Protein",
+     "expeditions_ingredient_types_id": 1,
+     "oz_per_meal": 0.88,
+     "prep_notes": "16 crew: 8 ea",
+     "_source": "Eggs",
+     "_total_oz": 14.1
+    },
+    {
+     "ingredient": "Soy Sauce",
+     "type": "Dry Goods",
+     "expeditions_ingredient_types_id": 4,
+     "oz_per_meal": 0.53,
+     "prep_notes": "16 crew: 250 mL (~1.1 cups)",
+     "_source": "Soy sauce",
+     "_total_oz": 8.5
+    },
+    {
+     "ingredient": "Vegetable Oil",
+     "type": "Dry Goods",
+     "expeditions_ingredient_types_id": 4,
+     "oz_per_meal": 0.42,
+     "prep_notes": "16 crew: 200 mL (~0.8 cups)",
+     "_source": "Vegetable (soybean) oil",
+     "_total_oz": 6.8
+    },
+    {
+     "ingredient": "Minced Garlic",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.1,
+     "prep_notes": "16 crew: 45 g (~3 tbsp)",
+     "_source": "Minced garlic",
+     "_total_oz": 1.6
+    },
+    {
+     "ingredient": "Hot Sauce (pepper sauce)",
+     "type": "Dry Goods",
+     "expeditions_ingredient_types_id": 4,
+     "oz_per_meal": 0.08,
+     "prep_notes": "16 crew: 0.05 bottle",
+     "_source": "Pepper sauce 750 mL",
+     "_total_oz": 1.3
+    },
+    {
+     "ingredient": "Salt",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.01,
+     "prep_notes": "16 crew: 5 g (~0.8 tsp)",
+     "_source": "Salt",
+     "_total_oz": 0.2
+    },
+    {
+     "ingredient": "Ground Black Pepper",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.01,
+     "prep_notes": "16 crew: 3 g (~1.3 tsp)",
+     "_source": "Black pepper, ground",
+     "_total_oz": 0.1
+    }
+   ],
+   "instructions": [
+    {
+     "step": 1,
+     "instructions": "Roast 10 lb leg quarters at 400°F for 45 min. Pull and chop the meat.",
+     "duration": "45",
+     "expedition_galley_equipment_id": [
+      4,
+      7,
+      9,
+      6
+     ]
+    },
+    {
+     "step": 2,
+     "instructions": "Cook 2 lb rice; spread on a tray to cool (day-old rice is best).",
+     "duration": "20",
+     "expedition_galley_equipment_id": [
+      12,
+      15,
+      19
+     ]
+    },
+    {
+     "step": 3,
+     "instructions": "Scramble 8 eggs; set aside.",
+     "duration": "5",
+     "expedition_galley_equipment_id": [
+      19
+     ]
+    },
+    {
+     "step": 4,
+     "instructions": "Heat oil very hot. Fry 1 lb diced onions and garlic 2 min, add 3 lb frozen mixed vegetables; cook 4 min.",
+     "duration": "10",
+     "expedition_galley_equipment_id": [
+      4,
+      7,
+      19
+     ]
+    },
+    {
+     "step": 5,
+     "instructions": "Add rice and chicken in batches; stir-fry 5 min. Add ~1 cup soy sauce and the eggs.",
+     "duration": "8",
+     "expedition_galley_equipment_id": [
+      19,
+      22
+     ]
+    },
+    {
+     "step": 6,
+     "instructions": "Serve with pepper sauce.",
+     "duration": "",
+     "expedition_galley_equipment_id": [
+      14
+     ]
+    }
+   ]
+  },
+  {
+   "code": "L7",
+   "cookbook": {
+    "recipe_name": "BBQ Pulled Chicken Sandwiches, Potato Wedges & Slaw",
+    "recipe_photo": null,
+    "type": "Lunch",
+    "types": [
+     "Lunch"
+    ],
+    "summary": "WIT 7-week menu L7 · serves 16. Per person: protein Leg quarter 10 oz bone-in (~6.5 oz meat); starch Bun 2.2 oz + potato wedges 4 oz; veg Slaw: cabbage 2 oz + carrots 2 oz. Prep 20 min, cook 60 min. Equipment: Roasting pans, sheet pans, pot, big bowl, grater. Est. cost $36.95 ($2.31 per person). Galley notes: Pulled chicken keeps 3 days chilled.",
+    "duration_minutes": "80",
+    "expeditions_id": [
+     14
+    ]
+   },
+   "ingredients": [
+    {
+     "ingredient": "Chicken Leg Quarters",
+     "type": "Protein",
+     "expeditions_ingredient_types_id": 1,
+     "oz_per_meal": 10.0,
+     "prep_notes": "16 crew: 10 lb · Prep: Debone + skin off, leave thigh/leg meat in whole pieces (bag label L7)",
+     "_source": "Chicken leg quarters, bone-in",
+     "_total_oz": 160.0
+    },
+    {
+     "ingredient": "Hamburger Buns",
+     "type": "Starch",
+     "expeditions_ingredient_types_id": 2,
+     "oz_per_meal": 2.2,
+     "prep_notes": "16 crew: 2 pk",
+     "_source": "Hamburger buns 8 ct",
+     "_total_oz": 35.2
+    },
+    {
+     "ingredient": "Potato",
+     "type": "Starch",
+     "expeditions_ingredient_types_id": 2,
+     "oz_per_meal": 4.5,
+     "prep_notes": "16 crew: 4.5 lb",
+     "_source": "Potatoes",
+     "_total_oz": 72.0
+    },
+    {
+     "ingredient": "Cabbage",
+     "type": "Veg",
+     "expeditions_ingredient_types_id": 3,
+     "oz_per_meal": 2.0,
+     "prep_notes": "16 crew: 2 lb",
+     "_source": "Green cabbage",
+     "_total_oz": 32.0
+    },
+    {
+     "ingredient": "Carrot",
+     "type": "Veg",
+     "expeditions_ingredient_types_id": 3,
+     "oz_per_meal": 2.0,
+     "prep_notes": "16 crew: 2 lb",
+     "_source": "Carrots",
+     "_total_oz": 32.0
+    },
+    {
+     "ingredient": "Mayo",
+     "type": "Dry Goods",
+     "expeditions_ingredient_types_id": 4,
+     "oz_per_meal": 0.74,
+     "prep_notes": "16 crew: 350 mL (~1.5 cups)",
+     "_source": "Mayonnaise",
+     "_total_oz": 11.8
+    },
+    {
+     "ingredient": "Sugar",
+     "type": "Dry Goods",
+     "expeditions_ingredient_types_id": 4,
+     "oz_per_meal": 0.07,
+     "prep_notes": "16 crew: 30 g",
+     "_source": "Sugar, white",
+     "_total_oz": 1.1
+    },
+    {
+     "ingredient": "BBQ Sauce",
+     "type": "Dry Goods",
+     "expeditions_ingredient_types_id": 4,
+     "oz_per_meal": 2.2,
+     "prep_notes": "16 crew: 1 kg",
+     "_source": "BBQ sauce",
+     "_total_oz": 35.3
+    },
+    {
+     "ingredient": "Paprika",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.01,
+     "prep_notes": "16 crew: 5 g (~2.1 tsp)",
+     "_source": "Paprika",
+     "_total_oz": 0.2
+    },
+    {
+     "ingredient": "Garlic Powder",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.01,
+     "prep_notes": "16 crew: 5 g (~1.7 tsp)",
+     "_source": "Garlic, granulated",
+     "_total_oz": 0.2
+    },
+    {
+     "ingredient": "Vegetable Oil",
+     "type": "Dry Goods",
+     "expeditions_ingredient_types_id": 4,
+     "oz_per_meal": 0.32,
+     "prep_notes": "16 crew: 150 mL (~0.6 cups)",
+     "_source": "Vegetable (soybean) oil",
+     "_total_oz": 5.1
+    },
+    {
+     "ingredient": "Salt",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.02,
+     "prep_notes": "16 crew: 8 g (~1.3 tsp)",
+     "_source": "Salt",
+     "_total_oz": 0.3
+    },
+    {
+     "ingredient": "Ground Black Pepper",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.01,
+     "prep_notes": "16 crew: 2 g (~0.9 tsp)",
+     "_source": "Black pepper, ground",
+     "_total_oz": 0.1
+    }
+   ],
+   "instructions": [
+    {
+     "step": 1,
+     "instructions": "Coleslaw: finely shred the cabbage and grate the carrots. Toss with mayo, 1 tbsp sugar, salt and pepper. Chill until serving.",
+     "duration": "10",
+     "expedition_galley_equipment_id": [
+      3,
+      4,
+      7
+     ]
+    },
+    {
+     "step": 2,
+     "instructions": "Roast 10 lb leg quarters at 400°F with paprika, granulated garlic and salt, 45–50 min.",
+     "duration": "50",
+     "expedition_galley_equipment_id": [
+      9
+     ]
+    },
+    {
+     "step": 3,
+     "instructions": "Pull the meat and toss with 1 kg BBQ sauce; warm through.",
+     "duration": "10",
+     "expedition_galley_equipment_id": [
+      6
+     ]
+    },
+    {
+     "step": 4,
+     "instructions": "Wedges: cut 4.5 lb potatoes into wedges, toss with oil, paprika and salt; roast at 425°F 30–35 min, turning once.",
+     "duration": "35",
+     "expedition_galley_equipment_id": [
+      4,
+      7,
+      9,
+      20
+     ]
+    },
+    {
+     "step": 5,
+     "instructions": "Bun with BBQ chicken, 4 oz wedges and ~4 oz slaw (on the side or in the bun).",
+     "duration": "",
+     "expedition_galley_equipment_id": []
+    }
+   ]
+  },
+  {
+   "code": "L8",
+   "cookbook": {
+    "recipe_name": "Shredded Beef Soft Tacos with Cabbage Slaw",
+    "recipe_photo": null,
+    "type": "Lunch",
+    "types": [
+     "Lunch"
+    ],
+    "summary": "WIT 7-week menu L8 · serves 16. Per person: protein Braised beef stew meat 8 oz; starch Tortilla 1.5 oz + rice 4.5 oz; veg Cabbage 2.5 oz + onion 1 oz + tomato 0.9 oz. Prep 15 min, cook 30 min. Equipment: Large heavy pot or pressure cooker, rice pot, big bowl. Est. cost $61.51 ($3.84 per person). Galley notes: Cabbage keeps 2–3 weeks chilled — buy it with the fresh restock.",
+    "duration_minutes": "45",
+    "expeditions_id": [
+     14
+    ]
+   },
+   "ingredients": [
+    {
+     "ingredient": "Beef Stew Meat",
+     "type": "Protein",
+     "expeditions_ingredient_types_id": 1,
+     "oz_per_meal": 8.0,
+     "prep_notes": "16 crew: 3.63 kg (8 lb) · Prep: leave large 1.5–2\" chunks (shred after cooking) (bag label L8)",
+     "_source": "Beef stew meat, boneless",
+     "_total_oz": 128.0
+    },
+    {
+     "ingredient": "Tortillas",
+     "type": "Starch",
+     "expeditions_ingredient_types_id": 2,
+     "oz_per_meal": 1.5,
+     "prep_notes": "16 crew: 1.5 lb",
+     "_source": "Flour tortillas",
+     "_total_oz": 24.0
+    },
+    {
+     "ingredient": "Rice",
+     "type": "Starch",
+     "expeditions_ingredient_types_id": 2,
+     "oz_per_meal": 1.5,
+     "prep_notes": "16 crew: 1.5 lb",
+     "_source": "Rice, white (dry)",
+     "_total_oz": 24.0
+    },
+    {
+     "ingredient": "Cabbage",
+     "type": "Veg",
+     "expeditions_ingredient_types_id": 3,
+     "oz_per_meal": 2.5,
+     "prep_notes": "16 crew: 2.5 lb",
+     "_source": "Green cabbage",
+     "_total_oz": 40.0
+    },
+    {
+     "ingredient": "Onion",
+     "type": "Veg",
+     "expeditions_ingredient_types_id": 3,
+     "oz_per_meal": 1.0,
+     "prep_notes": "16 crew: 1 lb",
+     "_source": "Onions, yellow",
+     "_total_oz": 16.0
+    },
+    {
+     "ingredient": "Canned Tomatoes (diced)",
+     "type": "Veg",
+     "expeditions_ingredient_types_id": 3,
+     "oz_per_meal": 0.91,
+     "prep_notes": "16 crew: 1 can",
+     "_source": "Diced tomatoes, canned 411 g",
+     "_total_oz": 14.5
+    },
+    {
+     "ingredient": "Complete Seasoning",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.09,
+     "prep_notes": "16 crew: 40 g (~5.0 tbsp)",
+     "_source": "All-purpose seasoning (taco/chili blend)",
+     "_total_oz": 1.4
+    },
+    {
+     "ingredient": "Cayenne",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.01,
+     "prep_notes": "16 crew: 3 g (~1.5 tsp)",
+     "_source": "Cayenne pepper",
+     "_total_oz": 0.1
+    },
+    {
+     "ingredient": "Minced Garlic",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.1,
+     "prep_notes": "16 crew: 45 g (~3 tbsp)",
+     "_source": "Minced garlic",
+     "_total_oz": 1.6
+    },
+    {
+     "ingredient": "Vegetable Oil",
+     "type": "Dry Goods",
+     "expeditions_ingredient_types_id": 4,
+     "oz_per_meal": 0.11,
+     "prep_notes": "16 crew: 50 mL (~0.2 cups)",
+     "_source": "Vegetable (soybean) oil",
+     "_total_oz": 1.7
+    },
+    {
+     "ingredient": "Mayo",
+     "type": "Dry Goods",
+     "expeditions_ingredient_types_id": 4,
+     "oz_per_meal": 0.42,
+     "prep_notes": "16 crew: 200 mL (~0.8 cups)",
+     "_source": "Mayonnaise",
+     "_total_oz": 6.8
+    },
+    {
+     "ingredient": "Hot Sauce (pepper sauce)",
+     "type": "Dry Goods",
+     "expeditions_ingredient_types_id": 4,
+     "oz_per_meal": 0.24,
+     "prep_notes": "16 crew: 0.15 bottle",
+     "_source": "Pepper sauce 750 mL",
+     "_total_oz": 3.8
+    },
+    {
+     "ingredient": "Salt",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.02,
+     "prep_notes": "16 crew: 8 g (~1.3 tsp)",
+     "_source": "Salt",
+     "_total_oz": 0.3
+    }
+   ],
+   "instructions": [
+    {
+     "step": 1,
+     "instructions": "Cook 1.5 lb rice.",
+     "duration": "20",
+     "expedition_galley_equipment_id": [
+      12,
+      19
+     ]
+    },
+    {
+     "step": 2,
+     "instructions": "Thaw 8 lb stew meat overnight in the fridge. Brown in batches with 1 lb diced onions; add garlic, 3 tbsp all-purpose seasoning, 1/4 tsp cayenne and 3 cups water. Cover and simmer 2 hr (40 min in a pressure cooker) until fork-tender, then shred with two forks and cook down until the sauce clings.",
+     "duration": "15",
+     "expedition_galley_equipment_id": [
+      12,
+      8,
+      4,
+      7,
+      19,
+      6
+     ]
+    },
+    {
+     "step": 3,
+     "instructions": "Cabbage slaw: shred 2.5 lb cabbage; toss with ~3/4 cup mayo, a dash of pepper sauce and salt.",
+     "duration": "8",
+     "expedition_galley_equipment_id": []
+    },
+    {
+     "step": 4,
+     "instructions": "Drain 1 can diced tomatoes for topping.",
+     "duration": "3",
+     "expedition_galley_equipment_id": [
+      4,
+      7,
+      18
+     ]
+    },
+    {
+     "step": 5,
+     "instructions": "Warm tortillas.",
+     "duration": "5",
+     "expedition_galley_equipment_id": []
+    },
+    {
+     "step": 6,
+     "instructions": "2 tacos per person with beef, slaw and tomato; 4.5 oz rice on the side.",
+     "duration": "",
+     "expedition_galley_equipment_id": []
+    }
+   ]
+  },
+  {
+   "code": "L9",
+   "cookbook": {
+    "recipe_name": "Sausage, Peppers & Onions with Boxed Mac and Cheese",
+    "recipe_photo": null,
+    "type": "Lunch",
+    "types": [
+     "Lunch"
+    ],
+    "summary": "WIT 7-week menu L9 · serves 16. Per person: protein Chicken sausage 8 oz; starch Mac & cheese ~6.5 oz prepared; veg Peppers 3 oz + onion 2 oz + tomato 0.9 oz. Prep 15 min, cook 30 min. Equipment: Sheet pans, oven, large pot, large pan. Est. cost $59.87 ($3.74 per person). Galley notes: Boxed mac & cheese replaces the old roasted-potato side.",
+    "duration_minutes": "45",
+    "expeditions_id": [
+     14
+    ]
+   },
+   "ingredients": [
+    {
+     "ingredient": "Chicken Sausage",
+     "type": "Protein",
+     "expeditions_ingredient_types_id": 1,
+     "oz_per_meal": 8.0,
+     "prep_notes": "16 crew: 8 lb · Prep: Whole links (bag label L9)",
+     "_source": "Chicken sausages",
+     "_total_oz": 128.0
+    },
+    {
+     "ingredient": "Mac & Cheese (boxed)",
+     "type": "Starch",
+     "expeditions_ingredient_types_id": 2,
+     "oz_per_meal": 2.73,
+     "prep_notes": "16 crew: 6 box",
+     "_source": "Boxed macaroni & cheese 206 g",
+     "_total_oz": 43.6
+    },
+    {
+     "ingredient": "Milk (long-life)",
+     "type": "Dairy",
+     "expeditions_ingredient_types_id": 7,
+     "oz_per_meal": 0.85,
+     "prep_notes": "16 crew: 400 mL (~1.7 cups)",
+     "_source": "Long-life milk 1 L",
+     "_total_oz": 13.5
+    },
+    {
+     "ingredient": "Margarine",
+     "type": "Dairy",
+     "expeditions_ingredient_types_id": 7,
+     "oz_per_meal": 0.55,
+     "prep_notes": "16 crew: 250 g",
+     "_source": "Margarine",
+     "_total_oz": 8.8
+    },
+    {
+     "ingredient": "Bell Pepper",
+     "type": "Veg",
+     "expeditions_ingredient_types_id": 3,
+     "oz_per_meal": 3.0,
+     "prep_notes": "16 crew: 3 lb",
+     "_source": "Bell peppers",
+     "_total_oz": 48.0
+    },
+    {
+     "ingredient": "Onion",
+     "type": "Veg",
+     "expeditions_ingredient_types_id": 3,
+     "oz_per_meal": 2.0,
+     "prep_notes": "16 crew: 2 lb",
+     "_source": "Onions, yellow",
+     "_total_oz": 32.0
+    },
+    {
+     "ingredient": "Canned Tomatoes (diced)",
+     "type": "Veg",
+     "expeditions_ingredient_types_id": 3,
+     "oz_per_meal": 0.91,
+     "prep_notes": "16 crew: 1 can",
+     "_source": "Diced tomatoes, canned 411 g",
+     "_total_oz": 14.5
+    },
+    {
+     "ingredient": "Minced Garlic",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.1,
+     "prep_notes": "16 crew: 45 g (~3 tbsp)",
+     "_source": "Minced garlic",
+     "_total_oz": 1.6
+    },
+    {
+     "ingredient": "Oregano",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.01,
+     "prep_notes": "16 crew: 3 g (~1.5 tbsp)",
+     "_source": "Oregano",
+     "_total_oz": 0.1
+    },
+    {
+     "ingredient": "Vegetable Oil",
+     "type": "Dry Goods",
+     "expeditions_ingredient_types_id": 4,
+     "oz_per_meal": 0.21,
+     "prep_notes": "16 crew: 100 mL (~0.4 cups)",
+     "_source": "Vegetable (soybean) oil",
+     "_total_oz": 3.4
+    },
+    {
+     "ingredient": "Mustard",
+     "type": "Dry Goods",
+     "expeditions_ingredient_types_id": 4,
+     "oz_per_meal": 0.15,
+     "prep_notes": "16 crew: 0.15 bottle",
+     "_source": "Mustard 454 g",
+     "_total_oz": 2.4
+    },
+    {
+     "ingredient": "Salt",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.01,
+     "prep_notes": "16 crew: 5 g (~0.8 tsp)",
+     "_source": "Salt",
+     "_total_oz": 0.2
+    },
+    {
+     "ingredient": "Ground Black Pepper",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.01,
+     "prep_notes": "16 crew: 3 g (~1.3 tsp)",
+     "_source": "Black pepper, ground",
+     "_total_oz": 0.1
+    }
+   ],
+   "instructions": [
+    {
+     "step": 1,
+     "instructions": "Bake 8 lb chicken sausages at 400°F 20–25 min, turning once, to 165°F.",
+     "duration": "25",
+     "expedition_galley_equipment_id": [
+      9,
+      20
+     ]
+    },
+    {
+     "step": 2,
+     "instructions": "Slice 3 lb peppers and 2 lb onions into strips. Sauté in oil with garlic and oregano 8 min; add 1 can diced tomatoes and simmer 5 min.",
+     "duration": "10",
+     "expedition_galley_equipment_id": [
+      12,
+      13,
+      4,
+      7,
+      19
+     ]
+    },
+    {
+     "step": 3,
+     "instructions": "Boxed mac & cheese: boil 6 boxes of macaroni in salted water 7–8 min; drain.",
+     "duration": "12",
+     "expedition_galley_equipment_id": [
+      12,
+      19,
+      18
+     ]
+    },
+    {
+     "step": 4,
+     "instructions": "Stir in the cheese packets, 1/2 cup margarine and ~1.5 cups milk.",
+     "duration": "3",
+     "expedition_galley_equipment_id": [
+      22
+     ]
+    },
+    {
+     "step": 5,
+     "instructions": "Slice sausages and toss with the peppers and onions.",
+     "duration": "2",
+     "expedition_galley_equipment_id": []
+    },
+    {
+     "step": 6,
+     "instructions": "8 oz sausage, peppers & onions with ~6.5 oz mac & cheese.",
+     "duration": "",
+     "expedition_galley_equipment_id": []
+    }
+   ]
+  },
+  {
+   "code": "L10",
+   "cookbook": {
+    "recipe_name": "Chicken Ranch Pasta Salad",
+    "recipe_photo": null,
+    "type": "Lunch",
+    "types": [
+     "Lunch"
+    ],
+    "summary": "WIT 7-week menu L10 · serves 16. Per person: protein Leg quarter 10 oz bone-in (~6.5 oz meat); starch Penne 6 oz cooked; veg Peppers 1.5 oz + carrot 0.5 oz + onion 0.5 oz + corn 2.1 oz. Prep 20 min, cook 60 min. Equipment: Roasting pans, large pot, big mixing bowl. Est. cost $31.50 ($1.97 per person). Galley notes: No bottled ranch at PriceSmart TT, so the dressing is made from mayo and pantry spices.",
+    "duration_minutes": "80",
+    "expeditions_id": [
+     14
+    ]
+   },
+   "ingredients": [
+    {
+     "ingredient": "Chicken Leg Quarters",
+     "type": "Protein",
+     "expeditions_ingredient_types_id": 1,
+     "oz_per_meal": 10.0,
+     "prep_notes": "16 crew: 10 lb · Prep: Debone + skin off, 3/4\" dice (bag label L10)",
+     "_source": "Chicken leg quarters, bone-in",
+     "_total_oz": 160.0
+    },
+    {
+     "ingredient": "Penne Pasta",
+     "type": "Starch",
+     "expeditions_ingredient_types_id": 2,
+     "oz_per_meal": 2.67,
+     "prep_notes": "16 crew: 2.67 lb",
+     "_source": "Penne (dry)",
+     "_total_oz": 42.7
+    },
+    {
+     "ingredient": "Bell Pepper",
+     "type": "Veg",
+     "expeditions_ingredient_types_id": 3,
+     "oz_per_meal": 1.5,
+     "prep_notes": "16 crew: 1.5 lb",
+     "_source": "Bell peppers",
+     "_total_oz": 24.0
+    },
+    {
+     "ingredient": "Carrot",
+     "type": "Veg",
+     "expeditions_ingredient_types_id": 3,
+     "oz_per_meal": 0.5,
+     "prep_notes": "16 crew: 0.5 lb",
+     "_source": "Carrots",
+     "_total_oz": 8.0
+    },
+    {
+     "ingredient": "Onion",
+     "type": "Veg",
+     "expeditions_ingredient_types_id": 3,
+     "oz_per_meal": 0.5,
+     "prep_notes": "16 crew: 0.5 lb",
+     "_source": "Onions, yellow",
+     "_total_oz": 8.0
+    },
+    {
+     "ingredient": "Canned Corn",
+     "type": "Veg",
+     "expeditions_ingredient_types_id": 3,
+     "oz_per_meal": 3.31,
+     "prep_notes": "16 crew: 0.5 can",
+     "_source": "Whole kernel corn, canned 3 kg",
+     "_total_oz": 52.9
+    },
+    {
+     "ingredient": "Mayo",
+     "type": "Dry Goods",
+     "expeditions_ingredient_types_id": 4,
+     "oz_per_meal": 0.95,
+     "prep_notes": "16 crew: 450 mL (~1.9 cups)",
+     "_source": "Mayonnaise",
+     "_total_oz": 15.2
+    },
+    {
+     "ingredient": "Milk (long-life)",
+     "type": "Dairy",
+     "expeditions_ingredient_types_id": 7,
+     "oz_per_meal": 0.42,
+     "prep_notes": "16 crew: 200 mL (~0.8 cups)",
+     "_source": "Long-life milk 1 L",
+     "_total_oz": 6.8
+    },
+    {
+     "ingredient": "Garlic Powder",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.02,
+     "prep_notes": "16 crew: 8 g (~2.7 tsp)",
+     "_source": "Garlic, granulated",
+     "_total_oz": 0.3
+    },
+    {
+     "ingredient": "Oregano",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.01,
+     "prep_notes": "16 crew: 3 g (~1.5 tbsp)",
+     "_source": "Oregano",
+     "_total_oz": 0.1
+    },
+    {
+     "ingredient": "Ground Black Pepper",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.01,
+     "prep_notes": "16 crew: 3 g (~1.3 tsp)",
+     "_source": "Black pepper, ground",
+     "_total_oz": 0.1
+    },
+    {
+     "ingredient": "Sugar",
+     "type": "Dry Goods",
+     "expeditions_ingredient_types_id": 4,
+     "oz_per_meal": 0.04,
+     "prep_notes": "16 crew: 20 g",
+     "_source": "Sugar, white",
+     "_total_oz": 0.7
+    },
+    {
+     "ingredient": "Salt",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.02,
+     "prep_notes": "16 crew: 10 g (~1.7 tsp)",
+     "_source": "Salt",
+     "_total_oz": 0.4
+    },
+    {
+     "ingredient": "Vegetable Oil",
+     "type": "Dry Goods",
+     "expeditions_ingredient_types_id": 4,
+     "oz_per_meal": 0.11,
+     "prep_notes": "16 crew: 50 mL (~0.2 cups)",
+     "_source": "Vegetable (soybean) oil",
+     "_total_oz": 1.7
+    }
+   ],
+   "instructions": [
+    {
+     "step": 1,
+     "instructions": "Roast 10 lb leg quarters at 400°F for 45 min. Cool, pull and chop.",
+     "duration": "45",
+     "expedition_galley_equipment_id": [
+      4,
+      7,
+      9,
+      6
+     ]
+    },
+    {
+     "step": 2,
+     "instructions": "Boil 2.67 lb penne; drain, rinse cold, toss with a little oil.",
+     "duration": "12",
+     "expedition_galley_equipment_id": [
+      12,
+      19,
+      18
+     ]
+    },
+    {
+     "step": 3,
+     "instructions": "Ranch-style dressing: whisk ~2 cups mayo, 3/4 cup milk, 1 tbsp granulated garlic, 1 tsp oregano, 1 tsp black pepper, 1 tsp sugar and salt.",
+     "duration": "5",
+     "expedition_galley_equipment_id": [
+      21
+     ]
+    },
+    {
+     "step": 4,
+     "instructions": "Dice 1.5 lb peppers and 0.5 lb onion; grate 0.5 lb carrots; drain half a can of corn.",
+     "duration": "8",
+     "expedition_galley_equipment_id": [
+      3,
+      4,
+      7,
+      18
+     ]
+    },
+    {
+     "step": 5,
+     "instructions": "Toss pasta, chicken, vegetables and dressing. Chill.",
+     "duration": "5",
+     "expedition_galley_equipment_id": []
+    },
+    {
+     "step": 6,
+     "instructions": "~1.5 cups per person.",
+     "duration": "",
+     "expedition_galley_equipment_id": []
+    }
+   ]
+  },
+  {
+   "code": "D1",
+   "cookbook": {
+    "recipe_name": "Spaghetti & Beef Ragu, Garlic Buttered Carrots",
+    "recipe_photo": null,
+    "type": "Dinner",
+    "types": [
+     "Dinner"
+    ],
+    "summary": "WIT 7-week menu D1 · serves 16. Per person: protein Braised beef stew meat 8 oz; starch Spaghetti 6 oz cooked; veg Carrots 4 oz + tomato 1.8 oz + onion 0.5 oz. Prep 15 min, cook 30 min. Equipment: Large pot (pasta), heavy pot or pressure cooker (ragu), pan. Est. cost $64.09 ($4.01 per person). Galley notes: Sauce can be made the day before.",
+    "duration_minutes": "45",
+    "expeditions_id": [
+     14
+    ]
+   },
+   "ingredients": [
+    {
+     "ingredient": "Beef Stew Meat",
+     "type": "Protein",
+     "expeditions_ingredient_types_id": 1,
+     "oz_per_meal": 8.0,
+     "prep_notes": "16 crew: 3.63 kg (8 lb) · Prep: Trim fat and silver skin, 1\" dice (bag label D1)",
+     "_source": "Beef stew meat, boneless",
+     "_total_oz": 128.0
+    },
+    {
+     "ingredient": "Spaghetti",
+     "type": "Starch",
+     "expeditions_ingredient_types_id": 2,
+     "oz_per_meal": 2.67,
+     "prep_notes": "16 crew: 2.67 lb",
+     "_source": "Spaghetti (dry)",
+     "_total_oz": 42.7
+    },
+    {
+     "ingredient": "Pasta Sauce",
+     "type": "Dry Goods",
+     "expeditions_ingredient_types_id": 4,
+     "oz_per_meal": 2.82,
+     "prep_notes": "16 crew: 1 jar",
+     "_source": "Pasta sauce 1.28 kg",
+     "_total_oz": 45.1
+    },
+    {
+     "ingredient": "Canned Tomatoes (diced)",
+     "type": "Veg",
+     "expeditions_ingredient_types_id": 3,
+     "oz_per_meal": 1.81,
+     "prep_notes": "16 crew: 2 can",
+     "_source": "Diced tomatoes, canned 411 g",
+     "_total_oz": 29.0
+    },
+    {
+     "ingredient": "Carrot",
+     "type": "Veg",
+     "expeditions_ingredient_types_id": 3,
+     "oz_per_meal": 4.0,
+     "prep_notes": "16 crew: 4 lb",
+     "_source": "Carrots",
+     "_total_oz": 64.0
+    },
+    {
+     "ingredient": "Onion",
+     "type": "Veg",
+     "expeditions_ingredient_types_id": 3,
+     "oz_per_meal": 0.5,
+     "prep_notes": "16 crew: 0.5 lb",
+     "_source": "Onions, yellow",
+     "_total_oz": 8.0
+    },
+    {
+     "ingredient": "Margarine",
+     "type": "Dairy",
+     "expeditions_ingredient_types_id": 7,
+     "oz_per_meal": 0.22,
+     "prep_notes": "16 crew: 100 g",
+     "_source": "Margarine",
+     "_total_oz": 3.5
+    },
+    {
+     "ingredient": "Minced Garlic",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.1,
+     "prep_notes": "16 crew: 45 g (~3 tbsp)",
+     "_source": "Minced garlic",
+     "_total_oz": 1.6
+    },
+    {
+     "ingredient": "Oregano",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.01,
+     "prep_notes": "16 crew: 4 g (~2.0 tbsp)",
+     "_source": "Oregano",
+     "_total_oz": 0.1
+    },
+    {
+     "ingredient": "Sugar",
+     "type": "Dry Goods",
+     "expeditions_ingredient_types_id": 4,
+     "oz_per_meal": 0.04,
+     "prep_notes": "16 crew: 20 g",
+     "_source": "Sugar, white",
+     "_total_oz": 0.7
+    },
+    {
+     "ingredient": "Salt",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.02,
+     "prep_notes": "16 crew: 10 g (~1.7 tsp)",
+     "_source": "Salt",
+     "_total_oz": 0.4
+    },
+    {
+     "ingredient": "Ground Black Pepper",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.01,
+     "prep_notes": "16 crew: 3 g (~1.3 tsp)",
+     "_source": "Black pepper, ground",
+     "_total_oz": 0.1
+    }
+   ],
+   "instructions": [
+    {
+     "step": 1,
+     "instructions": "Thaw 8 lb stew meat overnight in the fridge; cut into 1-inch pieces. Brown in batches with 0.5 lb diced onion.",
+     "duration": "20",
+     "expedition_galley_equipment_id": [
+      4,
+      7,
+      19
+     ]
+    },
+    {
+     "step": 2,
+     "instructions": "Add garlic, oregano, 1 jar pasta sauce, 2 cans diced tomatoes, a pinch of sugar and 2 cups water. Cover and simmer 1 hr 45 min (35 min in a pressure cooker) until the beef falls apart; break it up into the sauce with a fork.",
+     "duration": "2",
+     "expedition_galley_equipment_id": [
+      12,
+      8,
+      4,
+      7,
+      19
+     ]
+    },
+    {
+     "step": 3,
+     "instructions": "Boil 2.67 lb spaghetti 9–10 min; drain.",
+     "duration": "12",
+     "expedition_galley_equipment_id": [
+      12,
+      19,
+      18
+     ]
+    },
+    {
+     "step": 4,
+     "instructions": "Garlic carrots: slice 4 lb carrots into coins; boil 8–10 min until tender, drain, toss with margarine and a little garlic.",
+     "duration": "12",
+     "expedition_galley_equipment_id": [
+      12,
+      4,
+      7,
+      19,
+      18
+     ]
+    },
+    {
+     "step": 5,
+     "instructions": "6 oz spaghetti with beef ragu and ~4 oz carrots.",
+     "duration": "",
+     "expedition_galley_equipment_id": []
+    }
+   ]
+  },
+  {
+   "code": "D2",
+   "cookbook": {
+    "recipe_name": "BBQ Baked Chicken Leg Quarters, Boxed Mashed Potatoes, Corn & Carrots",
+    "recipe_photo": null,
+    "type": "Dinner",
+    "types": [
+     "Dinner"
+    ],
+    "summary": "WIT 7-week menu D2 · serves 16. Per person: protein Leg quarter 10 oz bone-in (~6.5 oz meat); starch Mashed potatoes ~6 oz; veg Corn 4.2 oz + carrots 3 oz. Prep 15 min, cook 60 min. Equipment: Roasting pans, oven, 2 pots. Est. cost $48.45 ($3.03 per person). Galley notes: Boxed mashed potatoes — no peeling, and the pouches keep for months.",
+    "duration_minutes": "75",
+    "expeditions_id": [
+     14
+    ]
+   },
+   "ingredients": [
+    {
+     "ingredient": "Chicken Leg Quarters",
+     "type": "Protein",
+     "expeditions_ingredient_types_id": 1,
+     "oz_per_meal": 10.0,
+     "prep_notes": "16 crew: 10 lb · Prep: Leave whole, skin on (bag label D2)",
+     "_source": "Chicken leg quarters, bone-in",
+     "_total_oz": 160.0
+    },
+    {
+     "ingredient": "Mashed Potatoes (instant)",
+     "type": "Starch",
+     "expeditions_ingredient_types_id": 2,
+     "oz_per_meal": 1.5,
+     "prep_notes": "16 crew: 6 pouch",
+     "_source": "Instant mashed potatoes 113 g",
+     "_total_oz": 23.9
+    },
+    {
+     "ingredient": "Margarine",
+     "type": "Dairy",
+     "expeditions_ingredient_types_id": 7,
+     "oz_per_meal": 0.44,
+     "prep_notes": "16 crew: 200 g",
+     "_source": "Margarine",
+     "_total_oz": 7.1
+    },
+    {
+     "ingredient": "Milk (long-life)",
+     "type": "Dairy",
+     "expeditions_ingredient_types_id": 7,
+     "oz_per_meal": 1.06,
+     "prep_notes": "16 crew: 500 mL (~2.1 cups)",
+     "_source": "Long-life milk 1 L",
+     "_total_oz": 16.9
+    },
+    {
+     "ingredient": "Canned Corn",
+     "type": "Veg",
+     "expeditions_ingredient_types_id": 3,
+     "oz_per_meal": 6.61,
+     "prep_notes": "16 crew: 1 can",
+     "_source": "Whole kernel corn, canned 3 kg",
+     "_total_oz": 105.8
+    },
+    {
+     "ingredient": "Carrot",
+     "type": "Veg",
+     "expeditions_ingredient_types_id": 3,
+     "oz_per_meal": 3.0,
+     "prep_notes": "16 crew: 3 lb",
+     "_source": "Carrots",
+     "_total_oz": 48.0
+    },
+    {
+     "ingredient": "BBQ Sauce",
+     "type": "Dry Goods",
+     "expeditions_ingredient_types_id": 4,
+     "oz_per_meal": 2.2,
+     "prep_notes": "16 crew: 1 kg",
+     "_source": "BBQ sauce",
+     "_total_oz": 35.3
+    },
+    {
+     "ingredient": "Paprika",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.01,
+     "prep_notes": "16 crew: 5 g (~2.1 tsp)",
+     "_source": "Paprika",
+     "_total_oz": 0.2
+    },
+    {
+     "ingredient": "Garlic Powder",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.01,
+     "prep_notes": "16 crew: 5 g (~1.7 tsp)",
+     "_source": "Garlic, granulated",
+     "_total_oz": 0.2
+    },
+    {
+     "ingredient": "Salt",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.02,
+     "prep_notes": "16 crew: 8 g (~1.3 tsp)",
+     "_source": "Salt",
+     "_total_oz": 0.3
+    },
+    {
+     "ingredient": "Ground Black Pepper",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.01,
+     "prep_notes": "16 crew: 3 g (~1.3 tsp)",
+     "_source": "Black pepper, ground",
+     "_total_oz": 0.1
+    }
+   ],
+   "instructions": [
+    {
+     "step": 1,
+     "instructions": "Heat oven to 400°F. Season 10 lb leg quarters with paprika, granulated garlic, salt and pepper.",
+     "duration": "5",
+     "expedition_galley_equipment_id": [
+      9
+     ]
+    },
+    {
+     "step": 2,
+     "instructions": "Roast 40 min.",
+     "duration": "40",
+     "expedition_galley_equipment_id": [
+      9
+     ]
+    },
+    {
+     "step": 3,
+     "instructions": "Brush with 1 kg BBQ sauce; roast 15 min more to 175°F.",
+     "duration": "15",
+     "expedition_galley_equipment_id": [
+      9
+     ]
+    },
+    {
+     "step": 4,
+     "instructions": "Boxed mashed potatoes: bring water (per pouch, ~2 cups each), 1/4 cup margarine and the milk to a boil; stir in 6 pouches, rest 2 min.",
+     "duration": "10",
+     "expedition_galley_equipment_id": [
+      12,
+      19,
+      22
+     ]
+    },
+    {
+     "step": 5,
+     "instructions": "Slice 3 lb carrots; boil 8–10 min. Heat 1 can drained corn. Toss both with margarine.",
+     "duration": "12",
+     "expedition_galley_equipment_id": [
+      12,
+      4,
+      7,
+      19,
+      18
+     ]
+    },
+    {
+     "step": 6,
+     "instructions": "1 leg quarter, ~6 oz mashed potatoes, corn & carrots.",
+     "duration": "",
+     "expedition_galley_equipment_id": []
+    }
+   ]
+  },
+  {
+   "code": "D3",
+   "cookbook": {
+    "recipe_name": "Caribbean Stew Chicken, Rice & Peas, Stewed Carrots",
+    "recipe_photo": null,
+    "type": "Dinner",
+    "types": [
+     "Dinner"
+    ],
+    "summary": "WIT 7-week menu D3 · serves 16. Per person: protein Leg quarter 10 oz bone-in (~6.5 oz meat); starch Rice & peas 6 oz cooked; veg Carrots 3 oz + onion 1 oz + tomato 1.8 oz + peas & carrots 1.2 oz. Prep 20 min, cook 60 min. Equipment: Heavy pot or Dutch oven, rice pot. Est. cost $34.01 ($2.13 per person). Galley notes: Browning gives colour fast if a sugar caramel feels risky in a seaway.",
+    "duration_minutes": "80",
+    "expeditions_id": [
+     14
+    ]
+   },
+   "ingredients": [
+    {
+     "ingredient": "Chicken Leg Quarters",
+     "type": "Protein",
+     "expeditions_ingredient_types_id": 1,
+     "oz_per_meal": 10.0,
+     "prep_notes": "16 crew: 10 lb · Prep: Split at the joint into thigh + drumstick, skin off (bag label D3)",
+     "_source": "Chicken leg quarters, bone-in",
+     "_total_oz": 160.0
+    },
+    {
+     "ingredient": "Rice",
+     "type": "Starch",
+     "expeditions_ingredient_types_id": 2,
+     "oz_per_meal": 2.0,
+     "prep_notes": "16 crew: 2 lb",
+     "_source": "Rice, white (dry)",
+     "_total_oz": 32.0
+    },
+    {
+     "ingredient": "Pigeon Peas (canned)",
+     "type": "Veg",
+     "expeditions_ingredient_types_id": 3,
+     "oz_per_meal": 1.76,
+     "prep_notes": "16 crew: 2 can",
+     "_source": "Pigeon peas, canned 400 g",
+     "_total_oz": 28.2
+    },
+    {
+     "ingredient": "Carrot",
+     "type": "Veg",
+     "expeditions_ingredient_types_id": 3,
+     "oz_per_meal": 3.0,
+     "prep_notes": "16 crew: 3 lb",
+     "_source": "Carrots",
+     "_total_oz": 48.0
+    },
+    {
+     "ingredient": "Onion",
+     "type": "Veg",
+     "expeditions_ingredient_types_id": 3,
+     "oz_per_meal": 1.0,
+     "prep_notes": "16 crew: 1 lb",
+     "_source": "Onions, yellow",
+     "_total_oz": 16.0
+    },
+    {
+     "ingredient": "Canned Peas & Carrots",
+     "type": "Veg",
+     "expeditions_ingredient_types_id": 3,
+     "oz_per_meal": 1.88,
+     "prep_notes": "16 crew: 2 can",
+     "_source": "Peas & carrots, canned 425 g",
+     "_total_oz": 30.0
+    },
+    {
+     "ingredient": "Canned Tomatoes (diced)",
+     "type": "Veg",
+     "expeditions_ingredient_types_id": 3,
+     "oz_per_meal": 1.81,
+     "prep_notes": "16 crew: 2 can",
+     "_source": "Diced tomatoes, canned 411 g",
+     "_total_oz": 29.0
+    },
+    {
+     "ingredient": "Green Seasoning",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.13,
+     "prep_notes": "16 crew: 60 g (~4.0 tbsp)",
+     "_source": "Green seasoning",
+     "_total_oz": 2.1
+    },
+    {
+     "ingredient": "Browning",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.08,
+     "prep_notes": "16 crew: 40 mL (~0.2 cups)",
+     "_source": "Browning",
+     "_total_oz": 1.4
+    },
+    {
+     "ingredient": "Sugar",
+     "type": "Dry Goods",
+     "expeditions_ingredient_types_id": 4,
+     "oz_per_meal": 0.11,
+     "prep_notes": "16 crew: 50 g",
+     "_source": "Sugar, white",
+     "_total_oz": 1.8
+    },
+    {
+     "ingredient": "Vegetable Oil",
+     "type": "Dry Goods",
+     "expeditions_ingredient_types_id": 4,
+     "oz_per_meal": 0.42,
+     "prep_notes": "16 crew: 200 mL (~0.8 cups)",
+     "_source": "Vegetable (soybean) oil",
+     "_total_oz": 6.8
+    },
+    {
+     "ingredient": "Minced Garlic",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.1,
+     "prep_notes": "16 crew: 45 g (~3 tbsp)",
+     "_source": "Minced garlic",
+     "_total_oz": 1.6
+    },
+    {
+     "ingredient": "Chicken Bouillon Cubes",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.04,
+     "prep_notes": "16 crew: 4 ea",
+     "_source": "Chicken bouillon cubes",
+     "_total_oz": 0.6
+    },
+    {
+     "ingredient": "Salt",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.02,
+     "prep_notes": "16 crew: 10 g (~1.7 tsp)",
+     "_source": "Salt",
+     "_total_oz": 0.4
+    },
+    {
+     "ingredient": "Ground Black Pepper",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.01,
+     "prep_notes": "16 crew: 3 g (~1.3 tsp)",
+     "_source": "Black pepper, ground",
+     "_total_oz": 0.1
+    }
+   ],
+   "instructions": [
+    {
+     "step": 1,
+     "instructions": "Cut leg quarters into pieces. Season with green seasoning, garlic, salt and pepper (overnight if possible).",
+     "duration": "10",
+     "expedition_galley_equipment_id": [
+      4,
+      7
+     ]
+    },
+    {
+     "step": 2,
+     "instructions": "Heat oil and 2 tbsp sugar until dark caramel, add browning, then brown the chicken in batches.",
+     "duration": "8",
+     "expedition_galley_equipment_id": [
+      19
+     ]
+    },
+    {
+     "step": 3,
+     "instructions": "Add 1 lb sliced onions, 2 cans diced tomatoes, 4 bouillon cubes and 2 cups water. Cover and simmer 35 min.",
+     "duration": "35",
+     "expedition_galley_equipment_id": [
+      12,
+      8,
+      4,
+      7,
+      19
+     ]
+    },
+    {
+     "step": 4,
+     "instructions": "Rice & peas: cook 2 lb rice with 2 cans drained pigeon peas, a little green seasoning, salt and water 1:1.75.",
+     "duration": "25",
+     "expedition_galley_equipment_id": [
+      12,
+      19,
+      18
+     ]
+    },
+    {
+     "step": 5,
+     "instructions": "Stewed carrots: add 3 lb sliced carrots for the last 15 min, and 2 cans drained peas & carrots for the last 5 min.",
+     "duration": "15",
+     "expedition_galley_equipment_id": [
+      4,
+      7,
+      18
+     ]
+    },
+    {
+     "step": 6,
+     "instructions": "Stew chicken over rice & peas with gravy and vegetables.",
+     "duration": "",
+     "expedition_galley_equipment_id": []
+    }
+   ]
+  },
+  {
+   "code": "D4",
+   "cookbook": {
+    "recipe_name": "Beef Tips in Onion Gravy, White Rice, Peas & Carrots",
+    "recipe_photo": null,
+    "type": "Dinner",
+    "types": [
+     "Dinner"
+    ],
+    "summary": "WIT 7-week menu D4 · serves 16. Per person: protein Beef tips 8 oz (stew meat); starch Rice 6 oz cooked; veg Green peas 3 oz + carrots 3 oz + onion 1 oz. Prep 25 min, cook 50 min. Equipment: Heavy pot or pressure cooker, pot, rice pot. Est. cost $62.31 ($3.89 per person). Galley notes: Move the stew meat to the fridge the night before so it is thawed by dinner.",
+    "duration_minutes": "75",
+    "expeditions_id": [
+     14
+    ]
+   },
+   "ingredients": [
+    {
+     "ingredient": "Beef Stew Meat",
+     "type": "Protein",
+     "expeditions_ingredient_types_id": 1,
+     "oz_per_meal": 8.0,
+     "prep_notes": "16 crew: 3.63 kg (8 lb) · Prep: 1.5\" chunks (fine to leave as is if about this size) (bag label D4)",
+     "_source": "Beef stew meat, boneless",
+     "_total_oz": 128.0
+    },
+    {
+     "ingredient": "Rice",
+     "type": "Starch",
+     "expeditions_ingredient_types_id": 2,
+     "oz_per_meal": 2.0,
+     "prep_notes": "16 crew: 2 lb",
+     "_source": "Rice, white (dry)",
+     "_total_oz": 32.0
+    },
+    {
+     "ingredient": "Green Peas (frozen)",
+     "type": "Frozen",
+     "expeditions_ingredient_types_id": 6,
+     "oz_per_meal": 3.0,
+     "prep_notes": "16 crew: 3 lb",
+     "_source": "Frozen green peas",
+     "_total_oz": 48.0
+    },
+    {
+     "ingredient": "Carrot",
+     "type": "Veg",
+     "expeditions_ingredient_types_id": 3,
+     "oz_per_meal": 3.0,
+     "prep_notes": "16 crew: 3 lb",
+     "_source": "Carrots",
+     "_total_oz": 48.0
+    },
+    {
+     "ingredient": "Onion",
+     "type": "Veg",
+     "expeditions_ingredient_types_id": 3,
+     "oz_per_meal": 1.0,
+     "prep_notes": "16 crew: 1 lb",
+     "_source": "Onions, yellow",
+     "_total_oz": 16.0
+    },
+    {
+     "ingredient": "Flour",
+     "type": "Dry Goods",
+     "expeditions_ingredient_types_id": 4,
+     "oz_per_meal": 0.33,
+     "prep_notes": "16 crew: 150 g",
+     "_source": "All-purpose flour",
+     "_total_oz": 5.3
+    },
+    {
+     "ingredient": "Margarine",
+     "type": "Dairy",
+     "expeditions_ingredient_types_id": 7,
+     "oz_per_meal": 0.44,
+     "prep_notes": "16 crew: 200 g",
+     "_source": "Margarine",
+     "_total_oz": 7.1
+    },
+    {
+     "ingredient": "Chicken Bouillon Cubes",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.05,
+     "prep_notes": "16 crew: 6 ea",
+     "_source": "Chicken bouillon cubes",
+     "_total_oz": 0.8
+    },
+    {
+     "ingredient": "Browning",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.04,
+     "prep_notes": "16 crew: 20 mL (~0.1 cups)",
+     "_source": "Browning",
+     "_total_oz": 0.7
+    },
+    {
+     "ingredient": "Minced Garlic",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.1,
+     "prep_notes": "16 crew: 45 g (~3 tbsp)",
+     "_source": "Minced garlic",
+     "_total_oz": 1.6
+    },
+    {
+     "ingredient": "Salt",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.02,
+     "prep_notes": "16 crew: 8 g (~1.3 tsp)",
+     "_source": "Salt",
+     "_total_oz": 0.3
+    },
+    {
+     "ingredient": "Ground Black Pepper",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.01,
+     "prep_notes": "16 crew: 3 g (~1.3 tsp)",
+     "_source": "Black pepper, ground",
+     "_total_oz": 0.1
+    }
+   ],
+   "instructions": [
+    {
+     "step": 1,
+     "instructions": "Thaw 8 lb stew meat overnight in the fridge. Season with garlic, salt and pepper; brown in batches in the heavy pot and set aside.",
+     "duration": "20",
+     "expedition_galley_equipment_id": [
+      12,
+      19
+     ]
+    },
+    {
+     "step": 2,
+     "instructions": "Onion gravy in the same pot: cook 1 lb sliced onions in margarine until golden; stir in 1 cup flour, then 6 bouillon cubes dissolved in 8 cups hot water and a splash of browning. Return the beef, cover and simmer 1 hr 30 min (30 min in a pressure cooker) until tender.",
+     "duration": "30",
+     "expedition_galley_equipment_id": [
+      12,
+      8,
+      4,
+      7,
+      19,
+      22
+     ]
+    },
+    {
+     "step": 3,
+     "instructions": "Skim off fat; season the gravy with salt and pepper and thin with hot water if too thick.",
+     "duration": "5",
+     "expedition_galley_equipment_id": []
+    },
+    {
+     "step": 4,
+     "instructions": "Cook 2 lb rice.",
+     "duration": "20",
+     "expedition_galley_equipment_id": [
+      12,
+      19
+     ]
+    },
+    {
+     "step": 5,
+     "instructions": "Boil 3 lb sliced carrots 8 min, add 3 lb frozen peas for 2 min; drain and toss with margarine.",
+     "duration": "10",
+     "expedition_galley_equipment_id": [
+      12,
+      4,
+      7,
+      19,
+      18
+     ]
+    },
+    {
+     "step": 6,
+     "instructions": "8 oz beef tips with gravy, 6 oz rice, peas & carrots.",
+     "duration": "",
+     "expedition_galley_equipment_id": []
+    }
+   ]
+  },
+  {
+   "code": "D5",
+   "cookbook": {
+    "recipe_name": "Chicken Alfredo Penne with Broccoli",
+    "recipe_photo": null,
+    "type": "Dinner",
+    "types": [
+     "Dinner"
+    ],
+    "summary": "WIT 7-week menu D5 · serves 16. Per person: protein Leg quarter 10 oz bone-in (~6.5 oz meat), pulled; starch Penne 6 oz cooked; veg Broccoli 6 oz. Prep 15 min, cook 60 min. Equipment: Roasting pans, large pot, large pan. Est. cost $60.68 ($3.79 per person). Galley notes: Using pulled leg-quarter meat instead of breast keeps the budget under $6,000.",
+    "duration_minutes": "75",
+    "expeditions_id": [
+     14
+    ]
+   },
+   "ingredients": [
+    {
+     "ingredient": "Chicken Leg Quarters",
+     "type": "Protein",
+     "expeditions_ingredient_types_id": 1,
+     "oz_per_meal": 10.0,
+     "prep_notes": "16 crew: 10 lb · Prep: Debone + skin off, 1\" dice (bag label D5)",
+     "_source": "Chicken leg quarters, bone-in",
+     "_total_oz": 160.0
+    },
+    {
+     "ingredient": "Penne Pasta",
+     "type": "Starch",
+     "expeditions_ingredient_types_id": 2,
+     "oz_per_meal": 2.67,
+     "prep_notes": "16 crew: 2.67 lb",
+     "_source": "Penne (dry)",
+     "_total_oz": 42.7
+    },
+    {
+     "ingredient": "Alfredo Sauce",
+     "type": "Dry Goods",
+     "expeditions_ingredient_types_id": 4,
+     "oz_per_meal": 2.81,
+     "prep_notes": "16 crew: 3 jar",
+     "_source": "Alfredo sauce 425 g",
+     "_total_oz": 45.0
+    },
+    {
+     "ingredient": "Milk (long-life)",
+     "type": "Dairy",
+     "expeditions_ingredient_types_id": 7,
+     "oz_per_meal": 2.11,
+     "prep_notes": "16 crew: 1 L",
+     "_source": "Long-life milk 1 L",
+     "_total_oz": 33.8
+    },
+    {
+     "ingredient": "Margarine",
+     "type": "Dairy",
+     "expeditions_ingredient_types_id": 7,
+     "oz_per_meal": 0.33,
+     "prep_notes": "16 crew: 150 g",
+     "_source": "Margarine",
+     "_total_oz": 5.3
+    },
+    {
+     "ingredient": "Flour",
+     "type": "Dry Goods",
+     "expeditions_ingredient_types_id": 4,
+     "oz_per_meal": 0.22,
+     "prep_notes": "16 crew: 100 g",
+     "_source": "All-purpose flour",
+     "_total_oz": 3.5
+    },
+    {
+     "ingredient": "Broccoli (frozen)",
+     "type": "Frozen",
+     "expeditions_ingredient_types_id": 6,
+     "oz_per_meal": 6.0,
+     "prep_notes": "16 crew: 6 lb",
+     "_source": "Frozen broccoli florets",
+     "_total_oz": 96.0
+    },
+    {
+     "ingredient": "Minced Garlic",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.1,
+     "prep_notes": "16 crew: 45 g (~3 tbsp)",
+     "_source": "Minced garlic",
+     "_total_oz": 1.6
+    },
+    {
+     "ingredient": "Garlic Powder",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.01,
+     "prep_notes": "16 crew: 5 g (~1.7 tsp)",
+     "_source": "Garlic, granulated",
+     "_total_oz": 0.2
+    },
+    {
+     "ingredient": "Salt",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.02,
+     "prep_notes": "16 crew: 8 g (~1.3 tsp)",
+     "_source": "Salt",
+     "_total_oz": 0.3
+    },
+    {
+     "ingredient": "Ground Black Pepper",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.01,
+     "prep_notes": "16 crew: 3 g (~1.3 tsp)",
+     "_source": "Black pepper, ground",
+     "_total_oz": 0.1
+    }
+   ],
+   "instructions": [
+    {
+     "step": 1,
+     "instructions": "Roast 10 lb leg quarters at 400°F with granulated garlic, salt and pepper. Pull the meat into bite-size pieces.",
+     "duration": "45",
+     "expedition_galley_equipment_id": [
+      9,
+      6
+     ]
+    },
+    {
+     "step": 2,
+     "instructions": "Boil 2.67 lb penne in salted water; drain.",
+     "duration": "12",
+     "expedition_galley_equipment_id": [
+      12,
+      19,
+      18
+     ]
+    },
+    {
+     "step": 3,
+     "instructions": "Sauce: melt margarine, add garlic, whisk in 1/4 cup flour, then 4 cups milk; simmer until thick. Stir in 3 jars Alfredo sauce.",
+     "duration": "8",
+     "expedition_galley_equipment_id": [
+      12,
+      21,
+      19,
+      22
+     ]
+    },
+    {
+     "step": 4,
+     "instructions": "Steam or boil 6 lb frozen broccoli 4–5 min; drain.",
+     "duration": "8",
+     "expedition_galley_equipment_id": [
+      12,
+      19,
+      18
+     ]
+    },
+    {
+     "step": 5,
+     "instructions": "Toss penne, chicken and sauce.",
+     "duration": "3",
+     "expedition_galley_equipment_id": []
+    },
+    {
+     "step": 6,
+     "instructions": "Serve 6 oz penne with chicken and ~6 oz broccoli on the side or tossed in.",
+     "duration": "",
+     "expedition_galley_equipment_id": [
+      14
+     ]
+    }
+   ]
+  },
+  {
+   "code": "D6",
+   "cookbook": {
+    "recipe_name": "Braised Beef Shepherd's Pie (boxed mashed potato topping)",
+    "recipe_photo": null,
+    "type": "Dinner",
+    "types": [
+     "Dinner"
+    ],
+    "summary": "WIT 7-week menu D6 · serves 16. Per person: protein Braised beef stew meat 8 oz; starch Mashed potato topping ~6 oz; veg Peas & carrots 3.6 oz + carrots 1 oz + onion 1 oz + corn 1.3 oz. Prep 25 min, cook 30 min. Equipment: Heavy pot or pressure cooker, deep hotel pans, oven, pot. Est. cost $76.26 ($4.77 per person). Galley notes: Boxed mashed potatoes make the topping in 5 minutes.",
+    "duration_minutes": "55",
+    "expeditions_id": [
+     14
+    ]
+   },
+   "ingredients": [
+    {
+     "ingredient": "Beef Stew Meat",
+     "type": "Protein",
+     "expeditions_ingredient_types_id": 1,
+     "oz_per_meal": 8.0,
+     "prep_notes": "16 crew: 3.63 kg (8 lb) · Prep: 1/2\" dice (may need to cut large chunks smaller) (bag label D6)",
+     "_source": "Beef stew meat, boneless",
+     "_total_oz": 128.0
+    },
+    {
+     "ingredient": "Mashed Potatoes (instant)",
+     "type": "Starch",
+     "expeditions_ingredient_types_id": 2,
+     "oz_per_meal": 1.5,
+     "prep_notes": "16 crew: 6 pouch",
+     "_source": "Instant mashed potatoes 113 g",
+     "_total_oz": 23.9
+    },
+    {
+     "ingredient": "Margarine",
+     "type": "Dairy",
+     "expeditions_ingredient_types_id": 7,
+     "oz_per_meal": 0.55,
+     "prep_notes": "16 crew: 250 g",
+     "_source": "Margarine",
+     "_total_oz": 8.8
+    },
+    {
+     "ingredient": "Milk (long-life)",
+     "type": "Dairy",
+     "expeditions_ingredient_types_id": 7,
+     "oz_per_meal": 1.06,
+     "prep_notes": "16 crew: 500 mL (~2.1 cups)",
+     "_source": "Long-life milk 1 L",
+     "_total_oz": 16.9
+    },
+    {
+     "ingredient": "Canned Peas & Carrots",
+     "type": "Veg",
+     "expeditions_ingredient_types_id": 3,
+     "oz_per_meal": 5.62,
+     "prep_notes": "16 crew: 6 can",
+     "_source": "Peas & carrots, canned 425 g",
+     "_total_oz": 90.0
+    },
+    {
+     "ingredient": "Carrot",
+     "type": "Veg",
+     "expeditions_ingredient_types_id": 3,
+     "oz_per_meal": 1.0,
+     "prep_notes": "16 crew: 1 lb",
+     "_source": "Carrots",
+     "_total_oz": 16.0
+    },
+    {
+     "ingredient": "Onion",
+     "type": "Veg",
+     "expeditions_ingredient_types_id": 3,
+     "oz_per_meal": 1.0,
+     "prep_notes": "16 crew: 1 lb",
+     "_source": "Onions, yellow",
+     "_total_oz": 16.0
+    },
+    {
+     "ingredient": "Canned Corn",
+     "type": "Veg",
+     "expeditions_ingredient_types_id": 3,
+     "oz_per_meal": 1.98,
+     "prep_notes": "16 crew: 0.3 can",
+     "_source": "Whole kernel corn, canned 3 kg",
+     "_total_oz": 31.7
+    },
+    {
+     "ingredient": "Flour",
+     "type": "Dry Goods",
+     "expeditions_ingredient_types_id": 4,
+     "oz_per_meal": 0.22,
+     "prep_notes": "16 crew: 100 g",
+     "_source": "All-purpose flour",
+     "_total_oz": 3.5
+    },
+    {
+     "ingredient": "Chicken Bouillon Cubes",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.04,
+     "prep_notes": "16 crew: 4 ea",
+     "_source": "Chicken bouillon cubes",
+     "_total_oz": 0.6
+    },
+    {
+     "ingredient": "Browning",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.03,
+     "prep_notes": "16 crew: 15 mL (~0.1 cups)",
+     "_source": "Browning",
+     "_total_oz": 0.5
+    },
+    {
+     "ingredient": "Cheddar Cheese (shredded)",
+     "type": "Dairy",
+     "expeditions_ingredient_types_id": 7,
+     "oz_per_meal": 0.5,
+     "prep_notes": "16 crew: 0.5 lb",
+     "_source": "Cheddar cheese, shredded",
+     "_total_oz": 8.0
+    },
+    {
+     "ingredient": "Salt",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.02,
+     "prep_notes": "16 crew: 8 g (~1.3 tsp)",
+     "_source": "Salt",
+     "_total_oz": 0.3
+    },
+    {
+     "ingredient": "Ground Black Pepper",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.01,
+     "prep_notes": "16 crew: 3 g (~1.3 tsp)",
+     "_source": "Black pepper, ground",
+     "_total_oz": 0.1
+    }
+   ],
+   "instructions": [
+    {
+     "step": 1,
+     "instructions": "Thaw 8 lb stew meat overnight in the fridge; cut into 1/2-inch pieces. Brown in batches with 1 lb diced onions and 1 lb diced carrots.",
+     "duration": "20",
+     "expedition_galley_equipment_id": [
+      4,
+      7,
+      19
+     ]
+    },
+    {
+     "step": 2,
+     "instructions": "Stir in 1/2 cup flour, 4 bouillon cubes dissolved in 5 cups water and a splash of browning. Cover and simmer 1 hr 30 min (30 min in a pressure cooker) until the beef is tender and the gravy is thick.",
+     "duration": "30",
+     "expedition_galley_equipment_id": [
+      12,
+      8,
+      19,
+      22
+     ]
+    },
+    {
+     "step": 3,
+     "instructions": "Fold in 6 cans drained peas & carrots and a third of a can of drained corn. Spread in pans.",
+     "duration": "3",
+     "expedition_galley_equipment_id": [
+      10,
+      18
+     ]
+    },
+    {
+     "step": 4,
+     "instructions": "Prepare 6 pouches boxed mashed potatoes with margarine and milk; spread over the filling; top with cheddar.",
+     "duration": "10",
+     "expedition_galley_equipment_id": []
+    },
+    {
+     "step": 5,
+     "instructions": "Bake at 400°F 20–25 min.",
+     "duration": "25",
+     "expedition_galley_equipment_id": [
+      9
+     ]
+    },
+    {
+     "step": 6,
+     "instructions": "Cut into 16 portions.",
+     "duration": "",
+     "expedition_galley_equipment_id": [
+      4,
+      7,
+      14
+     ]
+    }
+   ]
+  },
+  {
+   "code": "D7",
+   "cookbook": {
+    "recipe_name": "Curry Chicken (bone-in) over Rice with Vegetables",
+    "recipe_photo": null,
+    "type": "Dinner",
+    "types": [
+     "Dinner"
+    ],
+    "summary": "WIT 7-week menu D7 · serves 16. Per person: protein Leg quarter 10 oz bone-in (~6.5 oz meat); starch Rice 6 oz cooked; veg Mixed veg 3.5 oz + carrots 1 oz + onion 1 oz + tomato 0.9 oz. Prep 20 min, cook 60 min. Equipment: Heavy pot, rice pot. Est. cost $35.45 ($2.22 per person). Galley notes: Frying the curry powder first is the key to good flavour.",
+    "duration_minutes": "80",
+    "expeditions_id": [
+     14
+    ]
+   },
+   "ingredients": [
+    {
+     "ingredient": "Chicken Leg Quarters",
+     "type": "Protein",
+     "expeditions_ingredient_types_id": 1,
+     "oz_per_meal": 10.0,
+     "prep_notes": "16 crew: 10 lb · Prep: Split at the joint into thigh + drumstick, skin off (bag label D7)",
+     "_source": "Chicken leg quarters, bone-in",
+     "_total_oz": 160.0
+    },
+    {
+     "ingredient": "Rice",
+     "type": "Starch",
+     "expeditions_ingredient_types_id": 2,
+     "oz_per_meal": 2.0,
+     "prep_notes": "16 crew: 2 lb",
+     "_source": "Rice, white (dry)",
+     "_total_oz": 32.0
+    },
+    {
+     "ingredient": "Vegetable Mix (frozen)",
+     "type": "Frozen",
+     "expeditions_ingredient_types_id": 6,
+     "oz_per_meal": 3.5,
+     "prep_notes": "16 crew: 3.5 lb",
+     "_source": "Frozen mixed vegetables",
+     "_total_oz": 56.0
+    },
+    {
+     "ingredient": "Carrot",
+     "type": "Veg",
+     "expeditions_ingredient_types_id": 3,
+     "oz_per_meal": 1.0,
+     "prep_notes": "16 crew: 1 lb",
+     "_source": "Carrots",
+     "_total_oz": 16.0
+    },
+    {
+     "ingredient": "Onion",
+     "type": "Veg",
+     "expeditions_ingredient_types_id": 3,
+     "oz_per_meal": 1.0,
+     "prep_notes": "16 crew: 1 lb",
+     "_source": "Onions, yellow",
+     "_total_oz": 16.0
+    },
+    {
+     "ingredient": "Canned Tomatoes (diced)",
+     "type": "Veg",
+     "expeditions_ingredient_types_id": 3,
+     "oz_per_meal": 0.91,
+     "prep_notes": "16 crew: 1 can",
+     "_source": "Diced tomatoes, canned 411 g",
+     "_total_oz": 14.5
+    },
+    {
+     "ingredient": "Curry Powder",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.13,
+     "prep_notes": "16 crew: 60 g (~8.6 tbsp)",
+     "_source": "Curry powder",
+     "_total_oz": 2.1
+    },
+    {
+     "ingredient": "Green Seasoning",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.13,
+     "prep_notes": "16 crew: 60 g (~4.0 tbsp)",
+     "_source": "Green seasoning",
+     "_total_oz": 2.1
+    },
+    {
+     "ingredient": "Vegetable Oil",
+     "type": "Dry Goods",
+     "expeditions_ingredient_types_id": 4,
+     "oz_per_meal": 0.42,
+     "prep_notes": "16 crew: 200 mL (~0.8 cups)",
+     "_source": "Vegetable (soybean) oil",
+     "_total_oz": 6.8
+    },
+    {
+     "ingredient": "Minced Garlic",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.1,
+     "prep_notes": "16 crew: 45 g (~3 tbsp)",
+     "_source": "Minced garlic",
+     "_total_oz": 1.6
+    },
+    {
+     "ingredient": "Chicken Bouillon Cubes",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.04,
+     "prep_notes": "16 crew: 4 ea",
+     "_source": "Chicken bouillon cubes",
+     "_total_oz": 0.6
+    },
+    {
+     "ingredient": "Salt",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.02,
+     "prep_notes": "16 crew: 10 g (~1.7 tsp)",
+     "_source": "Salt",
+     "_total_oz": 0.4
+    }
+   ],
+   "instructions": [
+    {
+     "step": 1,
+     "instructions": "Cut leg quarters into pieces. Season with green seasoning, garlic and salt.",
+     "duration": "10",
+     "expedition_galley_equipment_id": [
+      4,
+      7
+     ]
+    },
+    {
+     "step": 2,
+     "instructions": "Heat oil; fry 1 lb sliced onions 3 min, then 1/2 cup curry powder mixed with a little water 1–2 min.",
+     "duration": "5",
+     "expedition_galley_equipment_id": [
+      4,
+      7,
+      19
+     ]
+    },
+    {
+     "step": 3,
+     "instructions": "Add chicken and turn to coat; cook 5–8 min.",
+     "duration": "10",
+     "expedition_galley_equipment_id": []
+    },
+    {
+     "step": 4,
+     "instructions": "Add 1 lb sliced carrots, 1 can diced tomatoes, 4 bouillon cubes and 3 cups water; cover and simmer 35 min.",
+     "duration": "35",
+     "expedition_galley_equipment_id": [
+      12,
+      8,
+      4,
+      7,
+      19
+     ]
+    },
+    {
+     "step": 5,
+     "instructions": "Add 3.5 lb frozen mixed vegetables; simmer 5–8 min.",
+     "duration": "8",
+     "expedition_galley_equipment_id": [
+      12,
+      19
+     ]
+    },
+    {
+     "step": 6,
+     "instructions": "Cook 2 lb rice.",
+     "duration": "20",
+     "expedition_galley_equipment_id": [
+      12,
+      19
+     ]
+    },
+    {
+     "step": 7,
+     "instructions": "Curry over 6 oz rice.",
+     "duration": "",
+     "expedition_galley_equipment_id": []
+    }
+   ]
+  },
+  {
+   "code": "D8",
+   "cookbook": {
+    "recipe_name": "Baked Chicken & Rice (Arroz con Pollo) with Coleslaw",
+    "recipe_photo": null,
+    "type": "Dinner",
+    "types": [
+     "Dinner"
+    ],
+    "summary": "WIT 7-week menu D8 · serves 16. Per person: protein Leg quarter 10 oz bone-in (~6.5 oz meat); starch Rice 6 oz cooked; veg Peppers 1.25 oz + onion 1 oz + tomato 0.9 oz + slaw (cabbage 2.5 oz + carrots 2.5 oz). Prep 20 min, cook 70 min. Equipment: Hotel pans, oven, foil, big bowl, grater. Est. cost $34.07 ($2.13 per person). Galley notes: One-pan main — less washing up.",
+    "duration_minutes": "90",
+    "expeditions_id": [
+     14
+    ]
+   },
+   "ingredients": [
+    {
+     "ingredient": "Chicken Leg Quarters",
+     "type": "Protein",
+     "expeditions_ingredient_types_id": 1,
+     "oz_per_meal": 10.0,
+     "prep_notes": "16 crew: 10 lb · Prep: Split at the joint into thigh + drumstick, skin on (bag label D8)",
+     "_source": "Chicken leg quarters, bone-in",
+     "_total_oz": 160.0
+    },
+    {
+     "ingredient": "Rice",
+     "type": "Starch",
+     "expeditions_ingredient_types_id": 2,
+     "oz_per_meal": 2.0,
+     "prep_notes": "16 crew: 2 lb",
+     "_source": "Rice, white (dry)",
+     "_total_oz": 32.0
+    },
+    {
+     "ingredient": "Bell Pepper",
+     "type": "Veg",
+     "expeditions_ingredient_types_id": 3,
+     "oz_per_meal": 1.25,
+     "prep_notes": "16 crew: 1.25 lb",
+     "_source": "Bell peppers",
+     "_total_oz": 20.0
+    },
+    {
+     "ingredient": "Onion",
+     "type": "Veg",
+     "expeditions_ingredient_types_id": 3,
+     "oz_per_meal": 1.0,
+     "prep_notes": "16 crew: 1 lb",
+     "_source": "Onions, yellow",
+     "_total_oz": 16.0
+    },
+    {
+     "ingredient": "Canned Tomatoes (diced)",
+     "type": "Veg",
+     "expeditions_ingredient_types_id": 3,
+     "oz_per_meal": 0.91,
+     "prep_notes": "16 crew: 1 can",
+     "_source": "Diced tomatoes, canned 411 g",
+     "_total_oz": 14.5
+    },
+    {
+     "ingredient": "Cabbage",
+     "type": "Veg",
+     "expeditions_ingredient_types_id": 3,
+     "oz_per_meal": 2.5,
+     "prep_notes": "16 crew: 2.5 lb",
+     "_source": "Green cabbage",
+     "_total_oz": 40.0
+    },
+    {
+     "ingredient": "Carrot",
+     "type": "Veg",
+     "expeditions_ingredient_types_id": 3,
+     "oz_per_meal": 2.5,
+     "prep_notes": "16 crew: 2.5 lb",
+     "_source": "Carrots",
+     "_total_oz": 40.0
+    },
+    {
+     "ingredient": "Mayo",
+     "type": "Dry Goods",
+     "expeditions_ingredient_types_id": 4,
+     "oz_per_meal": 0.63,
+     "prep_notes": "16 crew: 300 mL (~1.3 cups)",
+     "_source": "Mayonnaise",
+     "_total_oz": 10.1
+    },
+    {
+     "ingredient": "Sugar",
+     "type": "Dry Goods",
+     "expeditions_ingredient_types_id": 4,
+     "oz_per_meal": 0.07,
+     "prep_notes": "16 crew: 30 g",
+     "_source": "Sugar, white",
+     "_total_oz": 1.1
+    },
+    {
+     "ingredient": "Minced Garlic",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.1,
+     "prep_notes": "16 crew: 45 g (~3 tbsp)",
+     "_source": "Minced garlic",
+     "_total_oz": 1.6
+    },
+    {
+     "ingredient": "Paprika",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.02,
+     "prep_notes": "16 crew: 8 g (~1.1 tbsp)",
+     "_source": "Paprika",
+     "_total_oz": 0.3
+    },
+    {
+     "ingredient": "Complete Seasoning",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.03,
+     "prep_notes": "16 crew: 15 g (~1.9 tbsp)",
+     "_source": "All-purpose seasoning (taco/chili blend)",
+     "_total_oz": 0.5
+    },
+    {
+     "ingredient": "Chicken Bouillon Cubes",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.04,
+     "prep_notes": "16 crew: 4 ea",
+     "_source": "Chicken bouillon cubes",
+     "_total_oz": 0.6
+    },
+    {
+     "ingredient": "Vegetable Oil",
+     "type": "Dry Goods",
+     "expeditions_ingredient_types_id": 4,
+     "oz_per_meal": 0.21,
+     "prep_notes": "16 crew: 100 mL (~0.4 cups)",
+     "_source": "Vegetable (soybean) oil",
+     "_total_oz": 3.4
+    },
+    {
+     "ingredient": "Salt",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.02,
+     "prep_notes": "16 crew: 8 g (~1.3 tsp)",
+     "_source": "Salt",
+     "_total_oz": 0.3
+    }
+   ],
+   "instructions": [
+    {
+     "step": 1,
+     "instructions": "Season leg quarters with paprika, complete seasoning, garlic and salt; brown or roast at 425°F 20 min.",
+     "duration": "10",
+     "expedition_galley_equipment_id": [
+      9,
+      19
+     ]
+    },
+    {
+     "step": 2,
+     "instructions": "Dice 1.25 lb peppers and 1 lb onions.",
+     "duration": "8",
+     "expedition_galley_equipment_id": [
+      4,
+      7
+     ]
+    },
+    {
+     "step": 3,
+     "instructions": "In the pans mix 2 lb rice, peppers, onions, 1 can diced tomatoes and 4 bouillon cubes dissolved in 6 cups hot water.",
+     "duration": "10",
+     "expedition_galley_equipment_id": [
+      10,
+      4,
+      7
+     ]
+    },
+    {
+     "step": 4,
+     "instructions": "Nestle chicken on top, cover with foil and bake at 375°F 40–45 min.",
+     "duration": "45",
+     "expedition_galley_equipment_id": [
+      9
+     ]
+    },
+    {
+     "step": 5,
+     "instructions": "Coleslaw: shred 2.5 lb cabbage and grate 2.5 lb carrots; toss with mayo, 1 tbsp sugar, salt and pepper. Chill.",
+     "duration": "10",
+     "expedition_galley_equipment_id": [
+      3
+     ]
+    },
+    {
+     "step": 6,
+     "instructions": "1 leg quarter with 6 oz rice and coleslaw.",
+     "duration": "",
+     "expedition_galley_equipment_id": []
+    }
+   ]
+  },
+  {
+   "code": "D9",
+   "cookbook": {
+    "recipe_name": "Garlic Roast Chicken Legs, Roast Potatoes, Peas & Carrots",
+    "recipe_photo": null,
+    "type": "Dinner",
+    "types": [
+     "Dinner"
+    ],
+    "summary": "WIT 7-week menu D9 · serves 16. Per person: protein Leg quarter 10 oz bone-in (~6.5 oz meat); starch Roast potatoes 6 oz; veg Green peas 3 oz + carrots 3 oz. Prep 15 min, cook 60 min. Equipment: Roasting pans, sheet pans, oven, pot. Est. cost $34.09 ($2.13 per person). Galley notes: Roast the potatoes on the top rack alongside the chicken.",
+    "duration_minutes": "75",
+    "expeditions_id": [
+     14
+    ]
+   },
+   "ingredients": [
+    {
+     "ingredient": "Chicken Leg Quarters",
+     "type": "Protein",
+     "expeditions_ingredient_types_id": 1,
+     "oz_per_meal": 10.0,
+     "prep_notes": "16 crew: 10 lb · Prep: Leave whole, skin on (bag label D9)",
+     "_source": "Chicken leg quarters, bone-in",
+     "_total_oz": 160.0
+    },
+    {
+     "ingredient": "Potato",
+     "type": "Starch",
+     "expeditions_ingredient_types_id": 2,
+     "oz_per_meal": 7.0,
+     "prep_notes": "16 crew: 7 lb",
+     "_source": "Potatoes",
+     "_total_oz": 112.0
+    },
+    {
+     "ingredient": "Carrot",
+     "type": "Veg",
+     "expeditions_ingredient_types_id": 3,
+     "oz_per_meal": 3.0,
+     "prep_notes": "16 crew: 3 lb",
+     "_source": "Carrots",
+     "_total_oz": 48.0
+    },
+    {
+     "ingredient": "Green Peas (frozen)",
+     "type": "Frozen",
+     "expeditions_ingredient_types_id": 6,
+     "oz_per_meal": 3.0,
+     "prep_notes": "16 crew: 3 lb",
+     "_source": "Frozen green peas",
+     "_total_oz": 48.0
+    },
+    {
+     "ingredient": "Minced Garlic",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.2,
+     "prep_notes": "16 crew: 91 g (~6 tbsp)",
+     "_source": "Minced garlic",
+     "_total_oz": 3.2
+    },
+    {
+     "ingredient": "Vegetable Oil",
+     "type": "Dry Goods",
+     "expeditions_ingredient_types_id": 4,
+     "oz_per_meal": 0.63,
+     "prep_notes": "16 crew: 300 mL (~1.3 cups)",
+     "_source": "Vegetable (soybean) oil",
+     "_total_oz": 10.1
+    },
+    {
+     "ingredient": "Margarine",
+     "type": "Dairy",
+     "expeditions_ingredient_types_id": 7,
+     "oz_per_meal": 0.33,
+     "prep_notes": "16 crew: 150 g",
+     "_source": "Margarine",
+     "_total_oz": 5.3
+    },
+    {
+     "ingredient": "Garlic Powder",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.02,
+     "prep_notes": "16 crew: 8 g (~2.7 tsp)",
+     "_source": "Garlic, granulated",
+     "_total_oz": 0.3
+    },
+    {
+     "ingredient": "Paprika",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.01,
+     "prep_notes": "16 crew: 5 g (~2.1 tsp)",
+     "_source": "Paprika",
+     "_total_oz": 0.2
+    },
+    {
+     "ingredient": "Oregano",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.01,
+     "prep_notes": "16 crew: 3 g (~1.5 tbsp)",
+     "_source": "Oregano",
+     "_total_oz": 0.1
+    },
+    {
+     "ingredient": "Salt",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.02,
+     "prep_notes": "16 crew: 10 g (~1.7 tsp)",
+     "_source": "Salt",
+     "_total_oz": 0.4
+    },
+    {
+     "ingredient": "Ground Black Pepper",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.01,
+     "prep_notes": "16 crew: 4 g (~1.7 tsp)",
+     "_source": "Black pepper, ground",
+     "_total_oz": 0.1
+    }
+   ],
+   "instructions": [
+    {
+     "step": 1,
+     "instructions": "Mix minced garlic, oil, granulated garlic, paprika, oregano, salt and pepper; rub over 10 lb leg quarters.",
+     "duration": "5",
+     "expedition_galley_equipment_id": [
+      4,
+      7
+     ]
+    },
+    {
+     "step": 2,
+     "instructions": "Roast at 400°F 45–50 min to 175°F.",
+     "duration": "50",
+     "expedition_galley_equipment_id": [
+      9
+     ]
+    },
+    {
+     "step": 3,
+     "instructions": "Roast potatoes: cut 7 lb potatoes into chunks, toss with oil, salt and garlic; roast at 425°F 35–40 min, turning once.",
+     "duration": "40",
+     "expedition_galley_equipment_id": [
+      4,
+      7,
+      9,
+      20
+     ]
+    },
+    {
+     "step": 4,
+     "instructions": "Boil 3 lb sliced carrots 8 min, add 3 lb frozen peas 2 min; drain and toss with margarine.",
+     "duration": "10",
+     "expedition_galley_equipment_id": [
+      12,
+      4,
+      7,
+      19,
+      18
+     ]
+    },
+    {
+     "step": 5,
+     "instructions": "1 leg quarter, 6 oz roast potatoes, peas & carrots.",
+     "duration": "",
+     "expedition_galley_equipment_id": [
+      9
+     ]
+    }
+   ]
+  },
+  {
+   "code": "D10",
+   "cookbook": {
+    "recipe_name": "Baked Chicken & Pepper Penne",
+    "recipe_photo": null,
+    "type": "Dinner",
+    "types": [
+     "Dinner"
+    ],
+    "summary": "WIT 7-week menu D10 · serves 16. Per person: protein Leg quarter 10 oz bone-in (~6.5 oz meat), pulled; starch Penne 6 oz cooked; veg Peppers 2.5 oz + onion 1.5 oz + tomato 2.7 oz. Prep 20 min, cook 60 min. Equipment: Roasting pans, large pot, hotel pans, oven. Est. cost $41.25 ($2.58 per person). Galley notes: Pulled leg-quarter meat keeps the budget under $6,000.",
+    "duration_minutes": "80",
+    "expeditions_id": [
+     14
+    ]
+   },
+   "ingredients": [
+    {
+     "ingredient": "Chicken Leg Quarters",
+     "type": "Protein",
+     "expeditions_ingredient_types_id": 1,
+     "oz_per_meal": 10.0,
+     "prep_notes": "16 crew: 10 lb · Prep: Debone + skin off, 1\" dice (bag label D10)",
+     "_source": "Chicken leg quarters, bone-in",
+     "_total_oz": 160.0
+    },
+    {
+     "ingredient": "Penne Pasta",
+     "type": "Starch",
+     "expeditions_ingredient_types_id": 2,
+     "oz_per_meal": 2.67,
+     "prep_notes": "16 crew: 2.67 lb",
+     "_source": "Penne (dry)",
+     "_total_oz": 42.7
+    },
+    {
+     "ingredient": "Bell Pepper",
+     "type": "Veg",
+     "expeditions_ingredient_types_id": 3,
+     "oz_per_meal": 2.5,
+     "prep_notes": "16 crew: 2.5 lb",
+     "_source": "Bell peppers",
+     "_total_oz": 40.0
+    },
+    {
+     "ingredient": "Onion",
+     "type": "Veg",
+     "expeditions_ingredient_types_id": 3,
+     "oz_per_meal": 1.5,
+     "prep_notes": "16 crew: 1.5 lb",
+     "_source": "Onions, yellow",
+     "_total_oz": 24.0
+    },
+    {
+     "ingredient": "Canned Tomatoes (diced)",
+     "type": "Veg",
+     "expeditions_ingredient_types_id": 3,
+     "oz_per_meal": 2.72,
+     "prep_notes": "16 crew: 3 can",
+     "_source": "Diced tomatoes, canned 411 g",
+     "_total_oz": 43.5
+    },
+    {
+     "ingredient": "Pasta Sauce",
+     "type": "Dry Goods",
+     "expeditions_ingredient_types_id": 4,
+     "oz_per_meal": 1.41,
+     "prep_notes": "16 crew: 0.5 jar",
+     "_source": "Pasta sauce 1.28 kg",
+     "_total_oz": 22.6
+    },
+    {
+     "ingredient": "Mozzarella Cheese",
+     "type": "Dairy",
+     "expeditions_ingredient_types_id": 7,
+     "oz_per_meal": 1.0,
+     "prep_notes": "16 crew: 1 lb",
+     "_source": "Mozzarella cheese",
+     "_total_oz": 16.0
+    },
+    {
+     "ingredient": "Minced Garlic",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.1,
+     "prep_notes": "16 crew: 45 g (~3 tbsp)",
+     "_source": "Minced garlic",
+     "_total_oz": 1.6
+    },
+    {
+     "ingredient": "Oregano",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.01,
+     "prep_notes": "16 crew: 4 g (~2.0 tbsp)",
+     "_source": "Oregano",
+     "_total_oz": 0.1
+    },
+    {
+     "ingredient": "Salt",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.02,
+     "prep_notes": "16 crew: 8 g (~1.3 tsp)",
+     "_source": "Salt",
+     "_total_oz": 0.3
+    },
+    {
+     "ingredient": "Ground Black Pepper",
+     "type": "Seasoning",
+     "expeditions_ingredient_types_id": 5,
+     "oz_per_meal": 0.01,
+     "prep_notes": "16 crew: 3 g (~1.3 tsp)",
+     "_source": "Black pepper, ground",
+     "_total_oz": 0.1
+    }
+   ],
+   "instructions": [
+    {
+     "step": 1,
+     "instructions": "Roast 10 lb leg quarters at 400°F; pull the meat.",
+     "duration": "45",
+     "expedition_galley_equipment_id": [
+      9,
+      6
+     ]
+    },
+    {
+     "step": 2,
+     "instructions": "Boil 2.67 lb penne slightly underdone; drain.",
+     "duration": "12",
+     "expedition_galley_equipment_id": [
+      12,
+      19,
+      18
+     ]
+    },
+    {
+     "step": 3,
+     "instructions": "Sauté 2.5 lb sliced peppers and 1.5 lb onions with garlic and oregano; add 3 cans diced tomatoes and 1/2 jar pasta sauce; simmer 5 min.",
+     "duration": "10",
+     "expedition_galley_equipment_id": [
+      12,
+      13,
+      4,
+      7,
+      19
+     ]
+    },
+    {
+     "step": 4,
+     "instructions": "Mix pasta, chicken and sauce in pans; top with grated mozzarella.",
+     "duration": "3",
+     "expedition_galley_equipment_id": [
+      10
+     ]
+    },
+    {
+     "step": 5,
+     "instructions": "Bake at 375°F 20 min.",
+     "duration": "20",
+     "expedition_galley_equipment_id": [
+      9
+     ]
+    },
+    {
+     "step": 6,
+     "instructions": "~2 cups per person.",
+     "duration": "",
+     "expedition_galley_equipment_id": []
+    }
+   ]
+  }
+ ],
+ "menu": {
+  "anchor_monday": "2026-10-26",
+  "from_date": "2026-10-30",
+  "days": [
+   {
+    "date": "2026-10-26",
+    "weekday": "Mon",
+    "schedule_id": 393,
+    "week": 1,
+    "meals": {
+     "B": {
+      "code": "B1",
+      "action": "skip-past",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "L": {
+      "code": "L1",
+      "action": "skip-past",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "D": {
+      "code": "D1",
+      "action": "skip-past",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     }
+    }
+   },
+   {
+    "date": "2026-10-27",
+    "weekday": "Tue",
+    "schedule_id": 394,
+    "week": 1,
+    "meals": {
+     "B": {
+      "code": "B2",
+      "action": "skip-past",
+      "item_id": 3100,
+      "current_cookbook_id": 5,
+      "duplicates": []
+     },
+     "L": {
+      "code": "L2",
+      "action": "skip-past",
+      "item_id": 3111,
+      "current_cookbook_id": 39,
+      "duplicates": []
+     },
+     "D": {
+      "code": "D2",
+      "action": "skip-past",
+      "item_id": 3108,
+      "current_cookbook_id": 10,
+      "duplicates": []
+     }
+    }
+   },
+   {
+    "date": "2026-10-28",
+    "weekday": "Wed",
+    "schedule_id": 395,
+    "week": 1,
+    "meals": {
+     "B": {
+      "code": "B3",
+      "action": "skip-past",
+      "item_id": 3124,
+      "current_cookbook_id": 3,
+      "duplicates": []
+     },
+     "L": {
+      "code": "L3",
+      "action": "skip-past",
+      "item_id": 3135,
+      "current_cookbook_id": 23,
+      "duplicates": []
+     },
+     "D": {
+      "code": "D3",
+      "action": "skip-past",
+      "item_id": 3132,
+      "current_cookbook_id": 20,
+      "duplicates": []
+     }
+    }
+   },
+   {
+    "date": "2026-10-29",
+    "weekday": "Thu",
+    "schedule_id": 396,
+    "week": 1,
+    "meals": {
+     "B": {
+      "code": "B4",
+      "action": "skip-past",
+      "item_id": 3168,
+      "current_cookbook_id": 7,
+      "duplicates": []
+     },
+     "L": {
+      "code": "L4",
+      "action": "skip-past",
+      "item_id": 3179,
+      "current_cookbook_id": 28,
+      "duplicates": []
+     },
+     "D": {
+      "code": "D4",
+      "action": "skip-past",
+      "item_id": 3176,
+      "current_cookbook_id": 14,
+      "duplicates": []
+     }
+    }
+   },
+   {
+    "date": "2026-10-30",
+    "weekday": "Fri",
+    "schedule_id": 397,
+    "week": 1,
+    "meals": {
+     "B": {
+      "code": "B5",
+      "action": "keep-existing",
+      "item_id": 3190,
+      "current_cookbook_id": 6,
+      "duplicates": []
+     },
+     "L": {
+      "code": "L5",
+      "action": "keep-existing",
+      "item_id": 3201,
+      "current_cookbook_id": 30,
+      "duplicates": []
+     },
+     "D": {
+      "code": "D5",
+      "action": "keep-existing",
+      "item_id": 3198,
+      "current_cookbook_id": 21,
+      "duplicates": []
+     }
+    }
+   },
+   {
+    "date": "2026-10-31",
+    "weekday": "Sat",
+    "schedule_id": 398,
+    "week": 1,
+    "meals": {
+     "B": {
+      "code": "B6",
+      "action": "keep-existing",
+      "item_id": 3146,
+      "current_cookbook_id": 5,
+      "duplicates": []
+     },
+     "L": {
+      "code": "L6",
+      "action": "keep-existing",
+      "item_id": 3221,
+      "current_cookbook_id": 37,
+      "duplicates": []
+     },
+     "D": {
+      "code": "D6",
+      "action": "keep-existing",
+      "item_id": 3154,
+      "current_cookbook_id": 15,
+      "duplicates": []
+     }
+    }
+   },
+   {
+    "date": "2026-11-01",
+    "weekday": "Sun",
+    "schedule_id": 399,
+    "week": 1,
+    "meals": {
+     "B": {
+      "code": "B7",
+      "action": "set",
+      "item_id": 3289,
+      "current_cookbook_id": 0,
+      "duplicates": []
+     },
+     "L": {
+      "code": "L7",
+      "action": "set",
+      "item_id": 3290,
+      "current_cookbook_id": 0,
+      "duplicates": []
+     },
+     "D": {
+      "code": "D7",
+      "action": "set",
+      "item_id": 3291,
+      "current_cookbook_id": 0,
+      "duplicates": []
+     }
+    }
+   },
+   {
+    "date": "2026-11-02",
+    "weekday": "Mon",
+    "schedule_id": 400,
+    "week": 2,
+    "meals": {
+     "B": {
+      "code": "B1",
+      "action": "set",
+      "item_id": 3243,
+      "current_cookbook_id": 0,
+      "duplicates": []
+     },
+     "L": {
+      "code": "L8",
+      "action": "set",
+      "item_id": 3254,
+      "current_cookbook_id": 0,
+      "duplicates": []
+     },
+     "D": {
+      "code": "D9",
+      "action": "set",
+      "item_id": 3298,
+      "current_cookbook_id": 0,
+      "duplicates": []
+     }
+    }
+   },
+   {
+    "date": "2026-11-03",
+    "weekday": "Tue",
+    "schedule_id": 401,
+    "week": 2,
+    "meals": {
+     "B": {
+      "code": "B2",
+      "action": "set",
+      "item_id": 3265,
+      "current_cookbook_id": 0,
+      "duplicates": []
+     },
+     "L": {
+      "code": "L9",
+      "action": "set",
+      "item_id": 3276,
+      "current_cookbook_id": 0,
+      "duplicates": []
+     },
+     "D": {
+      "code": "D10",
+      "action": "set",
+      "item_id": 3273,
+      "current_cookbook_id": 0,
+      "duplicates": []
+     }
+    }
+   },
+   {
+    "date": "2026-11-04",
+    "weekday": "Wed",
+    "schedule_id": 402,
+    "week": 2,
+    "meals": {
+     "B": {
+      "code": "B3",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "L": {
+      "code": "L10",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "D": {
+      "code": "D8",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     }
+    }
+   },
+   {
+    "date": "2026-11-05",
+    "weekday": "Thu",
+    "schedule_id": 403,
+    "week": 2,
+    "meals": {
+     "B": {
+      "code": "B4",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "L": {
+      "code": "L1",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "D": {
+      "code": "D1",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     }
+    }
+   },
+   {
+    "date": "2026-11-06",
+    "weekday": "Fri",
+    "schedule_id": 404,
+    "week": 2,
+    "meals": {
+     "B": {
+      "code": "B5",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "L": {
+      "code": "L2",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "D": {
+      "code": "D2",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     }
+    }
+   },
+   {
+    "date": "2026-11-07",
+    "weekday": "Sat",
+    "schedule_id": 405,
+    "week": 2,
+    "meals": {
+     "B": {
+      "code": "B6",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "L": {
+      "code": "L3",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "D": {
+      "code": "D3",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     }
+    }
+   },
+   {
+    "date": "2026-11-08",
+    "weekday": "Sun",
+    "schedule_id": 406,
+    "week": 2,
+    "meals": {
+     "B": {
+      "code": "B7",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "L": {
+      "code": "L4",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "D": {
+      "code": "D4",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     }
+    }
+   },
+   {
+    "date": "2026-11-09",
+    "weekday": "Mon",
+    "schedule_id": 407,
+    "week": 3,
+    "meals": {
+     "B": {
+      "code": "B1",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "L": {
+      "code": "L5",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "D": {
+      "code": "D5",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     }
+    }
+   },
+   {
+    "date": "2026-11-10",
+    "weekday": "Tue",
+    "schedule_id": 408,
+    "week": 3,
+    "meals": {
+     "B": {
+      "code": "B2",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "L": {
+      "code": "L6",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "D": {
+      "code": "D6",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     }
+    }
+   },
+   {
+    "date": "2026-11-11",
+    "weekday": "Wed",
+    "schedule_id": 409,
+    "week": 3,
+    "meals": {
+     "B": {
+      "code": "B3",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "L": {
+      "code": "L7",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "D": {
+      "code": "D7",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     }
+    }
+   },
+   {
+    "date": "2026-11-12",
+    "weekday": "Thu",
+    "schedule_id": 410,
+    "week": 3,
+    "meals": {
+     "B": {
+      "code": "B4",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "L": {
+      "code": "L8",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "D": {
+      "code": "D9",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     }
+    }
+   },
+   {
+    "date": "2026-11-13",
+    "weekday": "Fri",
+    "schedule_id": 411,
+    "week": 3,
+    "meals": {
+     "B": {
+      "code": "B5",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "L": {
+      "code": "L9",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "D": {
+      "code": "D10",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     }
+    }
+   },
+   {
+    "date": "2026-11-14",
+    "weekday": "Sat",
+    "schedule_id": 412,
+    "week": 3,
+    "meals": {
+     "B": {
+      "code": "B6",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "L": {
+      "code": "L10",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "D": {
+      "code": "D8",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     }
+    }
+   },
+   {
+    "date": "2026-11-15",
+    "weekday": "Sun",
+    "schedule_id": 413,
+    "week": 3,
+    "meals": {
+     "B": {
+      "code": "B7",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "L": {
+      "code": "L1",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "D": {
+      "code": "D1",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     }
+    }
+   },
+   {
+    "date": "2026-11-16",
+    "weekday": "Mon",
+    "schedule_id": 414,
+    "week": 4,
+    "meals": {
+     "B": {
+      "code": "B1",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "L": {
+      "code": "L2",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "D": {
+      "code": "D2",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     }
+    }
+   },
+   {
+    "date": "2026-11-17",
+    "weekday": "Tue",
+    "schedule_id": 415,
+    "week": 4,
+    "meals": {
+     "B": {
+      "code": "B2",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "L": {
+      "code": "L3",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "D": {
+      "code": "D3",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     }
+    }
+   },
+   {
+    "date": "2026-11-18",
+    "weekday": "Wed",
+    "schedule_id": 416,
+    "week": 4,
+    "meals": {
+     "B": {
+      "code": "B3",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "L": {
+      "code": "L4",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "D": {
+      "code": "D4",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     }
+    }
+   },
+   {
+    "date": "2026-11-19",
+    "weekday": "Thu",
+    "schedule_id": 417,
+    "week": 4,
+    "meals": {
+     "B": {
+      "code": "B4",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "L": {
+      "code": "L5",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "D": {
+      "code": "D5",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     }
+    }
+   },
+   {
+    "date": "2026-11-20",
+    "weekday": "Fri",
+    "schedule_id": 418,
+    "week": 4,
+    "meals": {
+     "B": {
+      "code": "B5",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "L": {
+      "code": "L6",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "D": {
+      "code": "D6",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     }
+    }
+   },
+   {
+    "date": "2026-11-21",
+    "weekday": "Sat",
+    "schedule_id": 419,
+    "week": 4,
+    "meals": {
+     "B": {
+      "code": "B6",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "L": {
+      "code": "L7",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "D": {
+      "code": "D7",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     }
+    }
+   },
+   {
+    "date": "2026-11-22",
+    "weekday": "Sun",
+    "schedule_id": 420,
+    "week": 4,
+    "meals": {
+     "B": {
+      "code": "B7",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "L": {
+      "code": "L8",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "D": {
+      "code": "D9",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     }
+    }
+   },
+   {
+    "date": "2026-11-23",
+    "weekday": "Mon",
+    "schedule_id": 421,
+    "week": 5,
+    "meals": {
+     "B": {
+      "code": "B1",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "L": {
+      "code": "L9",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "D": {
+      "code": "D10",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     }
+    }
+   },
+   {
+    "date": "2026-11-24",
+    "weekday": "Tue",
+    "schedule_id": 422,
+    "week": 5,
+    "meals": {
+     "B": {
+      "code": "B2",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "L": {
+      "code": "L10",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "D": {
+      "code": "D8",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     }
+    }
+   },
+   {
+    "date": "2026-11-25",
+    "weekday": "Wed",
+    "schedule_id": 423,
+    "week": 5,
+    "meals": {
+     "B": {
+      "code": "B3",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "L": {
+      "code": "L1",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "D": {
+      "code": "D1",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     }
+    }
+   },
+   {
+    "date": "2026-11-26",
+    "weekday": "Thu",
+    "schedule_id": 424,
+    "week": 5,
+    "meals": {
+     "B": {
+      "code": "B4",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "L": {
+      "code": "L2",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "D": {
+      "code": "D2",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     }
+    }
+   },
+   {
+    "date": "2026-11-27",
+    "weekday": "Fri",
+    "schedule_id": 425,
+    "week": 5,
+    "meals": {
+     "B": {
+      "code": "B5",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "L": {
+      "code": "L3",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "D": {
+      "code": "D3",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     }
+    }
+   },
+   {
+    "date": "2026-11-28",
+    "weekday": "Sat",
+    "schedule_id": 426,
+    "week": 5,
+    "meals": {
+     "B": {
+      "code": "B6",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "L": {
+      "code": "L4",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "D": {
+      "code": "D4",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     }
+    }
+   },
+   {
+    "date": "2026-11-29",
+    "weekday": "Sun",
+    "schedule_id": 427,
+    "week": 5,
+    "meals": {
+     "B": {
+      "code": "B7",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "L": {
+      "code": "L5",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "D": {
+      "code": "D5",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     }
+    }
+   },
+   {
+    "date": "2026-11-30",
+    "weekday": "Mon",
+    "schedule_id": 428,
+    "week": 6,
+    "meals": {
+     "B": {
+      "code": "B1",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "L": {
+      "code": "L6",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "D": {
+      "code": "D6",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     }
+    }
+   },
+   {
+    "date": "2026-12-01",
+    "weekday": "Tue",
+    "schedule_id": 429,
+    "week": 6,
+    "meals": {
+     "B": {
+      "code": "B2",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "L": {
+      "code": "L7",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "D": {
+      "code": "D7",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     }
+    }
+   },
+   {
+    "date": "2026-12-02",
+    "weekday": "Wed",
+    "schedule_id": 430,
+    "week": 6,
+    "meals": {
+     "B": {
+      "code": "B3",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "L": {
+      "code": "L8",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "D": {
+      "code": "D9",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     }
+    }
+   },
+   {
+    "date": "2026-12-03",
+    "weekday": "Thu",
+    "schedule_id": 431,
+    "week": 6,
+    "meals": {
+     "B": {
+      "code": "B4",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "L": {
+      "code": "L9",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "D": {
+      "code": "D10",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     }
+    }
+   },
+   {
+    "date": "2026-12-04",
+    "weekday": "Fri",
+    "schedule_id": 432,
+    "week": 6,
+    "meals": {
+     "B": {
+      "code": "B5",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "L": {
+      "code": "L10",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "D": {
+      "code": "D8",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     }
+    }
+   },
+   {
+    "date": "2026-12-05",
+    "weekday": "Sat",
+    "schedule_id": 433,
+    "week": 6,
+    "meals": {
+     "B": {
+      "code": "B6",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "L": {
+      "code": "L1",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "D": {
+      "code": "D1",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     }
+    }
+   },
+   {
+    "date": "2026-12-06",
+    "weekday": "Sun",
+    "schedule_id": 434,
+    "week": 6,
+    "meals": {
+     "B": {
+      "code": "B7",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "L": {
+      "code": "L2",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "D": {
+      "code": "D2",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     }
+    }
+   },
+   {
+    "date": "2026-12-07",
+    "weekday": "Mon",
+    "schedule_id": 435,
+    "week": 7,
+    "meals": {
+     "B": {
+      "code": "B1",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "L": {
+      "code": "L3",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "D": {
+      "code": "D3",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     }
+    }
+   },
+   {
+    "date": "2026-12-08",
+    "weekday": "Tue",
+    "schedule_id": 436,
+    "week": 7,
+    "meals": {
+     "B": {
+      "code": "B2",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "L": {
+      "code": "L4",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "D": {
+      "code": "D4",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     }
+    }
+   },
+   {
+    "date": "2026-12-09",
+    "weekday": "Wed",
+    "schedule_id": 437,
+    "week": 7,
+    "meals": {
+     "B": {
+      "code": "B3",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "L": {
+      "code": "L5",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "D": {
+      "code": "D5",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     }
+    }
+   },
+   {
+    "date": "2026-12-10",
+    "weekday": "Thu",
+    "schedule_id": 438,
+    "week": 7,
+    "meals": {
+     "B": {
+      "code": "B4",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "L": {
+      "code": "L6",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "D": {
+      "code": "D6",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     }
+    }
+   },
+   {
+    "date": "2026-12-11",
+    "weekday": "Fri",
+    "schedule_id": 439,
+    "week": 7,
+    "meals": {
+     "B": {
+      "code": "B5",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "L": {
+      "code": "L7",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     },
+     "D": {
+      "code": "D7",
+      "action": "create",
+      "item_id": null,
+      "current_cookbook_id": null,
+      "duplicates": []
+     }
+    }
+   }
+  ]
+ },
+ "warnings": [],
+ "fixes": [
+  "L1 step 1: '12 lb leg quarters' -> '10 lb leg quarters'",
+  "L2 step 1: '12 lb leg quarters' -> '10 lb leg quarters'",
+  "L4 step 1: '12 lb leg quarters' -> '10 lb leg quarters'",
+  "L6 step 1: '12 lb leg quarters' -> '10 lb leg quarters'",
+  "L7 step 2: '12 lb leg quarters' -> '10 lb leg quarters'",
+  "L10 step 1: '12 lb leg quarters' -> '10 lb leg quarters'",
+  "D2 step 1: '12 lb leg quarters' -> '10 lb leg quarters'",
+  "D5 step 1: '12 lb leg quarters' -> '10 lb leg quarters'",
+  "D9 step 1: '12 lb leg quarters' -> '10 lb leg quarters'",
+  "D10 step 1: '12 lb leg quarters' -> '10 lb leg quarters'"
+ ]
+}

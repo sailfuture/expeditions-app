@@ -50,3 +50,6 @@ coverage
 *.seed
 *.pid.lock
 
+
+# Claude Code session files and worktrees (contain build output and .env.local)
+.claude/

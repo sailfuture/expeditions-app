@@ -47,7 +47,8 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
-import { ChevronLeft, ChevronRight, ExternalLink, Calendar, Plus, X, Pencil, Trash2, Clock, Wrench, ClipboardList, ChevronsUpDown, Check, CircleDot } from "lucide-react"
+import { ChevronLeft, ChevronRight, ExternalLink, Calendar, Plus, X, Pencil, Trash2, Clock, Wrench, ClipboardList, ChevronsUpDown, Check, CircleDot, Eye } from "lucide-react"
+import { RecipeThumb } from "@/components/recipe-thumb"
 import {
   Command,
   CommandEmpty,
@@ -68,6 +69,15 @@ import { toast } from "sonner"
 import { Spinner } from "@/components/ui/spinner"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { ExpeditionCalendar } from "@/components/expedition-calendar"
+
+/** "1h 20m" / "45m" from a cookbook duration_minutes value, or null when blank or zero. */
+function formatDuration(minutes: string | number | null | undefined): string | null {
+  const total = parseInt(String(minutes ?? ""), 10)
+  if (!total || total <= 0) return null
+  const h = Math.floor(total / 60)
+  const m = total % 60
+  return h > 0 ? (m > 0 ? `${h}h ${m}m` : `${h}h`) : `${m}m`
+}
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -275,9 +285,13 @@ function MealPlanSheet({ open, onOpenChange, recipe, loading, recipeId }: {
               {/* Recipe Header */}
               <div className="flex flex-col sm:flex-row gap-4">
                 {getPhotoUrl(recipe.recipe_photo) && (
-                  <div className="w-full sm:w-40 h-40 rounded-xl overflow-hidden bg-gray-100 shrink-0">
-                    <img src={getPhotoUrl(recipe.recipe_photo)!} alt={recipe.recipe_name} className="object-cover w-full h-full" />
-                  </div>
+                  <RecipeThumb
+                    photo={recipe.recipe_photo}
+                    name={recipe.recipe_name}
+                    size={320}
+                    fill
+                    className="w-full sm:w-40 h-40 rounded-xl"
+                  />
                 )}
                 <div className="flex-1">
                   <div className="flex flex-wrap items-center gap-2 mb-2">
@@ -1217,37 +1231,22 @@ function PlannerPageContent() {
                             <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 px-1">
                               {mealType}
                             </p>
-                            {mealItem ? (
-                              <Popover>
-                                <PopoverTrigger asChild>
-                                  <Button
-                                    variant="outline"
-                                    role="combobox"
-                                    disabled={isUpdating}
-                                    className={cn(
-                                      "w-full h-9 justify-between font-normal cursor-pointer text-sm",
-                                      isUpdating && "opacity-50"
-                                    )}
-                                  >
-                                    {isUpdating ? (
-                                      <>
-                                        <Spinner size="sm" className="h-3.5 w-3.5 mr-1.5" />
-                                        <span className="truncate text-muted-foreground">Updating...</span>
-                                      </>
-                                    ) : (
-                                      <>
-                                        <span className="truncate max-w-[calc(100%-20px)]">
-                                          {selectedRecipeName || "Assign meal..."}
-                                        </span>
-                                        <ChevronsUpDown className="ml-1 h-3 w-3 shrink-0 opacity-50" />
-                                      </>
-                                    )}
-                                  </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-[300px] p-0" align="start">
+                            {mealItem ? (() => {
+                              // The recipe shown on the card: the cookbook row when loaded, else what the
+                              // schedule item already carries, else a stub for a bare id.
+                              const slotRecipe = effectiveCookbookId > 0
+                                ? (recipesForType.find((r: any) => r.id === effectiveCookbookId)
+                                  || allCookbookRecipes.find((r: any) => r.id === effectiveCookbookId)
+                                  || mealItem._expedition_cookbook
+                                  || { id: effectiveCookbookId, recipe_name: selectedRecipeName || "Meal Plan", recipe_photo: null })
+                                : null
+                              const slotDuration = formatDuration(slotRecipe?.duration_minutes)
+
+                              const picker = (
+                                <PopoverContent className="w-[320px] p-0" align="start">
                                   <Command>
-                                    <CommandInput placeholder="Search recipes..." className="h-10" />
-                                    <CommandList className="max-h-[250px]">
+                                    <CommandInput placeholder={`Search ${mealType.toLowerCase()} recipes...`} className="h-10" />
+                                    <CommandList className="max-h-[300px]">
                                       <CommandEmpty>No recipes found.</CommandEmpty>
                                       <CommandGroup>
                                         <CommandItem
@@ -1261,28 +1260,95 @@ function PlannerPageContent() {
                                             : <Check className={cn("mr-2 h-4 w-4", effectiveCookbookId === 0 ? "opacity-100" : "opacity-0")} />}
                                           None
                                         </CommandItem>
-                                        {recipesForType.map((recipe: any) => (
-                                          <CommandItem
-                                            key={recipe.id}
-                                            value={recipe.recipe_name}
-                                            onSelect={() => handleMealPlanChange(mealItem.id, recipe.id, dateStrings[index])}
-                                            className="text-sm cursor-pointer"
-                                            disabled={isUpdating}
-                                          >
-                                            {isUpdating && updatingMealPlan?.cookbookId === recipe.id
-                                              ? <Spinner size="sm" className="mr-2 h-4 w-4" />
-                                              : effectiveCookbookId === recipe.id
-                                                ? <Check className="mr-2 h-4 w-4" />
-                                                : <CircleDot className="mr-2 h-4 w-4 text-gray-300" />}
-                                            <span className="truncate">{recipe.recipe_name}</span>
-                                          </CommandItem>
-                                        ))}
+                                        {recipesForType.map((recipe: any) => {
+                                          const duration = formatDuration(recipe.duration_minutes)
+                                          return (
+                                            <CommandItem
+                                              key={recipe.id}
+                                              value={recipe.recipe_name}
+                                              onSelect={() => handleMealPlanChange(mealItem.id, recipe.id, dateStrings[index])}
+                                              className="cursor-pointer gap-2.5 py-1.5"
+                                              disabled={isUpdating}
+                                            >
+                                              <RecipeThumb photo={recipe.recipe_photo} name={recipe.recipe_name} size={28} className="rounded-md" />
+                                              <div className="min-w-0 flex-1">
+                                                <p className="truncate text-sm text-gray-900">{recipe.recipe_name}</p>
+                                                {duration && <p className="text-[11px] leading-tight text-gray-400">{duration}</p>}
+                                              </div>
+                                              {isUpdating && updatingMealPlan?.cookbookId === recipe.id
+                                                ? <Spinner size="sm" className="h-4 w-4 shrink-0" />
+                                                : effectiveCookbookId === recipe.id
+                                                  ? <Check className="h-4 w-4 shrink-0 text-green-600" />
+                                                  : null}
+                                            </CommandItem>
+                                          )
+                                        })}
                                       </CommandGroup>
                                     </CommandList>
                                   </Command>
                                 </PopoverContent>
-                              </Popover>
-                            ) : (
+                              )
+
+                              if (!slotRecipe) {
+                                return (
+                                  <Popover>
+                                    <PopoverTrigger asChild>
+                                      <button
+                                        type="button"
+                                        disabled={isUpdating}
+                                        className="flex w-full cursor-pointer items-center gap-2 rounded-lg border border-dashed border-gray-300 px-2.5 py-2.5 text-left text-sm text-gray-500 transition-colors hover:border-gray-400 hover:bg-gray-50 disabled:cursor-default"
+                                      >
+                                        {isUpdating ? <Spinner size="sm" className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
+                                        <span>{isUpdating ? "Updating..." : `Assign ${mealType.toLowerCase()}`}</span>
+                                      </button>
+                                    </PopoverTrigger>
+                                    {picker}
+                                  </Popover>
+                                )
+                              }
+
+                              return (
+                                <div className={cn(
+                                  "flex items-stretch overflow-hidden rounded-lg border border-gray-200 bg-white transition-opacity",
+                                  isUpdating && "opacity-60"
+                                )}>
+                                  <button
+                                    type="button"
+                                    title="View recipe"
+                                    onClick={() => { setSelectedRecipeId(slotRecipe.id); setMealPlanSheetOpen(true) }}
+                                    className="flex min-w-0 flex-1 cursor-pointer items-center gap-2.5 p-2 text-left transition-colors hover:bg-gray-50"
+                                  >
+                                    <RecipeThumb photo={slotRecipe.recipe_photo} name={slotRecipe.recipe_name} size={44} className="rounded-md" />
+                                    <div className="min-w-0 flex-1">
+                                      <p className="line-clamp-2 text-sm font-medium leading-snug text-gray-900">{slotRecipe.recipe_name}</p>
+                                      <p className="mt-0.5 flex items-center gap-1 text-[11px] text-gray-500">
+                                        {isUpdating ? (
+                                          <><Spinner size="sm" className="h-3 w-3" /> Updating...</>
+                                        ) : slotDuration ? (
+                                          <><Clock className="h-3 w-3" /> {slotDuration}</>
+                                        ) : (
+                                          <><Eye className="h-3 w-3" /> View recipe</>
+                                        )}
+                                      </p>
+                                    </div>
+                                  </button>
+                                  <Popover>
+                                    <PopoverTrigger asChild>
+                                      <button
+                                        type="button"
+                                        disabled={isUpdating}
+                                        aria-label={`Change ${mealType.toLowerCase()} recipe`}
+                                        title="Change recipe"
+                                        className="flex w-8 shrink-0 cursor-pointer items-center justify-center border-l border-gray-100 text-gray-400 transition-colors hover:bg-gray-50 hover:text-gray-700 disabled:cursor-default"
+                                      >
+                                        <ChevronsUpDown className="h-3.5 w-3.5" />
+                                      </button>
+                                    </PopoverTrigger>
+                                    {picker}
+                                  </Popover>
+                                </div>
+                              )
+                            })() : (
                               <div className="h-9 rounded-md border border-dashed border-gray-200 flex items-center justify-center">
                                 <span className="text-[10px] text-gray-300">No {mealType.toLowerCase()} slot</span>
                               </div>
@@ -1708,10 +1774,7 @@ function PlannerPageContent() {
                             {isMealType(item) && (
                               <div className="flex items-center gap-1 mt-0.5">
                                 {getPhotoUrl(item._expedition_cookbook?.recipe_photo) && (
-                                  <Avatar className="h-3.5 w-3.5">
-                                    <AvatarImage src={getPhotoUrl(item._expedition_cookbook.recipe_photo)!} alt={item._expedition_cookbook.recipe_name} />
-                                    <AvatarFallback className="text-[6px] bg-orange-100 text-orange-600">🍽</AvatarFallback>
-                                  </Avatar>
+                                  <RecipeThumb photo={item._expedition_cookbook.recipe_photo} name={item._expedition_cookbook.recipe_name} size={14} className="rounded-full" />
                                 )}
                                 <p className={`text-[10px] truncate ${
                                   item._expedition_cookbook?.recipe_name || item.expedition_cookbook_id > 0
@@ -1882,10 +1945,7 @@ function PlannerPageContent() {
                     className="flex items-center gap-2 w-full text-left p-2 -m-2 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
                   >
                     {getPhotoUrl(selectedItem._expedition_cookbook?.recipe_photo) && (
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={getPhotoUrl(selectedItem._expedition_cookbook.recipe_photo)!} alt={selectedItem._expedition_cookbook.recipe_name} />
-                        <AvatarFallback className="text-xs bg-orange-100 text-orange-600">🍽</AvatarFallback>
-                      </Avatar>
+                      <RecipeThumb photo={selectedItem._expedition_cookbook.recipe_photo} name={selectedItem._expedition_cookbook.recipe_name} size={32} className="rounded-full" />
                     )}
                     <span className="text-sm font-medium text-gray-900">
                       {selectedItem._expedition_cookbook?.recipe_name || `Meal Plan #${selectedItem.expedition_cookbook_id}`}

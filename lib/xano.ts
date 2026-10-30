@@ -506,11 +506,8 @@ export async function updateStudent(id: number, data: any) {
 
 // ============ Dish Days Management ============
 export async function getExpeditionDishDays(expeditionsId?: number) {
-  if (expeditionsId) {
-    const allDishDays = await xanoFetch<any[]>("/expedition_dish_days")
-    return allDishDays.filter((d: any) => d.expeditions_id === expeditionsId)
-  }
-  return xanoFetch<any[]>("/expedition_dish_days")
+  // Xano filters by expedition when the id is given (it used to return every expedition's rows).
+  return xanoFetch<any[]>(expeditionsId ? `/expedition_dish_days?expeditions_id=${expeditionsId}` : "/expedition_dish_days")
 }
 
 export async function updateExpeditionDishDay(id: number, data: {

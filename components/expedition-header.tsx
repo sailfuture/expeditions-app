@@ -194,6 +194,10 @@ export function ExpeditionHeader({ expedition, isLoading = false, currentPage = 
                   <Button key={page} asChild variant={isActive ? "default" : "ghost"} size="sm" className={className}>
                     <Link
                       href={href(expedition.id, defaultDate)}
+                      // Eleven tabs each prefetch several route segments the moment the header
+                      // renders (about fifty requests per page). With prefetch off, Next still
+                      // prefetches the one tab the pointer hovers over.
+                      prefetch={false}
                       aria-current={isActive ? "page" : undefined}
                       title={PAGE_TITLES[page]}
                     >

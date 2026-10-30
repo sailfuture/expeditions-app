@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
-import { google } from "googleapis"
+// The per-API package: the all-in-one googleapis package put ~200MB of unused API clients into
+// the server bundle and slowed every cold start.
+import { auth as googleAuth, drive as googleDrive } from "@googleapis/drive"
 import { Readable } from "stream"
 
 import { XANO_DIRECT_URL as XANO_BASE_URL, xanoKeyHeaders } from "@/lib/xano-config"
@@ -12,7 +14,7 @@ function getAuth() {
     throw new Error("Missing Google service account credentials")
   }
 
-  return new google.auth.JWT({
+  return new googleAuth.JWT({
     email,
     key,
     scopes: ["https://www.googleapis.com/auth/drive"],
@@ -50,7 +52,7 @@ export async function POST(request: NextRequest) {
 
     // Authenticate with Google
     const auth = getAuth()
-    const drive = google.drive({ version: "v3", auth })
+    const drive = googleDrive({ version: "v3", auth })
 
     // Convert File to readable stream
     const buffer = Buffer.from(await file.arrayBuffer())
@@ -150,7 +152,7 @@ export async function DELETE(request: NextRequest) {
         const fileId = match[1]
         console.log("Attempting to delete Google Drive file:", fileId)
         const auth = getAuth()
-        const drive = google.drive({ version: "v3", auth })
+        const drive = googleDrive({ version: "v3", auth })
 
         // Try permanent delete first, fall back to trash
         try {

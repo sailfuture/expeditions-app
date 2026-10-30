@@ -20,7 +20,10 @@ import "server-only"
 // and these scopes granted to the service account's client ID under domain-wide delegation:
 //   https://www.googleapis.com/auth/chrome.management.policy
 //   https://www.googleapis.com/auth/admin.directory.orgunit.readonly
-import { google } from "googleapis"
+// Per-API packages: the all-in-one googleapis package put ~200MB of unused API clients into the
+// server bundle and slowed every cold start.
+import { admin as googleAdmin, auth as googleAuth } from "@googleapis/admin"
+import { chromepolicy as googleChromePolicy } from "@googleapis/chromepolicy"
 import { findLaptopOu, signInAllowlist } from "@/lib/chromebook-signin"
 
 const SCOPES = [
@@ -49,8 +52,8 @@ function clients() {
     email = parsed.client_email
     key = parsed.private_key
   }
-  const auth = new google.auth.JWT({ email, key, scopes: SCOPES, subject: process.env.GOOGLE_ADMIN_SUBJECT })
-  return { directory: google.admin({ version: "directory_v1", auth }), policy: google.chromepolicy({ version: "v1", auth }) }
+  const auth = new googleAuth.JWT({ email, key, scopes: SCOPES, subject: process.env.GOOGLE_ADMIN_SUBJECT })
+  return { directory: googleAdmin({ version: "directory_v1", auth }), policy: googleChromePolicy({ version: "v1", auth }) }
 }
 
 /** Google's own message for a failed call, without the stack. */

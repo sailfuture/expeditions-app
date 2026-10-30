@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   Dialog,
   DialogContent,
@@ -48,6 +48,7 @@ import { getStudentsByExpedition, getTeachersByExpedition, getExpeditionAssignme
 import { useExpeditions } from "@/lib/hooks/use-expeditions"
 import { toast } from "sonner"
 import { Spinner } from "@/components/ui/spinner"
+import { getPhotoUrl } from "@/lib/utils"
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
 
@@ -360,6 +361,8 @@ export default function PassportManifestPage({ params }: PageProps) {
         gender: person.gender,
         nationality: person.nationality,
         passport_photo: person.passport_photo,
+        // Google Workspace photo, copied onto the crew_members row by the expeditions site's cron
+        avatar_url: getPhotoUrl(person.google_photo),
         _isActiveOnExpedition: isPersonActive("Staff", person.id, person.isActive !== false),
       })),
     ...(students || [])
@@ -379,6 +382,7 @@ export default function PassportManifestPage({ params }: PageProps) {
           gender: person.gender || "",
           nationality: person.nationality || "",
           passport_photo: person.passport_photo || info?.passport_photo || "",
+          avatar_url: person.profileImage || null,
           _isActiveOnExpedition: isPersonActive("Student", person.id, !person.isArchived),
         }
       }),
@@ -527,6 +531,7 @@ export default function PassportManifestPage({ params }: PageProps) {
                           <TableCell className="h-16 px-6">
                             <div className="flex items-center gap-3">
                               <Avatar className="h-8 w-8">
+                                {person.avatar_url && <AvatarImage src={person.avatar_url} alt={person.name} />}
                                 <AvatarFallback className="text-xs bg-gray-200 text-gray-600">
                                   {person.name?.split(" ").map((n: string) => n[0]).join("") || "?"}
                                 </AvatarFallback>
@@ -597,6 +602,7 @@ export default function PassportManifestPage({ params }: PageProps) {
                           <TableCell className="h-16 px-6">
                             <div className="flex items-center gap-3">
                               <Avatar className="h-8 w-8">
+                                {person.avatar_url && <AvatarImage src={person.avatar_url} alt={person.name} />}
                                 <AvatarFallback className="text-xs bg-gray-200 text-gray-600">
                                   {person.name?.split(" ").map((n: string) => n[0]).join("") || "?"}
                                 </AvatarFallback>

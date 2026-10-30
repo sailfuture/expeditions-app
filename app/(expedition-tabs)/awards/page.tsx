@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -27,7 +28,8 @@ import { useReviewPeriods } from "@/components/review-periods-panel"
 import { getProfessionalismByStudent } from "@/lib/xano"
 import { cn } from "@/lib/utils"
 import { isResidentialExpedition } from "@/lib/expedition-type"
-import { DayReasons, ReasonsSummary } from "@/components/score-reasons"
+import { weeklyPeriods } from "@/lib/review-periods"
+import { ReasonsSummary } from "@/components/score-reasons"
 import {
   DEFAULT_AWARD_SETTINGS,
   RATED_CATEGORIES,
@@ -56,6 +58,15 @@ interface StudentRow {
   open: number
   /** Day -> name of the finalized week that froze it. */
   lockedByDate: Record<string, string>
+}
+
+function formatShortDay(dateStr: string) {
+  try {
+    const [y, m, d] = dateStr.split("-").map(Number)
+    return format(new Date(y, m - 1, d), "MMM d")
+  } catch {
+    return dateStr
+  }
 }
 
 function formatDate(dateStr: string) {
@@ -111,6 +122,14 @@ const CATEGORY_LABEL: Record<AwardCategory | "citizenship", string> = {
   citizenship: "Citizenship",
 }
 
+// Citizenship score badge colours: 1 red, 2 yellow, 3 and 4 green, 5 blue.
+function citizenshipScoreClass(score: number): string {
+  if (score <= 1) return "bg-red-50 text-red-700"
+  if (score < 3) return "bg-yellow-50 text-yellow-700"
+  if (score < 5) return "bg-green-50 text-green-700"
+  return "bg-blue-50 text-blue-700"
+}
+
 function CitizenshipCell({ day }: { day: DailyAward }) {
   return (
     <TableCell className={cn(CELL, "text-center")}>
@@ -118,9 +137,7 @@ function CitizenshipCell({ day }: { day: DailyAward }) {
         <span className="text-gray-300">—</span>
       ) : (
         <span className={cn("inline-flex min-w-[2.25rem] justify-center rounded-md px-1.5 py-0.5 text-xs font-medium",
-          day.citizenshipPercent >= 1 ? "bg-green-50 text-green-700"
-            : day.citizenshipPercent > 0 ? "bg-amber-50 text-amber-700"
-            : "bg-red-50 text-red-700")}>
+          citizenshipScoreClass(day.scores.citizenship))}>
           {day.scores.citizenship}
         </span>
       )}
@@ -154,7 +171,6 @@ function DailyBreakdown({
               <TableHead className={cn(HEAD, "text-right")}>Cit. %</TableHead>
               <TableHead className={cn(HEAD, "text-right")}>Withheld</TableHead>
               <TableHead className={cn(HEAD, "text-right")}>Award</TableHead>
-              <TableHead className={HEAD}>Reasons</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -192,9 +208,6 @@ function DailyBreakdown({
                 </TableCell>
                 <TableCell className={cn(CELL, "text-right font-semibold", d.award > 0 ? "text-green-700" : "text-gray-400")}>
                   {formatAwardDollars(d.award)}
-                </TableCell>
-                <TableCell className="min-w-[16rem] px-3 py-2 align-top">
-                  <DayReasons row={rowsByDate[d.date]} empty={<span className="text-sm text-gray-300">—</span>} />
                 </TableCell>
               </TableRow>
             ))}
@@ -487,6 +500,8 @@ function AwardsPageContent() {
 
   const [startDate, setStartDate] = useState("")
   const [endDate, setEndDate] = useState("")
+  // "all" = every scored day, a period id = that review period's dates, "custom" = hand-picked From/To.
+  const [periodChoice, setPeriodChoice] = useState("all")
   const [expanded, setExpanded] = useState<Set<number>>(new Set())
 
   // The From/To filter can only cover the expedition's own dates.
@@ -510,6 +525,30 @@ function AwardsPageContent() {
     () => new Map((periodsData?.periods ?? []).map((p) => [p.id, p.name] as const)),
     [periodsData]
   )
+  // Weeks in date order, then the final evaluation, for the period select.
+  const periodOptions = useMemo(() => {
+    const periods = periodsData?.periods ?? []
+    return [...weeklyPeriods(periods), ...periods.filter((p) => p.kind === "final")]
+  }, [periodsData])
+
+  const choosePeriod = (value: string) => {
+    setPeriodChoice(value)
+    if (value === "all") {
+      setStartDate("")
+      setEndDate("")
+      return
+    }
+    const period = periodOptions.find((p) => String(p.id) === value)
+    if (period) {
+      setStartDate(period.startDate)
+      setEndDate(period.endDate)
+    }
+  }
+  const chooseDates = (start: string, end: string) => {
+    setStartDate(start)
+    setEndDate(end)
+    setPeriodChoice(start || end ? "custom" : "all")
+  }
 
   const rows: StudentRow[] = useMemo(() => {
     if (!rowsByStudent) return []
@@ -603,7 +642,32 @@ function AwardsPageContent() {
             Daily cash award per student from their professionalism scores{expedition ? ` on ${expedition.name}` : ""}.
           </p>
         </div>
-        <div className="flex items-end gap-2">
+        <div className="flex flex-wrap items-end gap-2">
+          {periodOptions.length > 0 && (
+            <div>
+              <Label htmlFor="awards-period" className="text-xs text-gray-500">Review period</Label>
+              <Select value={periodChoice} onValueChange={choosePeriod}>
+                <SelectTrigger id="awards-period" className="mt-1 h-8 w-[15rem] cursor-pointer bg-white">
+                  <SelectValue placeholder="All days" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all" className="cursor-pointer">All days</SelectItem>
+                  {periodOptions.map((p) => (
+                    <SelectItem key={p.id} value={String(p.id)} className="cursor-pointer">
+                      <span className="font-medium">{p.name}</span>
+                      <span className="ml-1 text-muted-foreground">
+                        · {formatShortDay(p.startDate)} – {formatShortDay(p.endDate)}
+                        {p.status === "finalized" ? " · Finalized" : ""}
+                      </span>
+                    </SelectItem>
+                  ))}
+                  {periodChoice === "custom" && (
+                    <SelectItem value="custom" className="cursor-pointer">Custom dates</SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div>
             <Label htmlFor="awards-start" className="text-xs text-gray-500">From</Label>
             <Input
@@ -612,7 +676,7 @@ function AwardsPageContent() {
               value={startDate}
               min={expeditionStart}
               max={endDate || expeditionEnd}
-              onChange={(e) => setStartDate(clampToExpedition(e.target.value))}
+              onChange={(e) => chooseDates(clampToExpedition(e.target.value), endDate)}
               className="mt-1 h-8 bg-white"
             />
           </div>
@@ -624,12 +688,12 @@ function AwardsPageContent() {
               value={endDate}
               min={startDate || expeditionStart}
               max={expeditionEnd}
-              onChange={(e) => setEndDate(clampToExpedition(e.target.value))}
+              onChange={(e) => chooseDates(startDate, clampToExpedition(e.target.value))}
               className="mt-1 h-8 bg-white"
             />
           </div>
           {(startDate || endDate) && (
-            <Button variant="outline" size="sm" className="h-8 cursor-pointer" onClick={() => { setStartDate(""); setEndDate("") }}>
+            <Button variant="outline" size="sm" className="h-8 cursor-pointer" onClick={() => chooseDates("", "")}>
               Clear
             </Button>
           )}

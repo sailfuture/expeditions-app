@@ -4,12 +4,31 @@ import { Suspense, useEffect, useMemo, useState } from "react"
 import dynamic from "next/dynamic"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
-import { MapPinOff } from "lucide-react"
+import { MapPinOff, Ship } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
-import { useExpeditions, useExpeditionLocations, useExpeditionSchedules } from "@/lib/hooks/use-expeditions"
+import {
+  useExpeditions,
+  useExpeditionLocations,
+  useExpeditionSchedules,
+  useVesselPosition,
+} from "@/lib/hooks/use-expeditions"
 import { useExpeditionContext } from "@/lib/contexts/expedition-context"
-import { buildExpeditionRoute, formatDate, formatDateRange, type RouteStop } from "@/lib/expedition-route"
+import {
+  applyVesselPlacement,
+  buildExpeditionRoute,
+  describeVesselPlacement,
+  formatDate,
+  formatDateRange,
+  locateVesselOnRoute,
+  type RouteStop,
+} from "@/lib/expedition-route"
+import {
+  VESSEL_STATE_LABEL,
+  currentStopLabel,
+  formatCoordinates,
+  resolveVesselStatus,
+} from "@/lib/vessel-position"
 import { cn } from "@/lib/utils"
 
 // mapbox-gl touches `window` at import time, so it must never render on the server.
@@ -20,9 +39,11 @@ const ExpeditionRouteMap = dynamic(() => import("@/components/expedition-route-m
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? ""
 
+// The "current" label is left to currentStopLabel: it depends on whether GPS
+// or only the itinerary puts the boat at that stop.
 const STATUS_BADGE: Record<RouteStop["status"], { label: string; className: string }> = {
   visited: { label: "Visited", className: "bg-gray-100 text-gray-700 border-gray-200" },
-  current: { label: "You are here", className: "bg-emerald-600 text-white border-emerald-600" },
+  current: { label: "", className: "bg-emerald-600 text-white border-emerald-600" },
   upcoming: { label: "Upcoming", className: "bg-white text-slate-700 border-slate-300" },
   unscheduled: { label: "Not scheduled", className: "bg-gray-50 text-gray-500 border-gray-200" },
 }
@@ -80,11 +101,35 @@ function RouteMapContent() {
 
   // Strictly one expedition: without a resolved id nothing is plotted, and
   // records are filtered by expeditions_id in case the endpoint returns more.
-  const route = useMemo(() => {
+  const plannedRoute = useMemo(() => {
     if (!expeditionId) return buildExpeditionRoute([], [])
     const belongs = (r: any) => r?.expeditions_id == null || r.expeditions_id === expeditionId
     return buildExpeditionRoute((locations ?? []).filter(belongs), (schedules ?? []).filter(belongs))
   }, [locations, schedules, expeditionId])
+
+  // Where the boat actually is, refreshed every minute while the page is open.
+  const { data: vesselData, isLoading: loadingVessel, error: vesselError } = useVesselPosition(expeditionId)
+  const vesselStatus = useMemo(() => resolveVesselStatus(vesselData), [vesselData])
+  // A finished expedition's map must not show where the boat happens to be now.
+  const followsBoat = plannedRoute.phase === "during" || plannedRoute.phase === "before"
+  const boat = followsBoat ? vesselStatus.position : null
+  const boatName = vesselStatus.vessel?.name ?? "S/Y Whatever It Takes"
+  const boatReportedAt = boat?.ts
+    ? new Date(boat.ts).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })
+    : null
+
+  const placement = useMemo(() => (boat ? locateVesselOnRoute(plannedRoute, boat) : null), [plannedRoute, boat])
+  // During the trip GPS decides which stops are visited and which legs are
+  // sailed. Keyed on the placement so jitter at anchor doesn't rebuild the markers.
+  const placementKey = placement ? JSON.stringify(placement) : ""
+  const route = useMemo(
+    () => (placement && plannedRoute.phase === "during" ? applyVesselPlacement(plannedRoute, placement) : plannedRoute),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [plannedRoute, placementKey]
+  )
+  // Called out when the plan and the boat disagree about today.
+  const plannedStop = plannedRoute.phase === "during" ? plannedRoute.current?.stop ?? null : null
+  const offPlan = Boolean(boat && plannedStop && route.current?.stop.id !== plannedStop.id)
 
   const [selectedStopId, setSelectedStopId] = useState<number | null>(null)
   // Switching expeditions drops the selection so the map refits to the new route.
@@ -92,7 +137,10 @@ function RouteMapContent() {
     setSelectedStopId(null)
   }, [expeditionId])
 
-  const isLoading = Boolean(expeditionId) && (loadingSchedules || loadingLocations) && !schedules && !locations
+  // The map waits for the boat too, so it never flashes the planned position first.
+  const isLoading =
+    Boolean(expeditionId) &&
+    (((loadingSchedules || loadingLocations) && !schedules && !locations) || (loadingVessel && !vesselData))
   const error = schedulesError || locationsError
   const hasToken = MAPBOX_TOKEN.length > 0
   const unmapped = route.stops.filter((s) => s.lng === null && s.status !== "unscheduled")
@@ -108,6 +156,26 @@ function RouteMapContent() {
             <> · {formatDate(route.firstDate)} – {formatDate(route.lastDate)}</>
           )}
         </p>
+        {boat ? (
+          <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-sm text-slate-700">
+            <Ship className="h-3.5 w-3.5 text-sky-600" aria-hidden="true" />
+            <span className="font-medium">{boatName}</span>
+            {placement && <span>· {describeVesselPlacement(plannedRoute, placement)}</span>}
+            <span className="text-muted-foreground">
+              · {VESSEL_STATE_LABEL[boat.state]} · {formatCoordinates(boat.lat, boat.lng)}
+              {boat.speedKn !== null && boat.speedKn > 0.5 && <> · {boat.speedKn.toFixed(1)} kn</>}
+              {boatReportedAt && <> · reported {boatReportedAt}</>}
+            </span>
+          </p>
+        ) : followsBoat && (vesselData || vesselError) ? (
+          <p className="mt-1 text-sm text-muted-foreground">
+            {vesselError ? "Could not load the boat's live position." : "No live position from the boat yet."} Stops
+            follow the planned itinerary.
+          </p>
+        ) : null}
+        {offPlan && plannedStop && (
+          <p className="mt-0.5 text-xs text-muted-foreground">The itinerary has today at {plannedStop.port}.</p>
+        )}
       </div>
 
       {error && (
@@ -142,6 +210,9 @@ function RouteMapContent() {
             route={route}
             selectedStopId={selectedStopId}
             onSelectStop={(stop) => setSelectedStopId(stop.id)}
+            vessel={boat}
+            vesselTrack={boat ? vesselStatus.track : undefined}
+            vesselName={boatName}
             className="relative h-full w-full"
           />
         )}
@@ -168,8 +239,22 @@ function RouteMapContent() {
           </span>
           Planned
         </span>
+        {boat && (
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block h-3 w-3 rounded-full bg-sky-600 ring-2 ring-sky-200" /> Boat (live)
+          </span>
+        )}
+        {boat && (
+          <span className="flex items-center gap-1.5">
+            <span className="inline-flex h-3 w-8 items-center justify-center rounded-sm bg-slate-800">
+              <span className="inline-block h-0.5 w-6 rounded bg-sky-400" />
+            </span>
+            Boat&apos;s track
+          </span>
+        )}
         <span className="flex items-center gap-1.5">
-          <span className="inline-block h-3 w-3 rounded-full bg-emerald-600 ring-2 ring-emerald-200" /> Current position
+          <span className="inline-block h-3 w-3 rounded-full bg-emerald-600 ring-2 ring-emerald-200" />
+          {boat ? "Current stop" : "Scheduled for today"}
         </span>
         <span className="flex items-center gap-1.5">
           <span className="inline-block h-3 w-3 rounded-full bg-slate-500" /> Visited
@@ -235,7 +320,7 @@ function RouteMapContent() {
                       </span>
                     </span>
                     <Badge variant="outline" className={cn("flex-shrink-0 text-[11px]", badge.className)}>
-                      {badge.label}
+                      {stop.status === "current" ? currentStopLabel(boat) : badge.label}
                     </Badge>
                   </button>
                 </li>

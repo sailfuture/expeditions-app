@@ -6,7 +6,7 @@ import "mapbox-gl/dist/mapbox-gl.css"
 import type { ExpeditionRoute, RouteStop } from "@/lib/expedition-route"
 import { formatDateRange } from "@/lib/expedition-route"
 import type { VesselPosition } from "@/lib/vessel-position"
-import { VESSEL_STATE_LABEL, formatCoordinates } from "@/lib/vessel-position"
+import { VESSEL_STATE_LABEL, currentStopLabel, formatCoordinates, isFixStale } from "@/lib/vessel-position"
 
 interface ExpeditionRouteMapProps {
   token: string
@@ -33,12 +33,13 @@ const TRACK_LAYER = "vessel-track-line"
 export const MAP_STYLE = "mapbox://styles/hunterrthompson/cmvmvcpww007l01s68ouqhexa"
 
 // White lines on the dark satellite basemap; the leg types differ by dash and
-// opacity rather than colour. Only the current position is green.
+// opacity rather than colour. The boat's real trail is sky blue like its marker,
+// so it can't be mistaken for a planned leg.
 const COLORS = {
   sailed: "#ffffff",
   active: "#ffffff",
   planned: "#ffffff",
-  track: "#ffffff",
+  track: "#38bdf8",
 }
 
 // The style imports Mapbox Standard Satellite with the "night" light preset,
@@ -63,16 +64,18 @@ function escapeHtml(value: string): string {
     .replace(/"/g, "&quot;")
 }
 
-function popupHtml(stop: RouteStop, route: ExpeditionRoute): string {
+// With a fix (`vessel` set) the current stop is where GPS puts the boat. Without
+// one it is only today's itinerary row, and says so.
+function popupHtml(stop: RouteStop, route: ExpeditionRoute, vessel: VesselPosition | null | undefined): string {
   const isCurrent = stop.status === "current"
   const current = isCurrent ? route.current : null
-  const title = isCurrent ? (current?.underway ? "Departed from here" : "You are here") : null
+  const title = isCurrent ? (current?.underway ? "Scheduled departure" : currentStopLabel(vessel)) : null
   const ranges = stop.dateRanges.length
     ? stop.dateRanges.map((r) => `<li>${escapeHtml(formatDateRange(r))}</li>`).join("")
     : "<li>Not on the itinerary yet</li>"
   const statusLabel: Record<RouteStop["status"], string> = {
     visited: "Visited",
-    current: current?.underway ? "Underway" : "Current stop",
+    current: vessel ? "Current stop" : current?.underway ? "Scheduled passage" : "Scheduled for today",
     upcoming: "Upcoming",
     unscheduled: "Unscheduled",
   }
@@ -102,7 +105,7 @@ function vesselPopupHtml(vessel: VesselPosition, name?: string): string {
   else if (vessel.headingDeg !== null) facts.push(`HDG ${Math.round(vessel.headingDeg)}°`)
   return `
     <div class="min-w-[180px] text-sm text-gray-900">
-      <div class="mb-1 inline-flex items-center gap-1 rounded-full bg-sky-600 px-2 py-0.5 text-[11px] font-semibold text-white">Live position</div>
+      <div class="mb-1 inline-flex items-center gap-1 rounded-full bg-sky-600 px-2 py-0.5 text-[11px] font-semibold text-white">${isFixStale(vessel) ? "Last known position" : "Live position"}</div>
       <div class="pr-5 font-semibold leading-tight">${escapeHtml(name ?? "Vessel")}</div>
       <div class="text-xs text-gray-500">${escapeHtml(VESSEL_STATE_LABEL[vessel.state])}${facts.length ? ` · ${escapeHtml(facts.join(" · "))}` : ""}</div>
       <div class="mt-1 text-xs text-gray-700">${escapeHtml(formatCoordinates(vessel.lat, vessel.lng))}</div>
@@ -111,7 +114,7 @@ function vesselPopupHtml(vessel: VesselPosition, name?: string): string {
   `
 }
 
-function markerElement(stop: RouteStop): HTMLElement {
+function markerElement(stop: RouteStop, live: boolean): HTMLElement {
   const el = document.createElement("button")
   el.type = "button"
   el.setAttribute("aria-label", `${stop.index + 1}. ${stop.port}, ${stop.country}`)
@@ -124,9 +127,13 @@ function markerElement(stop: RouteStop): HTMLElement {
 
   if (stop.status === "current") {
     el.className += " h-10 w-10"
-    const ring = document.createElement("span")
-    ring.className = "absolute inset-0 rounded-full bg-emerald-400/60 animate-ping"
-    el.appendChild(ring)
+    // With a fix the boat's own marker carries the pulse; the halo is only
+    // for when the itinerary is the best guess.
+    if (!live) {
+      const ring = document.createElement("span")
+      ring.className = "absolute inset-0 rounded-full bg-emerald-400/60 animate-ping"
+      el.appendChild(ring)
+    }
     badge.className = `${base} relative h-9 w-9 border-white bg-emerald-600 text-white text-xs`
   } else if (stop.status === "visited") {
     el.className += " h-7 w-7"
@@ -141,12 +148,14 @@ function markerElement(stop: RouteStop): HTMLElement {
 
 /**
  * Boat icon for the live position: a pulsing halo around a sky-blue disc
- * with a bow-shaped arrow that the marker rotates to the boat's heading.
+ * with a bow-shaped arrow that the marker rotates to the boat's heading. It
+ * sits above the stop markers, which are recreated when the route changes.
  */
 function vesselElement(name: string): HTMLElement {
   const el = document.createElement("button")
   el.type = "button"
   el.setAttribute("aria-label", `${name}: live position`)
+  el.style.zIndex = "5"
   el.className = `relative flex h-12 w-12 items-center justify-center cursor-pointer focus:outline-none ${MARKER_BUTTON_RESET}`
 
   const ring = document.createElement("span")
@@ -210,6 +219,8 @@ export default function ExpeditionRouteMap({
   const routeRef = useRef(route)
   const [isReady, setIsReady] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
+  const live = Boolean(vessel)
+  const stopLabel = currentStopLabel(vessel)
 
   useEffect(() => {
     onSelectRef.current = onSelectStop
@@ -318,8 +329,8 @@ export default function ExpeditionRouteMap({
 
     for (const stop of route.mappable) {
       const popup = new mapboxgl.Popup({ ...POPUP_OPTIONS, offset: stop.status === "current" ? 22 : 16 })
-        .setHTML(popupHtml(stop, route))
-      const element = markerElement(stop)
+        .setHTML(popupHtml(stop, route, vessel))
+      const element = markerElement(stop, live)
       element.addEventListener("click", () => onSelectRef.current?.(stop))
       const marker = new mapboxgl.Marker({ element, anchor: "center" })
         .setLngLat([stop.lng!, stop.lat!])
@@ -342,9 +353,10 @@ export default function ExpeditionRouteMap({
         map.fitBounds(bounds, { padding: { top: 80, bottom: 60, left: 60, right: 60 }, maxZoom: 9, duration: 0 })
       }
     }
-    // `vessel` only matters here for the initial fit.
+    // A new fix alone must not rebuild the markers (that would close an open
+    // popup); `stopLabel` redraws them when the boat appears, drops out or goes stale.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [route, isReady])
+  }, [route, isReady, stopLabel])
 
   // Sync the live boat marker and its trail.
   useEffect(() => {

@@ -88,9 +88,12 @@ export function resolveVesselStatus(data: VesselPositionResponse | null | undefi
   const vessel = data?.vessel ?? null
   const latest = data?.latest ?? null
 
-  let position: VesselPosition | null = null
+  // The newest telemetry row and the vessel's mirrored last_* fields can
+  // disagree: the heartbeat keeps last_* current even when no new row is
+  // written, so whichever fix is newer wins (the vessel row on a tie).
+  let fromTelemetry: VesselPosition | null = null
   if (latest && isUsableFix(latest.lat, latest.lng)) {
-    position = {
+    fromTelemetry = {
       lat: num(latest.lat)!,
       lng: num(latest.lng)!,
       ts: num(latest.ts),
@@ -100,8 +103,10 @@ export function resolveVesselStatus(data: VesselPositionResponse | null | undefi
       state: latest.state ?? "unknown",
       source: "telemetry",
     }
-  } else if (vessel && isUsableFix(vessel.last_lat, vessel.last_lng)) {
-    position = {
+  }
+  let fromVessel: VesselPosition | null = null
+  if (vessel && isUsableFix(vessel.last_lat, vessel.last_lng)) {
+    fromVessel = {
       lat: num(vessel.last_lat)!,
       lng: num(vessel.last_lng)!,
       ts: num(vessel.last_telemetry_ts) ?? num(vessel.last_seen_at),
@@ -112,10 +117,20 @@ export function resolveVesselStatus(data: VesselPositionResponse | null | undefi
       source: "vessel",
     }
   }
+  let position: VesselPosition | null = fromTelemetry ?? fromVessel
+  if (fromTelemetry && fromVessel && (fromVessel.ts ?? 0) >= (fromTelemetry.ts ?? 0)) {
+    position = fromVessel
+  }
 
   const track: Array<[number, number]> = []
   for (const row of [...(data?.track ?? [])].reverse()) {
     if (isUsableFix(row.lat, row.lng)) track.push([num(row.lng)!, num(row.lat)!])
+  }
+
+  // End the trail at the boat itself when the newest fix is not a track row yet.
+  if (position) {
+    const end = track[track.length - 1]
+    if (!end || end[0] !== position.lng || end[1] !== position.lat) track.push([position.lng, position.lat])
   }
 
   const lastSeenAt = num(vessel?.last_seen_at) ?? num(latest?.ts) ?? null
@@ -128,6 +143,22 @@ export const VESSEL_STATE_LABEL: Record<VesselState, string> = {
   anchored: "Anchored",
   docked: "Docked",
   unknown: "Status unknown",
+}
+
+/** The boat reports at least every 10 minutes, so an hour of silence means the feed has dropped. */
+export const VESSEL_STALE_AFTER_MS = 60 * 60 * 1000
+
+export function isFixStale(position: VesselPosition, now: number = Date.now()): boolean {
+  return position.ts === null || now - position.ts > VESSEL_STALE_AFTER_MS
+}
+
+/**
+ * Wording for the stop marked current. Without a fix that stop is only what
+ * the itinerary says, so it must not claim the boat is there.
+ */
+export function currentStopLabel(position: VesselPosition | null | undefined): string {
+  if (!position) return "Scheduled here"
+  return isFixStale(position) ? "Last seen here" : "You are here"
 }
 
 /** "12.3456° N, 61.2345° W" */

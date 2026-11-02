@@ -1530,7 +1530,7 @@ export function ScheduleViewClient({ date, expeditionId }: ScheduleViewClientPro
                   <div>
                     <h3 className="text-sm font-semibold text-gray-900 mb-3">
                       Ingredients
-                      {schedule?.crew_members && (
+                      {(schedule?.crew_members ?? 0) > 0 && (
                         <span className="text-xs font-normal text-gray-500 ml-2">
                           ({schedule.crew_members} crew members)
                         </span>
@@ -1542,7 +1542,7 @@ export function ScheduleViewClient({ date, expeditionId }: ScheduleViewClientPro
                           <TableRow className="bg-gray-50/80">
                             <TableHead className="h-9 px-3 text-xs font-semibold text-gray-600">Ingredient</TableHead>
                             <TableHead className="h-9 px-3 text-xs font-semibold text-gray-600 w-20">Oz/Person</TableHead>
-                            {schedule?.crew_members && (
+                            {(schedule?.crew_members ?? 0) > 0 && (
                               <TableHead className="h-9 px-3 text-xs font-semibold text-gray-600 w-20">Total Oz</TableHead>
                             )}
                             <TableHead className="h-9 px-3 text-xs font-semibold text-gray-600">Prep</TableHead>
@@ -1557,7 +1557,7 @@ export function ScheduleViewClient({ date, expeditionId }: ScheduleViewClientPro
                               <TableCell className="h-10 px-3">
                                 <span className="text-sm text-gray-600">{ingredient.oz_per_meal}</span>
                               </TableCell>
-                              {schedule?.crew_members && (
+                              {(schedule?.crew_members ?? 0) > 0 && (
                                 <TableCell className="h-10 px-3">
                                   <span className="text-sm font-medium text-gray-900">
                                     {(ingredient.oz_per_meal * schedule.crew_members).toFixed(1)}

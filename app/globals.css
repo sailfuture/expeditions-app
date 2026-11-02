@@ -185,7 +185,10 @@ input[type="number"] {
 }
 /* Route map popups (components/expedition-route-map.tsx): a small round close
    button inset from the corner, instead of Mapbox's square corner button and
-   the app-wide button hover background. */
+   the app-wide button hover background. Popups stay above the boat marker. */
+.expedition-map-popup {
+  z-index: 6;
+}
 .expedition-map-popup .mapboxgl-popup-close-button {
   top: 6px;
   right: 6px;

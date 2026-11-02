@@ -9,6 +9,7 @@
  * compared lexically, which avoids timezone drift.
  */
 
+import { calculateNauticalMiles } from "@/lib/haversine"
 import { PORTS, normalizeSearch } from "@/lib/ports"
 
 export type StopStatus = "visited" | "current" | "upcoming" | "unscheduled"
@@ -342,6 +343,157 @@ export function buildExpeditionRoute(
   }
 
   return { stops, mappable, segments, current, phase, firstDate, lastDate }
+}
+
+/** Within this distance of a stop, a boat that is not underway counts as being there. */
+const AT_STOP_NM = 3
+/** Further than this from every leg, the boat is not following the planned route. */
+const OFF_ROUTE_NM = 60
+/** Distances closer than this are a tie, settled by whichever is nearest the plan. */
+const TIE_NM = 0.5
+
+/** Where the boat's real position falls on the route. Indexes count along the visit order. */
+export type VesselPlacement =
+  | { kind: "at-stop"; visit: number }
+  | { kind: "on-leg"; leg: number }
+  | { kind: "off-route" }
+
+/** Stops in the order they are sailed; a stop the boat returns to appears more than once. */
+function visitsOf(route: ExpeditionRoute): RouteStop[] {
+  if (route.segments.length === 0) return route.mappable
+  return [route.segments[0].from, ...route.segments.map((s) => s.to)]
+}
+
+/** Distance in nautical miles from a point to a leg, on a flat projection around the point. */
+function distanceToLegNm(lat: number, lng: number, from: RouteStop, to: RouteStop): number {
+  const scale = Math.cos((lat * Math.PI) / 180)
+  const ax = (from.lng! - lng) * scale * 60
+  const ay = (from.lat! - lat) * 60
+  const bx = (to.lng! - lng) * scale * 60
+  const by = (to.lat! - lat) * 60
+  const dx = bx - ax
+  const dy = by - ay
+  const lengthSquared = dx * dx + dy * dy
+  const t = lengthSquared === 0 ? 0 : Math.max(0, Math.min(1, -(ax * dx + ay * dy) / lengthSquared))
+  return Math.hypot(ax + t * dx, ay + t * dy)
+}
+
+/** Index of the smallest distance within `limit`; near-ties go to the index closest to the plan. */
+function closestIndex(distances: number[], limit: number, planned: number): number | null {
+  let best: number | null = null
+  distances.forEach((nm, i) => {
+    if (nm > limit) return
+    if (
+      best === null ||
+      nm < distances[best] - TIE_NM ||
+      (nm <= distances[best] + TIE_NM && Math.abs(i - planned) < Math.abs(best - planned))
+    ) {
+      best = i
+    }
+  })
+  return best
+}
+
+/**
+ * Works out where a GPS fix sits on the route: at a stop, along a leg, or off
+ * the route altogether. The plan only breaks ties, such as a stop the route
+ * visits twice.
+ */
+export function locateVesselOnRoute(
+  route: ExpeditionRoute,
+  fix: { lat: number; lng: number; state?: string | null }
+): VesselPlacement {
+  const planned = route.segments.filter((s) => s.status === "sailed").length
+
+  if (fix.state !== "underway") {
+    const toStops = visitsOf(route).map((s) => calculateNauticalMiles(fix.lat, fix.lng, s.lat!, s.lng!))
+    const visit = closestIndex(toStops, AT_STOP_NM, planned)
+    if (visit !== null) return { kind: "at-stop", visit }
+  }
+
+  const toLegs = route.segments.map((s) => distanceToLegNm(fix.lat, fix.lng, s.from, s.to))
+  const leg = closestIndex(toLegs, OFF_ROUTE_NM, planned)
+  return leg !== null ? { kind: "on-leg", leg } : { kind: "off-route" }
+}
+
+/**
+ * Rewrites the route's progress to match where the boat really is, so visited
+ * stops, the current stop and sailed legs come from GPS rather than the
+ * calendar. Dates on the stops stay as planned.
+ */
+export function applyVesselPlacement(route: ExpeditionRoute, placement: VesselPlacement): ExpeditionRoute {
+  const visits = visitsOf(route)
+  const frontier =
+    placement.kind === "at-stop" ? placement.visit : placement.kind === "on-leg" ? placement.leg + 1 : -1
+  const reached = new Set(visits.slice(0, Math.max(frontier, 0)).map((s) => s.id))
+  const onRoute = new Set(visits.map((s) => s.id))
+  const frontierStop = frontier >= 0 ? visits[frontier] : null
+  const currentId = placement.kind === "at-stop" ? visits[placement.visit].id : null
+
+  const stops = route.stops.map((stop): RouteStop => {
+    if (stop.status === "unscheduled") return stop
+    let status: StopStatus
+    if (placement.kind === "off-route") {
+      // Nothing to measure progress against, so only the plan's claim about today is dropped.
+      status = stop.status === "current" ? "upcoming" : stop.status
+    } else if (stop.id === currentId) {
+      status = "current"
+    } else if (onRoute.has(stop.id)) {
+      status = reached.has(stop.id) ? "visited" : "upcoming"
+    } else {
+      // Not on the line (no coordinates, say): judge by its place in the route order.
+      status = frontierStop && stop.index < frontierStop.index ? "visited" : "upcoming"
+    }
+    return status === stop.status ? stop : { ...stop, status }
+  })
+
+  const stopById = new Map(stops.map((s) => [s.id, s]))
+
+  const segments = route.segments.map((segment, leg): RouteSegment => {
+    const to = stopById.get(segment.to.id)!
+    let status: RouteSegment["status"]
+    if (placement.kind === "at-stop") {
+      status = leg < placement.visit ? "sailed" : "planned"
+    } else if (placement.kind === "on-leg") {
+      status = leg < placement.leg ? "sailed" : leg === placement.leg ? "active" : "planned"
+    } else {
+      status = segment.status === "sailed" && to.status === "visited" ? "sailed" : "planned"
+    }
+    return { from: stopById.get(segment.from.id)!, to, status }
+  })
+
+  let current: CurrentPosition | null = null
+  if (placement.kind === "at-stop" && currentId !== null) {
+    const stop = stopById.get(currentId)!
+    const today = todayLocalDateString()
+    const nextVisit = visits[placement.visit + 1]
+    const next = nextVisit ? stopById.get(nextVisit.id) ?? null : null
+    current = {
+      stop,
+      range: stop.dateRanges[0] ?? { start: today, end: today },
+      underway: false,
+      next,
+      nextDate: next ? next.dateRanges.find((r) => r.start > today)?.start ?? next.firstDate : null,
+    }
+  }
+
+  return {
+    ...route,
+    stops,
+    mappable: route.mappable.map((s) => stopById.get(s.id)!),
+    segments,
+    current,
+  }
+}
+
+/** A few words on where the boat is, for display next to the map. */
+export function describeVesselPlacement(route: ExpeditionRoute, placement: VesselPlacement): string {
+  const visits = visitsOf(route)
+  if (placement.kind === "at-stop") return `At ${visits[placement.visit].port}`
+  if (placement.kind === "on-leg") {
+    return `Between ${visits[placement.leg].port} and ${visits[placement.leg + 1].port}`
+  }
+  return "Away from the planned route"
 }
 
 /** "Oct 12" / "Oct 12 – Oct 15" / "Oct 30 – Nov 2" style label for a range. */

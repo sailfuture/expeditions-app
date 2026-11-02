@@ -1,6 +1,7 @@
 "use client"
 
 import { XANO_BASE_URL } from "@/lib/xano-config"
+import { generateRecipeImage } from "@/lib/recipe-image"
 import { useMemo, useState } from "react"
 import useSWR, { mutate } from "swr"
 import Image from "next/image"
@@ -71,25 +72,6 @@ async function uploadImageToXano(file: File): Promise<any> {
   })
   if (!response.ok) throw new Error("Failed to upload image")
   return response.json()
-}
-
-// Asks the server to generate a stock-style plate photo (app/api/generate-recipe-image) and
-// returns it as a File, so it flows through the same upload-on-save path as a chosen photo.
-async function generateRecipeImage(recipeName: string, summary: string, cookbookId?: number): Promise<File> {
-  const response = await fetch("/api/generate-recipe-image", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    // The id lets the server read the recipe's saved ingredients, so the plate shows real components.
-    body: JSON.stringify({ recipe_name: recipeName, summary, expedition_cookbook_id: cookbookId ?? null }),
-  })
-  if (!response.ok) {
-    const detail = await response.json().catch(() => null)
-    throw new Error(detail?.error || "Failed to generate image")
-  }
-  const blob = await response.blob()
-  const ext = blob.type === "image/jpeg" ? "jpg" : blob.type === "image/webp" ? "webp" : "png"
-  const base = recipeName.replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-|-$/g, "").toLowerCase() || "recipe"
-  return new File([blob], `${base}.${ext}`, { type: blob.type || "image/png" })
 }
 
 const truncateText = (text: string, maxLength: number) => {

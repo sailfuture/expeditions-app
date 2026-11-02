@@ -1,6 +1,7 @@
 "use client"
 
 import { XANO_BASE_URL } from "@/lib/xano-config"
+import { generateRecipeImage } from "@/lib/recipe-image"
 import React, { useMemo, useState } from "react"
 import useSWR, { mutate } from "swr"
 import Image from "next/image"
@@ -52,7 +53,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
-import { Clock, Wrench, Plus, Pencil, Trash2, X, FileUp, Check } from "lucide-react"
+import { Clock, Wrench, Plus, Pencil, Trash2, X, FileUp, Check, Sparkles } from "lucide-react"
 import {
   Command,
   CommandEmpty,
@@ -185,6 +186,66 @@ export default function RecipeDetailPage() {
   const [editRecipePhotoFile, setEditRecipePhotoFile] = useState<File | null>(null)
   const [editRecipePhotoPreview, setEditRecipePhotoPreview] = useState<string | null>(null)
   const [isSavingRecipe, setIsSavingRecipe] = useState(false)
+  // "Generate photo" on the empty-photo placeholder: generates, uploads and saves in one go
+  const [isGeneratingPhoto, setIsGeneratingPhoto] = useState(false)
+  // "Generate photo" in the Edit sheet: fills the photo field, saved with the rest on Save Changes
+  const [isGeneratingEditPhoto, setIsGeneratingEditPhoto] = useState(false)
+
+  const handleGenerateEditPhoto = async () => {
+    const name = editRecipeForm.recipe_name.trim()
+    if (!name) {
+      toast.error("Enter a recipe name first")
+      return
+    }
+    setIsGeneratingEditPhoto(true)
+    try {
+      const file = await generateRecipeImage(name, editRecipeForm.summary, recipe?.id)
+      setEditRecipePhotoFile(file)
+      setEditRecipePhotoPreview(URL.createObjectURL(file))
+      toast.success("Photo generated. Save to keep it, or generate again.")
+    } catch (error) {
+      console.error("Error generating recipe photo:", error)
+      toast.error(error instanceof Error ? error.message : "Failed to generate photo")
+    } finally {
+      setIsGeneratingEditPhoto(false)
+    }
+  }
+
+  const handleGeneratePhoto = async () => {
+    if (!recipe || isGeneratingPhoto) return
+    setIsGeneratingPhoto(true)
+    try {
+      const file = await generateRecipeImage(recipe.recipe_name || "", recipe.summary || "", recipe.id)
+      const formData = new FormData()
+      formData.append("content", file)
+      const uploadRes = await fetch(`${XANO_BASE_URL}/upload/image`, { method: "POST", body: formData })
+      if (!uploadRes.ok) throw new Error("Failed to upload image")
+      const photoData = await uploadRes.json()
+
+      // Same payload as the edit sheet's save, with only the photo changed
+      const response = await fetch(`${XANO_BASE_URL}/expedition_cookbook/${recipe.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          expedition_cookbook_id: recipe.id,
+          recipe_name: recipe.recipe_name,
+          recipe_photo: photoData,
+          type: recipe.type || "",
+          types: Array.isArray(recipe.types) && recipe.types.length > 0 ? recipe.types : recipe.type ? [recipe.type] : [],
+          summary: recipe.summary || "",
+          duration_minutes: recipe.duration_minutes || "",
+        }),
+      })
+      if (!response.ok) throw new Error("Failed to save photo")
+      mutate(`${XANO_BASE_URL}/expedition_cookbook/${recipeId}`)
+      toast.success("Photo generated. Use Edit to replace it.")
+    } catch (error) {
+      console.error("Error generating recipe photo:", error)
+      toast.error(error instanceof Error ? error.message : "Failed to generate photo")
+    } finally {
+      setIsGeneratingPhoto(false)
+    }
+  }
 
   const handleOpenEditRecipe = () => {
     if (!recipe) return
@@ -566,8 +627,18 @@ export default function RecipeDetailPage() {
                 />
               </div>
             ) : (
-              <div className="w-full sm:w-48 h-48 rounded-xl bg-gray-100 flex items-center justify-center text-gray-400 shrink-0">
-                No image
+              <div className="relative w-full sm:w-48 h-48 rounded-xl bg-gray-100 flex flex-col items-center justify-center gap-3 text-gray-400 shrink-0">
+                <span className="text-sm">No image</span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleGeneratePhoto}
+                  disabled={isGeneratingPhoto}
+                  className="cursor-pointer bg-white"
+                >
+                  {isGeneratingPhoto ? <Spinner className="size-4" /> : <Sparkles className="size-4" />}
+                  {isGeneratingPhoto ? "Generating…" : "Generate photo"}
+                </Button>
               </div>
             )}
             <div className="flex-1">
@@ -1299,7 +1370,20 @@ export default function RecipeDetailPage() {
 
             {/* Recipe Photo */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Recipe Photo</Label>
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium">Recipe Photo</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 cursor-pointer"
+                  disabled={isGeneratingEditPhoto || !editRecipeForm.recipe_name.trim()}
+                  onClick={handleGenerateEditPhoto}
+                >
+                  {isGeneratingEditPhoto ? <Spinner className="size-4" /> : <Sparkles className="size-4" />}
+                  {isGeneratingEditPhoto ? "Generating…" : editRecipePhotoFile ? "Generate again" : "Generate photo"}
+                </Button>
+              </div>
               {editRecipePhotoPreview && !editRecipePhotoFile && (
                 <div className="relative w-full h-32 rounded-lg overflow-hidden bg-gray-100">
                   <img src={editRecipePhotoPreview} alt="Recipe photo" className="object-cover w-full h-full" />

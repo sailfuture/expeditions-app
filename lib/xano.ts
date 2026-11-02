@@ -465,7 +465,6 @@ export async function createExpedition(data: {
   endDate: string
   schoolterms_id: number
   schoolyears_id: number
-  number_participants?: number
   expedition_type?: ExpeditionType
   // Public site fields (see lib/expedition-site.ts)
   title?: string
@@ -488,7 +487,6 @@ export async function updateExpedition(id: number, data: {
   schoolterms_id?: number
   schoolyears_id?: number
   isActive?: boolean
-  number_participants?: number
   expedition_type?: ExpeditionType
   // Public site fields (see lib/expedition-site.ts)
   title?: string

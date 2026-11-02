@@ -370,6 +370,9 @@ export default function StudentDetailPage() {
       
       mutate(`student_${studentId}`)
       mutate("students")
+      // Expedition rows carry the roster count
+      mutate("expeditions")
+      mutate("active_expedition")
       toast.success("Student updated successfully")
       setDialogOpen(false)
     } catch (error) {

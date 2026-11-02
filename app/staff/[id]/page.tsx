@@ -152,6 +152,9 @@ export default function StaffDetailPage() {
       }
       
       mutate("teachers")
+      // Expedition rows carry the roster count
+      mutate("expeditions")
+      mutate("active_expedition")
       toast.success("Staff member updated successfully")
       setDialogOpen(false)
     } catch (error) {

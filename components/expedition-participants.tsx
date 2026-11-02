@@ -266,6 +266,9 @@ export function ExpeditionParticipants({
     mutate("expedition_student_assignments")
     mutate("students")
     mutate("teachers")
+    // Expedition rows carry the roster count
+    mutate("expeditions")
+    mutate("active_expedition")
   }
 
   const handleAddStudent = async (studentId: number) => {

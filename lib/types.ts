@@ -23,7 +23,11 @@ export interface Expedition {
   endDate?: string
   start_date?: string
   end_date?: string
+  // Counted from the roster by Xano on every expeditions read (active
+  // students + active staff on the expedition); not editable.
   number_participants?: number
+  number_staff?: number
+  number_students?: number
   expedition_type?: ExpeditionType
   isActive?: boolean
 }

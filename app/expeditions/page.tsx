@@ -69,7 +69,6 @@ export default function ExpeditionsPage() {
     endDate: "",
     schoolterms_id: 0,
     schoolyears_id: 0,
-    number_participants: "",
     expedition_type: DEFAULT_EXPEDITION_TYPE as ExpeditionType,
     show_on_site: true,
   })
@@ -114,7 +113,6 @@ export default function ExpeditionsPage() {
       endDate: "",
       schoolterms_id: 0,
       schoolyears_id: 0,
-      number_participants: "",
       expedition_type: DEFAULT_EXPEDITION_TYPE,
       show_on_site: true,
     })
@@ -129,7 +127,6 @@ export default function ExpeditionsPage() {
       endDate: expedition.endDate,
       schoolterms_id: expedition.schoolterms_id,
       schoolyears_id: expedition.schoolyears_id,
-      number_participants: expedition.number_participants ? String(expedition.number_participants) : "",
       expedition_type: getExpeditionType(expedition),
       show_on_site: Boolean(expedition.is_published),
     })
@@ -151,7 +148,6 @@ export default function ExpeditionsPage() {
           endDate: formData.endDate,
           schoolterms_id: formData.schoolterms_id,
           schoolyears_id: formData.schoolyears_id,
-          number_participants: parseInt(formData.number_participants) || 0,
           expedition_type: formData.expedition_type,
           ...siteFieldsForUpdate(editingExpedition, formData.name.trim(), formData.show_on_site, expeditions ?? []),
         })
@@ -160,7 +156,6 @@ export default function ExpeditionsPage() {
         const { show_on_site, ...fields } = formData
         await createExpedition({
           ...fields,
-          number_participants: parseInt(formData.number_participants) || 0,
           ...siteFieldsForCreate(formData.name.trim(), show_on_site, expeditions ?? []),
         })
         toast.success(show_on_site ? "Expedition created and added to the expeditions site" : "Expedition created")
@@ -631,17 +626,36 @@ export default function ExpeditionsPage() {
               </Select>
             </div>
 
-            <div>
-              <Label htmlFor="number_participants">Number of Participants</Label>
-              <Input
-                id="number_participants"
-                type="number"
-                min={0}
-                value={formData.number_participants}
-                onChange={(e) => setFormData(prev => ({ ...prev, number_participants: e.target.value }))}
-                placeholder="e.g. 25"
-                className="mt-1.5"
-              />
+            {/* Counted from the roster by Xano (active students + active staff), not typed in */}
+            <div className="rounded-lg border bg-gray-50/50 px-4 py-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="text-sm font-medium text-gray-900">Participants</div>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    {editingExpedition
+                      ? "Counted from the active students and staff on the roster. Galley recipes scale to this number."
+                      : "Counted automatically once students and staff are added to the roster."}
+                  </p>
+                </div>
+                {editingExpedition && (
+                  <div className="text-right shrink-0">
+                    <div className="text-2xl font-semibold tabular-nums text-gray-900 leading-none">
+                      {editingExpedition.number_participants ?? 0}
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1 whitespace-nowrap">
+                      {editingExpedition.number_staff ?? 0} staff · {editingExpedition.number_students ?? 0} students
+                    </div>
+                  </div>
+                )}
+              </div>
+              {editingExpedition && (
+                <a
+                  href={`/expedition/${editingExpedition.id}`}
+                  className="inline-block mt-2 text-xs text-gray-700 underline underline-offset-2 hover:text-gray-900"
+                >
+                  Manage the roster
+                </a>
+              )}
             </div>
           </div>
           

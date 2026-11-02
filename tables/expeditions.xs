@@ -19,6 +19,8 @@ table expeditions {
     }
   
     bool isActive?
+    // Legacy, no longer written: the expeditions GET endpoints replace it with the
+    // roster count (expedition_participant_counts function)
     int number_participants?
   
     // academy = school expedition; residential = residential-program expedition with its own incentive system

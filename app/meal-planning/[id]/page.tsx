@@ -2,7 +2,7 @@
 
 import { XANO_BASE_URL } from "@/lib/xano-config"
 import { generateRecipeImage } from "@/lib/recipe-image"
-import React, { useMemo, useState } from "react"
+import React, { useEffect, useMemo, useState } from "react"
 import useSWR, { mutate } from "swr"
 import { RecipeThumb } from "@/components/recipe-thumb"
 import Link from "next/link"
@@ -144,8 +144,6 @@ export default function RecipeDetailPage() {
     () => fetch(`${XANO_BASE_URL}/expedition_galley_equipment`).then(r => r.json())
   )
 
-  // Inventory items for ingredient autocomplete
-  const { data: inventoryItems = [] } = useSWR("expeditions_inventory", getExpeditionsInventory)
   const [ingredientDropdownOpen, setIngredientDropdownOpen] = useState(false)
 
   // Instruction sheet state
@@ -163,6 +161,13 @@ export default function RecipeDetailPage() {
 
   // Ingredient sheet state
   const [ingredientSheetOpen, setIngredientSheetOpen] = useState(false)
+  // Inventory items (44 KB) feed the ingredient autocomplete, so they are fetched the first time
+  // the ingredient sheet opens rather than on every recipe view. SWR keeps them for later opens.
+  const [inventoryWanted, setInventoryWanted] = useState(false)
+  useEffect(() => {
+    if (ingredientSheetOpen) setInventoryWanted(true)
+  }, [ingredientSheetOpen])
+  const { data: inventoryItems = [] } = useSWR(inventoryWanted ? "expeditions_inventory" : null, getExpeditionsInventory)
   const [editingIngredient, setEditingIngredient] = useState<Ingredient | null>(null)
   const [ingredientForm, setIngredientForm] = useState({
     ingredient: "",

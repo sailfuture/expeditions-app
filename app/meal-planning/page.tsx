@@ -35,7 +35,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { toast } from "sonner"
-import { Plus, Pencil, X, FileUp, Search } from "lucide-react"
+import { Plus, Pencil, X, FileUp, Search, Sparkles } from "lucide-react"
 import {
   FileUpload,
   FileUploadDropzone,
@@ -73,6 +73,25 @@ async function uploadImageToXano(file: File): Promise<any> {
   return response.json()
 }
 
+// Asks the server to generate a stock-style plate photo (app/api/generate-recipe-image) and
+// returns it as a File, so it flows through the same upload-on-save path as a chosen photo.
+async function generateRecipeImage(recipeName: string, summary: string, cookbookId?: number): Promise<File> {
+  const response = await fetch("/api/generate-recipe-image", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    // The id lets the server read the recipe's saved ingredients, so the plate shows real components.
+    body: JSON.stringify({ recipe_name: recipeName, summary, expedition_cookbook_id: cookbookId ?? null }),
+  })
+  if (!response.ok) {
+    const detail = await response.json().catch(() => null)
+    throw new Error(detail?.error || "Failed to generate image")
+  }
+  const blob = await response.blob()
+  const ext = blob.type === "image/jpeg" ? "jpg" : blob.type === "image/webp" ? "webp" : "png"
+  const base = recipeName.replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-|-$/g, "").toLowerCase() || "recipe"
+  return new File([blob], `${base}.${ext}`, { type: blob.type || "image/png" })
+}
+
 const truncateText = (text: string, maxLength: number) => {
   if (!text || text.length <= maxLength) return text
   return text.substring(0, maxLength).trim() + "..."
@@ -100,6 +119,7 @@ export default function MealPlanningPage() {
   const [addPhotoFile, setAddPhotoFile] = useState<File | null>(null)
   const [addPhotoPreview, setAddPhotoPreview] = useState<string | null>(null)
   const [isUploadingAddPhoto, setIsUploadingAddPhoto] = useState(false)
+  const [isGeneratingAddPhoto, setIsGeneratingAddPhoto] = useState(false)
   const [isSavingAdd, setIsSavingAdd] = useState(false)
 
   // Edit sheet state
@@ -116,7 +136,32 @@ export default function MealPlanningPage() {
   const [editPhotoFile, setEditPhotoFile] = useState<File | null>(null)
   const [editPhotoPreview, setEditPhotoPreview] = useState<string | null>(null)
   const [isUploadingEditPhoto, setIsUploadingEditPhoto] = useState(false)
+  const [isGeneratingEditPhoto, setIsGeneratingEditPhoto] = useState(false)
   const [isSavingEdit, setIsSavingEdit] = useState(false)
+
+  const handleGeneratePhoto = async (target: "add" | "edit") => {
+    const form = target === "add" ? addForm : editForm
+    const name = form.recipe_name.trim()
+    if (!name) {
+      toast.error("Enter a recipe name first")
+      return
+    }
+    const setGenerating = target === "add" ? setIsGeneratingAddPhoto : setIsGeneratingEditPhoto
+    const setFile = target === "add" ? setAddPhotoFile : setEditPhotoFile
+    const setPreview = target === "add" ? setAddPhotoPreview : setEditPhotoPreview
+    setGenerating(true)
+    try {
+      const file = await generateRecipeImage(name, form.summary, target === "edit" ? editRecipe?.id : undefined)
+      setFile(file)
+      setPreview(URL.createObjectURL(file))
+      toast.success("Photo generated. Save to keep it, or generate again.")
+    } catch (error) {
+      console.error("Error generating recipe photo:", error)
+      toast.error(error instanceof Error ? error.message : "Failed to generate photo")
+    } finally {
+      setGenerating(false)
+    }
+  }
   
   const { data: recipes, isLoading, error } = useSWR<Recipe[]>(
     `${XANO_BASE_URL}/expedition_cookbook`,
@@ -657,7 +702,20 @@ export default function MealPlanningPage() {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Recipe Photo</Label>
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium">Recipe Photo</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 cursor-pointer"
+                  disabled={isGeneratingAddPhoto || !addForm.recipe_name.trim()}
+                  onClick={() => handleGeneratePhoto("add")}
+                >
+                  {isGeneratingAddPhoto ? <Spinner className="size-4" /> : <Sparkles className="size-4" />}
+                  {isGeneratingAddPhoto ? "Generating…" : addPhotoFile ? "Generate again" : "Generate photo"}
+                </Button>
+              </div>
               <FileUpload
                 maxFiles={1}
                 maxSize={10 * 1024 * 1024}
@@ -857,7 +915,20 @@ export default function MealPlanningPage() {
 
             {/* Recipe Photo */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Recipe Photo</Label>
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium">Recipe Photo</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 cursor-pointer"
+                  disabled={isGeneratingEditPhoto || !editForm.recipe_name.trim()}
+                  onClick={() => handleGeneratePhoto("edit")}
+                >
+                  {isGeneratingEditPhoto ? <Spinner className="size-4" /> : <Sparkles className="size-4" />}
+                  {isGeneratingEditPhoto ? "Generating…" : editPhotoFile ? "Generate again" : "Generate photo"}
+                </Button>
+              </div>
               {editPhotoPreview && !editPhotoFile && (
                 <div className="relative w-full h-32 rounded-lg overflow-hidden bg-gray-100">
                   <img

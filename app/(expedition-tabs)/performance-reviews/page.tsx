@@ -22,7 +22,11 @@ import { FileText, User, Download, ExternalLink, Plus, Calendar, Eye, Trash2, Ma
 import { Textarea } from "@/components/ui/textarea"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { generatePerformanceReviewPDF } from "@/lib/pdf-generator"
+
+// jspdf (~350 KB) and the PDF helpers load on demand, so they stay out of the page bundle
+// until someone asks for a PDF.
+const generatePerformanceReviewPDF = async (reviewId: number) =>
+  (await import("@/lib/pdf-generator")).generatePerformanceReviewPDF(reviewId)
 import { DayReasons, ReasonsSummary } from "@/components/score-reasons"
 import { toast } from "sonner"
 import { getProfessionalismByStudentAndDate, updatePerformanceReviewNotes, getPerformanceReviewById, deletePerformanceReview, getEvaluationByStudent, getStudentById, getExpeditionPerformanceReviews } from "@/lib/xano"

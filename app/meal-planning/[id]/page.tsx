@@ -4,7 +4,7 @@ import { XANO_BASE_URL } from "@/lib/xano-config"
 import { generateRecipeImage } from "@/lib/recipe-image"
 import React, { useMemo, useState } from "react"
 import useSWR, { mutate } from "swr"
-import Image from "next/image"
+import { RecipeThumb } from "@/components/recipe-thumb"
 import Link from "next/link"
 import { useParams } from "next/navigation"
 import {
@@ -412,6 +412,7 @@ export default function RecipeDetailPage() {
       setInstructionSheetOpen(false)
       setEditingInstruction(null)
       mutate(`${XANO_BASE_URL}/expedition_cookbook/${recipeId}`)
+      mutate("expedition_recipe_instructions")
     } catch (error) {
       console.error("Error saving instruction:", error)
       toast.error("Failed to save instruction")
@@ -431,6 +432,7 @@ export default function RecipeDetailPage() {
       toast.success("Instruction deleted")
       setDeleteInstructionDialog(null)
       mutate(`${XANO_BASE_URL}/expedition_cookbook/${recipeId}`)
+      mutate("expedition_recipe_instructions")
     } catch (error) {
       console.error("Error deleting instruction:", error)
       toast.error("Failed to delete instruction")
@@ -617,15 +619,14 @@ export default function RecipeDetailPage() {
           {/* Recipe Header */}
           <div className="flex flex-col sm:flex-row sm:items-center gap-6">
             {getPhotoUrl(recipe.recipe_photo) ? (
-              <div className="w-full sm:w-48 h-48 rounded-xl overflow-hidden bg-gray-100 shrink-0">
-                <Image
-                  src={getPhotoUrl(recipe.recipe_photo)!}
-                  alt={recipe.recipe_name}
-                  width={192}
-                  height={192}
-                  className="object-cover w-full h-full"
-                />
-              </div>
+              <RecipeThumb
+                photo={recipe.recipe_photo}
+                name={recipe.recipe_name}
+                size={192}
+                fill
+                priority
+                className="w-full sm:w-48 h-48 rounded-xl shrink-0"
+              />
             ) : (
               <div className="relative w-full sm:w-48 h-48 rounded-xl bg-gray-100 flex flex-col items-center justify-center gap-3 text-gray-400 shrink-0">
                 <span className="text-sm">No image</span>

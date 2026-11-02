@@ -1,28 +1,32 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import Image from "next/image"
 import { UtensilsCrossed } from "lucide-react"
 import { cn, getPhotoUrl } from "@/lib/utils"
-import { optimizedImageUrl } from "@/lib/recipe-image"
 
 interface RecipeThumbProps {
   /** The cookbook `recipe_photo` value (Xano image object or URL). */
   photo: any
   name?: string
-  /** Displayed size in CSS px (square). Also the size requested from Cloudinary, at 2×. */
+  /** Displayed size in CSS px (square). Also the size requested from the image optimizer. */
   size?: number
   /** Let `className` size the element instead of `size` (which then only sets the request size). */
   fill?: boolean
   className?: string
+  /** Load eagerly (above the fold, e.g. a recipe page's hero photo). */
+  priority?: boolean
 }
 
 /**
- * A recipe photo at thumbnail size. Loads the Cloudinary-resized copy first, falls back to the
- * original file if that fails, and to a placeholder when there is no photo at all.
+ * A recipe photo at thumbnail size. Recipe photos are ~1 MB PNGs in Xano's file vault; this
+ * renders them through Vercel's image optimizer (see `images` in next.config.mjs), which
+ * resizes to `size` and serves WebP/AVIF. If the optimizer can't fetch the file it falls
+ * back to the original, and to a placeholder when there is no photo at all.
  */
-export function RecipeThumb({ photo, name, size = 48, fill = false, className }: RecipeThumbProps) {
+export function RecipeThumb({ photo, name, size = 48, fill = false, className, priority }: RecipeThumbProps) {
   const original = getPhotoUrl(photo)
-  // 0 = optimized URL, 1 = original file, 2 = placeholder
+  // 0 = optimized, 1 = original file, 2 = placeholder
   const [stage, setStage] = useState<0 | 1 | 2>(0)
   useEffect(() => {
     setStage(0)
@@ -43,11 +47,15 @@ export function RecipeThumb({ photo, name, size = 48, fill = false, className }:
   }
 
   return (
-    <img
-      src={stage === 0 ? optimizedImageUrl(original, size) : original}
+    <Image
+      src={original}
       alt={name || ""}
-      loading="lazy"
-      decoding="async"
+      width={size}
+      height={size}
+      sizes={`${size}px`}
+      quality={70}
+      priority={priority}
+      unoptimized={stage === 1}
       onError={() => setStage((s) => (s === 0 ? 1 : 2))}
       className={cn("shrink-0 object-cover bg-gray-100", className)}
       style={style}

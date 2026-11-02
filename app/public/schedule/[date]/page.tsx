@@ -29,6 +29,7 @@ import { Clock, ChevronLeft, ChevronRight, MapPin, Briefcase, StickyNote, Users,
 import useSWR from "swr"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { RecipeThumb } from "@/components/recipe-thumb"
 import {
   useExpeditionSchedules,
   useExpeditionScheduleItemsByDate,
@@ -542,10 +543,7 @@ export default function PublicSchedulePage() {
                     {isMealType(item) && (
                       <div className={`flex items-center gap-1.5 mt-2 ${!item._expedition_cookbook?.recipe_name && !item.expedition_cookbook_id ? 'text-gray-400 italic' : 'text-gray-600'}`}>
                         {getPhotoUrl(item._expedition_cookbook?.recipe_photo) && (
-                          <Avatar className="h-5 w-5">
-                            <AvatarImage src={getPhotoUrl(item._expedition_cookbook.recipe_photo)!} alt={item._expedition_cookbook.recipe_name} />
-                            <AvatarFallback className="text-[8px] bg-orange-100 text-orange-600">MP</AvatarFallback>
-                          </Avatar>
+                          <RecipeThumb photo={item._expedition_cookbook.recipe_photo} name={item._expedition_cookbook.recipe_name} size={20} className="rounded-full" />
                         )}
                         <span className="text-sm">{item._expedition_cookbook?.recipe_name || (item.expedition_cookbook_id > 0 ? `Meal Plan #${item.expedition_cookbook_id}` : 'No Meal Plan')}</span>
                       </div>
@@ -714,10 +712,7 @@ export default function PublicSchedulePage() {
                         className="flex items-center gap-2 w-full text-left p-2 -m-2 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
                       >
                         {getPhotoUrl(selectedItem._expedition_cookbook?.recipe_photo) && (
-                          <Avatar className="h-8 w-8">
-                            <AvatarImage src={getPhotoUrl(selectedItem._expedition_cookbook.recipe_photo)!} alt={selectedItem._expedition_cookbook.recipe_name} />
-                            <AvatarFallback className="text-xs bg-orange-100 text-orange-600">MP</AvatarFallback>
-                          </Avatar>
+                          <RecipeThumb photo={selectedItem._expedition_cookbook.recipe_photo} name={selectedItem._expedition_cookbook.recipe_name} size={32} className="rounded-full" />
                         )}
                         <span className="text-sm font-medium text-gray-900">
                           {selectedItem._expedition_cookbook?.recipe_name || `Meal Plan #${selectedItem.expedition_cookbook_id}`}
@@ -774,13 +769,13 @@ export default function PublicSchedulePage() {
                 {/* Recipe Header */}
                 <div className="flex flex-col sm:flex-row gap-4">
                   {getPhotoUrl(selectedRecipe.recipe_photo) && (
-                    <div className="w-full sm:w-40 h-40 rounded-xl overflow-hidden bg-gray-100 shrink-0">
-                      <img
-                        src={getPhotoUrl(selectedRecipe.recipe_photo)!}
-                        alt={selectedRecipe.recipe_name}
-                        className="object-cover w-full h-full"
-                      />
-                    </div>
+                    <RecipeThumb
+                      photo={selectedRecipe.recipe_photo}
+                      name={selectedRecipe.recipe_name}
+                      size={320}
+                      fill
+                      className="w-full sm:w-40 h-40 rounded-xl shrink-0"
+                    />
                   )}
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">

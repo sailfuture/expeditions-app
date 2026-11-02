@@ -2,6 +2,10 @@
 // number_staff and number_students counted from the roster (see the
 // expedition_participant_counts function); the table's number_participants
 // column is no longer used.
+//
+// One addon each for the term and the year. This used to list the schoolTerms
+// addon three times and schoolYears twice (the duplicates overwrote each other),
+// so every row ran five sub-queries instead of two and the call took ~1.6 s.
 query expeditions verb=GET {
   api_group = "Expedition App"
 
@@ -17,21 +21,6 @@ query expeditions verb=GET {
           name : "schoolTerms"
           input: {schoolTerms_id: $output.schoolterms_id}
           as   : "_schoolterms"
-        }
-        {
-          name : "schoolTerms"
-          input: {schoolTerms_id: $output.schoolterms_id}
-          as   : "_schoolterms"
-        }
-        {
-          name : "schoolTerms"
-          input: {schoolTerms_id: $output.schoolterms_id}
-          as   : "_schoolterms"
-        }
-        {
-          name : "schoolYears"
-          input: {schoolYears_id: $output.schoolterms_id.schoolyear_id}
-          as   : "_schoolyears"
         }
         {
           name : "schoolYears"

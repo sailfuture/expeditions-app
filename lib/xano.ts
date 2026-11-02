@@ -830,6 +830,11 @@ export async function getGalleyEquipment() {
   return xanoFetch<any[]>("/expedition_galley_equipment")
 }
 
+/** Every instruction step of every recipe (expedition_cookbook_id, step, equipment ids...). */
+export async function getExpeditionRecipeInstructions() {
+  return xanoFetch<any[]>("/expedition_recipe_instructions")
+}
+
 export async function createGalleyEquipment(data: {
   name: string
   category?: string

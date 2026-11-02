@@ -1,6 +1,7 @@
 "use client"
 
 import { XANO_BASE_URL } from "@/lib/xano-config"
+import { RecipeThumb } from "@/components/recipe-thumb"
 import React, { useMemo, useState, Suspense } from "react"
 import useSWR from "swr"
 import Link from "next/link"
@@ -493,13 +494,14 @@ function PublicRecipeDetailPage() {
             {/* Recipe Header — vertically centered */}
             <div className="flex flex-col sm:flex-row sm:items-center gap-6">
               {getPhotoUrl(recipe.recipe_photo) ? (
-                <div className="w-full sm:w-48 h-48 rounded-xl overflow-hidden bg-gray-100 shrink-0">
-                  <img
-                    src={getPhotoUrl(recipe.recipe_photo)!}
-                    alt={recipe.recipe_name}
-                    className="object-cover w-full h-full"
-                  />
-                </div>
+                <RecipeThumb
+                  photo={recipe.recipe_photo}
+                  name={recipe.recipe_name}
+                  size={192}
+                  fill
+                  priority
+                  className="w-full sm:w-48 h-48 rounded-xl shrink-0"
+                />
               ) : (
                 <div className="w-full sm:w-48 h-48 rounded-xl bg-gray-100 flex items-center justify-center text-gray-400 shrink-0">
                   No image

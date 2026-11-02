@@ -41,6 +41,7 @@ import {
   Search,
 } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { RecipeThumb } from "@/components/recipe-thumb"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { ExpeditionCalendar, expeditionDateBounds, isOutsideExpedition } from "@/components/expedition-calendar"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
@@ -651,19 +652,13 @@ function PublicGalleyPage() {
                     onClick={() => handleRowClick(meal.id, "cookbook")}
                   >
                     <TableCell className="h-16 px-4 sm:px-6">
-                      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg overflow-hidden bg-gray-100">
-                        {getPhotoUrl(meal.recipe_photo) ? (
-                          <img
-                            src={getPhotoUrl(meal.recipe_photo)!}
-                            alt={meal.recipe_name}
-                            className="object-cover w-full h-full"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">
-                            No img
-                          </div>
-                        )}
-                      </div>
+                      <RecipeThumb
+                        photo={meal.recipe_photo}
+                        name={meal.recipe_name}
+                        size={48}
+                        fill
+                        className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg"
+                      />
                     </TableCell>
                     <TableCell className="h-16 px-4 sm:px-6 overflow-hidden">
                       <span className="font-medium text-gray-900 text-sm truncate block">{meal.recipe_name}</span>
@@ -997,13 +992,13 @@ function PublicGalleyPage() {
                         <div className="flex items-start gap-4">
                           {/* Recipe Photo */}
                           {recipePhoto ? (
-                            <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg overflow-hidden bg-gray-100 shrink-0">
-                              <img
-                                src={recipePhoto}
-                                alt={recipeName || item.name}
-                                className="object-cover w-full h-full"
-                              />
-                            </div>
+                            <RecipeThumb
+                              photo={recipePhoto}
+                              name={recipeName || item.name}
+                              size={96}
+                              fill
+                              className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg shrink-0"
+                            />
                           ) : (
                             <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
                               <UtensilsCrossed className="h-8 w-8 text-gray-300" />

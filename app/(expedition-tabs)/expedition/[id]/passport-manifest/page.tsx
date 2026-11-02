@@ -49,8 +49,6 @@ import { useExpeditions } from "@/lib/hooks/use-expeditions"
 import { toast } from "sonner"
 import { Spinner } from "@/components/ui/spinner"
 import { getPhotoUrl } from "@/lib/utils"
-import jsPDF from "jspdf"
-import autoTable from "jspdf-autotable"
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -244,7 +242,9 @@ export default function PassportManifestPage({ params }: PageProps) {
     }
   }
 
-  const exportPDF = () => {
+  const exportPDF = async () => {
+    // jspdf + autotable (~400 KB) load on demand, so they stay out of the page bundle.
+    const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([import("jspdf"), import("jspdf-autotable")])
     const doc = new jsPDF({ orientation: "landscape", unit: "in", format: "letter" })
 
     // Title

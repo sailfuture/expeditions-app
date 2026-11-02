@@ -57,6 +57,7 @@ import {
 } from "@/components/ui/breadcrumb"
 import { Clock, User, MessageSquare, ChevronLeft, ChevronRight, Plus, Pencil, Trash2, X, Settings, MapPin, ClipboardList, Wrench, ExternalLink } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { RecipeThumb } from "@/components/recipe-thumb"
 import { DateNavigation } from "@/components/date-navigation"
 import { AddScheduleItemSheet } from "@/components/add-schedule-item-sheet"
 import { DraggableScheduleItem } from "@/components/draggable-schedule-item"
@@ -1217,10 +1218,7 @@ export function ScheduleViewClient({ date, expeditionId }: ScheduleViewClientPro
                       className="flex items-center gap-3 w-full text-left p-2 -m-2 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
                     >
                       {getPhotoUrl(selectedItem._expedition_cookbook?.recipe_photo) && (
-                        <Avatar className="h-10 w-10">
-                          <AvatarImage src={getPhotoUrl(selectedItem._expedition_cookbook.recipe_photo)!} alt={selectedItem._expedition_cookbook.recipe_name} />
-                          <AvatarFallback className="text-sm bg-orange-100 text-orange-600">🍽</AvatarFallback>
-                        </Avatar>
+                        <RecipeThumb photo={selectedItem._expedition_cookbook.recipe_photo} name={selectedItem._expedition_cookbook.recipe_name} size={40} className="rounded-full" />
                       )}
                       <p className="text-base font-medium text-gray-900">
                         {selectedItem._expedition_cookbook?.recipe_name || `Meal Plan #${selectedItem.expedition_cookbook_id}`}
@@ -1424,13 +1422,13 @@ export function ScheduleViewClient({ date, expeditionId }: ScheduleViewClientPro
                 {/* Recipe Header */}
                 <div className="flex flex-col sm:flex-row gap-4">
                   {getPhotoUrl(selectedRecipe.recipe_photo) && (
-                    <div className="w-full sm:w-40 h-40 rounded-xl overflow-hidden bg-gray-100 shrink-0">
-                      <img
-                        src={getPhotoUrl(selectedRecipe.recipe_photo)!}
-                        alt={selectedRecipe.recipe_name}
-                        className="object-cover w-full h-full"
-                      />
-                    </div>
+                    <RecipeThumb
+                      photo={selectedRecipe.recipe_photo}
+                      name={selectedRecipe.recipe_name}
+                      size={320}
+                      fill
+                      className="w-full sm:w-40 h-40 rounded-xl shrink-0"
+                    />
                   )}
                   <div className="flex-1">
                     <div className="flex flex-wrap items-center gap-2 mb-2">

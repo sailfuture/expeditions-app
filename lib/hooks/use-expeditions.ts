@@ -66,9 +66,13 @@ export function useExpeditionScheduleItems() {
 }
 
 export function useExpeditionScheduleItemsByDate(date: string | null, expeditionsId?: number, options?: { refreshInterval?: number; revalidateOnFocus?: boolean }) {
+  // Xano's expedition_schedule_items_date needs an expedition id: without one it fails after
+  // ~2.5 s. Pages learn the id from the active expedition a moment after mount, so wait for it
+  // rather than send a request that can only fail (and show a console error).
+  const ready = Boolean(date && expeditionsId)
   return useSWR(
-    date ? `expedition_schedule_items_date_${date}_${expeditionsId || 'all'}` : null,
-    date ? () => getExpeditionScheduleItemsByDate(date, expeditionsId) : null,
+    ready ? `expedition_schedule_items_date_${date}_${expeditionsId}` : null,
+    ready ? () => getExpeditionScheduleItemsByDate(date!, expeditionsId) : null,
     options
   )
 }

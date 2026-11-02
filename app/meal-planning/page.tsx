@@ -4,7 +4,6 @@ import { XANO_BASE_URL } from "@/lib/xano-config"
 import { generateRecipeImage } from "@/lib/recipe-image"
 import { useMemo, useState } from "react"
 import useSWR, { mutate } from "swr"
-import Image from "next/image"
 import { useRouter } from "next/navigation"
 import {
   Table,
@@ -47,7 +46,9 @@ import {
   FileUploadList,
 } from "@/components/ui/file-upload"
 import { cn, getPhotoUrl } from "@/lib/utils"
-import { getGalleyEquipment } from "@/lib/xano"
+import { getGalleyEquipment, getExpeditionRecipeInstructions } from "@/lib/xano"
+import { useExpeditions } from "@/lib/hooks/use-expeditions"
+import { RecipeThumb } from "@/components/recipe-thumb"
 
 
 interface Recipe {
@@ -150,39 +151,37 @@ export default function MealPlanningPage() {
     fetcher
   )
 
-  const { data: expeditions } = useSWR<any[]>(
-    `${XANO_BASE_URL}/expeditions`,
-    fetcher
-  )
+  // Same SWR key as the navbar and expedition context, so the list is fetched once per page.
+  const { data: expeditions } = useExpeditions()
 
   // Galley equipment
   const { data: galleyEquipment = [] } = useSWR("galley_equipment", getGalleyEquipment)
 
-  // Fetch recipe details (with instructions) for equipment display
-  const recipeIds = useMemo(() => (recipes || []).map(r => r.id), [recipes])
-  const { data: recipeDetails } = useSWR(
-    recipeIds.length > 0 ? `recipe_details_${recipeIds.join(",")}` : null,
-    async () => {
-      const details = await Promise.all(
-        recipeIds.map(id => fetch(`${XANO_BASE_URL}/expedition_cookbook/${id}`).then(r => r.json()))
-      )
-      const map: Record<number, any> = {}
-      details.forEach(d => { if (d.id) map[d.id] = d })
-      return map
-    }
-  )
+  // The Equipment column needs each recipe's instruction steps. One request for every step
+  // in the cookbook (a few hundred small rows) replaces a request per recipe, which used to
+  // fire 60+ calls at once and left the page waiting several seconds on the slowest one.
+  const { data: allInstructions } = useSWR("expedition_recipe_instructions", getExpeditionRecipeInstructions)
 
-  const getRecipeEquipment = (recipeId: number): string[] => {
-    const detail = recipeDetails?.[recipeId]
-    if (!detail?.instructions) return []
-    const ids = new Set<number>()
-    detail.instructions.forEach((inst: any) => {
-      if (Array.isArray(inst.expedition_galley_equipment_id)) {
-        inst.expedition_galley_equipment_id.forEach((id: number) => ids.add(id))
-      }
+  // Equipment names per recipe id, sorted, from the instruction steps.
+  const equipmentByRecipe = useMemo(() => {
+    const names = new Map<number, string>()
+    galleyEquipment.forEach((e: any) => names.set(e.id, e.name))
+    const idsByRecipe = new Map<number, Set<number>>()
+    ;(allInstructions || []).forEach((inst: any) => {
+      const recipeId = Number(inst.expedition_cookbook_id)
+      if (!recipeId || !Array.isArray(inst.expedition_galley_equipment_id)) return
+      let ids = idsByRecipe.get(recipeId)
+      if (!ids) idsByRecipe.set(recipeId, (ids = new Set<number>()))
+      inst.expedition_galley_equipment_id.forEach((id: number) => ids!.add(id))
     })
-    return [...ids].map(id => galleyEquipment.find((e: any) => e.id === id)?.name).filter(Boolean).sort()
-  }
+    const result = new Map<number, string[]>()
+    idsByRecipe.forEach((ids, recipeId) => {
+      result.set(recipeId, [...ids].map((id) => names.get(id)).filter((n): n is string => Boolean(n)).sort())
+    })
+    return result
+  }, [allInstructions, galleyEquipment])
+
+  const getRecipeEquipment = (recipeId: number): string[] => equipmentByRecipe.get(recipeId) ?? []
 
   // Group recipes by types array (a recipe can appear in multiple groups),
   // filtered by the search query (name, description, or equipment).
@@ -220,7 +219,7 @@ export default function MealPlanningPage() {
     })
 
     return groups
-  }, [recipes, search, recipeDetails, galleyEquipment])
+  }, [recipes, search, equipmentByRecipe])
 
   const handleRowClick = (id: number) => {
     router.push(`/meal-planning/${id}`)
@@ -420,21 +419,13 @@ export default function MealPlanningPage() {
                     className="hover:bg-gray-50 transition-colors"
                   >
                     <TableCell className="h-16 px-4 sm:px-6 cursor-pointer" onClick={() => handleRowClick(meal.id)}>
-                      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg overflow-hidden bg-gray-100">
-                        {getPhotoUrl(meal.recipe_photo) ? (
-                          <Image
-                            src={getPhotoUrl(meal.recipe_photo)!}
-                            alt={meal.recipe_name}
-                            width={48}
-                            height={48}
-                            className="object-cover w-full h-full"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">
-                            No img
-                          </div>
-                        )}
-                      </div>
+                      <RecipeThumb
+                        photo={meal.recipe_photo}
+                        name={meal.recipe_name}
+                        size={48}
+                        fill
+                        className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg"
+                      />
                     </TableCell>
                     <TableCell className="h-16 px-4 sm:px-6 cursor-pointer" onClick={() => handleRowClick(meal.id)}>
                       <span className="font-medium text-gray-900 text-sm truncate block">{meal.recipe_name}</span>

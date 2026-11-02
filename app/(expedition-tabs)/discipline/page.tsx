@@ -64,8 +64,6 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
-import jsPDF from "jspdf"
-import { addPDFHeader } from "@/lib/pdf-generator"
 
 // Helper function to format dates
 function formatDate(dateStr: string | null) {
@@ -99,7 +97,10 @@ function formatRelativeTime(timestamp: number | null) {
 }
 
 // Generate PDF for discipline record
+// jspdf (~350 KB) and the PDF helpers load on demand, so they stay out of the page bundle
+// until someone asks for a PDF.
 async function generateDisciplinePDF(record: any, studentName: string, staffName: string) {
+  const [{ default: jsPDF }, { addPDFHeader }] = await Promise.all([import("jspdf"), import("@/lib/pdf-generator")])
   const doc = new jsPDF()
   const pageWidth = doc.internal.pageSize.getWidth()
   const margin = 14

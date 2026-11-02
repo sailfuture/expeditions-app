@@ -555,7 +555,7 @@ export function Navbar() {
               <DropdownMenu>
                 <DropdownMenuTrigger className="flex items-center cursor-pointer hover:opacity-80 transition-opacity">
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src={currentUser?.photo_url || "/diverse-user-avatars.png"} />
+                    <AvatarImage src={currentUser?.photo_url || undefined} />
                     <AvatarFallback>
                       {currentUser?.name
                         ?.split(" ")

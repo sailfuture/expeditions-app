@@ -3,6 +3,7 @@
 import React, { useRef, useEffect, useState, useCallback } from "react"
 import { useDraggable } from "@dnd-kit/core"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { RecipeThumb } from "@/components/recipe-thumb"
 import { MessageSquare, GripVertical, Pencil } from "lucide-react"
 import { cn, getPhotoUrl } from "@/lib/utils"
 
@@ -300,10 +301,7 @@ export function DraggableScheduleItem({
           {isMealType(item) && (
             <div className="flex items-center gap-1 mt-0.5">
               {getPhotoUrl(item._expedition_cookbook?.recipe_photo) && (
-                <Avatar className="h-3.5 w-3.5">
-                  <AvatarImage src={getPhotoUrl(item._expedition_cookbook.recipe_photo)!} alt={item._expedition_cookbook.recipe_name} />
-                  <AvatarFallback className="text-[6px] bg-orange-100 text-orange-600">🍽</AvatarFallback>
-                </Avatar>
+                <RecipeThumb photo={item._expedition_cookbook.recipe_photo} name={item._expedition_cookbook.recipe_name} size={14} className="rounded-full" />
               )}
               <p className={`text-[10px] truncate ${
                 item._expedition_cookbook?.recipe_name || item.expedition_cookbook_id > 0 

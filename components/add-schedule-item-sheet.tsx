@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Spinner } from "@/components/ui/spinner"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { RecipeThumb } from "@/components/recipe-thumb"
 import { Check, ChevronDown, X, Trash2, ExternalLink, Search } from "lucide-react"
 import { createExpeditionScheduleItem, updateExpeditionScheduleItem, deleteExpeditionScheduleItem, getExpeditionCookbook } from "@/lib/xano"
 import { useExpeditionScheduleItemTypes, revalidateScheduleItemRanges } from "@/lib/hooks/use-expeditions"
@@ -803,10 +804,7 @@ function CookbookSelector({
       >
         <div className="flex items-center gap-2 flex-1 min-w-0">
           {getPhotoUrl(selectedRecipe?.recipe_photo) && (
-            <Avatar className="h-7 w-7 shrink-0">
-              <AvatarImage src={getPhotoUrl(selectedRecipe.recipe_photo)!} alt={selectedRecipe.recipe_name} />
-              <AvatarFallback className="text-[10px] bg-orange-100 text-orange-600">🍽</AvatarFallback>
-            </Avatar>
+            <RecipeThumb photo={selectedRecipe.recipe_photo} name={selectedRecipe.recipe_name} size={28} className="rounded-full" />
           )}
           <span className={selectedRecipe ? "text-gray-900 text-base truncate" : "text-gray-500 text-base"}>
             {selectedRecipe ? selectedRecipe.recipe_name : "Select a meal plan..."}
@@ -870,12 +868,7 @@ function CookbookSelector({
                     recipe.id === selectedId && "bg-gray-50"
                   )}
                 >
-                  <Avatar className="h-8 w-8 shrink-0">
-                    {getPhotoUrl(recipe.recipe_photo) ? (
-                      <AvatarImage src={getPhotoUrl(recipe.recipe_photo)!} alt={recipe.recipe_name} />
-                    ) : null}
-                    <AvatarFallback className="text-xs bg-orange-100 text-orange-600">🍽</AvatarFallback>
-                  </Avatar>
+                  <RecipeThumb photo={recipe.recipe_photo} name={recipe.recipe_name} size={32} className="rounded-full" />
                   <div className="flex-1 min-w-0">
                     <span className="text-sm font-medium block truncate">{recipe.recipe_name}</span>
                   </div>

@@ -24,8 +24,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import jsPDF from "jspdf"
-import { addPDFHeader } from "@/lib/pdf-generator"
 
 // Fetcher for SWR
 async function fetchApplications() {
@@ -63,12 +61,15 @@ function formatRelativeTime(timestamp: number | null) {
   }
 }
 
-// Generate PDF for application
-function generateApplicationPDF(application: any) {
+// Generate PDF for application.
+// jspdf (~350 KB) and the PDF helpers load on demand, so they stay out of the page bundle
+// until someone asks for a PDF.
+async function generateApplicationPDF(application: any) {
+  const [{ default: jsPDF }, { addPDFHeader }] = await Promise.all([import("jspdf"), import("@/lib/pdf-generator")])
   const doc = new jsPDF()
-  
+
   // Add header
-  const startY = addPDFHeader(doc)
+  const startY = await addPDFHeader(doc)
   let y = startY + 5
   
   // Title
@@ -176,8 +177,13 @@ function ApplicationsContent() {
     setViewModalOpen(true)
   }
   
-  const handleDownloadPDF = (application: any) => {
-    generateApplicationPDF(application)
+  const handleDownloadPDF = async (application: any) => {
+    try {
+      await generateApplicationPDF(application)
+    } catch (error) {
+      console.error("Error generating application PDF:", error)
+      toast.error("Failed to generate PDF")
+    }
   }
 
   return (

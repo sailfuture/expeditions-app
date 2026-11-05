@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useMemo } from "react"
+import { useMemo } from "react"
 import { ExternalLink } from "lucide-react"
 import { format } from "date-fns"
 import { Button } from "@/components/ui/button"
@@ -13,8 +13,8 @@ import { cn } from "@/lib/utils"
 
 /**
  * One row per scored day for a student on an expedition, as the
- * "All Evaluation Records" dialog shows it: every score category next to the
- * reasons given for it that day.
+ * "All Evaluation Records" dialog shows it: the score categories side by
+ * side, then the reasons given that day, one column per category.
  *
  * Rows are raw expeditions_professionalism records (academics / crew / job /
  * citizenship / service plus their isXUsed flags and <category>_reason
@@ -97,19 +97,19 @@ export function EvaluationRecordsTable({
   /** Open the scores screen for that day. */
   onView?: (date: string) => void
 }) {
-  // A reasons column only for the categories that were given a reason on at
-  // least one of these days, so an anchored expedition isn't padded with
-  // empty Crew / Service reason columns.
-  const reasonKeys = useMemo(() => {
+  // Scores sit together, then the reasons: one column per category that was
+  // given a reason on at least one of these days, so an anchored expedition
+  // isn't padded with empty Crew / Service reason columns.
+  const reasonColumns = useMemo(() => {
     const seen = new Set<ScoreKey>()
     for (const record of records) {
       const stored = readStoredReasons(record)
       for (const cat of CATEGORIES) if (stored[cat.reasonKey].length > 0) seen.add(cat.reasonKey)
     }
-    return seen
+    return CATEGORIES.filter((cat) => seen.has(cat.reasonKey))
   }, [records])
 
-  const columnCount = 3 + CATEGORIES.length + reasonKeys.size + (onView ? 1 : 0)
+  const columnCount = 3 + CATEGORIES.length + reasonColumns.length + (onView ? 1 : 0)
 
   return (
     <Table>
@@ -118,14 +118,12 @@ export function EvaluationRecordsTable({
           <TableHead className={HEAD}>Date</TableHead>
           <TableHead className={cn(HEAD, "text-center")}>Type</TableHead>
           {CATEGORIES.map((cat) => (
-            <React.Fragment key={cat.field}>
-              <TableHead className={cn(HEAD, "text-center")}>{cat.label}</TableHead>
-              {reasonKeys.has(cat.reasonKey) && (
-                <TableHead className={cn(HEAD, "min-w-[11rem]")}>{cat.label} reasons</TableHead>
-              )}
-            </React.Fragment>
+            <TableHead key={cat.field} className={cn(HEAD, "text-center")}>{cat.label}</TableHead>
           ))}
           <TableHead className={cn(HEAD, "text-center")}>Journal</TableHead>
+          {reasonColumns.map((cat) => (
+            <TableHead key={cat.field} className={cn(HEAD, "min-w-[11rem] border-l")}>{cat.label} reasons</TableHead>
+          ))}
           {onView && <TableHead className={cn(HEAD, "text-right")}>View</TableHead>}
         </TableRow>
       </TableHeader>
@@ -158,21 +156,19 @@ export function EvaluationRecordsTable({
                   const blocked = record[cat.flag] === true
                   const value = scoreOf(record, cat)
                   return (
-                    <React.Fragment key={cat.field}>
-                      <TableCell className={cn("px-3 py-3 text-center align-top text-sm", scoreTone(value, blocked))}>
-                        {formatScore(value, blocked)}
-                      </TableCell>
-                      {reasonKeys.has(cat.reasonKey) && (
-                        <TableCell className="px-3 py-2.5 align-top">
-                          <CategoryReasonChips row={record} category={cat.reasonKey} />
-                        </TableCell>
-                      )}
-                    </React.Fragment>
+                    <TableCell key={cat.field} className={cn("px-3 py-3 text-center align-top text-sm", scoreTone(value, blocked))}>
+                      {formatScore(value, blocked)}
+                    </TableCell>
                   )
                 })}
                 <TableCell className={cn("px-3 py-3 text-center align-top", getJournalStringColor(journal))}>
                   <span className={cn("text-sm", journal ? "font-medium text-gray-700" : "text-gray-400")}>{journal || "—"}</span>
                 </TableCell>
+                {reasonColumns.map((cat) => (
+                  <TableCell key={cat.field} className="px-3 py-2.5 align-top border-l">
+                    <CategoryReasonChips row={record} category={cat.reasonKey} />
+                  </TableCell>
+                ))}
                 {onView && (
                   <TableCell className="px-3 py-2 text-right align-top">
                     <Button

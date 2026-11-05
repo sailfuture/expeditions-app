@@ -66,6 +66,7 @@ import { formatDistanceToNow } from "date-fns"
 import { Eye } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import { EvaluationRecordsTable } from "@/components/evaluation-records-table"
 import { cn } from "@/lib/utils"
 
 export default function StudentDetailPage() {
@@ -569,36 +570,6 @@ export default function StudentDetailPage() {
       })
   }, [allProfessionalismRecords, studentId])
   
-  // Format score value with special handling for null, 0, and isUsed
-  const formatScoreValue = (value: number | null | undefined, isUsed: boolean) => {
-    if (isUsed) return "N/A"
-    if (value === null || value === undefined) return "No Score"
-    if (value === 0) return "Unexcused"
-    return value.toString()
-  }
-  
-  // Get CSS class for score value
-  const getScoreClass = (value: number | null | undefined, isUsed: boolean) => {
-    if (isUsed) return "text-gray-700"
-    if (value === null || value === undefined) return "text-gray-700"
-    if (value === 0) return "text-gray-700"
-    return "text-gray-700"
-  }
-  
-  // Get row background color based on score value
-  // 5=blue, 3=green, 2=yellow, 1=red, 0/unexcused=red
-  const getScoreRowColor = (value: number | null | undefined, isUsed: boolean) => {
-    if (isUsed) return "bg-red-50" // Unexcused
-    if (value === null || value === undefined) return ""
-    if (value === 5) return "bg-blue-50"
-    if (value === 4) return "bg-blue-50"
-    if (value === 3) return "bg-green-50"
-    if (value === 2) return "bg-yellow-50"
-    if (value === 1) return "bg-red-50"
-    if (value === 0) return "bg-red-50"
-    return ""
-  }
-  
   // Get the expedition name if an expedition is specified
   const currentExpedition = useMemo(() => {
     if (!expeditionId || !allExpeditions) return null
@@ -613,17 +584,6 @@ export default function StudentDetailPage() {
     return "Needs Improvement"
   }
   
-  // Format date for detailed scores modal
-  const formatDetailDate = (dateStr: string) => {
-    if (!dateStr) return "—"
-    try {
-      const [year, month, day] = dateStr.split('-').map(Number)
-      const date = new Date(year, month - 1, day)
-      return format(date, "MMM d, yyyy")
-    } catch {
-      return dateStr
-    }
-  }
   
   // Format relative time (abbreviated)
   const formatRelativeTime = (timestamp: number | null) => {
@@ -2323,7 +2283,7 @@ export default function StudentDetailPage() {
 
       {/* All Scores Modal */}
       <Dialog open={allScoresModalOpen} onOpenChange={setAllScoresModalOpen}>
-        <DialogContent className="sm:max-w-[900px] max-h-[85vh] overflow-hidden flex flex-col">
+        <DialogContent className="sm:max-w-[min(1280px,95vw)] max-h-[85vh] overflow-hidden flex flex-col">
           <DialogHeader className="flex-shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <Calendar className="h-5 w-5" />
@@ -2340,123 +2300,11 @@ export default function StudentDetailPage() {
           
           <div className="flex-1 min-h-0 overflow-hidden border rounded-lg">
             <div className="max-h-[500px] overflow-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-b bg-gray-50 hover:bg-gray-50 sticky top-0 z-10">
-                    <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 bg-gray-50 whitespace-nowrap">Date</TableHead>
-                    <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 bg-gray-50 text-center whitespace-nowrap">Type</TableHead>
-                    <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 bg-gray-50 text-center whitespace-nowrap">Citizenship</TableHead>
-                    <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 bg-gray-50 text-center whitespace-nowrap">Crew</TableHead>
-                    <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 bg-gray-50 text-center whitespace-nowrap">Academics</TableHead>
-                    <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 bg-gray-50 text-center whitespace-nowrap">Job</TableHead>
-                    <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 bg-gray-50 text-center whitespace-nowrap">Service</TableHead>
-                    <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 bg-gray-50 text-center whitespace-nowrap">Journal</TableHead>
-                    <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 bg-gray-50 whitespace-nowrap">Reasons</TableHead>
-                    <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 bg-gray-50 text-right whitespace-nowrap">View</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {loadingAllRecords ? (
-                    <TableRow>
-                      <TableCell colSpan={10} className="text-center py-8">
-                        <Spinner size="md" className="mx-auto" />
-                      </TableCell>
-                    </TableRow>
-                  ) : sortedAllRecords.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={10} className="text-center py-8 text-gray-500">
-                        No records found
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    sortedAllRecords.map((record: any, index: number) => {
-                      const recordDate = record.date || record._expedition_schedule?.date
-                      return (
-                        <TableRow 
-                          key={`${recordDate}-${record._expedition_schedule?.id}-${index}`}
-                          className="border-b hover:bg-gray-50/50"
-                        >
-                          <TableCell className="px-4 py-3 whitespace-nowrap">
-                            <span className="text-sm text-gray-700">{formatDetailDate(recordDate)}</span>
-                          </TableCell>
-                          <TableCell className="px-4 py-3 text-center">
-                            {(() => {
-                              const schedule = record._expedition_schedule
-                              if (schedule?.isService) {
-                                return (
-                                  <span className="inline-flex items-center justify-center h-6 w-6 rounded bg-red-50 text-red-700 text-xs font-bold border border-red-200">
-                                    S
-                                  </span>
-                                )
-                              } else if (schedule?.isOffshore) {
-                                return (
-                                  <span className="inline-flex items-center justify-center h-6 w-6 rounded bg-blue-50 text-blue-700 text-xs font-bold border border-blue-200">
-                                    O
-                                  </span>
-                                )
-                              } else {
-                                return (
-                                  <span className="inline-flex items-center justify-center h-6 w-6 rounded bg-green-50 text-green-700 text-xs font-bold border border-green-200">
-                                    A
-                                  </span>
-                                )
-                              }
-                            })()}
-                          </TableCell>
-                          <TableCell className={`px-4 py-3 text-center ${getScoreRowColor(record.citizenship, record.isCitizenshipUsed)}`}>
-                            <span className={`text-sm ${getScoreClass(record.citizenship, record.isCitizenshipUsed)}`}>
-                              {formatScoreValue(record.citizenship, record.isCitizenshipUsed)}
-                            </span>
-                          </TableCell>
-                          <TableCell className={`px-4 py-3 text-center ${getScoreRowColor(record.crew, record.isCrewUsed)}`}>
-                            <span className={`text-sm ${getScoreClass(record.crew, record.isCrewUsed)}`}>
-                              {formatScoreValue(record.crew, record.isCrewUsed)}
-                            </span>
-                          </TableCell>
-                          <TableCell className={`px-4 py-3 text-center ${getScoreRowColor(record.academics, record.isAcademicsUsed)}`}>
-                            <span className={`text-sm ${getScoreClass(record.academics, record.isAcademicsUsed)}`}>
-                              {formatScoreValue(record.academics, record.isAcademicsUsed)}
-                            </span>
-                          </TableCell>
-                          <TableCell className={`px-4 py-3 text-center ${getScoreRowColor(record.job, record.isJobUsed)}`}>
-                            <span className={`text-sm ${getScoreClass(record.job, record.isJobUsed)}`}>
-                              {formatScoreValue(record.job, record.isJobUsed)}
-                            </span>
-                          </TableCell>
-                          <TableCell className={`px-4 py-3 text-center ${getScoreRowColor(record.service, record.isServiceUsed)}`}>
-                            <span className={`text-sm ${getScoreClass(record.service, record.isServiceUsed)}`}>
-                              {formatScoreValue(record.service, record.isServiceUsed)}
-                            </span>
-                          </TableCell>
-                          <TableCell className={`px-4 py-3 text-center ${(record.journaling || record.note) ? getJournalStringColor(record.journaling || record.note) : ''}`}>
-                            <span className={`text-sm ${(record.journaling || record.note) ? 'font-medium text-gray-700' : 'text-gray-400'}`}>
-                              {record.journaling || record.note || 'No Score'}
-                            </span>
-                          </TableCell>
-                          <TableCell className="min-w-[14rem] px-4 py-3 align-top">
-                            <DayReasons row={record} empty={<span className="text-sm text-gray-300">—</span>} />
-                          </TableCell>
-                          <TableCell className="px-4 py-3 text-right">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 cursor-pointer"
-                              onClick={() => {
-                                if (recordDate) {
-                                  router.push(`/evaluate/${recordDate}?expedition=${expeditionId}`)
-                                }
-                              }}
-                              disabled={!recordDate}
-                            >
-                              <ExternalLink className="h-3.5 w-3.5 text-gray-500" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      )
-                    })
-                  )}
-                </TableBody>
-              </Table>
+              <EvaluationRecordsTable
+                records={sortedAllRecords}
+                loading={loadingAllRecords}
+                onView={(date) => router.push(`/evaluate/${date}?expedition=${expeditionId}`)}
+              />
             </div>
           </div>
           

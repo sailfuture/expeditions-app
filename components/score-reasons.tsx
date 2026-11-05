@@ -1,9 +1,12 @@
 import { cn } from "@/lib/utils"
 import {
+  parseStoredReasons,
   reasonGroupsForRow,
   summarizeReasons,
+  REASON_FIELD_BY_KEY,
   type CategoryReasonSummary,
   type ReasonTally,
+  type ScoreKey,
 } from "@/lib/evaluation-reasons"
 
 const CHIP = "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-medium leading-4"
@@ -38,6 +41,32 @@ export function DayReasons({
             </span>
           ))}
         </div>
+      ))}
+    </div>
+  )
+}
+
+/**
+ * The reasons given for one category on one day, as chips. Renders nothing
+ * when that category had no reason that day.
+ */
+export function CategoryReasonChips({
+  row,
+  category,
+  className,
+}: {
+  row: Record<string, unknown> | null | undefined
+  category: ScoreKey
+  className?: string
+}) {
+  const reasons = parseStoredReasons(row?.[REASON_FIELD_BY_KEY[category]])
+  if (reasons.length === 0) return null
+  return (
+    <div className={cn("flex flex-wrap items-center gap-1", className)}>
+      {reasons.map((reason) => (
+        <span key={`${reason.type}-${reason.id}`} className={cn(CHIP, CHIP_TONE[reason.type])}>
+          {reason.name}
+        </span>
       ))}
     </div>
   )

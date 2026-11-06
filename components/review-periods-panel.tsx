@@ -388,8 +388,8 @@ function FinalizeDialog({
                     <tr>
                       <th className="px-3 py-1.5 text-left font-semibold">Student</th>
                       <th className="px-3 py-1.5 text-right font-semibold">Days</th>
+                      <th className="px-3 py-1.5 text-right font-semibold">Potential</th>
                       <th className="px-3 py-1.5 text-right font-semibold">Earned</th>
-                      <th className="px-3 py-1.5 text-right font-semibold">Award</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">

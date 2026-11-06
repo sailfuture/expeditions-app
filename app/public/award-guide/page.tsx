@@ -106,7 +106,7 @@ function ExampleDay({ title, note, scores }: { title: string; note: string; scor
           <tr>
             <th className={TH}>Category</th>
             <th className={TH}>Score</th>
-            <th className={TH + " text-right"}>Earned</th>
+            <th className={TH + " text-right"}>Potential</th>
           </tr>
         </thead>
         <tbody>
@@ -132,7 +132,7 @@ function ExampleDay({ title, note, scores }: { title: string; note: string; scor
       <table className="mt-2 w-full border-collapse">
         <tbody>
           <tr>
-            <td className={TD}>Step 1 · Dollars earned</td>
+            <td className={TD}>Step 1 · Potential dollars</td>
             <td className={TD}>{formatAwardDollars(SETTINGS.dollarsPerCategory)} × {Object.values(day.earnedByCategory).filter((v) => v > 0).length} categories</td>
             <td className={TD_NUM}>{formatAwardDollars(day.earned)}</td>
           </tr>
@@ -147,7 +147,7 @@ function ExampleDay({ title, note, scores }: { title: string; note: string; scor
             <td className={TD_NUM}>{formatAwardPercent(day.citizenshipPercent)}</td>
           </tr>
           <tr>
-            <td className={TD + " font-bold"}>Today&apos;s award</td>
+            <td className={TD + " font-bold"}>Earned today</td>
             <td className={TD}>
               {formatAwardDollars(day.earned)} × {formatAwardPercent(day.performancePercent)} × {formatAwardPercent(day.citizenshipPercent)}
             </td>
@@ -194,12 +194,12 @@ export default function AwardGuidePage() {
               <table className="mt-4 w-full border-collapse">
                 <tbody>
                   <tr>
-                    <td className={TD + " font-semibold"}>Today&apos;s award</td>
-                    <td className={TD}>Dollars earned × Performance % × Citizenship %</td>
+                    <td className={TD + " font-semibold"}>Earned today</td>
+                    <td className={TD}>Potential dollars × Performance % × Citizenship %</td>
                   </tr>
                   <tr>
                     <td className={TD + " font-semibold"}>Expedition total</td>
-                    <td className={TD}>Every day&apos;s award added together</td>
+                    <td className={TD}>Every day&apos;s earnings added together</td>
                   </tr>
                 </tbody>
               </table>

@@ -165,12 +165,12 @@ function DailyBreakdown({
               {BREAKDOWN_COLUMNS.map((key) => (
                 <TableHead key={key} className={cn(HEAD, "text-center")}>{CATEGORY_LABEL[key]}</TableHead>
               ))}
-              <TableHead className={cn(HEAD, "text-right")}>Earned</TableHead>
+              <TableHead className={cn(HEAD, "text-right")}>Potential</TableHead>
               <TableHead className={cn(HEAD, "text-right")}>Perf. score</TableHead>
               <TableHead className={cn(HEAD, "text-right")}>Perf. %</TableHead>
               <TableHead className={cn(HEAD, "text-right")}>Cit. %</TableHead>
-              <TableHead className={cn(HEAD, "text-right")}>Withheld</TableHead>
-              <TableHead className={cn(HEAD, "text-right")}>Award</TableHead>
+              <TableHead className={cn(HEAD, "text-right")}>Deductions</TableHead>
+              <TableHead className={cn(HEAD, "text-right")}>Earned</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -310,7 +310,7 @@ function HowItWorks() {
           <Info className="h-4 w-4 text-gray-400" />
           <span className="text-sm font-semibold text-gray-700">How the award is calculated</span>
           <span className="ml-auto hidden text-xs text-gray-500 lg:inline">
-            Daily award = earned $ × performance % × citizenship %
+            Earned = potential $ × performance % × citizenship %
           </span>
         </button>
         <Button asChild variant="outline" size="sm" className="h-7 flex-shrink-0 cursor-pointer text-xs">
@@ -331,11 +331,11 @@ function HowItWorks() {
           <div className="grid gap-4 md:grid-cols-2">
             <StepCard
               step={1}
-              title="Earned dollars"
+              title="Potential dollars"
               description={
                 <>
-                  Each qualifying category earns {formatAwardDollars(SETTINGS.dollarsPerCategory)}. Blank or blocked categories earn
-                  nothing.
+                  Each qualifying category adds {formatAwardDollars(SETTINGS.dollarsPerCategory)} to the day's potential. Blank or blocked
+                  categories add nothing.
                 </>
               }
             >
@@ -413,8 +413,8 @@ function HowItWorks() {
 
             <StepCard
               step={4}
-              title="Daily award and total"
-              description="The earned dollars are multiplied by both percents. The expedition total adds up every day's award."
+              title="Earned today and the total"
+              description="The potential dollars are multiplied by both percents. The expedition total adds up what every day earned."
             >
               <table className="w-full">
                 <thead className="bg-gray-50">
@@ -426,7 +426,7 @@ function HowItWorks() {
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   <tr>
-                    <td className={cn(EXPLAIN_TD, "font-medium text-gray-900")}>Earned</td>
+                    <td className={cn(EXPLAIN_TD, "font-medium text-gray-900")}>Potential</td>
                     <td className={EXPLAIN_TD}>{Object.values(ex.earnedByCategory).filter((v) => v > 0).length} categories qualified</td>
                     <td className={EXPLAIN_NUM}>{formatAwardDollars(ex.earned)}</td>
                   </tr>
@@ -444,7 +444,7 @@ function HowItWorks() {
                 <tfoot className="border-t border-gray-200 bg-gray-50">
                   <tr>
                     <td colSpan={2} className={cn(EXPLAIN_TD, "font-semibold text-gray-900")}>
-                      Daily award <span className="font-normal text-gray-500">· {formatAwardDollars(ex.withheld)} withheld</span>
+                      Earned today <span className="font-normal text-gray-500">· {formatAwardDollars(ex.withheld)} deducted</span>
                     </td>
                     <td className={EXPLAIN_NUM}>{formatAwardDollars(ex.award)}</td>
                   </tr>
@@ -721,10 +721,9 @@ function AwardsPageContent() {
                 <TableHead className="h-10 w-8 px-3" />
                 <TableHead className="h-10 px-3 text-xs font-semibold text-gray-600 sm:px-6">Student</TableHead>
                 <TableHead className="h-10 px-3 text-center text-xs font-semibold text-gray-600">Days scored</TableHead>
-                <TableHead className="h-10 px-3 text-right text-xs font-semibold text-gray-600">Earned</TableHead>
-                <TableHead className="h-10 px-3 text-right text-xs font-semibold text-gray-600">Withheld</TableHead>
-                <TableHead className="h-10 px-3 text-right text-xs font-semibold text-gray-600" title="Saved when a week was finalized">Finalized</TableHead>
-                <TableHead className="h-10 px-3 text-right text-xs font-semibold text-gray-600 sm:px-6">Award</TableHead>
+                <TableHead className="h-10 px-3 text-right text-xs font-semibold text-gray-600" title="What the days would pay with every category qualified and nothing deducted">Potential</TableHead>
+                <TableHead className="h-10 px-3 text-right text-xs font-semibold text-gray-600" title="Taken off the potential by the performance and citizenship percents">Deductions</TableHead>
+                <TableHead className="h-10 px-3 text-right text-xs font-semibold text-gray-600 sm:px-6" title="Potential minus deductions. A lock means part of it was frozen by a finalized weekly review.">Earned</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -768,28 +767,27 @@ function AwardsPageContent() {
                           <span className="ml-1 text-xs text-gray-400">({formatAwardPercent(keptPct)} kept)</span>
                         )}
                       </TableCell>
-                      <TableCell className="h-14 px-3 text-right text-sm text-gray-700">
-                        {paid > 0 ? (
-                          <span className="inline-flex items-center gap-1"><Lock className="h-3 w-3 text-gray-400" />{formatAwardDollars(paid)}</span>
-                        ) : "—"}
-                      </TableCell>
                       <TableCell className="h-14 px-3 text-right sm:px-6">
                         {unscored ? (
                           <span className="text-base text-gray-300">—</span>
                         ) : (
-                          <span className={cn("text-base font-semibold", paid + open > 0 ? "text-green-700" : "text-gray-400")}>
+                          <span
+                            className={cn("inline-flex items-center gap-1.5 text-base font-semibold", paid + open > 0 ? "text-green-700" : "text-gray-400")}
+                            title={paid > 0 ? `${formatAwardDollars(paid)} locked by finalized weekly reviews` : undefined}
+                          >
+                            {paid > 0 && <Lock className="h-3.5 w-3.5 text-gray-400" />}
                             {formatAwardDollars(paid + open)}
                           </span>
                         )}
                         {paid > 0 && open > 0 && (
-                          <span className="block text-[11px] text-gray-400">{formatAwardDollars(open)} not finalized</span>
+                          <span className="block text-[11px] text-gray-400">{formatAwardDollars(paid)} locked · {formatAwardDollars(open)} still open</span>
                         )}
                       </TableCell>
                     </TableRow>
                     <AnimatePresence initial={false}>
                       {isOpen && (
                         <TableRow key="breakdown" className="hover:bg-transparent">
-                          <TableCell colSpan={7} className="p-0">
+                          <TableCell colSpan={6} className="p-0">
                             <motion.div
                               initial={{ height: 0, opacity: 0 }}
                               animate={{ height: "auto", opacity: 1 }}
@@ -817,9 +815,6 @@ function AwardsPageContent() {
                 <TableCell className="h-12 px-3 text-right text-sm font-semibold text-gray-900">{formatAwardDollars(totals.earned)}</TableCell>
                 <TableCell className="h-12 px-3 text-right text-sm font-semibold text-gray-500">
                   {totals.withheld > 0 ? `-${formatAwardDollars(totals.withheld)}` : "—"}
-                </TableCell>
-                <TableCell className="h-12 px-3 text-right text-sm font-semibold text-gray-900">
-                  {totals.paid > 0 ? formatAwardDollars(totals.paid) : "—"}
                 </TableCell>
                 <TableCell className="h-12 px-3 text-right text-base font-bold text-green-700 sm:px-6">{formatAwardDollars(totals.total)}</TableCell>
               </TableRow>

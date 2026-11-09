@@ -18,7 +18,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
-import { Calendar, Plus, Check, X, ChevronDown, ChevronRight, ExternalLink, MapPin, Users, Ship, RefreshCw, Trash2, Clock } from "lucide-react"
+import { Calendar, Plus, Check, X, ChevronDown, ChevronRight, ExternalLink, MapPin, Users, Ship, RefreshCw, Trash2, Clock, ArrowRight } from "lucide-react"
 import {
   Sheet,
   SheetContent,
@@ -47,6 +47,8 @@ import useSWR, { mutate } from "swr"
 import { toast } from "sonner"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useExpeditions } from "@/lib/hooks/use-expeditions"
+import { LoadError } from "@/components/load-error"
+import { cn, formatLocalDateString } from "@/lib/utils"
 
 // Multi-select component for Staff Off
 function StaffOffMultiSelect({
@@ -182,7 +184,7 @@ export default function DashboardPage() {
     return activeExpedition || selectedExpedition
   }, [expeditionIdFromUrl, allExpeditionsData, userExpeditions, activeExpedition, selectedExpedition])
   
-  const { data: schedules, isLoading: loadingSchedules } = useExpeditionSchedules(activeExpeditionId || undefined)
+  const { data: schedules, isLoading: loadingSchedules, error: schedulesError, mutate: refetchSchedules } = useExpeditionSchedules(activeExpeditionId || undefined)
   const { data: locations } = useExpeditionLocations(activeExpeditionId || undefined)
   const { data: staff } = useTeachers()
   const { data: galleyTeams } = useSWR(
@@ -550,6 +552,67 @@ export default function DashboardPage() {
     if (schedule.isService || schedule.is_service) return "bg-red-100 text-red-800"
     return "bg-green-100 text-green-800"
   }
+
+  // Phones get a read-only card per day (every inline control in the table
+  // writes to Xano on first tap). The whole card opens the day sheet.
+  const todayString = formatLocalDateString(today)
+  const renderDayCards = (list: any[]) => (
+    <ul className="md:hidden divide-y divide-gray-100 rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+      {list.map((schedule: any) => {
+        const isPast = isOldDate(schedule.date)
+        const isTodayRow = schedule.date === todayString
+        const isOffshore = schedule.isOffshore || schedule.is_offshore
+        const port = schedule._expedition_current_location?.port || "No location"
+        const destination = isOffshore
+          ? (schedule._expedition_destination_location?.port
+            || locations?.find((l: any) => l.id === schedule.destination)?.port
+            || null)
+          : null
+        const offNames = (schedule.staff_off || [])
+          .map((id: number) => staff?.find((s: any) => s.id === id)?.name?.split(" ")[0])
+          .filter(Boolean)
+        return (
+          <li key={schedule.id} className={cn(isPast && "opacity-60")}>
+            <button
+              type="button"
+              onClick={() => handleRowClick(schedule)}
+              className={cn(
+                "flex w-full min-h-[64px] items-center gap-3 px-4 py-3 text-left active:bg-gray-50",
+                isTodayRow && "ring-2 ring-inset ring-green-500 rounded-xl"
+              )}
+            >
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold text-gray-900">{formatDate(schedule.date)}</span>
+                  <span className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium", getScheduleTypeColor(schedule))}>
+                    {getScheduleTypeName(schedule)}
+                  </span>
+                  {isTodayRow && <span className="text-[11px] font-semibold uppercase tracking-wide text-green-700">Today</span>}
+                </div>
+                <div className="mt-0.5 flex min-w-0 items-center gap-1 text-sm text-gray-700">
+                  <span className="truncate">{port}</span>
+                  {destination && (
+                    <>
+                      <ArrowRight className="h-3.5 w-3.5 shrink-0 text-gray-400" />
+                      <span className="truncate">{destination}</span>
+                    </>
+                  )}
+                </div>
+                {(offNames.length > 0 || schedule.notes) && (
+                  <p className="mt-0.5 truncate text-xs text-gray-500">
+                    {offNames.length > 0 && <span className="text-orange-700">Off: {offNames.join(", ")}</span>}
+                    {offNames.length > 0 && schedule.notes && <span> · </span>}
+                    {schedule.notes}
+                  </p>
+                )}
+              </div>
+              <ChevronRight className="h-5 w-5 shrink-0 text-gray-400" />
+            </button>
+          </li>
+        )
+      })}
+    </ul>
+  )
 
   const handleGenerateAllDates = async () => {
     if (!activeExpeditionId) {
@@ -929,6 +992,8 @@ export default function DashboardPage() {
                 </TableBody>
               </Table>
             </div>
+          ) : schedulesError ? (
+            <LoadError error={schedulesError} what="the expedition's days" onRetry={() => refetchSchedules()} />
           ) : filteredSchedules.length === 0 ? (
             <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-12 text-center text-muted-foreground">
               No schedules found for this expedition
@@ -958,12 +1023,14 @@ export default function DashboardPage() {
                   </button>
 
                   {!isCollapsed && (
-                    <div className="relative">
+                    <>
+                    <div className="md:hidden border-t">{renderDayCards(locationSchedules)}</div>
+                    <div className="relative hidden md:block">
                       {/* Left scroll gradient indicator */}
                       <div className={`absolute top-0 left-0 bottom-0 w-8 bg-gradient-to-r from-white to-transparent pointer-events-none z-10 transition-opacity ${scrollState[locationKey]?.left ? 'opacity-100' : 'opacity-0'}`} />
                       {/* Right scroll gradient indicator */}
                       <div className={`absolute top-0 right-0 bottom-0 w-8 bg-gradient-to-l from-white to-transparent pointer-events-none z-10 transition-opacity ${scrollState[locationKey]?.right !== false ? 'opacity-100' : 'opacity-0'}`} />
-                      <div className="overflow-hidden" ref={handleScrollRef(locationKey)}>
+                      <div className="overflow-x-auto" ref={handleScrollRef(locationKey)}>
                     <Table className="table-fixed w-full">
                       <TableHeader>
                         <TableRow className="border-b bg-gray-50/30 hover:bg-gray-50/30">
@@ -971,8 +1038,8 @@ export default function DashboardPage() {
                           <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600" style={{ width: "19%" }}>Location</TableHead>
                           <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600" style={{ width: "12%" }}>Type</TableHead>
                           <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600" style={{ width: "19%" }}>Destination</TableHead>
-                          <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600" style={{ width: "15%" }}>Time Off</TableHead>
-                          <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600" style={{ width: "auto" }}>Notes</TableHead>
+                          <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600 hidden lg:table-cell" style={{ width: "15%" }}>Time Off</TableHead>
+                          <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600 hidden lg:table-cell" style={{ width: "auto" }}>Notes</TableHead>
                           <TableHead className="h-10 pl-2 pr-6 text-right text-xs font-semibold text-gray-600" style={{ width: "68px" }}><span className="sr-only">Actions</span></TableHead>
                         </TableRow>
                       </TableHeader>
@@ -1108,7 +1175,7 @@ export default function DashboardPage() {
                                   )}
                                 </div>
                               </TableCell>
-                              <TableCell className="h-14 px-2" onClick={(e) => e.stopPropagation()}>
+                              <TableCell className="h-14 px-2 hidden lg:table-cell" onClick={(e) => e.stopPropagation()}>
                                 <div className="relative">
                                   <StaffOffMultiSelect
                                     staff={staff || []}
@@ -1138,7 +1205,7 @@ export default function DashboardPage() {
                                   )}
                                 </div>
                               </TableCell>
-                              <TableCell className="h-14 px-2" onClick={(e) => e.stopPropagation()}>
+                              <TableCell className="h-14 px-2 hidden lg:table-cell" onClick={(e) => e.stopPropagation()}>
                                 {editingNotesId === schedule.id ? (
                                   <div className="flex min-w-0 items-center gap-1">
                                     <Input
@@ -1205,17 +1272,20 @@ export default function DashboardPage() {
                     </Table>
                       </div>
                     </div>
+                    </>
                   )}
                 </div>
               )
             })
           ) : (
-            <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden relative">
+            <>
+            {renderDayCards(filteredSchedules)}
+            <div className="hidden md:block rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden relative">
               {/* Left scroll gradient indicator */}
               <div className={`absolute top-0 left-0 bottom-0 w-8 bg-gradient-to-r from-white to-transparent pointer-events-none z-10 transition-opacity ${scrollState['main']?.left ? 'opacity-100' : 'opacity-0'}`} />
               {/* Right scroll gradient indicator */}
               <div className={`absolute top-0 right-0 bottom-0 w-8 bg-gradient-to-l from-white to-transparent pointer-events-none z-10 transition-opacity ${scrollState['main']?.right !== false ? 'opacity-100' : 'opacity-0'}`} />
-              <div className="overflow-hidden" ref={handleScrollRef('main')}>
+              <div className="overflow-x-auto" ref={handleScrollRef('main')}>
                     <Table className="table-fixed w-full">
                       <TableHeader>
                         <TableRow className="border-b bg-gray-50/30 hover:bg-gray-50/30">
@@ -1223,8 +1293,8 @@ export default function DashboardPage() {
                           <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600" style={{ width: "19%" }}>Location</TableHead>
                           <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600" style={{ width: "12%" }}>Type</TableHead>
                           <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600" style={{ width: "19%" }}>Destination</TableHead>
-                          <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600" style={{ width: "15%" }}>Time Off</TableHead>
-                          <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600" style={{ width: "auto" }}>Notes</TableHead>
+                          <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600 hidden lg:table-cell" style={{ width: "15%" }}>Time Off</TableHead>
+                          <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600 hidden lg:table-cell" style={{ width: "auto" }}>Notes</TableHead>
                           <TableHead className="h-10 pl-2 pr-6 text-right text-xs font-semibold text-gray-600" style={{ width: "68px" }}><span className="sr-only">Actions</span></TableHead>
                         </TableRow>
                       </TableHeader>
@@ -1359,7 +1429,7 @@ export default function DashboardPage() {
                                   )}
                                 </div>
                               </TableCell>
-                              <TableCell className="h-14 px-2" onClick={(e) => e.stopPropagation()}>
+                              <TableCell className="h-14 px-2 hidden lg:table-cell" onClick={(e) => e.stopPropagation()}>
                                 <div className="relative">
                                   <StaffOffMultiSelect
                                     staff={staff || []}
@@ -1389,7 +1459,7 @@ export default function DashboardPage() {
                                   )}
                                 </div>
                               </TableCell>
-                              <TableCell className="h-14 px-2" onClick={(e) => e.stopPropagation()}>
+                              <TableCell className="h-14 px-2 hidden lg:table-cell" onClick={(e) => e.stopPropagation()}>
                                 {editingNotesId === schedule.id ? (
                                   <div className="flex min-w-0 items-center gap-1">
                                     <Input
@@ -1456,6 +1526,7 @@ export default function DashboardPage() {
                     </Table>
               </div>
             </div>
+            </>
           )}
         </div>
       </main>
@@ -1658,33 +1729,33 @@ export default function DashboardPage() {
           )}
 
           {selectedSchedule && (
-            <div className="flex gap-2 p-4 border-t shrink-0">
+            <div className="grid grid-cols-[1fr_1fr_auto] gap-2 p-4 border-t shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))]">
               <Button
                 variant="outline"
-                className="flex-1 cursor-pointer"
+                className="h-11 min-w-0 cursor-pointer sm:h-9"
                 onClick={() => {
                   setDetailModalOpen(false)
                   router.push(`/schedule/${selectedSchedule.date}${expeditionQuery}`)
                 }}
               >
-                <Calendar className="h-4 w-4 mr-2" />
-                Open Full Schedule
+                <Calendar className="h-4 w-4 shrink-0" />
+                <span className="truncate"><span className="sm:hidden">Schedule</span><span className="hidden sm:inline">Open Full Schedule</span></span>
               </Button>
               <Button
                 variant="outline"
-                className="flex-1 cursor-pointer"
+                className="h-11 min-w-0 cursor-pointer sm:h-9"
                 onClick={() => {
                   setDetailModalOpen(false)
                   router.push(`/evaluate/${selectedSchedule.date}${expeditionQuery}`)
                 }}
               >
-                <Users className="h-4 w-4 mr-2" />
-                Evaluate Students
+                <Users className="h-4 w-4 shrink-0" />
+                <span className="truncate"><span className="sm:hidden">Scores</span><span className="hidden sm:inline">Evaluate Students</span></span>
               </Button>
               <Button
                 variant="outline"
                 size="icon"
-                className="shrink-0 cursor-pointer border-gray-300 text-gray-500 hover:border-red-300 hover:bg-red-50 hover:text-red-600"
+                className="h-11 w-11 shrink-0 cursor-pointer border-gray-300 text-gray-500 hover:border-red-300 hover:bg-red-50 hover:text-red-600 sm:h-9 sm:w-9"
                 title="Delete this day"
                 aria-label="Delete this day"
                 onClick={() => {

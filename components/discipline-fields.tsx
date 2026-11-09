@@ -108,12 +108,12 @@ export function DisciplineConsequenceField({
 }) {
   const withDays = consequenceHasDays(value)
   return (
-    <div className="flex items-start gap-2">
+    <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
       <div className="min-w-0 flex-1">
         <DisciplineConsequenceSelect value={value} onChange={(c) => onChange(c, consequenceHasDays(c) ? days || "1" : "")} />
       </div>
       {withDays && (
-        <div className="flex w-[6.5rem] shrink-0 items-center gap-1.5">
+        <div className="flex shrink-0 items-center gap-1.5 sm:w-[6.5rem]">
           <Input
             type="number"
             inputMode="numeric"

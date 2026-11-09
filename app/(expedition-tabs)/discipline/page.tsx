@@ -27,6 +27,7 @@ import {
 } from "@/lib/xano"
 import { Spinner } from "@/components/ui/spinner"
 import { DisciplineReasonSelect, DisciplineConsequenceField, DisciplineSeverityBadge } from "@/components/discipline-fields"
+import { RowCard, RowCardList } from "@/components/row-card"
 import { consequenceHasDays, formatConsequence, isCriticalReason, reasonForEdit, recordIsCritical } from "@/lib/discipline"
 import {
   Dialog,
@@ -375,45 +376,83 @@ function DisciplinePageContent() {
     <div className="min-h-screen bg-gray-50/50">
 
       <main className="container mx-auto px-4 py-8">
-        <div className="mb-8 flex items-start justify-between">
+        <div className="mb-6 flex flex-col gap-3 md:mb-8 md:flex-row md:items-start md:justify-between">
           <div>
             <h1 className="text-2xl font-bold mb-1">Discipline Records</h1>
             <p className="text-muted-foreground">
               Track critical and non-critical incidents for expedition students
             </p>
           </div>
-          <Button onClick={handleOpenCreate} className="cursor-pointer">
+          <Button onClick={handleOpenCreate} className="h-11 w-full cursor-pointer md:h-9 md:w-auto">
             <Plus className="h-4 w-4 mr-2" />
             New Record
           </Button>
         </div>
 
-        {/* Table */}
-        <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+        {/* Phones: one card per record, tap to open. Reason and consequence are the
+            point of the row, so they are never cut to make room for metadata. */}
+        <div className="md:hidden">
+          {loadingDiscipline ? (
+            <RowCardList>
+              {Array.from({ length: 3 }).map((_, i) => (
+                <li key={i} className="flex min-h-[64px] items-center gap-3 px-4 py-3">
+                  <Skeleton className="h-5 w-16" />
+                  <div className="flex-1 space-y-1.5">
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-3 w-40" />
+                  </div>
+                </li>
+              ))}
+            </RowCardList>
+          ) : sortedRecords.length === 0 ? (
+            <div className="rounded-xl border border-gray-200 bg-white py-12 text-center text-sm text-muted-foreground shadow-sm">
+              No discipline records found
+            </div>
+          ) : (
+            <RowCardList>
+              {sortedRecords.map((record: any) => (
+                <RowCard
+                  key={record.id}
+                  onClick={() => handleOpenView(record)}
+                  leading={<DisciplineSeverityBadge critical={recordIsCritical(record)} className="text-[11px]" />}
+                  title={getStudentName(record.students_id)}
+                  lines={[
+                    `${formatDate(record.date)} · ${getStaffName(record.expedition_staff_id)}`,
+                    record.reason,
+                    formatConsequence(record.consequence, record.consequence_days) ? `→ ${formatConsequence(record.consequence, record.consequence_days)}` : null,
+                  ]}
+                />
+              ))}
+            </RowCardList>
+          )}
+        </div>
+
+        {/* Table from md; Created and Staff wait for lg so Reason and Consequence keep their width */}
+        <div className="hidden md:block rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
           <Table className="table-fixed w-full">
             <TableHeader>
               <TableRow className="border-b bg-gray-50/30 hover:bg-gray-50/30">
-                <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600" style={{ width: "80px" }}>Created</TableHead>
-                <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600" style={{ width: "90px" }}>Type</TableHead>
-                <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600" style={{ width: "150px" }}>Student</TableHead>
-                <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600" style={{ width: "100px" }}>Date</TableHead>
-                <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600">Reason</TableHead>
-                <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600">Consequence</TableHead>
-                <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600" style={{ width: "120px" }}>Staff</TableHead>
-                <TableHead className="h-10 px-4 text-right text-xs font-semibold text-gray-600" style={{ width: "100px" }}>Actions</TableHead>
+                <TableHead className="h-10 px-3 lg:px-4 text-xs font-semibold text-gray-600 hidden lg:table-cell" style={{ width: "8%" }}>Created</TableHead>
+                <TableHead className="h-10 px-3 lg:px-4 text-xs font-semibold text-gray-600" style={{ width: "11%" }}>Type</TableHead>
+                <TableHead className="h-10 px-3 lg:px-4 text-xs font-semibold text-gray-600" style={{ width: "16%" }}>Student</TableHead>
+                <TableHead className="h-10 px-3 lg:px-4 text-xs font-semibold text-gray-600" style={{ width: "12%" }}>Date</TableHead>
+                <TableHead className="h-10 px-3 lg:px-4 text-xs font-semibold text-gray-600">Reason</TableHead>
+                <TableHead className="h-10 px-3 lg:px-4 text-xs font-semibold text-gray-600">Consequence</TableHead>
+                <TableHead className="h-10 px-3 lg:px-4 text-xs font-semibold text-gray-600 hidden lg:table-cell" style={{ width: "12%" }}>Staff</TableHead>
+                <TableHead className="h-10 px-3 lg:px-4 text-right text-xs font-semibold text-gray-600" style={{ width: "96px" }}>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loadingDiscipline ? (
                 Array.from({ length: 3 }).map((_, i) => (
                   <TableRow key={i} className="border-b last:border-0">
-                    <TableCell className="h-14 px-4"><Skeleton className="h-4 w-12" /></TableCell>
+                    <TableCell className="h-14 px-4 hidden lg:table-cell"><Skeleton className="h-4 w-12" /></TableCell>
                     <TableCell className="h-14 px-4"><Skeleton className="h-4 w-16" /></TableCell>
                     <TableCell className="h-14 px-4"><Skeleton className="h-4 w-24" /></TableCell>
                     <TableCell className="h-14 px-4"><Skeleton className="h-4 w-20" /></TableCell>
                     <TableCell className="h-14 px-4"><Skeleton className="h-4 w-32" /></TableCell>
                     <TableCell className="h-14 px-4"><Skeleton className="h-4 w-28" /></TableCell>
-                    <TableCell className="h-14 px-4"><Skeleton className="h-4 w-20" /></TableCell>
+                    <TableCell className="h-14 px-4 hidden lg:table-cell"><Skeleton className="h-4 w-20" /></TableCell>
                     <TableCell className="h-14 px-4"><Skeleton className="h-4 w-16" /></TableCell>
                   </TableRow>
                 ))
@@ -430,7 +469,7 @@ function DisciplinePageContent() {
                     className="border-b last:border-0 transition-colors hover:bg-gray-50/50 cursor-pointer"
                     onClick={() => handleOpenView(record)}
                   >
-                    <TableCell className="h-14 px-4 text-muted-foreground text-sm">
+                    <TableCell className="h-14 px-3 lg:px-4 text-muted-foreground text-sm hidden lg:table-cell">
                       {formatRelativeTime(record.created_at)}
                     </TableCell>
                     <TableCell className="h-14 px-4">
@@ -444,7 +483,7 @@ function DisciplinePageContent() {
                     <TableCell className="h-14 px-4 text-sm text-gray-700 truncate" title={formatConsequence(record.consequence, record.consequence_days)}>
                       {formatConsequence(record.consequence, record.consequence_days) || "—"}
                     </TableCell>
-                    <TableCell className="h-14 px-4 text-sm text-gray-700">{getStaffName(record.expedition_staff_id)}</TableCell>
+                    <TableCell className="h-14 px-3 lg:px-4 text-sm text-gray-700 hidden lg:table-cell">{getStaffName(record.expedition_staff_id)}</TableCell>
                     <TableCell className="h-14 px-4 text-right">
                       <div className="flex items-center justify-end gap-1">
                         <Button
@@ -483,7 +522,7 @@ function DisciplinePageContent() {
 
       {/* View/Edit Modal */}
       <Dialog open={viewModalOpen} onOpenChange={setViewModalOpen}>
-        <DialogContent className="w-full sm:max-w-2xl max-h-[90vh] flex flex-col">
+        <DialogContent className="w-full sm:max-w-2xl max-h-[90vh] flex flex-col max-md:inset-0 max-md:top-0 max-md:left-0 max-md:h-[100dvh] max-md:max-h-none max-md:max-w-none max-md:translate-x-0 max-md:translate-y-0 max-md:rounded-none max-md:border-0 max-md:p-4 max-md:pt-5">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <DisciplineSeverityBadge critical={recordIsCritical(selectedRecord)} />
@@ -497,7 +536,7 @@ function DisciplinePageContent() {
           <div className="flex-1 overflow-y-auto py-4 space-y-4">
             {isEditing ? (
               <>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label>Student *</Label>
                     <Select value={formData.students_id} onValueChange={(v) => setFormData(prev => ({ ...prev, students_id: v }))}>
@@ -536,7 +575,7 @@ function DisciplinePageContent() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label>Reason *</Label>
                     <DisciplineReasonSelect
@@ -590,7 +629,7 @@ function DisciplinePageContent() {
               </>
             ) : (
               <>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div>
                     <Label className="text-muted-foreground text-sm">Reason</Label>
                     <p className="font-medium">{selectedRecord?.reason || "—"}</p>
@@ -614,7 +653,7 @@ function DisciplinePageContent() {
             )}
           </div>
 
-          <DialogFooter className="border-t pt-4">
+          <DialogFooter className="border-t pt-4 max-md:pb-[max(0px,env(safe-area-inset-bottom))] max-md:[&>button]:h-11">
             {isEditing ? (
               <>
                 <Button variant="outline" className="cursor-pointer" onClick={() => setIsEditing(false)} disabled={isSaving}>
@@ -659,7 +698,7 @@ function DisciplinePageContent() {
 
       {/* Create Modal */}
       <Dialog open={createModalOpen} onOpenChange={setCreateModalOpen}>
-        <DialogContent className="w-full sm:max-w-2xl max-h-[90vh] flex flex-col">
+        <DialogContent className="w-full sm:max-w-2xl max-h-[90vh] flex flex-col max-md:inset-0 max-md:top-0 max-md:left-0 max-md:h-[100dvh] max-md:max-h-none max-md:max-w-none max-md:translate-x-0 max-md:translate-y-0 max-md:rounded-none max-md:border-0 max-md:p-4 max-md:pt-5">
           <DialogHeader>
             <DialogTitle>Create New Record</DialogTitle>
             <DialogDescription>
@@ -668,7 +707,7 @@ function DisciplinePageContent() {
           </DialogHeader>
 
           <div className="flex-1 overflow-y-auto py-4 space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>Student *</Label>
                 <Select value={formData.students_id} onValueChange={(v) => setFormData(prev => ({ ...prev, students_id: v }))}>
@@ -707,7 +746,7 @@ function DisciplinePageContent() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>Reason *</Label>
                 <DisciplineReasonSelect
@@ -760,7 +799,7 @@ function DisciplinePageContent() {
             </div>
           </div>
 
-          <DialogFooter className="border-t pt-4">
+          <DialogFooter className="border-t pt-4 max-md:pb-[max(0px,env(safe-area-inset-bottom))] max-md:[&>button]:h-11">
             <Button variant="outline" className="cursor-pointer" onClick={() => setCreateModalOpen(false)} disabled={isSaving}>
               Cancel
             </Button>

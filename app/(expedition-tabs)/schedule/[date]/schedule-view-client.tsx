@@ -77,6 +77,7 @@ import { Label } from "@/components/ui/label"
 import { Save } from "lucide-react"
 import { useCurrentUser } from "@/lib/contexts/user-context"
 import { useExpeditionContext } from "@/lib/contexts/expedition-context"
+import { useBoatClock } from "@/lib/hooks/use-boat-clock"
 import useSWR, { mutate } from "swr"
 import { toast } from "sonner"
 import { isDateWithinExpeditionRange, clampDateToExpeditionRange, formatLocalDateString, getPhotoUrl } from "@/lib/utils"
@@ -391,17 +392,12 @@ export function ScheduleViewClient({ date, expeditionId }: ScheduleViewClientPro
     return sortedItems.filter((item: any) => item.time_in === 0 || item.time_out === 0)
   }, [sortedItems])
 
-  // Phone list: the current time as HHMM, refreshed each minute, so the "Now"
-  // divider sits between what has ended and what is still to come.
-  const isToday = date === formatLocalDateString(new Date())
-  const [nowMilitary, setNowMilitary] = useState<number | null>(null)
-  useEffect(() => {
-    if (!isToday) { setNowMilitary(null); return }
-    const tick = () => { const d = new Date(); setNowMilitary(d.getHours() * 100 + d.getMinutes()) }
-    tick()
-    const id = window.setInterval(tick, 60_000)
-    return () => window.clearInterval(id)
-  }, [isToday])
+  // Phone list: the boat's current time as HHMM (the day's location sets the timezone),
+  // refreshed each minute, so the "Now" divider sits between what has ended and what is
+  // still to come.
+  const { clock: boatNow } = useBoatClock(effectiveExpeditionId ?? null)
+  const isToday = date === boatNow.date
+  const nowMilitary = isToday ? boatNow.military : null
   // Index of the first timed item that has not ended yet; the divider goes just above it.
   const nowIndex = useMemo(() => {
     if (nowMilitary === null) return -1

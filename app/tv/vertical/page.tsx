@@ -7,6 +7,7 @@ import { format } from "date-fns"
 import { cn } from "@/lib/utils"
 import { getActiveExpedition, getExpeditionScheduleItemsByDate } from "@/lib/xano"
 import useSWR from "swr"
+import { useBoatClock } from "@/lib/hooks/use-boat-clock"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 
@@ -16,15 +17,6 @@ const TIMELINE_END_HOUR = 23 // 11 PM
 const TOTAL_HOURS = TIMELINE_END_HOUR - TIMELINE_START_HOUR // 17 hours
 
 // Parse UTC offset string like "UTC-5" or "UTC+2" to get offset in hours
-function parseUtcOffset(offsetString: string | undefined): number {
-  if (!offsetString) return -5 // Default to UTC-5 (Eastern Time)
-  const match = offsetString.match(/UTC([+-])(\d+)/)
-  if (!match) return -5
-  const sign = match[1] === "+" ? 1 : -1
-  const hours = parseInt(match[2])
-  return sign * hours
-}
-
 // Get today's date for a specific UTC offset
 function getTodayForOffset(offsetHours: number): string {
   const now = new Date()
@@ -84,14 +76,10 @@ function TVVerticalContent() {
     }
   )
 
-  // Get timezone offset from expedition
-  const timezoneOffset = useMemo(() => {
-    if (!activeExpedition) return -5
-    const timezoneString = activeExpedition.timezone || 
-                           activeExpedition._expedition_location?.timezone ||
-                           activeExpedition.location?.timezone
-    return parseUtcOffset(timezoneString)
-  }, [activeExpedition])
+  // The boat's UTC offset: the timezone of the day's scheduled location (see lib/boat-clock.ts),
+  // or the browser's when no day has one.
+  const { clock: boatNow } = useBoatClock(activeExpedition?.id ?? null)
+  const timezoneOffset = boatNow.offsetHours
 
   // Calculate today's date based on expedition timezone
   const todayDate = useMemo(() => {

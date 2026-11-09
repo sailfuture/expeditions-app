@@ -21,6 +21,7 @@ import {
   useStudentsByExpedition,
 } from "@/lib/hooks/use-expeditions"
 import { useRecalculateEvaluations } from "@/lib/hooks/use-recalculate-evaluations"
+import { useBoatClock } from "@/lib/hooks/use-boat-clock"
 import { buildExpeditionRoute, formatDate, todayLocalDateString } from "@/lib/expedition-route"
 import { clampDateToExpeditionRange, cn } from "@/lib/utils"
 
@@ -90,8 +91,10 @@ export function HomeDashboard() {
   const startDate: string | undefined = expedition?.startDate || expedition?.start_date
   const endDate: string | undefined = expedition?.endDate || expedition?.end_date
 
-  // Today when it falls inside the expedition, otherwise the nearest expedition day.
-  const today = todayLocalDateString()
+  // Today on the boat (the day's location sets the clock), when it falls inside the
+  // expedition; otherwise the nearest expedition day.
+  const { clock } = useBoatClock(expeditionId)
+  const today = clock.date
   const scheduleDate = useMemo(() => {
     if (!expedition) return null
     return clampDateToExpeditionRange(today, startDate, endDate) || startDate || today
@@ -178,6 +181,8 @@ export function HomeDashboard() {
             expeditionId={expeditionId}
             date={scheduleDate}
             isToday={isToday}
+            nowMilitary={clock.military}
+            timezoneLabel={clock.timezoneLabel}
             className="lg:col-span-2 lg:max-h-[600px]"
           />
 

@@ -1,9 +1,9 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { Fragment, useMemo, useState } from "react"
 import Link from "next/link"
 import { Anchor, ArrowRight, Calendar, CalendarX, Clock, MapPin, Ship, Users, Wrench, X } from "lucide-react"
-import { ScheduleRow, formatMilitaryTime, scheduleItemColor as itemColor } from "@/components/schedule-row"
+import { NowDivider, ScheduleRow, formatMilitaryTime, scheduleItemColor as itemColor } from "@/components/schedule-row"
 import { ResponsiveSheet, ResponsiveSheetContent } from "@/components/responsive-sheet"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -20,6 +20,10 @@ interface TodayScheduleProps {
   date: string | null
   /** True when `date` is actually today (as opposed to the nearest expedition day). */
   isToday: boolean
+  /** The boat's current time as HHMM when `date` is today; the Now divider sits where it falls. */
+  nowMilitary?: number | null
+  /** The timezone the boat's clock runs on ("UTC−4"), shown beside the date when known. */
+  timezoneLabel?: string | null
   className?: string
 }
 
@@ -46,7 +50,7 @@ function initials(name?: string) {
  * as the Daily View tab. Timed items come first in start-time order; items
  * without a time are grouped under "Anytime".
  */
-export function TodaySchedule({ expeditionId, date, isToday, className }: TodayScheduleProps) {
+export function TodaySchedule({ expeditionId, date, isToday, nowMilitary = null, timezoneLabel = null, className }: TodayScheduleProps) {
   const { data, isLoading, error } = useExpeditionScheduleItemsByDate(date, expeditionId || undefined)
 
   const { schedule, timed, untimed } = useMemo(() => {
@@ -67,6 +71,13 @@ export function TodaySchedule({ expeditionId, date, isToday, className }: TodayS
   }, [data])
 
   const location = schedule?._expedition_locations || schedule?._expedition_current_location
+  // The divider goes above the first timed item that has not ended yet (or after the last one).
+  const now = isToday ? nowMilitary : null
+  const nowIndex = useMemo(() => {
+    if (now === null) return -1
+    const idx = timed.findIndex((item) => item.time_out > now)
+    return idx === -1 ? timed.length : idx
+  }, [timed, now])
   const dayKind = schedule?.isOffshore ? "offshore" : schedule?.isService ? "service" : schedule ? "anchored" : null
   const dailyViewHref = expeditionId && date ? `/schedule/${date}?expedition=${expeditionId}` : null
   const [sheetOpen, setSheetOpen] = useState(false)
@@ -79,6 +90,7 @@ export function TodaySchedule({ expeditionId, date, isToday, className }: TodayS
           <p className="text-sm text-muted-foreground truncate">
             {date ? formatScheduleDate(date) : "No date"}
             {!isToday && date && <span className="text-gray-400"> · nearest expedition day</span>}
+            {isToday && timezoneLabel && <span className="text-gray-400"> · boat time {timezoneLabel}</span>}
           </p>
         </div>
         {dailyViewHref && (
@@ -140,9 +152,17 @@ export function TodaySchedule({ expeditionId, date, isToday, className }: TodayS
             // The card has a max height on large screens, so the list scrolls inside it;
             // overscroll-contain keeps the page from scrolling once the list hits its end.
             <ul className="min-h-0 flex-1 divide-y overflow-y-auto overscroll-contain">
-              {timed.map((item) => (
-                <ScheduleRow key={item.id} item={item} time={`${formatMilitaryTime(item.time_in)} – ${formatMilitaryTime(item.time_out)}`} />
+              {timed.map((item, index) => (
+                <Fragment key={item.id}>
+                  {nowIndex === index && <NowDivider time={formatMilitaryTime(now!)} />}
+                  <ScheduleRow
+                    item={item}
+                    time={`${formatMilitaryTime(item.time_in)} – ${formatMilitaryTime(item.time_out)}`}
+                    past={now !== null && item.time_out <= now}
+                  />
+                </Fragment>
               ))}
+              {now !== null && nowIndex === timed.length && <NowDivider time={formatMilitaryTime(now)} />}
               {untimed.length > 0 && (
                 <li className="px-5 py-1.5 bg-gray-50/60 text-[11px] font-semibold uppercase tracking-wide text-gray-500">
                   Anytime

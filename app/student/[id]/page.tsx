@@ -48,6 +48,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Pencil, ExternalLink, Calendar, FileText, TrendingUp, CheckCircle2, ArrowLeft, Calculator, Download, Check, ChevronsUpDown, X, Upload, Trash2 } from "lucide-react"
+import { CopyButton, LoginSecret } from "@/components/login-secret"
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts"
 import {
   ChartContainer,
@@ -279,6 +280,7 @@ export default function StudentDetailPage() {
     firstName: "",
     lastName: "",
     studentEmail: "",
+    email_password: "",
     grade: "",
     expeditions_id: [] as number[],
     isArchived: false,
@@ -306,6 +308,7 @@ export default function StudentDetailPage() {
         firstName: student.firstName || "",
         lastName: student.lastName || "",
         studentEmail: student.studentEmail || "",
+        email_password: student.email_password || "",
         grade: student.grade || "",
         expeditions_id: expeditionIds,
         isArchived: student.isArchived || false,
@@ -347,6 +350,8 @@ export default function StudentDetailPage() {
         lastName: formData.lastName,
         // The school email: the expeditions site links a signed-in student to their crew profile by it.
         studentEmail: formData.studentEmail.trim().toLowerCase(),
+        // Xano drops empty text on PATCH, so a blanked password keeps the old one.
+        email_password: formData.email_password.trim(),
         grade: formData.grade,
         expeditions_id: formData.expeditions_id,
         isArchived: formData.isArchived,
@@ -1574,6 +1579,25 @@ export default function StudentDetailPage() {
                     <dt className="text-sm font-medium text-gray-500">Grade</dt>
                     <dd className="mt-1 text-sm text-gray-900">{student.grade || "—"}</dd>
                   </div>
+                  <div className="min-w-0">
+                    <dt className="text-sm font-medium text-gray-500">School Email</dt>
+                    <dd className="mt-1 text-sm text-gray-900">
+                      {student.studentEmail ? (
+                        <span className="inline-flex items-center gap-1 min-w-0 max-w-full">
+                          <span className="truncate" title={student.studentEmail}>{student.studentEmail}</span>
+                          <CopyButton value={student.studentEmail} label="Email" />
+                        </span>
+                      ) : (
+                        "—"
+                      )}
+                    </dd>
+                  </div>
+                  <div className="min-w-0">
+                    <dt className="text-sm font-medium text-gray-500">Email Password</dt>
+                    <dd className="mt-1 text-sm text-gray-900">
+                      <LoginSecret value={student.email_password} label="Password" />
+                    </dd>
+                  </div>
                 </dl>
               </div>
             </div>
@@ -1966,6 +1990,22 @@ export default function StudentDetailPage() {
                     {student?.toddleID
                       ? "Synced from Toddle. A Toddle sync replaces it with the email in Toddle, if Toddle has one."
                       : "Added by hand. The next Toddle sync links this student to their Toddle record by this email."}
+                  </div>
+                </div>
+                <div className="col-span-2">
+                  <Label htmlFor="email_password">Email Password</Label>
+                  <Input
+                    id="email_password"
+                    type="text"
+                    autoComplete="off"
+                    spellCheck={false}
+                    value={formData.email_password}
+                    onChange={(e) => setFormData(prev => ({ ...prev, email_password: e.target.value }))}
+                    placeholder="Password for the school email account"
+                    className="mt-1.5 font-mono"
+                  />
+                  <div className="text-xs text-gray-500 mt-1">
+                    Shown to signed-in staff here and on the student list, so they can help the student sign in.
                   </div>
                 </div>
                 <div>

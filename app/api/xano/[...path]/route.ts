@@ -57,6 +57,7 @@ const PRIVATE_FIELDS = new Set([
   "gender",
   "email",
   "studentEmail",
+  "email_password",
   "contact_info",
   "families",
   "phone",

@@ -15,6 +15,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import { ExternalLink, User, Users, Link2, Link2Off, RefreshCw, UserPlus } from "lucide-react"
+import { LoginSecret } from "@/components/login-secret"
 import { useStudentsByExpedition, useStudents as useAllStudents } from "@/lib/hooks/use-expeditions"
 import { useCurrentUser } from "@/lib/contexts/user-context"
 import { useExpeditionContext } from "@/lib/contexts/expedition-context"
@@ -109,6 +110,7 @@ function StudentsPageContent() {
     firstName: "",
     lastName: "",
     studentEmail: "",
+    email_password: "",
     yearGroup: "",
     grade: "",
     gender: "",
@@ -331,6 +333,7 @@ function StudentsPageContent() {
         firstName: addForm.firstName.trim(),
         lastName: addForm.lastName.trim(),
         studentEmail: addForm.studentEmail.trim().toLowerCase(),
+        email_password: addForm.email_password.trim(),
         yearGroup: addForm.yearGroup.trim(),
         grade: addForm.grade.trim(),
         gender: addForm.gender.trim(),
@@ -745,6 +748,7 @@ function StudentsPageContent() {
                       <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 w-[240px]">Student Name</TableHead>
                       <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 w-[120px]">Crew</TableHead>
                       <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 w-[200px]">Email</TableHead>
+                      <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 w-[160px]">Email Password</TableHead>
                       <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 w-[280px]">Expeditions</TableHead>
                       <TableHead className="h-10 px-4 text-xs font-semibold text-gray-600 w-[100px]">Status</TableHead>
                       <TableHead className="h-10 px-4 text-right text-xs font-semibold text-gray-600 w-[80px]">Actions</TableHead>
@@ -790,6 +794,9 @@ function StudentsPageContent() {
                             <span className="text-sm text-gray-600 truncate block" title={student.studentEmail || ""}>
                               {student.studentEmail || "—"}
                             </span>
+                          </TableCell>
+                          <TableCell className="h-14 px-4 w-[160px]" onClick={(e) => e.stopPropagation()}>
+                            <LoginSecret value={student.email_password} label="Password" />
                           </TableCell>
                           <TableCell className="h-14 px-4 w-[280px]">
                             {expeditionNames.length > 0 ? (
@@ -890,6 +897,21 @@ function StudentsPageContent() {
                 placeholder="name@sailfuture.org"
               />
               <p className="text-xs text-gray-500">The next Toddle sync links this student to their Toddle record by this email.</p>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="add-email-password">Email password</Label>
+              <Input
+                id="add-email-password"
+                type="text"
+                autoComplete="off"
+                spellCheck={false}
+                className="font-mono"
+                value={addForm.email_password}
+                onChange={(e) => setAddForm({ ...addForm, email_password: e.target.value })}
+                placeholder="Password for the school email account"
+              />
+              <p className="text-xs text-gray-500">Optional. Staff can see it on the student list and the student page.</p>
             </div>
 
             <div className="grid grid-cols-2 gap-3">

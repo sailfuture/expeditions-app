@@ -1144,3 +1144,37 @@ export async function deleteExpeditionLinenInventoryLocation(id: number) {
   })
 }
 
+
+// ============ Toddle Term Grades (Grades tab) ============
+// The grades live in the professionalism dashboard's Xano group behind a service key, so the
+// browser reaches them through this app's /api/grades routes (lib/xano-grades.ts), never Xano.
+import { parseTermGradesPayload, type TermGradesPayload, type TermGradesRefreshResult } from "@/lib/grades"
+
+/** Every stored Toddle overall score, all grading periods of a school year (by name,
+ *  e.g. "2026-2027"), for the given students' Toddle ids. */
+export async function getTermGrades(schoolYear: string, studentToddleIds: string[]): Promise<TermGradesPayload> {
+  const params = new URLSearchParams({ school_year: schoolYear, students: studentToddleIds.join(",") })
+  const res = await fetch(`/api/grades?${params.toString()}`, { cache: "no-store" })
+  if (!res.ok) {
+    let detail = ""
+    try { detail = (await res.json())?.message || "" } catch {}
+    throw new Error(detail || `Grades request failed (${res.status})`)
+  }
+  return parseTermGradesPayload(await res.json())
+}
+
+/** Runs the grades-only Toddle pull now (Xano throttles it to once a minute). Callers refetch afterwards. */
+export async function refreshTermGrades(): Promise<TermGradesRefreshResult> {
+  const res = await fetch(`/api/grades/refresh`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}", cache: "no-store" })
+  if (!res.ok) {
+    let detail = ""
+    try { detail = (await res.json())?.message || "" } catch {}
+    throw new Error(detail || `Toddle pull failed (${res.status})`)
+  }
+  const data = await res.json()
+  return {
+    skipped: data?.skipped === true,
+    seconds_ago: typeof data?.seconds_ago === "number" ? data.seconds_ago : null,
+    last_run: data?.last_run && typeof data.last_run === "object" ? data.last_run : null,
+  }
+}

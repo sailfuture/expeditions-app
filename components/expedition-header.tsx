@@ -13,7 +13,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import {
-  Home, Map, Route, ClipboardList, Users, Eye, PlusCircle, FileText, AlertTriangle, ClipboardCheck, IdCard, Trophy,
+  Home, Map, Route, ClipboardList, Users, Eye, PlusCircle, FileText, AlertTriangle, ClipboardCheck, IdCard, Trophy, BookMarked,
   type LucideIcon,
 } from "lucide-react"
 import { cn, clampDateToExpeditionRange } from "@/lib/utils"
@@ -34,6 +34,7 @@ export type ExpeditionPage =
   | "applications"
   | "passport-manifest"
   | "awards"
+  | "grades"
   // The post-login home dashboard (/home): shows the header for the active
   // expedition but is not one of the tabs, so no tab is highlighted.
   | "dashboard"
@@ -57,6 +58,7 @@ const PAGE_TITLES: Record<ExpeditionPage, string> = {
   "applications": "Applications",
   "passport-manifest": "Manifest",
   "awards": "Awards",
+  "grades": "Grades",
   "dashboard": "Dashboard",
 }
 
@@ -80,6 +82,7 @@ const TABS: TabDef[] = [
   { page: "applications", label: "Apps", icon: ClipboardCheck, href: (id) => `/applications?expedition=${id}` },
   { page: "passport-manifest", label: "Manifest", icon: IdCard, href: (id) => `/expedition/${id}/passport-manifest` },
   { page: "awards", label: "Awards", icon: Trophy, href: (id) => `/awards?expedition=${id}` },
+  { page: "grades", label: "Grades", icon: BookMarked, href: (id) => `/grades?expedition=${id}` },
 ]
 
 const TAB_BUTTON_CLASS = "cursor-pointer h-7 px-2 rounded-md text-xs min-w-0"
@@ -194,7 +197,7 @@ export function ExpeditionHeader({ expedition, isLoading = false, currentPage = 
                   <Button key={page} asChild variant={isActive ? "default" : "ghost"} size="sm" className={className}>
                     <Link
                       href={href(expedition.id, defaultDate)}
-                      // Eleven tabs each prefetch several route segments the moment the header
+                      // A dozen tabs each prefetch several route segments the moment the header
                       // renders (about fifty requests per page). With prefetch off, Next still
                       // prefetches the one tab the pointer hovers over.
                       prefetch={false}

@@ -21,6 +21,7 @@ const TAB_ROUTES: Array<[RegExp, ExpeditionPage]> = [
   [/^\/discipline/, "discipline"],
   [/^\/applications/, "applications"],
   [/^\/awards/, "awards"],
+  [/^\/grades/, "grades"],
 ]
 
 function resolveCurrentPage(pathname: string): ExpeditionPage {

@@ -233,15 +233,15 @@ export function DraggableScheduleItem({
                 {staffName && (
                   <>
                     <span aria-hidden="true" className="shrink-0 text-gray-400">&bull;</span>
-                    <span className="min-w-0 shrink-[2] truncate text-[11px] text-gray-500">{staffName}</span>
+                    <span className="min-w-0 shrink-[2] truncate text-xs text-gray-500">{staffName}</span>
                   </>
                 )}
                 {density === "tiny" && (
-                  <span className="ml-1 shrink-0 text-[11px] text-gray-500">{timeRange}</span>
+                  <span className="ml-1 shrink-0 text-xs text-gray-500">{timeRange}</span>
                 )}
               </p>
               {density === "compact" && (
-                <p className="truncate text-[11px] text-gray-600 leading-tight">{timeRange}</p>
+                <p className="truncate text-xs text-gray-600 leading-tight">{timeRange}</p>
               )}
             </>
           ) : (
@@ -249,7 +249,7 @@ export function DraggableScheduleItem({
           <h3 className="font-semibold text-sm text-gray-900 leading-tight line-clamp-1">
             {item.name}
           </h3>
-          <p className="text-[11px] text-gray-600 leading-tight">
+          <p className="text-xs text-gray-600 leading-tight">
             {timeRange}
           </p>
           {item._expedition_staff && (
@@ -259,7 +259,7 @@ export function DraggableScheduleItem({
                     {item._expedition_staff.name?.split(" ").map((n: string) => n[0]).join("")}
                   </AvatarFallback>
                 </Avatar>
-                <span className="text-[11px] text-gray-500 truncate">
+                <span className="text-xs text-gray-500 truncate">
                   {item._expedition_staff.name}
                 </span>
                 {/* Staff participants as circle initials */}

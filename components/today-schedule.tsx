@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react"
 import Link from "next/link"
 import { Anchor, ArrowRight, Calendar, CalendarX, Clock, MapPin, Ship, Users, Wrench, X } from "lucide-react"
+import { ScheduleRow, formatMilitaryTime, scheduleItemColor as itemColor } from "@/components/schedule-row"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -21,29 +22,7 @@ interface TodayScheduleProps {
   className?: string
 }
 
-// Tailwind needs the full class names to exist in source, so map colours statically.
-const ITEM_TYPE_COLORS: Record<string, string> = {
-  amber: "bg-amber-500", orange: "bg-orange-500", red: "bg-red-500", green: "bg-green-500",
-  blue: "bg-blue-500", purple: "bg-purple-500", teal: "bg-teal-500", pink: "bg-pink-500",
-  indigo: "bg-indigo-500", cyan: "bg-cyan-500", yellow: "bg-yellow-500", lime: "bg-lime-500",
-  emerald: "bg-emerald-500", sky: "bg-sky-500", violet: "bg-violet-500", fuchsia: "bg-fuchsia-500",
-  rose: "bg-rose-500", slate: "bg-slate-500", gray: "bg-gray-500", zinc: "bg-zinc-500",
-  neutral: "bg-neutral-500", stone: "bg-stone-500",
-}
-
-function itemColor(item: any) {
-  const color = item?._expedition_schedule_item_types?.color
-  return (color && ITEM_TYPE_COLORS[color]) || "bg-gray-400"
-}
-
-export function formatMilitaryTime(militaryTime: number) {
-  if (militaryTime === 2400) return "12:00 AM"
-  const hours = Math.floor(militaryTime / 100)
-  const minutes = militaryTime % 100
-  const displayHours = hours % 12 || 12
-  const period = hours >= 12 ? "PM" : "AM"
-  return `${displayHours}:${minutes.toString().padStart(2, "0")} ${period}`
-}
+export { formatMilitaryTime }
 
 export function formatScheduleDate(dateString: string) {
   const [year, month, day] = dateString.split("-").map(Number)
@@ -395,45 +374,5 @@ function DayStaffOffAndNotes({ schedule }: { schedule: any }) {
         )}
       </div>
     </div>
-  )
-}
-
-function ScheduleRow({ item, time }: { item: any; time: string | null }) {
-  // Type as the title, except "Other", where the item's own name is the title.
-  const { title, subtitle } = scheduleItemTitle(item)
-  const staff = item._expedition_staff
-  const studentCount = Array.isArray(item.students_id) ? item.students_id.filter((s: any) => s != null).length : 0
-  return (
-    <li className="flex items-stretch gap-3 px-5 py-2.5">
-      <span className={cn("w-1 flex-shrink-0 rounded-full", itemColor(item))} />
-      <div className="min-w-0 flex-1">
-        <div className="flex items-baseline justify-between gap-3">
-          <p className="min-w-0 truncate text-sm font-medium text-gray-900" title={title}>
-            {title}
-          </p>
-          {time && (
-            <span className="flex flex-shrink-0 items-center gap-1 text-xs text-gray-500 tabular-nums">
-              <Clock className="h-3 w-3" />
-              {time}
-            </span>
-          )}
-        </div>
-        {subtitle && <p className="truncate text-xs text-gray-600">{subtitle}</p>}
-        {(staff || studentCount > 0 || item.notes) && (
-          <div className="mt-0.5 flex items-center gap-2 text-xs text-gray-500 min-w-0">
-            {staff && (
-              <span className="flex items-center gap-1 flex-shrink-0">
-                <Avatar className="h-4 w-4">
-                  <AvatarFallback className="text-[8px] bg-gray-200 text-gray-700">{initials(staff.name)}</AvatarFallback>
-                </Avatar>
-                <span className="truncate max-w-[140px]">{staff.name}</span>
-              </span>
-            )}
-            {studentCount > 0 && <span className="flex-shrink-0">{studentCount} student{studentCount === 1 ? "" : "s"}</span>}
-            {item.notes && <span className="truncate">{item.notes}</span>}
-          </div>
-        )}
-      </div>
-    </li>
   )
 }

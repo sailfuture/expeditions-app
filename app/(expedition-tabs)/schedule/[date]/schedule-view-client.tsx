@@ -1,7 +1,7 @@
 "use client"
 
 import { XANO_BASE_URL } from "@/lib/xano-config"
-import { useMemo, useState, useRef, useCallback, useEffect } from "react"
+import { Fragment, useMemo, useState, useRef, useCallback, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -62,6 +62,7 @@ import { DateNavigation } from "@/components/date-navigation"
 import { AddScheduleItemSheet } from "@/components/add-schedule-item-sheet"
 import { DraggableScheduleItem } from "@/components/draggable-schedule-item"
 import { ScheduleDragContext } from "@/components/schedule-drag-context"
+import { ScheduleRow, NowDivider } from "@/components/schedule-row"
 import {
   useExpeditionSchedules,
   useExpeditionScheduleItemsByDate,
@@ -390,6 +391,35 @@ export function ScheduleViewClient({ date, expeditionId }: ScheduleViewClientPro
   const unscheduledItems = useMemo(() => {
     return sortedItems.filter((item: any) => item.time_in === 0 || item.time_out === 0)
   }, [sortedItems])
+
+  // Phone list: the current time as HHMM, refreshed each minute, so the "Now"
+  // divider sits between what has ended and what is still to come.
+  const isToday = date === formatLocalDateString(new Date())
+  const [nowMilitary, setNowMilitary] = useState<number | null>(null)
+  useEffect(() => {
+    if (!isToday) { setNowMilitary(null); return }
+    const tick = () => { const d = new Date(); setNowMilitary(d.getHours() * 100 + d.getMinutes()) }
+    tick()
+    const id = window.setInterval(tick, 60_000)
+    return () => window.clearInterval(id)
+  }, [isToday])
+  // Index of the first timed item that has not ended yet; the divider goes just above it.
+  const nowIndex = useMemo(() => {
+    if (nowMilitary === null) return -1
+    const idx = scheduledItems.findIndex((item: any) => item.time_out > nowMilitary)
+    return idx === -1 ? scheduledItems.length : idx
+  }, [scheduledItems, nowMilitary])
+  // Scroll the divider into view once per day, after the items have loaded.
+  const nowDividerRef = useRef<HTMLLIElement>(null)
+  const scrolledToNowFor = useRef<string | null>(null)
+  useEffect(() => {
+    if (!isToday || nowIndex < 0 || loadingItems || scrolledToNowFor.current === date) return
+    const el = nowDividerRef.current
+    // display:none (the md+ timeline is showing) has no box, so there is nothing to scroll to
+    if (!el || el.offsetParent === null) return
+    scrolledToNowFor.current = date
+    el.scrollIntoView({ block: "center" })
+  }, [isToday, nowIndex, loadingItems, date])
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
@@ -915,6 +945,37 @@ export function ScheduleViewClient({ date, expeditionId }: ScheduleViewClientPro
           </div>
         ) : (
           <>
+            {/* Phones: one list, past items dimmed, a "Now" divider on today. Tapping a
+                row opens the same detail dialog as the timeline cards. */}
+            <ul className="md:hidden divide-y overflow-hidden rounded-xl border border-gray-200 bg-white">
+              {scheduledItems.map((item: any, index: number) => {
+                const past = nowMilitary !== null && item.time_out <= nowMilitary
+                return (
+                  <Fragment key={item.id}>
+                    {isToday && nowIndex === index && <NowDivider ref={nowDividerRef} time={nowMilitary !== null ? formatMilitaryTime(nowMilitary) : undefined} />}
+                    <ScheduleRow
+                      item={item}
+                      time={`${formatMilitaryTime(item.time_in)} – ${formatMilitaryTime(item.time_out)}`}
+                      onClick={() => handleItemClick(item)}
+                      past={past}
+                    />
+                  </Fragment>
+                )
+              })}
+              {isToday && nowIndex === scheduledItems.length && (
+                <NowDivider ref={nowDividerRef} time={nowMilitary !== null ? formatMilitaryTime(nowMilitary) : undefined} />
+              )}
+              {unscheduledItems.length > 0 && (
+                <li className="bg-gray-50/60 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+                  Anytime
+                </li>
+              )}
+              {unscheduledItems.map((item: any) => (
+                <ScheduleRow key={item.id} item={item} time={null} onClick={() => handleItemClick(item)} />
+              ))}
+            </ul>
+
+            <div className="hidden md:block">
             {/* Unscheduled Items */}
             {unscheduledItems.length > 0 && (
               <div className="mb-8">
@@ -1038,6 +1099,7 @@ export function ScheduleViewClient({ date, expeditionId }: ScheduleViewClientPro
                 </div>
               </ScheduleDragContext>
             )}
+            </div>
           </>
         )}
       </div>

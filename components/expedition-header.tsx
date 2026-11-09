@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useMemo } from "react"
+import { useEffect, useMemo, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
@@ -13,7 +13,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import {
-  Home, Map, Route, ClipboardList, Users, Eye, PlusCircle, FileText, AlertTriangle, ClipboardCheck, IdCard, Trophy, BookMarked,
+  Home, Map, Route, ClipboardList, Users, Eye, PlusCircle, FileText, AlertTriangle, ClipboardCheck, IdCard, Trophy, BookMarked, ChevronLeft,
   type LucideIcon,
 } from "lucide-react"
 import { cn, clampDateToExpeditionRange } from "@/lib/utils"
@@ -71,8 +71,8 @@ interface TabDef {
 
 const TABS: TabDef[] = [
   { page: "overview", label: "Overview", icon: Home, href: (id) => `/expedition/${id}` },
-  { page: "trip-planner", label: "Planner", icon: Map, href: (id) => `/dashboard?expedition=${id}` },
-  { page: "route-map", label: "Map", icon: Route, href: (id) => `/map?expedition=${id}` },
+  { page: "trip-planner", label: "Planner", icon: Route, href: (id) => `/dashboard?expedition=${id}` },
+  { page: "route-map", label: "Map", icon: Map, href: (id) => `/map?expedition=${id}` },
   { page: "weekly-planner", label: "Weekly", icon: ClipboardList, href: (id) => `/planner?expedition=${id}` },
   { page: "daily-view", label: "Daily", icon: Eye, href: (id, date) => `/schedule/${date}?expedition=${id}` },
   { page: "students", label: "Assign", icon: Users, href: (id) => `/expedition/${id}/assignments` },
@@ -85,7 +85,11 @@ const TABS: TabDef[] = [
   { page: "grades", label: "Grades", icon: BookMarked, href: (id) => `/grades?expedition=${id}` },
 ]
 
-const TAB_BUTTON_CLASS = "cursor-pointer h-7 px-2 rounded-md text-xs min-w-0"
+// Under lg: a 48px-tall, 56px-wide icon-over-label chip in a scrolling strip
+// (phones and tablets have no hover, and icon-only tabs were unreadable).
+// At lg+: the original compact 28px row with the label beside the icon.
+const TAB_BUTTON_CLASS =
+  "cursor-pointer h-12 min-w-[56px] shrink-0 snap-start flex-col gap-0.5 rounded-md px-1.5 text-[11px] leading-none lg:h-7 lg:min-w-0 lg:shrink lg:flex-row lg:gap-1 lg:px-2 lg:text-xs"
 const INACTIVE_TAB_CLASS = "bg-white border border-gray-200 hover:bg-gray-50"
 
 // Local date string (not UTC) to avoid timezone issues
@@ -118,12 +122,43 @@ export function ExpeditionHeader({ expedition, isLoading = false, currentPage = 
     [expedition]
   )
 
+  // When the strip scrolls (under lg), bring the active tab into view on mount
+  // without scrolling the page itself.
+  const navRef = useRef<HTMLElement>(null)
+  useEffect(() => {
+    const nav = navRef.current
+    if (!nav || nav.scrollWidth <= nav.clientWidth) return
+    const active = nav.querySelector<HTMLElement>('[aria-current="page"]')
+    if (!active) return
+    const target = active.offsetLeft - (nav.clientWidth - active.offsetWidth) / 2
+    nav.scrollLeft = Math.max(0, target)
+  }, [currentPage, visibleTabs.length])
+
   return (
     <>
-      {/* Breadcrumb - Always visible */}
+      {/* Breadcrumb: on phones a single back link with the expedition name; the full trail from md */}
       <div className="bg-white border-b">
         <div className="container mx-auto px-4 py-3">
-          <Breadcrumb>
+          <div className="flex items-center gap-2 md:hidden min-h-[24px]">
+            <Link
+              href={currentPage === "overview" ? (isAdmin ? "/expeditions" : "/my-expeditions") : expedition ? `/expedition/${expedition.id}` : "#"}
+              className="flex min-w-0 items-center gap-1 text-sm font-medium text-gray-900 -ml-1.5 py-1 pr-1 rounded-md active:bg-gray-100"
+              aria-label={currentPage === "overview" ? (isAdmin ? "All Expeditions" : "My Expeditions") : "Expedition overview"}
+            >
+              <ChevronLeft className="h-4 w-4 shrink-0 text-gray-500" />
+              {expedition ? (
+                <span className="truncate">{expedition.name}</span>
+              ) : isLoading ? (
+                <Skeleton className="h-4 w-32" />
+              ) : (
+                <span className="text-gray-500">{isAdmin ? "All Expeditions" : "My Expeditions"}</span>
+              )}
+            </Link>
+            {expedition && (
+              <ExpeditionTypeBadge expedition={expedition} className="h-5 shrink-0 px-1.5 text-[10px] uppercase tracking-wide" />
+            )}
+          </div>
+          <Breadcrumb className="hidden md:block">
             <BreadcrumbList>
               <BreadcrumbItem>
                 <BreadcrumbLink
@@ -172,16 +207,22 @@ export function ExpeditionHeader({ expedition, isLoading = false, currentPage = 
 
       {/* Navigation */}
       <div className="border-b bg-muted/30">
-        <div className="container mx-auto px-4 py-3">
+        {/* Under lg the strip bleeds to the screen edges and scrolls sideways; from lg it
+            sits in the container and wraps like before. */}
+        <div className="container mx-auto px-0 py-2 lg:px-4 lg:py-3">
           <div className="flex items-center">
-            <nav aria-label="Expedition sections" className="inline-flex gap-1 rounded-lg border border-gray-200 bg-gray-50 p-1 shadow-sm flex-wrap">
+            <nav
+              ref={navRef}
+              aria-label="Expedition sections"
+              className="flex w-full snap-x snap-mandatory flex-nowrap gap-1 overflow-x-auto px-4 py-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:w-auto lg:inline-flex lg:flex-wrap lg:overflow-visible lg:rounded-lg lg:border lg:border-gray-200 lg:bg-gray-50 lg:p-1 lg:shadow-sm"
+            >
               {visibleTabs.map(({ page, label, icon: Icon, href }) => {
                 const isActive = currentPage === page
                 const className = cn(TAB_BUTTON_CLASS, !isActive && INACTIVE_TAB_CLASS)
                 const content = (
                   <>
-                    <Icon className="h-3.5 w-3.5 flex-shrink-0 lg:mr-1" />
-                    <span className="hidden lg:inline truncate">{label}</span>
+                    <Icon className="h-4 w-4 flex-shrink-0 lg:h-3.5 lg:w-3.5" />
+                    <span className="truncate">{label}</span>
                   </>
                 )
 

@@ -1,6 +1,6 @@
 "use client"
 
-import { Suspense, useEffect, useMemo, useState } from "react"
+import { Suspense, useMemo, useState } from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import useSWR from "swr"
@@ -16,7 +16,7 @@ import { GradeCell, GradeLegend } from "@/components/grade-cell"
 import { useExpeditions, useSchoolTerms, useSchoolYears, useStudentsByExpedition } from "@/lib/hooks/use-expeditions"
 import { getTermGrades, refreshTermGrades } from "@/lib/xano"
 import {
-  asOfLabel, fmtGpa, gpaOf, meanOf, periodOptions, pickDefaultPeriod,
+  asOfLabel, fmtGpa, gpaOf, meanOf, periodOptions,
   type PeriodOption, type TermGradeRow,
 } from "@/lib/grades"
 import { toddleClassUrl } from "@/lib/toddle-links"
@@ -101,20 +101,19 @@ function GradesPageContent() {
     { revalidateOnFocus: false },
   )
 
-  const [selectedPeriodId, setSelectedPeriodId] = useState<string | null>(null)
   const [sortKey, setSortKey] = useState<SortKey>("name")
   const [refreshing, setRefreshing] = useState(false)
 
   const periods = useMemo<PeriodOption[]>(() => periodOptions(payload?.grades ?? []), [payload])
 
-  useEffect(() => {
-    if (periods.length === 0) return
-    if (selectedPeriodId && periods.some((p) => p.id === selectedPeriodId)) return
-    const match = pickDefaultPeriod(periods, payload?.grades ?? [], termName)
-    if (match) setSelectedPeriodId(match.id)
-  }, [periods, selectedPeriodId, payload, termName])
-
-  const selectedPeriod = periods.find((p) => p.id === selectedPeriodId) ?? null
+  // The tab shows one grading period only: the one named like the
+  // expedition's school term ("Term 2"). Toddle's period labels and the
+  // expedition app's term short names are kept the same by hand.
+  const selectedPeriod = useMemo<PeriodOption | null>(() => {
+    const wanted = (termName || "").trim().toLowerCase()
+    if (!wanted) return null
+    return periods.find((p) => p.label.trim().toLowerCase() === wanted) ?? null
+  }, [periods, termName])
 
   const handleRefresh = async () => {
     setRefreshing(true)
@@ -243,25 +242,19 @@ function GradesPageContent() {
           <h2 className="text-lg font-semibold">Grades</h2>
           <p className="mt-1 text-sm text-gray-600">
             Toddle overall score in every class for the students on {expedition?.name ?? "this expedition"}
-            {schoolYearName ? ` (${schoolYearName})` : ""}.
+            {termName ? ` during ${termName}` : ""}{schoolYearName ? ` (${schoolYearName})` : ""}.
           </p>
         </div>
         <GradeLegend />
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <Select value={selectedPeriodId ?? ""} onValueChange={setSelectedPeriodId} disabled={periods.length === 0}>
-          <SelectTrigger className="h-9 w-[200px] cursor-pointer bg-white">
-            <SelectValue placeholder={loading ? "Loading…" : "No grading periods"} />
-          </SelectTrigger>
-          <SelectContent>
-            {periods.map((p) => (
-              <SelectItem key={p.id} value={p.id} className="cursor-pointer">
-                {p.label}{p.type === "CUMULATIVE" ? " (cumulative)" : ""}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <span
+          className="inline-flex h-9 items-center rounded-md border border-gray-200 bg-white px-3 text-sm font-medium text-gray-700"
+          title="Grades are shown for the expedition's school term"
+        >
+          {termName ?? (expedition ? "No school term" : "…")}
+        </span>
         <Select value={sortKey} onValueChange={(v) => setSortKey(v as SortKey)}>
           <SelectTrigger className="h-9 w-[160px] cursor-pointer bg-white">
             <SelectValue />
@@ -308,16 +301,22 @@ function GradesPageContent() {
             <BookMarked className="mx-auto mb-3 h-12 w-12 text-gray-300" />
             <p className="text-lg font-medium text-gray-600">No students on this expedition</p>
           </div>
-        ) : periods.length === 0 ? (
+        ) : !selectedPeriod ? (
           <div className="p-12 text-center text-muted-foreground">
             <BookMarked className="mx-auto mb-3 h-12 w-12 text-gray-300" />
-            <p className="text-lg font-medium text-gray-600">No Toddle grades yet</p>
+            <p className="text-lg font-medium text-gray-600">
+              {!termName ? "No school term on this expedition" : `No ${termName} grades yet`}
+            </p>
             <p className="mx-auto mt-1 max-w-md text-sm text-gray-500">
-              {payload && "unknown_year" in (payload as any)
-                ? `The grades store has no school year named ${schoolYearName}.`
-                : toddleIds.length === 0
-                  ? "None of these students is linked to a Toddle record, so there are no grades to show."
-                  : `Nothing is stored for ${schoolYearName ?? "this school year"} yet. Refresh from Toddle to pull it now.`}
+              {!termName
+                ? "Set the expedition's school term in its settings; grades are shown for that term only."
+                : payload && "unknown_year" in (payload as any)
+                  ? `The grades store has no school year named ${schoolYearName}.`
+                  : toddleIds.length === 0
+                    ? "None of these students is linked to a Toddle record, so there are no grades to show."
+                    : periods.length === 0
+                      ? `Nothing is stored for ${schoolYearName ?? "this school year"} yet. Refresh from Toddle to pull it now.`
+                      : `Toddle has no grading period named ${termName} for ${schoolYearName ?? "this school year"}. Stored periods: ${periods.map((p) => p.label).join(", ")}.`}
             </p>
           </div>
         ) : (

@@ -28,8 +28,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import {
-  Sheet,
-  SheetContent,
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet"
@@ -51,6 +49,7 @@ import {
 } from "@/components/ui/breadcrumb"
 import { ChevronLeft, ChevronRight, ExternalLink, Calendar, Plus, X, Pencil, Trash2, Clock, Wrench, ClipboardList, ChevronsUpDown, Check, CircleDot, Eye, Users } from "lucide-react"
 import { LoadError } from "@/components/load-error"
+import { ResponsiveSheet, ResponsiveSheetContent } from "@/components/responsive-sheet"
 import { RecipeThumb } from "@/components/recipe-thumb"
 import {
   Command,
@@ -272,8 +271,8 @@ function MealPlanSheet({ open, onOpenChange, recipe, loading, recipeId }: {
   }
 
   return (
-    <Sheet open={open} onOpenChange={handleOpenChange}>
-      <SheetContent className="w-full sm:w-[600px] sm:max-w-[90vw] p-0 flex flex-col h-full overflow-hidden">
+    <ResponsiveSheet open={open} onOpenChange={handleOpenChange}>
+      <ResponsiveSheetContent className="w-full sm:w-[600px] sm:max-w-[90vw]">
         <SheetHeader className="p-6 pb-4 border-b shrink-0">
           <div className="flex items-center justify-between">
             <SheetTitle className="text-xl">
@@ -639,8 +638,8 @@ function MealPlanSheet({ open, onOpenChange, recipe, loading, recipeId }: {
             <div className="text-center py-8 text-muted-foreground">Recipe not found.</div>
           )}
         </div>
-      </SheetContent>
-    </Sheet>
+      </ResponsiveSheetContent>
+    </ResponsiveSheet>
   )
 }
 

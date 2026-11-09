@@ -1,18 +1,18 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { TimePicker } from "@/components/ui/time-picker"
 import {
-  Sheet,
-  SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet"
+import { ResponsiveSheet, ResponsiveSheetContent, ResponsiveSheetFooter } from "@/components/responsive-sheet"
+import { MobilePicker, type PickerOption } from "@/components/mobile-picker"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,7 +26,7 @@ import {
 import { Spinner } from "@/components/ui/spinner"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { RecipeThumb } from "@/components/recipe-thumb"
-import { Check, ChevronDown, X, Trash2, ExternalLink, Search } from "lucide-react"
+import { Check, X, Trash2, ExternalLink } from "lucide-react"
 import { createExpeditionScheduleItem, updateExpeditionScheduleItem, deleteExpeditionScheduleItem, getExpeditionCookbook } from "@/lib/xano"
 import { useExpeditionScheduleItemTypes, revalidateScheduleItemRanges } from "@/lib/hooks/use-expeditions"
 import useSWR, { mutate } from "swr"
@@ -44,90 +44,34 @@ interface AddScheduleItemSheetProps {
   expeditionsId?: number // For cache invalidation
 }
 
-// Custom dropdown component
-function CustomSelect({
-  value,
-  onChange,
-  options,
-  placeholder,
-  renderValue,
-  renderOption,
-  className,
-}: {
-  value: string | number
-  onChange: (value: string | number, option?: any) => void
-  options: { value: string | number; label: string; data?: any }[]
-  placeholder: string
-  renderValue?: (option: { value: string | number; label: string; data?: any } | null) => React.ReactNode
-  renderOption?: (option: { value: string | number; label: string; data?: any }) => React.ReactNode
-  className?: string
-}) {
-  const [isOpen, setIsOpen] = useState(false)
-  const dropdownRef = useRef<HTMLDivElement>(null)
+function staffInitials(name: string) {
+  if (!name) return "?"
+  return name.split(" ").map((n) => n[0]).filter(Boolean).join("").toUpperCase().slice(0, 2)
+}
 
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false)
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside)
-    return () => document.removeEventListener("mousedown", handleClickOutside)
-  }, [])
+function studentInitials(firstName: string, lastName: string) {
+  return `${firstName?.[0] || ""}${lastName?.[0] || ""}`.toUpperCase() || "?"
+}
 
-  const selectedOption = options.find(o => o.value.toString() === value.toString()) || null
+function studentName(student: any) {
+  return `${student.firstName || ""} ${student.lastName || ""}`.trim() || "Unknown"
+}
 
+/** Round check used as the selected marker in the multi-select lists. */
+function SelectionDot({ selected }: { selected: boolean }) {
   return (
-    <div className="relative" ref={dropdownRef}>
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className={cn(
-          "w-full rounded-lg border border-gray-200 bg-white px-4 flex items-center justify-between gap-2 text-left cursor-pointer",
-          "hover:bg-gray-50 transition-colors",
-          isOpen && "ring-2 ring-gray-400 ring-offset-2",
-          className
-        )}
-      >
-        <div className="flex-1 min-w-0">
-          {renderValue ? (
-            renderValue(selectedOption)
-          ) : (
-            <span className={selectedOption ? "text-gray-900" : "text-gray-500"}>
-              {selectedOption?.label || placeholder}
-            </span>
-          )}
-        </div>
-        <ChevronDown className={cn("h-4 w-4 text-gray-400 transition-transform shrink-0", isOpen && "rotate-180")} />
-      </button>
-
-      {isOpen && (
-        <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
-          <div className="max-h-64 overflow-y-auto py-1">
-            {options.map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => {
-                  onChange(option.value, option)
-                  setIsOpen(false)
-                }}
-                className={cn(
-                  "w-full px-4 py-2.5 flex items-center gap-3 hover:bg-gray-100 transition-colors text-left cursor-pointer",
-                  option.value.toString() === value.toString() && "bg-gray-50"
-                )}
-              >
-                {renderOption ? renderOption(option) : <span className="text-sm">{option.label}</span>}
-              </button>
-            ))}
-          </div>
-        </div>
+    <span
+      className={cn(
+        "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors",
+        selected ? "border-gray-800 bg-gray-800" : "border-gray-300"
       )}
-    </div>
+    >
+      {selected && <Check className="h-3 w-3 text-white" />}
+    </span>
   )
 }
 
-// Staff Combobox - searchable dropdown for selecting a staff member
+// Led By: one staff member or none
 function StaffCombobox({
   value,
   onChange,
@@ -137,124 +81,52 @@ function StaffCombobox({
   onChange: (value: number) => void
   staff: any[]
 }) {
-  const [isOpen, setIsOpen] = useState(false)
-  const [search, setSearch] = useState("")
-  const dropdownRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false)
-        setSearch("")
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside)
-    return () => document.removeEventListener("mousedown", handleClickOutside)
-  }, [])
-
-  useEffect(() => {
-    if (isOpen && inputRef.current) {
-      inputRef.current.focus()
-    }
-  }, [isOpen])
-
-  const getInitials = (name: string) => {
-    if (!name) return "?"
-    return name.split(" ").map((n) => n[0]).filter(Boolean).join("").toUpperCase().slice(0, 2)
-  }
-
-  const selectedStaff = staff.find(s => s.id === value) || null
-
-  const filteredStaff = staff.filter(s =>
-    s.name.toLowerCase().includes(search.toLowerCase())
-  )
+  const selectedStaff = staff.find((s) => s.id === value) || null
+  const options: PickerOption[] = [
+    { value: 0, label: "None" },
+    ...staff.map((s) => ({ value: s.id, label: s.name, data: s })),
+  ]
 
   return (
-    <div className="relative" ref={dropdownRef}>
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className={cn(
-          "w-full rounded-lg border border-gray-200 bg-white px-4 h-14 flex items-center justify-between gap-2 text-left cursor-pointer",
-          "hover:bg-gray-50 transition-colors",
-          isOpen && "ring-2 ring-gray-400 ring-offset-2"
-        )}
-      >
-        <div className="flex-1 min-w-0">
-          {selectedStaff ? (
-            <div className="flex items-center gap-3">
-              <Avatar className="h-8 w-8">
-                {selectedStaff.photo_url && <AvatarImage src={selectedStaff.photo_url} alt={selectedStaff.name} />}
-                <AvatarFallback className="text-xs bg-gray-100 text-gray-800">{getInitials(selectedStaff.name)}</AvatarFallback>
-              </Avatar>
-              <span className="text-base">{selectedStaff.name}</span>
-            </div>
-          ) : (
-            <span className="text-gray-500 text-base">Select staff member</span>
-          )}
-        </div>
-        <ChevronDown className={cn("h-4 w-4 text-gray-400 transition-transform shrink-0", isOpen && "rotate-180")} />
-      </button>
-
-      {isOpen && (
-        <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
-          <div className="p-2 border-b border-gray-100">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <input
-                ref={inputRef}
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search staff..."
-                className="w-full pl-8 pr-3 py-2 text-sm border border-gray-200 rounded-md outline-none focus:ring-2 focus:ring-gray-400"
-              />
-            </div>
+    <MobilePicker
+      title="Led by"
+      searchPlaceholder="Search staff..."
+      emptyText="No staff found"
+      options={options}
+      value={value}
+      onChange={(v) => onChange(Number(v))}
+      triggerClassName="h-14"
+      renderValue={() =>
+        selectedStaff ? (
+          <div className="flex items-center gap-3">
+            <Avatar className="h-8 w-8">
+              {selectedStaff.photo_url && <AvatarImage src={selectedStaff.photo_url} alt={selectedStaff.name} />}
+              <AvatarFallback className="text-xs bg-gray-100 text-gray-800">{staffInitials(selectedStaff.name)}</AvatarFallback>
+            </Avatar>
+            <span className="text-base">{selectedStaff.name}</span>
           </div>
-          <div className="max-h-64 overflow-y-auto py-1">
-            <button
-              type="button"
-              onClick={() => {
-                onChange(0)
-                setIsOpen(false)
-                setSearch("")
-              }}
-              className={cn(
-                "w-full px-4 py-2.5 flex items-center gap-3 hover:bg-gray-100 transition-colors text-left cursor-pointer",
-                value === 0 && "bg-gray-50"
-              )}
-            >
-              <span className="text-gray-500 text-sm">None</span>
-            </button>
-            {filteredStaff.map((s) => (
-              <button
-                key={s.id}
-                type="button"
-                onClick={() => {
-                  onChange(s.id)
-                  setIsOpen(false)
-                  setSearch("")
-                }}
-                className={cn(
-                  "w-full px-4 py-2.5 flex items-center gap-3 hover:bg-gray-100 transition-colors text-left cursor-pointer",
-                  s.id === value && "bg-gray-50"
-                )}
-              >
-                <Avatar className="h-8 w-8">
-                  {s.photo_url && <AvatarImage src={s.photo_url} alt={s.name} />}
-                  <AvatarFallback className="text-xs bg-gray-100 text-gray-800">{getInitials(s.name)}</AvatarFallback>
-                </Avatar>
-                <span className="text-sm font-medium">{s.name}</span>
-              </button>
-            ))}
-            {filteredStaff.length === 0 && (
-              <div className="px-4 py-3 text-sm text-gray-500 text-center">No staff found</div>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
+        ) : (
+          <span className="text-base text-gray-500">Select staff member</span>
+        )
+      }
+      renderOption={(option, selected) =>
+        option.data ? (
+          <>
+            <Avatar className="h-8 w-8">
+              {option.data.photo_url && <AvatarImage src={option.data.photo_url} alt={option.label} />}
+              <AvatarFallback className="text-xs bg-gray-100 text-gray-800">{staffInitials(option.label)}</AvatarFallback>
+            </Avatar>
+            <span className="flex-1 truncate text-sm font-medium">{option.label}</span>
+            {selected && <Check className="h-4 w-4 shrink-0 text-gray-600" />}
+          </>
+        ) : (
+          <>
+            <span className="flex-1 text-sm text-gray-500">{option.label}</span>
+            {selected && <Check className="h-4 w-4 shrink-0 text-gray-600" />}
+          </>
+        )
+      }
+    />
   )
 }
 
@@ -273,7 +145,12 @@ const ACTIVITY_TYPE_COLORS: Record<string, string> = {
   cyan: "#06b6d4",
 }
 
-// Activity Type selector using CustomSelect with search and grouped items
+function TypeDot({ color }: { color?: string }) {
+  if (!color) return null
+  return <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: ACTIVITY_TYPE_COLORS[color] || color }} />
+}
+
+// Activity type, grouped into Meals and Activities
 function ActivityTypeSelector({
   value,
   onChange,
@@ -283,143 +160,38 @@ function ActivityTypeSelector({
   onChange: (value: number, option?: any) => void
   options: { value: number; label: string; data?: any }[]
 }) {
-  const [isOpen, setIsOpen] = useState(false)
-  const [searchQuery, setSearchQuery] = useState("")
-  const dropdownRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false)
-        setSearchQuery("")
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside)
-    return () => document.removeEventListener("mousedown", handleClickOutside)
-  }, [])
-
-  const selectedOption = options.find(o => o.value === value) || null
-
-  // Group and filter options
-  const filteredOptions = options.filter(o =>
-    o.value !== 0 && o.label.toLowerCase().includes(searchQuery.toLowerCase())
-  )
-  const mealOptions = filteredOptions.filter(o => o.data?.isMeal)
-  const activityOptions = filteredOptions.filter(o => !o.data?.isMeal)
+  const selectedOption = options.find((o) => o.value === value) || null
+  const pickerOptions: PickerOption[] = options
+    .filter((o) => o.value !== 0)
+    .map((o) => ({ value: o.value, label: o.label, data: o.data, group: o.data?.isMeal ? "Meals" : "Activities" }))
+    // Meals first, as before
+    .sort((a, b) => (a.group === b.group ? 0 : a.group === "Meals" ? -1 : 1))
 
   return (
-    <div className="relative" ref={dropdownRef}>
-      <button
-        type="button"
-        onClick={() => {
-          setIsOpen(!isOpen)
-          if (!isOpen) setTimeout(() => inputRef.current?.focus(), 50)
-        }}
-        className={cn(
-          "w-full h-12 rounded-lg border border-gray-200 bg-white px-4 flex items-center justify-between gap-2 text-left cursor-pointer",
-          "hover:bg-gray-50 transition-colors",
-          isOpen && "ring-2 ring-gray-400 ring-offset-2"
-        )}
-      >
-        <div className="flex-1 min-w-0 flex items-center gap-2">
-          {selectedOption?.data?.color && (
-            <div
-              className="w-3 h-3 rounded-full shrink-0"
-              style={{ backgroundColor: ACTIVITY_TYPE_COLORS[selectedOption.data.color] || selectedOption.data.color }}
-            />
-          )}
+    <MobilePicker
+      title="Activity type"
+      searchPlaceholder="Search types..."
+      emptyText="No types found"
+      options={pickerOptions}
+      value={value}
+      onChange={(v, option) => onChange(Number(v), option)}
+      triggerClassName="h-12"
+      renderValue={() => (
+        <div className="flex min-w-0 items-center gap-2">
+          <TypeDot color={selectedOption?.data?.color} />
           <span className={cn("truncate", selectedOption ? "text-gray-900" : "text-gray-500")}>
             {selectedOption?.label || "Select activity type..."}
           </span>
         </div>
-        <ChevronDown className={cn("h-4 w-4 text-gray-400 transition-transform shrink-0", isOpen && "rotate-180")} />
-      </button>
-
-      {isOpen && (
-        <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
-          <div className="p-2 border-b border-gray-100">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <input
-                ref={inputRef}
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search types..."
-                className="w-full h-8 pl-8 pr-3 text-sm rounded-md border border-gray-200 outline-none focus:ring-2 focus:ring-gray-300"
-              />
-            </div>
-          </div>
-          <div className="max-h-64 overflow-y-auto py-1">
-            {filteredOptions.length === 0 && (
-              <div className="px-4 py-3 text-sm text-gray-500 text-center">No types found</div>
-            )}
-            {mealOptions.length > 0 && (
-              <>
-                <div className="px-3 py-1.5 text-xs font-medium text-gray-500 uppercase tracking-wider">Meals</div>
-                {mealOptions.map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => {
-                      onChange(option.value, option)
-                      setIsOpen(false)
-                      setSearchQuery("")
-                    }}
-                    className={cn(
-                      "w-full px-4 py-2.5 flex items-center gap-3 hover:bg-gray-100 transition-colors text-left cursor-pointer",
-                      option.value === value && "bg-gray-50"
-                    )}
-                  >
-                    {option.data?.color && (
-                      <div
-                        className="w-3 h-3 rounded-full shrink-0"
-                        style={{ backgroundColor: ACTIVITY_TYPE_COLORS[option.data.color] || option.data.color }}
-                      />
-                    )}
-                    <span className="text-sm truncate">{option.label}</span>
-                    {option.value === value && <Check className="h-4 w-4 text-gray-600 ml-auto shrink-0" />}
-                  </button>
-                ))}
-              </>
-            )}
-            {mealOptions.length > 0 && activityOptions.length > 0 && (
-              <div className="my-1 h-px bg-gray-200 mx-2" />
-            )}
-            {activityOptions.length > 0 && (
-              <>
-                <div className="px-3 py-1.5 text-xs font-medium text-gray-500 uppercase tracking-wider">Activities</div>
-                {activityOptions.map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => {
-                      onChange(option.value, option)
-                      setIsOpen(false)
-                      setSearchQuery("")
-                    }}
-                    className={cn(
-                      "w-full px-4 py-2.5 flex items-center gap-3 hover:bg-gray-100 transition-colors text-left cursor-pointer",
-                      option.value === value && "bg-gray-50"
-                    )}
-                  >
-                    {option.data?.color && (
-                      <div
-                        className="w-3 h-3 rounded-full shrink-0"
-                        style={{ backgroundColor: ACTIVITY_TYPE_COLORS[option.data.color] || option.data.color }}
-                      />
-                    )}
-                    <span className="text-sm truncate">{option.label}</span>
-                    {option.value === value && <Check className="h-4 w-4 text-gray-600 ml-auto shrink-0" />}
-                  </button>
-                ))}
-              </>
-            )}
-          </div>
-        </div>
       )}
-    </div>
+      renderOption={(option, selected) => (
+        <>
+          <TypeDot color={option.data?.color} />
+          <span className="flex-1 truncate text-sm">{option.label}</span>
+          {selected && <Check className="h-4 w-4 shrink-0 text-gray-600" />}
+        </>
+      )}
+    />
   )
 }
 
@@ -433,147 +205,65 @@ function StaffParticipantSelector({
   selectedIds: number[]
   onChange: (ids: number[]) => void
 }) {
-  const [isOpen, setIsOpen] = useState(false)
-  const [searchQuery, setSearchQuery] = useState("")
-  const dropdownRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false)
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside)
-    return () => document.removeEventListener("mousedown", handleClickOutside)
-  }, [])
-
-  useEffect(() => {
-    if (isOpen && inputRef.current) {
-      inputRef.current.focus()
-    }
-  }, [isOpen])
-
   const selectedStaff = staff?.filter((s) => selectedIds.includes(s.id)) || []
+  const options: PickerOption[] = (staff || []).map((s) => ({ value: s.id, label: s.name, data: s }))
 
-  // Filter staff based on search
-  const filteredStaff = staff?.filter((member) => {
-    if (!searchQuery) return true
-    return member.name.toLowerCase().includes(searchQuery.toLowerCase())
-  }) || []
-
-  const toggleParticipant = (id: number) => {
-    if (selectedIds.includes(id)) {
-      onChange(selectedIds.filter((sid) => sid !== id))
-    } else {
-      onChange([...selectedIds, id])
-    }
-  }
-
-  const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2)
+  const toggle = (id: number) => {
+    onChange(selectedIds.includes(id) ? selectedIds.filter((sid) => sid !== id) : [...selectedIds, id])
   }
 
   return (
-    <div className="space-y-2 relative" ref={dropdownRef}>
+    <div className="space-y-2">
       <Label className="text-sm font-medium">Participants (Staff)</Label>
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className={cn(
-          "w-full min-h-12 rounded-lg border border-gray-200 bg-white px-4 py-2 flex items-center justify-between gap-2 text-left cursor-pointer",
-          "hover:bg-gray-50 transition-colors",
-          isOpen && "ring-2 ring-gray-400 ring-offset-2"
-        )}
-      >
-        {selectedStaff.length === 0 ? (
-          <span className="text-gray-500 text-base">Select staff participants...</span>
-        ) : (
-          <div className="flex flex-wrap gap-1.5">
-            {selectedStaff.slice(0, 3).map((member) => (
-              <span
-                key={member.id}
-                className="inline-flex items-center gap-1.5 bg-gray-100 text-gray-800 px-2.5 py-1 rounded-md text-sm font-medium"
-              >
-                <Avatar className="h-5 w-5">
-                  {member.photo_url && <AvatarImage src={member.photo_url} alt={member.name} />}
-                  <AvatarFallback className="text-[10px] bg-gray-200 text-gray-700">{getInitials(member.name)}</AvatarFallback>
-                </Avatar>
-                {member.name.split(" ")[0]}
-              </span>
-            ))}
-            {selectedStaff.length > 3 && (
-              <span className="inline-flex items-center bg-gray-200 text-gray-700 px-2.5 py-1 rounded-md text-sm font-medium">
-                +{selectedStaff.length - 3} more
-              </span>
-            )}
-          </div>
-        )}
-        <div className="flex items-center gap-2 shrink-0">
-          {selectedStaff.length > 0 && (
-            <span className="inline-flex items-center justify-center h-6 min-w-6 px-1.5 rounded-md bg-gray-800 text-white text-xs font-semibold">
-              {selectedStaff.length}
-            </span>
-          )}
-          <ChevronDown className={cn("h-4 w-4 text-gray-400 transition-transform", isOpen && "rotate-180")} />
-        </div>
-      </button>
-
-      {isOpen && (
-        <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
-          {/* Search input */}
-          <div className="p-2 border-b border-gray-100">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <input
-                ref={inputRef}
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search staff..."
-                className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-400"
-              />
-            </div>
-          </div>
-          <div className="max-h-64 overflow-y-auto py-1">
-            {filteredStaff.length === 0 && (
-              <div className="px-4 py-3 text-gray-500 text-sm">
-                {searchQuery ? "No staff match your search" : "No staff members available"}
+      <MobilePicker
+        multiple
+        title="Staff participants"
+        description="Tap to add or remove; close when done."
+        searchPlaceholder="Search staff..."
+        emptyText="No staff found"
+        options={options}
+        value={selectedIds}
+        onChange={(v) => toggle(Number(v))}
+        renderValue={() => (
+          <div className="flex items-center justify-between gap-2">
+            {selectedStaff.length === 0 ? (
+              <span className="text-base text-gray-500">Select staff participants...</span>
+            ) : (
+              <div className="flex flex-wrap gap-1.5">
+                {selectedStaff.slice(0, 3).map((member) => (
+                  <span key={member.id} className="inline-flex items-center gap-1.5 rounded-md bg-gray-100 px-2.5 py-1 text-sm font-medium text-gray-800">
+                    <Avatar className="h-5 w-5">
+                      {member.photo_url && <AvatarImage src={member.photo_url} alt={member.name} />}
+                      <AvatarFallback className="text-[10px] bg-gray-200 text-gray-700">{staffInitials(member.name)}</AvatarFallback>
+                    </Avatar>
+                    {member.name.split(" ")[0]}
+                  </span>
+                ))}
+                {selectedStaff.length > 3 && (
+                  <span className="inline-flex items-center rounded-md bg-gray-200 px-2.5 py-1 text-sm font-medium text-gray-700">
+                    +{selectedStaff.length - 3} more
+                  </span>
+                )}
               </div>
             )}
-            {filteredStaff.map((member) => {
-              const isSelected = selectedIds.includes(member.id)
-              return (
-                <button
-                  key={member.id}
-                  type="button"
-                  onClick={() => toggleParticipant(member.id)}
-                  className="w-full px-4 py-2.5 flex items-center gap-3 hover:bg-gray-100 transition-colors text-left cursor-pointer"
-                >
-                  <span
-                    className={cn(
-                      "h-5 w-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors",
-                      isSelected ? "border-gray-800 bg-gray-800" : "border-gray-300"
-                    )}
-                  >
-                    {isSelected && <Check className="h-3 w-3 text-white" />}
-                  </span>
-                  <Avatar className="h-8 w-8">
-                    {member.photo_url && <AvatarImage src={member.photo_url} alt={member.name} />}
-                    <AvatarFallback className="text-xs bg-gray-100 text-gray-800">{getInitials(member.name)}</AvatarFallback>
-                  </Avatar>
-                  <span className="text-sm font-medium">{member.name}</span>
-                </button>
-              )
-            })}
+            {selectedStaff.length > 0 && (
+              <span className="inline-flex h-6 min-w-6 shrink-0 items-center justify-center rounded-md bg-gray-800 px-1.5 text-xs font-semibold text-white">
+                {selectedStaff.length}
+              </span>
+            )}
           </div>
-        </div>
-      )}
+        )}
+        renderOption={(option, selected) => (
+          <>
+            <SelectionDot selected={selected} />
+            <Avatar className="h-8 w-8">
+              {option.data?.photo_url && <AvatarImage src={option.data.photo_url} alt={option.label} />}
+              <AvatarFallback className="text-xs bg-gray-100 text-gray-800">{staffInitials(option.label)}</AvatarFallback>
+            </Avatar>
+            <span className="flex-1 truncate text-sm font-medium">{option.label}</span>
+          </>
+        )}
+      />
     </div>
   )
 }
@@ -588,151 +278,69 @@ function StudentParticipantSelector({
   selectedIds: number[]
   onChange: (ids: number[]) => void
 }) {
-  const [isOpen, setIsOpen] = useState(false)
-  const [searchQuery, setSearchQuery] = useState("")
-  const dropdownRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false)
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside)
-    return () => document.removeEventListener("mousedown", handleClickOutside)
-  }, [])
-
-  useEffect(() => {
-    if (isOpen && inputRef.current) {
-      inputRef.current.focus()
-    }
-  }, [isOpen])
-
   const selectedStudents = students?.filter((s) => selectedIds.includes(s.id)) || []
+  const options: PickerOption[] = (students || []).map((s) => ({ value: s.id, label: studentName(s), data: s }))
 
-  const getInitials = (firstName: string, lastName: string) => {
-    return `${firstName?.[0] || ""}${lastName?.[0] || ""}`.toUpperCase() || "?"
-  }
-
-  const getFullName = (student: any) => {
-    return `${student.firstName || ""} ${student.lastName || ""}`.trim() || "Unknown"
-  }
-
-  // Filter students based on search
-  const filteredStudents = students?.filter((student) => {
-    if (!searchQuery) return true
-    const fullName = getFullName(student).toLowerCase()
-    return fullName.includes(searchQuery.toLowerCase())
-  }) || []
-
-  const toggleParticipant = (id: number) => {
-    if (selectedIds.includes(id)) {
-      onChange(selectedIds.filter((sid) => sid !== id))
-    } else {
-      onChange([...selectedIds, id])
-    }
+  const toggle = (id: number) => {
+    onChange(selectedIds.includes(id) ? selectedIds.filter((sid) => sid !== id) : [...selectedIds, id])
   }
 
   return (
-    <div className="space-y-2 relative" ref={dropdownRef}>
+    <div className="space-y-2">
       <Label className="text-sm font-medium">Participants (Students)</Label>
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className={cn(
-          "w-full min-h-12 rounded-lg border border-gray-200 bg-white px-4 py-2 flex items-center justify-between gap-2 text-left cursor-pointer",
-          "hover:bg-gray-50 transition-colors",
-          isOpen && "ring-2 ring-gray-400 ring-offset-2"
-        )}
-      >
-        {selectedStudents.length === 0 ? (
-          <span className="text-gray-500 text-base">Select student participants...</span>
-        ) : (
-          <div className="flex flex-wrap gap-1.5">
-            {selectedStudents.slice(0, 3).map((student) => (
-              <span
-                key={student.id}
-                className="inline-flex items-center gap-1.5 bg-gray-100 text-gray-800 px-2.5 py-1 rounded-md text-sm font-medium"
-              >
-                <Avatar className="h-5 w-5">
-                  {student.profileImage && <AvatarImage src={student.profileImage} alt={getFullName(student)} />}
-                  <AvatarFallback className="text-[10px] bg-gray-200 text-gray-700">
-                    {getInitials(student.firstName, student.lastName)}
-                  </AvatarFallback>
-                </Avatar>
-                {student.firstName}
-              </span>
-            ))}
-            {selectedStudents.length > 3 && (
-              <span className="inline-flex items-center bg-gray-200 text-gray-700 px-2.5 py-1 rounded-md text-sm font-medium">
-                +{selectedStudents.length - 3} more
-              </span>
-            )}
-          </div>
-        )}
-        <div className="flex items-center gap-2 shrink-0">
-          {selectedStudents.length > 0 && (
-            <span className="inline-flex items-center justify-center h-6 min-w-6 px-1.5 rounded-md bg-gray-800 text-white text-xs font-semibold">
-              {selectedStudents.length}
-            </span>
-          )}
-          <ChevronDown className={cn("h-4 w-4 text-gray-400 transition-transform", isOpen && "rotate-180")} />
-        </div>
-      </button>
-
-      {isOpen && (
-        <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
-          {/* Search input */}
-          <div className="p-2 border-b border-gray-100">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <input
-                ref={inputRef}
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search students..."
-                className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-400"
-              />
-            </div>
-          </div>
-          <div className="max-h-64 overflow-y-auto py-1">
-            {filteredStudents.length === 0 && (
-              <div className="px-4 py-3 text-gray-500 text-sm">
-                {searchQuery ? "No students match your search" : "No students available"}
+      <MobilePicker
+        multiple
+        title="Student participants"
+        description="Tap to add or remove; close when done."
+        searchPlaceholder="Search students..."
+        emptyText="No students found"
+        options={options}
+        value={selectedIds}
+        onChange={(v) => toggle(Number(v))}
+        renderValue={() => (
+          <div className="flex items-center justify-between gap-2">
+            {selectedStudents.length === 0 ? (
+              <span className="text-base text-gray-500">Select student participants...</span>
+            ) : (
+              <div className="flex flex-wrap gap-1.5">
+                {selectedStudents.slice(0, 3).map((student) => (
+                  <span key={student.id} className="inline-flex items-center gap-1.5 rounded-md bg-gray-100 px-2.5 py-1 text-sm font-medium text-gray-800">
+                    <Avatar className="h-5 w-5">
+                      {student.profileImage && <AvatarImage src={student.profileImage} alt={studentName(student)} />}
+                      <AvatarFallback className="text-[10px] bg-gray-200 text-gray-700">
+                        {studentInitials(student.firstName, student.lastName)}
+                      </AvatarFallback>
+                    </Avatar>
+                    {student.firstName}
+                  </span>
+                ))}
+                {selectedStudents.length > 3 && (
+                  <span className="inline-flex items-center rounded-md bg-gray-200 px-2.5 py-1 text-sm font-medium text-gray-700">
+                    +{selectedStudents.length - 3} more
+                  </span>
+                )}
               </div>
             )}
-            {filteredStudents.map((student) => {
-              const isSelected = selectedIds.includes(student.id)
-              return (
-                <button
-                  key={student.id}
-                  type="button"
-                  onClick={() => toggleParticipant(student.id)}
-                  className="w-full px-4 py-2.5 flex items-center gap-3 hover:bg-gray-100 transition-colors text-left cursor-pointer"
-                >
-                  <span
-                    className={cn(
-                      "h-5 w-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors",
-                      isSelected ? "border-gray-800 bg-gray-800" : "border-gray-300"
-                    )}
-                  >
-                    {isSelected && <Check className="h-3 w-3 text-white" />}
-                  </span>
-                  <Avatar className="h-8 w-8">
-                    {student.profileImage && <AvatarImage src={student.profileImage} alt={getFullName(student)} />}
-                    <AvatarFallback className="text-xs bg-gray-100 text-gray-800">
-                      {getInitials(student.firstName, student.lastName)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="text-sm font-medium">{getFullName(student)}</span>
-                </button>
-              )
-            })}
+            {selectedStudents.length > 0 && (
+              <span className="inline-flex h-6 min-w-6 shrink-0 items-center justify-center rounded-md bg-gray-800 px-1.5 text-xs font-semibold text-white">
+                {selectedStudents.length}
+              </span>
+            )}
           </div>
-        </div>
-      )}
+        )}
+        renderOption={(option, selected) => (
+          <>
+            <SelectionDot selected={selected} />
+            <Avatar className="h-8 w-8">
+              {option.data?.profileImage && <AvatarImage src={option.data.profileImage} alt={option.label} />}
+              <AvatarFallback className="text-xs bg-gray-100 text-gray-800">
+                {studentInitials(option.data?.firstName, option.data?.lastName)}
+              </AvatarFallback>
+            </Avatar>
+            <span className="flex-1 truncate text-sm font-medium">{option.label}</span>
+          </>
+        )}
+      />
     </div>
   )
 }
@@ -747,11 +355,6 @@ function CookbookSelector({
   onChange: (id: number) => void
   mealTypeName: string | undefined
 }) {
-  const [isOpen, setIsOpen] = useState(false)
-  const [searchQuery, setSearchQuery] = useState("")
-  const dropdownRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
-
   // Fetch all cookbook recipes and filter by type client-side (supports types[] array)
   const { data: allRecipes = [], isLoading } = useSWR(
     mealTypeName ? "expedition_cookbook_all" : null,
@@ -762,123 +365,51 @@ function CookbookSelector({
     const types = Array.isArray(r.types) && r.types.length > 0 ? r.types : r.type ? [r.type] : []
     return types.includes(mealTypeName || "")
   })
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false)
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside)
-    return () => document.removeEventListener("mousedown", handleClickOutside)
-  }, [])
-
-  // Focus input when dropdown opens
-  useEffect(() => {
-    if (isOpen && inputRef.current) {
-      inputRef.current.focus()
-    }
-  }, [isOpen])
-
-  // Filter recipes based on search
-  const filteredRecipes = recipes.filter((recipe: any) => {
-    if (!searchQuery) return true
-    const name = recipe.recipe_name || ""
-    return name.toLowerCase().includes(searchQuery.toLowerCase())
-  })
-
-  // Find selected recipe
   const selectedRecipe = recipes.find((r: any) => r.id === selectedId)
 
+  const options: PickerOption[] = [
+    { value: 0, label: "None" },
+    ...recipes.map((r: any) => ({ value: r.id, label: r.recipe_name || `Meal Plan #${r.id}`, data: r })),
+  ]
+
   return (
-    <div className="space-y-2 relative" ref={dropdownRef}>
+    <div className="space-y-2">
       <Label className="text-sm font-medium">Meal Plan</Label>
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className={cn(
-          "w-full h-12 rounded-lg border border-gray-200 bg-white px-4 flex items-center justify-between gap-2 text-left cursor-pointer",
-          "hover:bg-gray-50 transition-colors",
-          isOpen && "ring-2 ring-gray-400 ring-offset-2"
-        )}
-      >
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-          {getPhotoUrl(selectedRecipe?.recipe_photo) && (
-            <RecipeThumb photo={selectedRecipe.recipe_photo} name={selectedRecipe.recipe_name} size={28} className="rounded-full" />
-          )}
-          <span className={selectedRecipe ? "text-gray-900 text-base truncate" : "text-gray-500 text-base"}>
-            {selectedRecipe ? selectedRecipe.recipe_name : "Select a meal plan..."}
-          </span>
-        </div>
-        <ChevronDown className={cn("h-4 w-4 text-gray-400 transition-transform shrink-0", isOpen && "rotate-180")} />
-      </button>
-
-      {isOpen && (
-        <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
-          {/* Search input */}
-          <div className="p-2 border-b border-gray-100">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <input
-                ref={inputRef}
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search meal plans..."
-                className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-400"
-              />
-            </div>
-          </div>
-
-          <div className="max-h-64 overflow-y-auto py-1">
-            {/* None option */}
-            <button
-              type="button"
-              onClick={() => {
-                onChange(0)
-                setIsOpen(false)
-                setSearchQuery("")
-              }}
-              className={cn(
-                "w-full px-4 py-2.5 flex items-center gap-3 hover:bg-gray-100 transition-colors text-left cursor-pointer",
-                selectedId === 0 && "bg-gray-50"
-              )}
-            >
-              <span className="text-sm text-gray-500">None</span>
-            </button>
-
-            {isLoading ? (
-              <div className="px-4 py-3 text-gray-500 text-sm">Loading meal plans...</div>
-            ) : filteredRecipes.length === 0 ? (
-              <div className="px-4 py-3 text-gray-500 text-sm">
-                {searchQuery ? "No meal plans match your search" : "No meal plans available"}
-              </div>
-            ) : (
-              filteredRecipes.map((recipe: any) => (
-                <button
-                  key={recipe.id}
-                  type="button"
-                  onClick={() => {
-                    onChange(recipe.id)
-                    setIsOpen(false)
-                    setSearchQuery("")
-                  }}
-                  className={cn(
-                    "w-full px-4 py-2.5 flex items-center gap-3 hover:bg-gray-100 transition-colors text-left cursor-pointer",
-                    recipe.id === selectedId && "bg-gray-50"
-                  )}
-                >
-                  <RecipeThumb photo={recipe.recipe_photo} name={recipe.recipe_name} size={32} className="rounded-full" />
-                  <div className="flex-1 min-w-0">
-                    <span className="text-sm font-medium block truncate">{recipe.recipe_name}</span>
-                  </div>
-                  {recipe.id === selectedId && <Check className="h-4 w-4 text-gray-700 shrink-0" />}
-                </button>
-              ))
+      <MobilePicker
+        title="Meal plan"
+        searchPlaceholder="Search meal plans..."
+        emptyText="No meal plans available"
+        loading={isLoading}
+        loadingText="Loading meal plans..."
+        options={options}
+        value={selectedId}
+        onChange={(v) => onChange(Number(v))}
+        triggerClassName="h-12"
+        renderValue={() => (
+          <div className="flex min-w-0 items-center gap-2">
+            {getPhotoUrl(selectedRecipe?.recipe_photo) && (
+              <RecipeThumb photo={selectedRecipe.recipe_photo} name={selectedRecipe.recipe_name} size={28} className="rounded-full" />
             )}
+            <span className={selectedRecipe ? "truncate text-base text-gray-900" : "text-base text-gray-500"}>
+              {selectedRecipe ? selectedRecipe.recipe_name : "Select a meal plan..."}
+            </span>
           </div>
-        </div>
-      )}
+        )}
+        renderOption={(option, selected) =>
+          option.data ? (
+            <>
+              <RecipeThumb photo={option.data.recipe_photo} name={option.label} size={32} className="rounded-full" />
+              <span className="flex-1 truncate text-sm font-medium">{option.label}</span>
+              {selected && <Check className="h-4 w-4 shrink-0 text-gray-700" />}
+            </>
+          ) : (
+            <>
+              <span className="flex-1 text-sm text-gray-500">{option.label}</span>
+              {selected && <Check className="h-4 w-4 shrink-0 text-gray-700" />}
+            </>
+          )
+        }
+      />
     </div>
   )
 }
@@ -906,10 +437,10 @@ function dateToMilitary(date: Date | undefined, isEndTime: boolean = false): num
   return hours * 100 + minutes
 }
 
-export function AddScheduleItemSheet({ 
-  open, 
-  onOpenChange, 
-  scheduleId, 
+export function AddScheduleItemSheet({
+  open,
+  onOpenChange,
+  scheduleId,
   date,
   staff = [],
   students = [],
@@ -918,9 +449,9 @@ export function AddScheduleItemSheet({
 }: AddScheduleItemSheetProps) {
   // Fetch item types from API
   const { data: itemTypes = [] } = useExpeditionScheduleItemTypes()
-  
+
   const isEditMode = !!editItem
-  
+
   // Check if an activity type is a meal using the isMeal boolean from the type record
   const isMealType = (typeId: number) => {
     if (!typeId) return false
@@ -959,7 +490,7 @@ export function AddScheduleItemSheet({
           if (s?.id) return s.id
           // If it has firstName/lastName, look up the student by name
           if (s?.firstName && s?.lastName && students) {
-            const foundStudent = students.find((st: any) => 
+            const foundStudent = students.find((st: any) =>
               st.firstName === s.firstName && st.lastName === s.lastName
             )
             return foundStudent?.id
@@ -984,12 +515,12 @@ export function AddScheduleItemSheet({
       expedition_cookbook_id: editItem?.expedition_cookbook_id || 0,
     }
   }
-  
+
   const [formData, setFormData] = useState(getInitialFormData())
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
-  
+
   // Time state as Date objects for the picker
   const [timeInDate, setTimeInDate] = useState<Date | undefined>(militaryToDate(editItem?.time_in || 800))
   const [timeOutDate, setTimeOutDate] = useState<Date | undefined>(militaryToDate(editItem?.time_out || 900))
@@ -1013,19 +544,9 @@ export function AddScheduleItemSheet({
     }))
   }, [timeInDate, timeOutDate])
 
-  const getInitials = (name: string) => {
-    if (!name) return "?"
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2)
-  }
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!formData.name) {
       toast.error("Please enter an activity name")
       return
@@ -1057,7 +578,7 @@ export function AddScheduleItemSheet({
         await createExpeditionScheduleItem(payload)
         toast.success("Activity added successfully")
       }
-      
+
       await mutate(`expedition_schedule_items_date_${date}_${expeditionsId || 'all'}`)
       await revalidateScheduleItemRanges()
       onOpenChange(false)
@@ -1113,11 +634,6 @@ export function AddScheduleItemSheet({
   // Prepare options for dropdowns
   const typeOptions = itemTypes.map((t: any) => ({ value: t.id, label: t.name, data: t }))
 
-  const staffOptions = [
-    { value: 0, label: "None" },
-    ...staff.map(s => ({ value: s.id, label: s.name, data: s }))
-  ]
-
   // Handle activity type change - auto-fill name
   const handleTypeChange = (value: string | number, option?: any) => {
     const typeId = Number(value)
@@ -1130,16 +646,19 @@ export function AddScheduleItemSheet({
   }
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-xl p-0 flex flex-col">
-        <div className="flex-1 overflow-y-auto p-8 pb-24">
-          <SheetHeader className="mb-8">
+    <ResponsiveSheet open={open} onOpenChange={onOpenChange}>
+      {/* Right-side sheet from md, bottom sheet on phones; the footer is a flex
+          child, not absolutely positioned, so it is never covered or off-screen. */}
+      <ResponsiveSheetContent className="w-full sm:max-w-xl">
+        <div className="flex-1 overflow-y-auto p-5 sm:p-8">
+          <SheetHeader className="mb-6 sm:mb-8">
             <div className="flex items-center justify-between">
               <SheetTitle className="text-2xl">{isEditMode ? "Edit Activity" : "Add Activity"}</SheetTitle>
               <button
                 type="button"
                 onClick={() => onOpenChange(false)}
-                className="rounded-full p-1.5 hover:bg-gray-100 transition-colors cursor-pointer"
+                className="-mr-2 flex h-10 w-10 items-center justify-center rounded-full hover:bg-gray-100 transition-colors cursor-pointer"
+                aria-label="Close"
               >
                 <X className="h-5 w-5 text-gray-500" />
               </button>
@@ -1172,8 +691,8 @@ export function AddScheduleItemSheet({
               />
             </div>
 
-            {/* Time Selectors */}
-            <div className="grid grid-cols-2 gap-6">
+            {/* Time Selectors: stacked on phones, side by side from sm */}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
               <TimePicker
                 label="Start Time"
                 date={timeInDate}
@@ -1283,8 +802,8 @@ export function AddScheduleItemSheet({
           </form>
         </div>
 
-        {/* Fixed Bottom Buttons - Trash | Cancel | Save Changes (flexible) */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 bg-white border-t flex gap-3 items-center">
+        {/* Footer - Trash | Cancel | Save Changes (flexible) */}
+        <ResponsiveSheetFooter>
           {/* Delete button - only in edit mode */}
           {isEditMode && (
             <Button
@@ -1292,7 +811,8 @@ export function AddScheduleItemSheet({
               variant="outline"
               onClick={handleDeleteClick}
               disabled={saving || deleting}
-              className="h-10 text-sm cursor-pointer px-3 border-gray-300"
+              className="h-11 w-11 shrink-0 cursor-pointer border-gray-300 px-0 sm:h-10 sm:w-auto sm:px-3"
+              aria-label="Delete activity"
             >
               {deleting ? (
                 <Spinner size="sm" className="h-4 w-4 text-gray-500" />
@@ -1301,23 +821,23 @@ export function AddScheduleItemSheet({
               )}
             </Button>
           )}
-          
+
           <Button
             type="button"
             variant="outline"
             onClick={() => onOpenChange(false)}
             disabled={saving || deleting}
-            className="h-10 text-sm cursor-pointer px-4"
+            className="h-11 text-sm cursor-pointer px-4 sm:h-10"
           >
             Cancel
           </Button>
-          
+
           {/* Save button - flexible width */}
           <Button
             type="submit"
             form="add-activity-form"
             disabled={saving || deleting}
-            className="h-10 text-sm cursor-pointer flex-1"
+            className="h-11 text-sm cursor-pointer flex-1 sm:h-10"
           >
             {saving ? (
               <>
@@ -1328,7 +848,7 @@ export function AddScheduleItemSheet({
               isEditMode ? 'Save Changes' : 'Add Activity'
             )}
           </Button>
-        </div>
+        </ResponsiveSheetFooter>
 
         {/* Delete Confirmation Dialog */}
         <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
@@ -1341,7 +861,7 @@ export function AddScheduleItemSheet({
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel className="cursor-pointer">Cancel</AlertDialogCancel>
-              <AlertDialogAction 
+              <AlertDialogAction
                 onClick={handleDeleteConfirm}
                 className="bg-red-600 hover:bg-red-700 cursor-pointer"
               >
@@ -1350,7 +870,7 @@ export function AddScheduleItemSheet({
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-      </SheetContent>
-    </Sheet>
+      </ResponsiveSheetContent>
+    </ResponsiveSheet>
   )
 }

@@ -25,8 +25,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import {
-  Sheet,
-  SheetContent,
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet"
@@ -63,6 +61,7 @@ import { AddScheduleItemSheet } from "@/components/add-schedule-item-sheet"
 import { DraggableScheduleItem } from "@/components/draggable-schedule-item"
 import { ScheduleDragContext } from "@/components/schedule-drag-context"
 import { ScheduleRow, NowDivider } from "@/components/schedule-row"
+import { ResponsiveSheet, ResponsiveSheetContent } from "@/components/responsive-sheet"
 import {
   useExpeditionSchedules,
   useExpeditionScheduleItemsByDate,
@@ -1466,8 +1465,8 @@ export function ScheduleViewClient({ date, expeditionId }: ScheduleViewClientPro
       />
 
       {/* Meal Plan Detail Sheet */}
-      <Sheet open={mealPlanSheetOpen} onOpenChange={setMealPlanSheetOpen}>
-        <SheetContent className="w-full sm:w-[600px] sm:max-w-[90vw] p-0 flex flex-col h-full overflow-hidden">
+      <ResponsiveSheet open={mealPlanSheetOpen} onOpenChange={setMealPlanSheetOpen}>
+        <ResponsiveSheetContent className="w-full sm:w-[600px] sm:max-w-[90vw]">
           <SheetHeader className="p-6 pb-4 border-b shrink-0">
             <div className="flex items-center justify-between">
               <SheetTitle className="text-xl">
@@ -1660,8 +1659,8 @@ export function ScheduleViewClient({ date, expeditionId }: ScheduleViewClientPro
               </div>
             )}
           </div>
-        </SheetContent>
-      </Sheet>
+        </ResponsiveSheetContent>
+      </ResponsiveSheet>
     </div>
   )
 }

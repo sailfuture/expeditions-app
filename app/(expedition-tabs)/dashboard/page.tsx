@@ -20,8 +20,6 @@ import {
 } from "@/components/ui/breadcrumb"
 import { Calendar, Plus, Check, X, ChevronDown, ChevronRight, ExternalLink, MapPin, Users, Ship, RefreshCw, Trash2, Clock, ArrowRight } from "lucide-react"
 import {
-  Sheet,
-  SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
@@ -48,6 +46,7 @@ import { toast } from "sonner"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useExpeditions } from "@/lib/hooks/use-expeditions"
 import { LoadError } from "@/components/load-error"
+import { ResponsiveSheet, ResponsiveSheetContent } from "@/components/responsive-sheet"
 import { cn, formatLocalDateString } from "@/lib/utils"
 
 // Multi-select component for Staff Off
@@ -1532,8 +1531,8 @@ export default function DashboardPage() {
       </main>
 
       {/* Day Preview Sheet */}
-      <Sheet open={detailModalOpen} onOpenChange={setDetailModalOpen}>
-        <SheetContent className="w-full sm:w-[640px] sm:max-w-[90vw] p-0 flex flex-col h-full overflow-hidden">
+      <ResponsiveSheet open={detailModalOpen} onOpenChange={setDetailModalOpen}>
+        <ResponsiveSheetContent className="w-full sm:w-[640px] sm:max-w-[90vw]">
           <SheetHeader className="p-6 pb-4 border-b shrink-0">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-3 min-w-0">
@@ -1596,9 +1595,9 @@ export default function DashboardPage() {
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-gray-50/50 hover:bg-gray-50/50">
-                        <TableHead className="h-9 px-3 text-xs w-[120px]">Time</TableHead>
+                        <TableHead className="h-9 px-3 text-xs w-[84px] sm:w-[120px]">Time</TableHead>
                         <TableHead className="h-9 px-3 text-xs">Activity</TableHead>
-                        <TableHead className="h-9 px-3 text-xs w-[150px]">Staff</TableHead>
+                        <TableHead className="h-9 px-3 text-xs w-[150px] hidden sm:table-cell">Staff</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -1650,7 +1649,7 @@ export default function DashboardPage() {
                                   </div>
                                 </div>
                               </TableCell>
-                              <TableCell className="px-3 py-2.5 align-top">
+                              <TableCell className="px-3 py-2.5 align-top hidden sm:table-cell">
                                 {staffMember ? (
                                   <div className="flex items-center gap-1.5 min-w-0">
                                     <Avatar className="h-5 w-5 shrink-0">
@@ -1767,8 +1766,8 @@ export default function DashboardPage() {
               </Button>
             </div>
           )}
-        </SheetContent>
-      </Sheet>
+        </ResponsiveSheetContent>
+      </ResponsiveSheet>
 
       {/* Delete Date Row Confirmation */}
       <AlertDialog open={pendingBulkAction !== null} onOpenChange={(open) => { if (!open) setPendingBulkAction(null) }}>

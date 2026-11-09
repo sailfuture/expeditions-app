@@ -4,10 +4,11 @@ import { useMemo, useState } from "react"
 import Link from "next/link"
 import { Anchor, ArrowRight, Calendar, CalendarX, Clock, MapPin, Ship, Users, Wrench, X } from "lucide-react"
 import { ScheduleRow, formatMilitaryTime, scheduleItemColor as itemColor } from "@/components/schedule-row"
+import { ResponsiveSheet, ResponsiveSheetContent } from "@/components/responsive-sheet"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import { SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useExpeditionScheduleItemsByDate, useTeachers } from "@/lib/hooks/use-expeditions"
 import { cn } from "@/lib/utils"
@@ -208,8 +209,8 @@ function DayScheduleSheet({
   evaluateHref: string
 }) {
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:w-[640px] sm:max-w-[90vw] p-0 flex flex-col h-full overflow-hidden gap-0">
+    <ResponsiveSheet open={open} onOpenChange={onOpenChange}>
+      <ResponsiveSheetContent className="w-full sm:w-[640px] sm:max-w-[90vw]">
         <SheetHeader className="p-6 pb-4 border-b shrink-0">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
@@ -265,9 +266,9 @@ function DayScheduleSheet({
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b bg-gray-50/50 text-left text-xs font-medium text-muted-foreground">
-                      <th className="h-9 px-3 w-[120px]">Time</th>
+                      <th className="h-9 px-3 w-[84px] sm:w-[120px]">Time</th>
                       <th className="h-9 px-3">Activity</th>
-                      <th className="h-9 px-3 w-[150px]">Staff</th>
+                      <th className="h-9 px-3 w-[150px] hidden sm:table-cell">Staff</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
@@ -296,7 +297,7 @@ function DayScheduleSheet({
                               </div>
                             </div>
                           </td>
-                          <td className="px-3 py-2.5 align-top">
+                          <td className="px-3 py-2.5 align-top hidden sm:table-cell">
                             {staff ? (
                               <div className="flex items-center gap-1.5 min-w-0">
                                 <Avatar className="h-5 w-5 shrink-0">
@@ -320,22 +321,22 @@ function DayScheduleSheet({
           {schedule && <DayStaffOffAndNotes schedule={schedule} />}
         </div>
 
-        <div className="flex gap-2 p-4 border-t shrink-0">
-          <Button asChild variant="outline" className="flex-1 cursor-pointer">
+        <div className="flex gap-2 p-4 border-t shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))]">
+          <Button asChild variant="outline" className="h-11 flex-1 cursor-pointer sm:h-9">
             <Link href={dailyViewHref}>
               <Calendar className="h-4 w-4 mr-2" />
               Open full schedule
             </Link>
           </Button>
-          <Button asChild variant="outline" className="flex-1 cursor-pointer">
+          <Button asChild variant="outline" className="h-11 flex-1 cursor-pointer sm:h-9">
             <Link href={evaluateHref}>
               <Users className="h-4 w-4 mr-2" />
               Evaluate students
             </Link>
           </Button>
         </div>
-      </SheetContent>
-    </Sheet>
+      </ResponsiveSheetContent>
+    </ResponsiveSheet>
   )
 }
 

@@ -3,7 +3,9 @@
 import { XANO_BASE_URL } from "@/lib/xano-config"
 import { useMemo, useState, useRef, useCallback, useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
+import Link from "next/link"
 import { format, addDays, subDays, isToday } from "date-fns"
+import { useIsPhone } from "@/hooks/use-is-phone"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
@@ -656,6 +658,13 @@ function PlannerPageContent() {
 
   const [centerDate, setCenterDate] = useState(getDefaultDate())
 
+  // On a phone this page hands over to the Daily View for the centre date.
+  const isPhone = useIsPhone()
+  const phoneDailyViewHref = `/schedule/${format(centerDate, "yyyy-MM-dd")}${effectiveExpeditionId ? `?expedition=${effectiveExpeditionId}` : ""}`
+  useEffect(() => {
+    if (isPhone) router.replace(phoneDailyViewHref)
+  }, [isPhone, phoneDailyViewHref, router])
+
   // Update center date when display expedition changes (especially on reload)
   useEffect(() => {
     if (displayExpedition) {
@@ -1077,19 +1086,27 @@ function PlannerPageContent() {
   return (
     <div className="flex flex-col flex-1 min-h-0 bg-gray-50 overflow-hidden">
 
-      {/* Mobile blocking message */}
-      <div className="sm:hidden flex flex-col items-center justify-center flex-1 bg-gray-50 p-6 text-center">
+      {/* Phones: the week grid does not fit, and on a phone the job is "today",
+          which the Daily View already does well. Redirect there (see the effect
+          above); this card is the fallback while the redirect resolves. */}
+      <div className="md:hidden flex flex-col items-center justify-center flex-1 bg-gray-50 p-6 text-center">
         <div className="bg-white rounded-xl border border-gray-200 p-8 max-w-sm shadow-sm">
           <ClipboardList className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h2 className="text-lg font-semibold text-gray-900 mb-2">Desktop Required</h2>
-          <p className="text-sm text-gray-500">
-            The Weekly Planner requires a larger screen. Please use a tablet or desktop device to access this page.
+          <h2 className="text-lg font-semibold text-gray-900 mb-2">Opening the Daily View</h2>
+          <p className="text-sm text-gray-500 mb-5">
+            The week grid needs a tablet or laptop. On a phone, the Daily View shows one day at a time with the same activities and meals.
           </p>
+          <Button asChild className="h-11 w-full cursor-pointer">
+            <Link href={phoneDailyViewHref}>
+              <Eye className="h-4 w-4 mr-2" />
+              Open the Daily View
+            </Link>
+          </Button>
         </div>
       </div>
 
-      {/* Desktop content */}
-      <div className="hidden sm:flex flex-col flex-1 overflow-hidden">
+      {/* Tablet and desktop content */}
+      <div className="hidden md:flex flex-col flex-1 overflow-hidden">
       {/* Date Navigation Controls */}
       <div className="bg-gray-50 border-b flex-shrink-0">
         <div className="container mx-auto px-4 py-4">

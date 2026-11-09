@@ -443,10 +443,42 @@ export default function DashboardPage() {
     return scheduleDate < today
   }
 
+  // Day links carry the expedition so the tab shell does not fall back to the
+  // active expedition when someone is planning the next trip.
+  const expeditionQuery = activeExpeditionId ? `?expedition=${activeExpeditionId}` : ""
+
   const handleViewSchedule = (schedule: any, e?: React.MouseEvent) => {
     e?.stopPropagation()
     // Use the date string directly - it's already in YYYY-MM-DD format
-    router.push(`/schedule/${schedule.date}`)
+    router.push(`/schedule/${schedule.date}${expeditionQuery}`)
+  }
+
+  // Generate / Update Dish / Update Galley rewrite every day of the expedition,
+  // so each asks first. Which one is pending decides the dialog copy.
+  type BulkAction = "generate" | "dish" | "galley"
+  const [pendingBulkAction, setPendingBulkAction] = useState<BulkAction | null>(null)
+  const dayCount = schedules?.length ?? 0
+  const bulkActionCopy: Record<BulkAction, { title: string; description: string; confirm: string; run: () => Promise<void> }> = {
+    generate: {
+      title: "Generate every date for this expedition?",
+      description: dayCount > 0
+        ? `This adds a schedule day for each date of the expedition that does not have one yet (${dayCount} already exist) and assigns dish and galley teams to the new days.`
+        : "This creates a schedule day for every date of the expedition and assigns dish and galley teams to each.",
+      confirm: "Generate dates",
+      run: () => handleGenerateAllDates(),
+    },
+    dish: {
+      title: "Reassign dish teams on every day?",
+      description: `Each of the ${dayCount} days gets the dish team that matches its weekday. Any dish team you set by hand on a day will be replaced.`,
+      confirm: "Update dish teams",
+      run: () => handleRotateDishTeams(),
+    },
+    galley: {
+      title: "Reassign galley teams on every day?",
+      description: `Galley teams are rotated in order from the first date across all ${dayCount} days. Any galley team you set by hand on a day will be replaced.`,
+      confirm: "Update galley teams",
+      run: () => handleRotateGalleyTeams(),
+    },
   }
 
   const handleDeleteRowClick = (schedule: any, e: React.MouseEvent) => {
@@ -805,24 +837,26 @@ export default function DashboardPage() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Button 
-                  onClick={handleGenerateAllDates} 
+                <Button
+                  onClick={() => setPendingBulkAction("generate")}
                   variant="outline"
                   size="sm"
                   disabled={generatingDates || !activeExpeditionId}
                   className="cursor-pointer h-8 sm:h-9 px-2 sm:px-3"
                   title={!activeExpeditionId ? "No active expedition selected" : "Generate all dates for the expedition"}
+                  aria-label="Generate dates"
                 >
                   <Plus className="h-4 w-4 sm:mr-2" />
                   <span className="hidden sm:inline">{generatingDates ? "Generating..." : "Generate Dates"}</span>
                 </Button>
-                <Button 
-                  onClick={handleRotateDishTeams} 
+                <Button
+                  onClick={() => setPendingBulkAction("dish")}
                   variant="outline"
                   size="sm"
                   disabled={rotatingDishTeams || !activeExpeditionId || !dishDays || dishDays.length === 0 || !schedules || schedules.length === 0}
                   className="cursor-pointer h-8 sm:h-9 px-2 sm:px-3"
                   title={!schedules || schedules.length === 0 ? "Generate dates first" : "Assign dish teams by matching each day's weekday"}
+                  aria-label="Update dish teams"
                 >
                   {rotatingDishTeams ? (
                     <Spinner className="h-4 w-4 sm:mr-2" />
@@ -831,13 +865,14 @@ export default function DashboardPage() {
                   )}
                   <span className="hidden sm:inline">{rotatingDishTeams ? "Updating..." : "Update Dish"}</span>
                 </Button>
-                <Button 
-                  onClick={handleRotateGalleyTeams} 
+                <Button
+                  onClick={() => setPendingBulkAction("galley")}
                   variant="outline"
                   size="sm"
                   disabled={rotatingGalleyTeams || !activeExpeditionId || !galleyTeams || galleyTeams.length === 0 || !schedules || schedules.length === 0}
                   className="cursor-pointer h-8 sm:h-9 px-2 sm:px-3"
                   title={!schedules || schedules.length === 0 ? "Generate dates first" : "Assign galley teams in rotation starting from first date"}
+                  aria-label="Update galley teams"
                 >
                   {rotatingGalleyTeams ? (
                     <Spinner className="h-4 w-4 sm:mr-2" />
@@ -1629,7 +1664,7 @@ export default function DashboardPage() {
                 className="flex-1 cursor-pointer"
                 onClick={() => {
                   setDetailModalOpen(false)
-                  router.push(`/schedule/${selectedSchedule.date}`)
+                  router.push(`/schedule/${selectedSchedule.date}${expeditionQuery}`)
                 }}
               >
                 <Calendar className="h-4 w-4 mr-2" />
@@ -1640,7 +1675,7 @@ export default function DashboardPage() {
                 className="flex-1 cursor-pointer"
                 onClick={() => {
                   setDetailModalOpen(false)
-                  router.push(`/evaluate/${selectedSchedule.date}`)
+                  router.push(`/evaluate/${selectedSchedule.date}${expeditionQuery}`)
                 }}
               >
                 <Users className="h-4 w-4 mr-2" />
@@ -1665,6 +1700,32 @@ export default function DashboardPage() {
       </Sheet>
 
       {/* Delete Date Row Confirmation */}
+      <AlertDialog open={pendingBulkAction !== null} onOpenChange={(open) => { if (!open) setPendingBulkAction(null) }}>
+        <AlertDialogContent>
+          {pendingBulkAction && (
+            <>
+              <AlertDialogHeader>
+                <AlertDialogTitle>{bulkActionCopy[pendingBulkAction].title}</AlertDialogTitle>
+                <AlertDialogDescription>{bulkActionCopy[pendingBulkAction].description}</AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel className="cursor-pointer">Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  className="cursor-pointer"
+                  onClick={() => {
+                    const action = bulkActionCopy[pendingBulkAction]
+                    setPendingBulkAction(null)
+                    void action.run()
+                  }}
+                >
+                  {bulkActionCopy[pendingBulkAction].confirm}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </>
+          )}
+        </AlertDialogContent>
+      </AlertDialog>
+
       <AlertDialog open={deleteRowDialogOpen} onOpenChange={setDeleteRowDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>

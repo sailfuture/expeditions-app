@@ -165,12 +165,15 @@ export function HomeDashboard() {
         </div>
       </div>
 
-      <main className="container mx-auto px-4 py-6 space-y-6">
-        {/* The six stat cards, shared with the overview page */}
-        <ExpeditionStatsCards expeditionId={expeditionId} isLoading={loadingHeader} />
+      <main className="container mx-auto flex flex-col gap-6 px-4 py-6">
+        {/* The six stat cards, shared with the overview page. On a phone the
+            schedule is the reason to open the app, so it comes first there. */}
+        <div className="order-2 lg:order-1">
+          <ExpeditionStatsCards expeditionId={expeditionId} isLoading={loadingHeader} />
+        </div>
 
         {/* Today's schedule + how students did the day before */}
-        <div className="grid gap-6 lg:grid-cols-5">
+        <div className="order-1 grid gap-6 lg:order-2 lg:grid-cols-5">
           <TodaySchedule
             expeditionId={expeditionId}
             date={scheduleDate}
@@ -189,7 +192,7 @@ export function HomeDashboard() {
         </div>
 
         {/* Student evaluations, recalculated on load */}
-        <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+        <div className="order-3 rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
           <div className="px-6 py-4 border-b bg-gray-50/50 flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="text-lg font-semibold">Student Evaluations</h2>

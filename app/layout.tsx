@@ -1,11 +1,11 @@
 import type React from "react"
-import type { Metadata } from "next"
+import type { Metadata, Viewport } from "next"
 import { Suspense } from "react"
 import { Inter } from "next/font/google"
 import "./globals.css"
 import { Navbar } from "@/components/navbar"
 import { Providers } from "@/components/providers"
-import { Toaster } from "sonner"
+import { AppToaster } from "@/components/app-toaster"
 import { PointerEventsFix } from "@/components/pointer-events-fix"
 import { Analytics } from "@vercel/analytics/next"
 
@@ -31,6 +31,15 @@ export const metadata: Metadata = {
   },
 }
 
+// viewport-fit=cover is what makes env(safe-area-inset-*) non-zero on iPhones,
+// so the fixed bottom bars can pad above the home indicator.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#ffffff",
+}
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -46,7 +55,7 @@ export default function RootLayout({
             <Navbar />
           </Suspense>
           {children}
-          <Toaster position="bottom-right" />
+          <AppToaster />
           <PointerEventsFix />
         </Providers>
         <Analytics />

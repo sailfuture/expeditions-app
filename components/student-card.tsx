@@ -243,7 +243,7 @@ export function StudentCard({
   return (
     <Card className={cn("w-full relative p-0", record.isLocked && "bg-gray-50")}>
       <div className="flex items-center justify-between px-3 py-2 sm:px-4 sm:py-3 border-b border-gray-200 mb-3 bg-gray-50 rounded-t-xl">
-        <div className="flex items-center gap-3">
+        <div className="flex min-w-0 items-center gap-3">
           <span className={cn(
             "relative flex shrink-0 overflow-hidden rounded-full h-10 w-10 border-2",
             record.isLocked ? "border-gray-300 grayscale" : "border-gray-300"
@@ -263,38 +263,41 @@ export function StudentCard({
               </span>
             )}
           </span>
-          <div>
+          <div className="min-w-0">
             <h3 className={cn("text-lg font-bold truncate", record.isLocked && "text-gray-500")}>
               {studentName}
             </h3>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        {/* 44px round targets: these get tapped with a thumb on deck */}
+        <div className="flex shrink-0 items-center gap-1.5">
           <button
             type="button"
             className={cn(
-              "p-2 rounded-full cursor-pointer transition-colors duration-200",
+              "flex h-11 w-11 items-center justify-center rounded-full cursor-pointer transition-colors duration-200",
               record.isLocked ? "bg-gray-100" : "bg-gray-50 hover:bg-red-50 group",
             )}
             title="Exclude student"
+            aria-label="Exclude student"
             onClick={handleExcludeToggle}
             disabled={record.isLocked}
           >
-            <X className={cn("h-4 w-4", record.isLocked ? "text-gray-400" : "text-gray-400 group-hover:text-red-500")} />
+            <X className={cn("h-5 w-5", record.isLocked ? "text-gray-400" : "text-gray-400 group-hover:text-red-500")} />
           </button>
           <button
             type="button"
             className={cn(
-              "p-2 rounded-full cursor-pointer transition-colors duration-200",
+              "flex h-11 w-11 items-center justify-center rounded-full cursor-pointer transition-colors duration-200",
               record.isLocked ? "bg-gray-100" : "bg-green-50",
             )}
             title={record.isLocked ? "Locked - click to unlock" : "Unlocked - can edit"}
+            aria-label={record.isLocked ? "Unlock student" : "Lock student"}
             onClick={handleLockToggle}
           >
             {record.isLocked ? (
-              <Lock className="h-4 w-4 text-gray-400" />
+              <Lock className="h-5 w-5 text-gray-400" />
             ) : (
-              <LockOpen className="h-4 w-4 text-green-500" />
+              <LockOpen className="h-5 w-5 text-green-500" />
             )}
           </button>
         </div>
@@ -322,8 +325,9 @@ export function StudentCard({
 
         <div className="flex w-full flex-col gap-1.5">
           <label className={CARD_FIELD_LABEL}>NOTE</label>
+          {/* No `text-sm` override: the Input's `text-base md:text-sm` keeps phones at 16px, which stops iOS zooming on focus. */}
           <Input
-            className={cn(CARD_FIELD_BOX, "h-11 w-full cursor-text border-gray-200 text-sm shadow-none focus-visible:border-gray-400 focus-visible:ring-0")}
+            className={cn(CARD_FIELD_BOX, "h-11 w-full cursor-text border-gray-200 shadow-none focus-visible:border-gray-400 focus-visible:ring-0")}
             placeholder="Add a note..."
             value={record.note ?? ""}
             onChange={handleNoteChange}

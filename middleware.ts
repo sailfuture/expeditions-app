@@ -3,7 +3,8 @@ import { NextResponse } from "next/server"
 
 // Routes that don't require authentication
 // /api/xano checks the staff session itself: the public pages call it too.
-const publicRoutes = ["/login", "/public", "/api/auth", "/api/xano", "/tv", "/apply", "/intake"]
+// Browsers fetch the web app manifest without cookies, so it must be public too.
+const publicRoutes = ["/login", "/public", "/api/auth", "/api/xano", "/tv", "/apply", "/intake", "/manifest.webmanifest"]
 
 export default auth((req) => {
   const { pathname } = req.nextUrl

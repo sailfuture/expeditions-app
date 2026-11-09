@@ -66,11 +66,14 @@ export function ScoreControl({ label, value, onChange, min = 0, max = 5, disable
             onClick={onBlockToggle}
             disabled={disabled}
             className={cn(
-              "p-0.5 rounded transition-colors cursor-pointer",
+              // The glyph stays small; the pseudo-element gives it a ~34px hit area without moving the label.
+              "relative p-0.5 rounded transition-colors cursor-pointer before:absolute before:-inset-2 before:content-['']",
               isBlocked ? "text-red-500 hover:text-red-600" : "text-gray-300 hover:text-gray-400",
               disabled && "opacity-50 cursor-not-allowed"
             )}
             title={isBlocked ? "Enable this category" : "Disable this category (N/A)"}
+            aria-label={isBlocked ? `Enable ${label}` : `Mark ${label} not applicable`}
+            aria-pressed={isBlocked}
           >
             <Ban className="h-3.5 w-3.5" />
           </button>

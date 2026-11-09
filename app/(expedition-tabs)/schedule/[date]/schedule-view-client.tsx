@@ -672,9 +672,10 @@ export function ScheduleViewClient({ date, expeditionId }: ScheduleViewClientPro
       {/* Date Navigation & Actions Bar */}
       <div className="border-b bg-muted/30">
         <div className="container mx-auto px-4 py-4">
-          <div className="flex flex-row items-center gap-4 justify-between flex-nowrap">
+          {/* Wraps under lg so the date is never the thing that truncates */}
+          <div className="flex flex-row items-center gap-3 justify-between flex-wrap lg:flex-nowrap lg:gap-4">
             {/* Date Navigation */}
-            <DateNavigation 
+            <DateNavigation
               date={currentDate} 
               onDateChange={handleDateChange}
               isOffshore={schedule?.isOffshore || schedule?.is_offshore || false}
@@ -689,7 +690,8 @@ export function ScheduleViewClient({ date, expeditionId }: ScheduleViewClientPro
             <div className="flex items-center gap-2 flex-nowrap flex-shrink-0">
               {schedule && (
                 <>
-                  <div className="hidden lg:flex items-center gap-1.5 text-muted-foreground text-sm max-w-[100px]">
+                  {/* "Where are we" is the first glance on deck, so it shows at every width */}
+                  <div className="flex items-center gap-1.5 text-muted-foreground text-sm max-w-[160px] lg:max-w-[100px]">
                     <MapPin className="h-4 w-4 flex-shrink-0" />
                     <span className="truncate" title={(schedule._expedition_locations || schedule._expedition_current_location) ? formatLocation(schedule._expedition_locations || schedule._expedition_current_location) : "No Location"}>
                       {(schedule._expedition_locations || schedule._expedition_current_location) ? formatLocation(schedule._expedition_locations || schedule._expedition_current_location) : "No Location"}
@@ -794,42 +796,7 @@ export function ScheduleViewClient({ date, expeditionId }: ScheduleViewClientPro
                   <div className="hidden sm:block h-6 w-px bg-border" />
                 </>
               )}
-              {Array.isArray(scheduleItems) && scheduleItems.length === 0 && schedule && isWithinExpeditionRange && (
-                <div className="hidden sm:flex items-center gap-2">
-                  <Select 
-                    value={selectedTemplate} 
-                    onValueChange={setSelectedTemplate}
-                  >
-                    <SelectTrigger 
-                      className="w-[160px] bg-white text-sm font-medium cursor-pointer border border-input rounded-md px-3 hover:bg-accent hover:text-accent-foreground"
-                      style={{ height: '40px' }}
-                    >
-                      <SelectValue placeholder="Select template" />
-                    </SelectTrigger>
-                    <SelectContent className="min-w-[200px]">
-                      {templates?.map((template: any) => (
-                        <SelectItem key={template.id} value={template.id.toString()} className="cursor-pointer text-sm py-2">
-                          {template.template_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Button 
-                    onClick={handleAddTemplate}
-                    variant="outline"
-                    className="cursor-pointer h-10 px-4"
-                    disabled={!selectedTemplate || addingTemplate}
-                  >
-                    {addingTemplate ? (
-                      <Spinner size="sm" className="h-4 w-4" />
-                    ) : (
-                      "Apply"
-                    )}
-                  </Button>
-                  <div className="h-6 w-px bg-border" />
-                </div>
-              )}
-              <Button 
+              <Button
                 onClick={() => setAddSheetOpen(true)} 
                 className="hidden sm:flex cursor-pointer h-10 w-10 p-0"
                 disabled={!isWithinExpeditionRange}
@@ -917,6 +884,34 @@ export function ScheduleViewClient({ date, expeditionId }: ScheduleViewClientPro
           <div className="text-center py-8">
             <Clock className="h-8 w-8 mx-auto text-muted-foreground mb-3" />
             <p className="text-sm text-muted-foreground">No activities for this day</p>
+            {/* The template picker lives here, where the empty day is, at every width
+                (it used to be a header control hidden on phones) */}
+            {isWithinExpeditionRange && (
+              <div className="mt-5 flex flex-col items-stretch justify-center gap-2 sm:flex-row sm:items-center">
+                <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
+                  <SelectTrigger
+                    className="h-11 w-full bg-white text-sm font-medium cursor-pointer border border-input rounded-md px-3 hover:bg-accent hover:text-accent-foreground sm:w-[220px]"
+                  >
+                    <SelectValue placeholder="Start from a template" />
+                  </SelectTrigger>
+                  <SelectContent className="min-w-[220px]">
+                    {templates?.map((template: any) => (
+                      <SelectItem key={template.id} value={template.id.toString()} className="cursor-pointer text-sm py-2">
+                        {template.template_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  onClick={handleAddTemplate}
+                  variant="outline"
+                  className="h-11 cursor-pointer px-5"
+                  disabled={!selectedTemplate || addingTemplate}
+                >
+                  {addingTemplate ? <Spinner size="sm" className="h-4 w-4" /> : "Apply template"}
+                </Button>
+              </div>
+            )}
           </div>
         ) : (
           <>
@@ -1346,8 +1341,8 @@ export function ScheduleViewClient({ date, expeditionId }: ScheduleViewClientPro
         </DialogContent>
       </Dialog>
 
-      {/* Mobile Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 md:hidden z-50 shadow-lg">
+      {/* Mobile Bottom Navigation: previous · add · score this day · next */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:hidden z-40 shadow-lg">
         <div className="flex items-center justify-center gap-4">
           <Button
             variant="outline"
@@ -1355,16 +1350,31 @@ export function ScheduleViewClient({ date, expeditionId }: ScheduleViewClientPro
             onClick={goToPrevDay}
             disabled={!canGoPrev}
             className="h-12 w-12 rounded-full"
+            aria-label="Previous day"
           >
             <ChevronLeft className="h-6 w-6" />
           </Button>
-          
+
           <Button
             size="icon"
             onClick={() => setAddSheetOpen(true)}
+            disabled={!isWithinExpeditionRange}
             className="h-14 w-14 rounded-full cursor-pointer"
+            aria-label="Add activity"
           >
             <Plus className="h-7 w-7" />
+          </Button>
+
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => router.push(`/evaluate/${date}${effectiveExpeditionId ? `?expedition=${effectiveExpeditionId}` : ''}`)}
+            disabled={!isWithinExpeditionRange}
+            className="h-12 w-12 rounded-full cursor-pointer"
+            aria-label="Score this day"
+            title="Score this day"
+          >
+            <ClipboardList className="h-6 w-6" />
           </Button>
 
           <Button
@@ -1373,13 +1383,14 @@ export function ScheduleViewClient({ date, expeditionId }: ScheduleViewClientPro
             onClick={goToNextDay}
             disabled={!canGoNext}
             className="h-12 w-12 rounded-full"
+            aria-label="Next day"
           >
             <ChevronRight className="h-6 w-6" />
           </Button>
         </div>
       </div>
 
-      <div className="h-20 md:hidden" />
+      <div className="h-24 md:hidden" />
 
       <AddScheduleItemSheet
         open={addSheetOpen}

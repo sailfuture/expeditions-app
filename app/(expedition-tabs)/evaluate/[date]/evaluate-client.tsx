@@ -15,7 +15,24 @@ import {
 } from "@/components/ui/breadcrumb"
 import { DateNavigation } from "@/components/date-navigation"
 import { Spinner } from "@/components/ui/spinner"
-import { Unlock, MapPin, Calendar, X, Tags, Lock } from "lucide-react"
+import { Unlock, MapPin, Calendar, Tags, Lock, RotateCcw, MoreHorizontal, ChevronLeft, ChevronRight } from "lucide-react"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { useReviewPeriods } from "@/components/review-periods-panel"
 import { lockingPeriodForDate } from "@/lib/review-periods"
 import { ReasonCategoriesDialog } from "@/components/reason-categories-dialog"
@@ -103,6 +120,8 @@ export function EvaluateClient({ date, expeditionId }: EvaluateClientProps) {
   const [isNavigating, setIsNavigating] = useState(false)
   const [isLoadingStudents, setIsLoadingStudents] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  // "Re-enable all N/A" rewrites scores, so it asks first
+  const [unblockAllOpen, setUnblockAllOpen] = useState(false)
 
   // Get current schedule by date
   const schedule = useMemo(() => {
@@ -140,6 +159,12 @@ export function EvaluateClient({ date, expeditionId }: EvaluateClientProps) {
   const isWithinExpeditionRange = useMemo(() => {
     return isDateWithinExpeditionRange(currentDate, expeditionStartDate, expeditionEndDate)
   }, [currentDate, expeditionStartDate, expeditionEndDate])
+
+  // Neighbouring days for the phone bottom bar (the header chevrons are desktop-only)
+  const prevDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate() - 1)
+  const nextDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate() + 1)
+  const canGoPrev = isDateWithinExpeditionRange(prevDay, expeditionStartDate, expeditionEndDate)
+  const canGoNext = isDateWithinExpeditionRange(nextDay, expeditionStartDate, expeditionEndDate)
 
   // If the URL date falls outside the expedition, jump to its start date
   // (or its end date once the expedition has passed).
@@ -390,23 +415,16 @@ export function EvaluateClient({ date, expeditionId }: EvaluateClientProps) {
     }
   }
 
-  const handleSubmitScores = async () => {
-    // Get all unlocked, non-flagged records (submit even if values are null - use default of 3)
-    const recordsToSubmit = records.filter((r) => !r.isLocked && !r.isFlagged)
-
+  // Saves each record in turn. A failure no longer stops the loop: the records
+  // that did save are reported, the ones that did not keep their local edits
+  // and can be retried from the toast. On a flaky link at sea this is the
+  // difference between "retry 3" and "which of my 15 went through?".
+  const submitRecords = async (recordsToSubmit: ExpeditionProfessionalism[]) => {
     if (recordsToSubmit.length === 0) return
 
-    if (missingReasons.length > 0) {
-      const where = Array.from(
-        new Set(missingReasons.map((m) => `${m.record._students?.firstName || "Student"}: ${SCORE_LABELS[m.key]}`))
-      )
-      toast.error("Choose a reason for every score above or below 3", {
-        description: where.slice(0, 6).join(", ") + (where.length > 6 ? ", …" : ""),
-      })
-      return
-    }
-
     setIsSubmitting(true)
+    const failed: ExpeditionProfessionalism[] = []
+    const savedIds: number[] = []
 
     try {
       for (const record of recordsToSubmit) {
@@ -488,17 +506,33 @@ export function EvaluateClient({ date, expeditionId }: EvaluateClientProps) {
             // Create new record
             await createExpeditionsProfessionalism(data)
           }
+          savedIds.push(record.id)
         } catch (error) {
           console.error("Failed to save record:", error, "Data:", data)
-          toast.error(`Failed to save score for ${record._students?.firstName || 'student'}`)
-          throw error // Re-throw to trigger the outer catch
+          failed.push(record)
         }
       }
 
       // Refresh data
       await mutate(`expeditions_professionalism_date_${date}_${effectiveExpeditionId}`)
-      setLocalUpdates({})
-      toast.success("Scores submitted successfully")
+
+      if (failed.length === 0) {
+        setLocalUpdates({})
+        toast.success("Scores submitted successfully")
+      } else {
+        // Keep the unsaved edits of the records that failed so a retry has them
+        setLocalUpdates((prev) => {
+          const next = { ...prev }
+          for (const id of savedIds) delete next[id]
+          return next
+        })
+        const names = failed.map((r) => r._students?.firstName || "Student")
+        toast.error(`Saved ${savedIds.length} of ${recordsToSubmit.length} — ${failed.length} did not save`, {
+          description: names.join(", "),
+          duration: 15_000,
+          action: { label: "Retry", onClick: () => void submitRecords(failed) },
+        })
+      }
     } catch (error) {
       console.error("Error submitting scores:", error)
       toast.error("Failed to submit scores")
@@ -507,8 +541,45 @@ export function EvaluateClient({ date, expeditionId }: EvaluateClientProps) {
     }
   }
 
+  const handleSubmitScores = async () => {
+    // Get all unlocked, non-flagged records (submit even if values are null - use default of 3)
+    const recordsToSubmit = records.filter((r) => !r.isLocked && !r.isFlagged)
+
+    if (recordsToSubmit.length === 0) return
+
+    if (missingReasons.length > 0) {
+      const where = Array.from(
+        new Set(missingReasons.map((m) => `${m.record._students?.firstName || "Student"}: ${SCORE_LABELS[m.key]}`))
+      )
+      toast.error("Choose a reason for every score above or below 3", {
+        description: where.slice(0, 6).join(", ") + (where.length > 6 ? ", …" : ""),
+      })
+      return
+    }
+
+    await submitRecords(recordsToSubmit)
+  }
+
   // Count all unlocked, non-flagged records (they will all be submitted with default values if needed)
   const submitCount = records.filter((r) => !r.isLocked && !r.isFlagged).length
+
+  // Submit stays tappable while reasons are missing: pressing it explains what is
+  // missing (handleSubmitScores toasts), which a grey button never could.
+  const hasNoStudents = !allProfessionalism || allProfessionalism.length === 0
+  const submitDisabled =
+    submitCount === 0 || isNavigating || isSubmitting || !isWithinExpeditionRange || hasNoStudents || loadingProfessionalism || !!lockingPeriod
+  const submitTitle = !isWithinExpeditionRange
+    ? "Outside expedition date range"
+    : hasNoStudents
+      ? "No students loaded"
+      : lockingPeriod
+        ? `Locked: ${lockingPeriod.name} is finalized`
+        : missingReasons.length > 0
+          ? `Choose a reason for every score above or below 3 (${missingReasons.length} missing)`
+          : "Submit professionalism scores"
+  const submitLabel = `Submit (${loadingProfessionalism || isNavigating || hasNoStudents ? 0 : submitCount})`
+  const showMissingReasons = missingReasons.length > 0 && !isNavigating && !loadingProfessionalism
+  const missingReasonsText = `${missingReasons.length} reason${missingReasons.length === 1 ? "" : "s"} needed`
 
   const isLoading =
     loadingSchedule ||
@@ -567,71 +638,115 @@ export function EvaluateClient({ date, expeditionId }: EvaluateClientProps) {
 
               <div className="hidden sm:block h-6 w-px bg-border" />
 
-              {/* View Schedule button - hidden on mobile */}
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => router.push(`/schedule/${date}`)}
-                className="hidden sm:flex cursor-pointer h-10 w-10"
-                disabled={!isWithinExpeditionRange}
-                title={!isWithinExpeditionRange ? "Outside expedition date range" : "View schedule"}
-              >
-                <Calendar className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={handleUnblockAllCategories}
-                className="cursor-pointer h-10 w-10"
-                disabled={isNavigating || !isWithinExpeditionRange}
-                title={!isWithinExpeditionRange ? "Outside expedition date range" : "Unblock all categories"}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => setReasonTagsOpen(true)}
-                className="hidden sm:flex cursor-pointer h-10 w-10"
-                title="Reason categories"
-                aria-label="Edit reason categories"
-              >
-                <Tags className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={handleUnlockAll}
-                className="cursor-pointer h-10 w-10"
-                disabled={isNavigating || !isWithinExpeditionRange}
-                title={!isWithinExpeditionRange ? "Outside expedition date range" : "Unlock All"}
-              >
-                <Unlock className="h-4 w-4" />
-              </Button>
-              {missingReasons.length > 0 && !isNavigating && !loadingProfessionalism && (
-                <span
-                  className="hidden md:inline-flex h-10 items-center rounded-md border border-amber-300 bg-amber-50 px-2.5 text-xs font-medium text-amber-800 whitespace-nowrap"
-                  title="Every score above or below 3 needs a reason before submitting"
+              {/* Secondary actions: icon buttons from md up, one ⋯ menu on phones */}
+              <div className="hidden md:flex items-center gap-3">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => router.push(`/schedule/${date}${effectiveExpeditionId ? `?expedition=${effectiveExpeditionId}` : ""}`)}
+                  className="cursor-pointer h-10 w-10"
+                  disabled={!isWithinExpeditionRange}
+                  title={!isWithinExpeditionRange ? "Outside expedition date range" : "View schedule"}
+                  aria-label="View schedule"
                 >
-                  {missingReasons.length} reason{missingReasons.length === 1 ? "" : "s"} needed
-                </span>
-              )}
-              <Button
-                size="default"
-                disabled={submitCount === 0 || isNavigating || isSubmitting || !isWithinExpeditionRange || !allProfessionalism || allProfessionalism.length === 0 || loadingProfessionalism || missingReasons.length > 0 || !!lockingPeriod}
-                onClick={handleSubmitScores}
-                className="cursor-pointer h-10 px-4"
-                title={!isWithinExpeditionRange ? "Outside expedition date range" : (!allProfessionalism || allProfessionalism.length === 0) ? "No students loaded" : missingReasons.length > 0 ? `Choose a reason for every score above or below 3 (${missingReasons.length} missing)` : "Submit professionalism scores"}
-              >
-                {isSubmitting ? (
-                  <>
-                    <Spinner size="sm" className="h-4 w-4 mr-2" />
-                    Submitting...
-                  </>
-                ) : (
-                  `Submit (${(loadingProfessionalism || isNavigating || !allProfessionalism || allProfessionalism.length === 0) ? 0 : submitCount})`
+                  <Calendar className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setUnblockAllOpen(true)}
+                  className="cursor-pointer h-10 w-10"
+                  disabled={isNavigating || !isWithinExpeditionRange}
+                  title={!isWithinExpeditionRange ? "Outside expedition date range" : "Re-enable every N/A category (sets those scores to 3)"}
+                  aria-label="Re-enable all N/A categories"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setReasonTagsOpen(true)}
+                  className="cursor-pointer h-10 w-10"
+                  title="Reason categories"
+                  aria-label="Edit reason categories"
+                >
+                  <Tags className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={handleUnlockAll}
+                  className="cursor-pointer h-10 w-10"
+                  disabled={isNavigating || !isWithinExpeditionRange}
+                  title={!isWithinExpeditionRange ? "Outside expedition date range" : "Unlock All"}
+                  aria-label="Unlock all students"
+                >
+                  <Unlock className="h-4 w-4" />
+                </Button>
+                {showMissingReasons && (
+                  <span
+                    className="inline-flex h-10 items-center rounded-md border border-amber-300 bg-amber-50 px-2.5 text-xs font-medium text-amber-800 whitespace-nowrap"
+                    title="Every score above or below 3 needs a reason before submitting"
+                  >
+                    {missingReasonsText}
+                  </span>
                 )}
-              </Button>
+                <Button
+                  size="default"
+                  disabled={submitDisabled}
+                  onClick={handleSubmitScores}
+                  className="cursor-pointer h-10 px-4"
+                  title={submitTitle}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Spinner size="sm" className="h-4 w-4 mr-2" />
+                      Submitting...
+                    </>
+                  ) : (
+                    submitLabel
+                  )}
+                </Button>
+              </div>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={<Button variant="outline" size="icon" className="md:hidden h-11 w-11 cursor-pointer" aria-label="More actions" />}
+                >
+                  <MoreHorizontal className="h-5 w-5" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-64">
+                  <DropdownMenuItem
+                    className="h-11 cursor-pointer"
+                    disabled={!isWithinExpeditionRange}
+                    onClick={() => router.push(`/schedule/${date}${effectiveExpeditionId ? `?expedition=${effectiveExpeditionId}` : ""}`)}
+                  >
+                    <Calendar className="h-4 w-4" />
+                    View today&apos;s schedule
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="h-11 cursor-pointer"
+                    disabled={isNavigating || !isWithinExpeditionRange}
+                    onClick={handleUnlockAll}
+                  >
+                    <Unlock className="h-4 w-4" />
+                    Unlock all students
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="h-11 cursor-pointer"
+                    disabled={isNavigating || !isWithinExpeditionRange}
+                    onClick={() => setUnblockAllOpen(true)}
+                  >
+                    <RotateCcw className="h-4 w-4" />
+                    Re-enable all N/A categories…
+                  </DropdownMenuItem>
+                  <DropdownMenuItem className="h-11 cursor-pointer" onClick={() => setReasonTagsOpen(true)}>
+                    <Tags className="h-4 w-4" />
+                    Reason categories
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </div>
@@ -748,6 +863,82 @@ export function EvaluateClient({ date, expeditionId }: EvaluateClientProps) {
           </div>
         )}
       </main>
+
+      {/* Phone bottom bar: previous day · Submit · next day. The header
+          chevrons and Submit are md+ only, so on a phone this is the only way
+          to move between days and to submit — it has to stay reachable with a
+          thumb and must not be covered by toasts (they render top-center on phones). */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-gray-200 bg-white px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-lg md:hidden">
+        {showMissingReasons && (
+          <p className="mb-2 text-center text-xs font-medium text-amber-800">
+            {missingReasonsText}: every score above or below 3 needs a reason
+          </p>
+        )}
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => canGoPrev && handleDateChange(prevDay)}
+            disabled={!canGoPrev || isNavigating}
+            className="h-12 w-12 shrink-0 rounded-full cursor-pointer"
+            aria-label="Previous day"
+          >
+            <ChevronLeft className="h-6 w-6" />
+          </Button>
+          <Button
+            onClick={handleSubmitScores}
+            disabled={submitDisabled}
+            title={submitTitle}
+            className="h-12 flex-1 text-base font-semibold cursor-pointer"
+          >
+            {isSubmitting ? (
+              <>
+                <Spinner size="sm" className="h-4 w-4 mr-2" />
+                Submitting...
+              </>
+            ) : (
+              submitLabel
+            )}
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => canGoNext && handleDateChange(nextDay)}
+            disabled={!canGoNext || isNavigating}
+            className="h-12 w-12 shrink-0 rounded-full cursor-pointer"
+            aria-label="Next day"
+          >
+            <ChevronRight className="h-6 w-6" />
+          </Button>
+        </div>
+      </div>
+      {/* Keeps the last student card clear of the fixed bar */}
+      <div className="h-28 md:hidden" />
+
+      <AlertDialog open={unblockAllOpen} onOpenChange={setUnblockAllOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Re-enable every N/A category?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Every category currently marked N/A for the {records.length} student{records.length === 1 ? "" : "s"} on this day
+              will be scored again, starting at 3. Scores that were already entered are not changed. Nothing is saved until
+              you submit.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="cursor-pointer">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="cursor-pointer"
+              onClick={() => {
+                handleUnblockAllCategories()
+                setUnblockAllOpen(false)
+              }}
+            >
+              Re-enable all
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <ReasonCategoriesDialog
         open={reasonTagsOpen}

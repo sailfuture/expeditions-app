@@ -71,8 +71,8 @@ export default function ExpeditionTabsLayout({ children }: { children: ReactNode
     <div
       className={
         fillsViewport
-          ? "flex flex-col h-[calc(100vh-64px)] overflow-hidden bg-gray-50"
-          : "flex flex-col min-h-[calc(100vh-64px)] bg-gray-50"
+          ? "flex flex-col h-[calc(100dvh-57px)] overflow-hidden bg-gray-50"
+          : "flex flex-col min-h-[calc(100dvh-57px)] bg-gray-50"
       }
     >
       <Suspense fallback={<ExpeditionHeaderSkeleton currentPage={currentPage} />}>

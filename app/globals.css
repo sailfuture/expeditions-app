@@ -3,6 +3,11 @@
 /* @import "shadcn/tailwind.css"; */
 
 @custom-variant dark (&:is(.dark *));
+/* Tailwind v4 gates `hover:` behind `@media (hover: hover)`, so a control styled
+   `opacity-0 group-hover:opacity-100` never appears on a touch screen. Put the
+   hiding half behind this variant instead (`pointer-fine:opacity-0`), and the
+   control stays visible wherever hover does not exist. */
+@custom-variant pointer-fine (@media (hover: hover) and (pointer: fine));
 
 @theme inline {
 --font-sans: var(--font-sans);

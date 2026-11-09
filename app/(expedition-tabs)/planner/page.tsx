@@ -49,7 +49,8 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
-import { ChevronLeft, ChevronRight, ExternalLink, Calendar, Plus, X, Pencil, Trash2, Clock, Wrench, ClipboardList, ChevronsUpDown, Check, CircleDot, Eye } from "lucide-react"
+import { ChevronLeft, ChevronRight, ExternalLink, Calendar, Plus, X, Pencil, Trash2, Clock, Wrench, ClipboardList, ChevronsUpDown, Check, CircleDot, Eye, Users } from "lucide-react"
+import { LoadError } from "@/components/load-error"
 import { RecipeThumb } from "@/components/recipe-thumb"
 import {
   Command,
@@ -80,11 +81,37 @@ function formatDuration(minutes: string | number | null | undefined): string | n
   const m = total % 60
   return h > 0 ? (m > 0 ? `${h}h ${m}m` : `${h}h`) : `${m}m`
 }
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { useExpeditions } from "@/lib/hooks/use-expeditions"
 
+
+/**
+ * Small round button beside a team chip that opens the team's roster. It
+ * replaces a hover tooltip, which Tailwind v4 never shows on a touch screen.
+ */
+function TeamRosterPopover({ label, tone, children }: { label: string; tone: "blue" | "green"; children: React.ReactNode }) {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          aria-label={label}
+          title={label}
+          className={cn(
+            "h-5 w-5 rounded-full border flex items-center justify-center cursor-pointer",
+            tone === "blue" ? "border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-100" : "border-green-200 bg-green-50 text-green-700 hover:bg-green-100"
+          )}
+        >
+          <Users className="h-3 w-3" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent side="bottom" align="start" className="w-auto max-w-xs p-3">
+        <div className="text-xs space-y-1">{children}</div>
+      </PopoverContent>
+    </Popover>
+  )
+}
 
 function MealPlanSheet({ open, onOpenChange, recipe, loading, recipeId }: {
   open: boolean
@@ -862,7 +889,7 @@ function PlannerPageContent() {
   }
 
   // One request for the whole visible week; each day is { items, schedule } like the per-day endpoint
-  const { data: weekData, isLoading: weekLoading } = useExpeditionScheduleItemsRange(
+  const { data: weekData, isLoading: weekLoading, error: weekError, mutate: refetchWeek } = useExpeditionScheduleItemsRange(
     dateStrings[0],
     dateStrings[dateStrings.length - 1],
     effectiveExpeditionId
@@ -1192,7 +1219,7 @@ function PlannerPageContent() {
         /* Galley Meal Planning View */
         <div className="flex-1 min-h-0 overflow-hidden px-4 pb-4 pt-4">
           <div className="h-full container w-full mx-auto">
-            <div className="grid grid-cols-5 gap-2 h-full">
+            <div className="grid grid-cols-3 lg:grid-cols-5 gap-2 h-full">
               {days.map((day, index) => {
                 const items = Array.isArray(allItems[index]) ? allItems[index] : []
                 const isTodayColumn = isToday(day)
@@ -1210,6 +1237,8 @@ function PlannerPageContent() {
                     key={`galley-${dateStrings[index]}`}
                     className={cn(
                       "bg-white rounded-xl border-2 overflow-hidden flex flex-col h-full",
+                      // Tablets show the centre day plus one each side; the last two columns wait for lg
+                      index >= 3 && "hidden lg:flex",
                       isTodayColumn && isWithinRange ? "border-green-500 shadow-lg" : "border-gray-200",
                       !isWithinRange && "opacity-50 bg-gray-50"
                     )}
@@ -1226,7 +1255,10 @@ function PlannerPageContent() {
 
                     {/* Meal Slots */}
                     <div className="flex-1 overflow-y-auto p-2 space-y-2">
-                      {mealTypes.map((mealType) => {
+                      {weekError && !weekLoading && (
+                        <LoadError variant="inline" error={weekError} what="this day" onRetry={() => refetchWeek()} />
+                      )}
+                      {!weekError && mealTypes.map((mealType) => {
                         const mealItem = mealItems.find(
                           (item: any) => item._expedition_schedule_item_types?.name === mealType
                         )
@@ -1384,7 +1416,7 @@ function PlannerPageContent() {
       /* Schedule Planner Grid - fills remaining height */
       <div className="flex-1 min-h-0 overflow-hidden px-4 pb-4 pt-4">
         <div className="h-full container w-full mx-auto">
-          <div className="grid grid-cols-5 gap-2 h-full">
+          <div className="grid grid-cols-3 lg:grid-cols-5 gap-2 h-full">
           {days.map((day, index) => {
             const items = Array.isArray(allItems[index]) ? allItems[index] : []
             const isLoadingDay = allLoading[index]
@@ -1411,12 +1443,14 @@ function PlannerPageContent() {
                 key={dateStrings[index]}
                 className={cn(
                   "bg-white rounded-xl border-2 overflow-hidden flex flex-col h-full",
+                  // Tablets show the centre day plus one each side; the last two columns wait for lg
+                  index >= 3 && "hidden lg:flex",
                   isTodayColumn && isWithinRange ? "border-green-500 shadow-lg" : "border-gray-200",
                   !isWithinRange && "opacity-50 bg-gray-50"
                 )}
               >
                 {/* Day Header - fixed height */}
-                <div className="px-3 py-2.5 border-b bg-white flex-shrink-0 h-[88px]">
+                <div className="px-3 py-2.5 border-b bg-white flex-shrink-0 min-h-[88px]">
                   <div className="flex items-start justify-between mb-0.5">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1">
@@ -1426,7 +1460,7 @@ function PlannerPageContent() {
                         {location && (
                           <>
                             <span className="text-[8px] text-gray-300">•</span>
-                            <span className="text-[9px] text-gray-400 truncate max-w-[60px]" title={destination && destination !== location ? `${location} → ${destination}` : location}>
+                            <span className="text-[11px] text-gray-500 truncate max-w-[120px]" title={destination && destination !== location ? `${location} → ${destination}` : location}>
                               {destination && destination !== location ? `→ ${destination}` : location}
                             </span>
                           </>
@@ -1468,68 +1502,63 @@ function PlannerPageContent() {
                           const dishValue = optimisticValues[dishUpdateKey] ?? (schedule.expedition_dish_days_id ? String(schedule.expedition_dish_days_id) : "none")
                           const isUpdatingDish = updatingScheduleField === dishUpdateKey
                           return (
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <div className="flex items-center relative">
-                                  <Select
-                                    value={dishValue}
-                                    onValueChange={(value) => handleScheduleFieldChange(schedule.id, "expedition_dish_days_id", value)}
-                                    disabled={isUpdatingDish}
-                                  >
-                                    <SelectTrigger className={cn("h-5 w-auto min-w-[55px] text-[9px] px-1.5 py-0 border-blue-200 bg-blue-50 text-blue-700 cursor-pointer", isUpdatingDish && "pr-5")}>
-                                      <SelectValue placeholder="Dish" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="none" className="text-xs text-gray-500">None</SelectItem>
-                                      {dishDays?.sort((a: any, b: any) => {
-                                        const dayOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-                                        return dayOrder.indexOf(a.day_of_week) - dayOrder.indexOf(b.day_of_week)
-                                      }).map((dish: any) => (
-                                        <SelectItem key={dish.id} value={String(dish.id)} className="text-xs">
-                                          {dish.dishteam?.replace('Dish Team ', 'Dish ') || `Dish ${dish.id}`}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                  {isUpdatingDish && (
-                                    <Spinner className="h-3 w-3 absolute right-1 top-1/2 -translate-y-1/2" />
-                                  )}
-                                </div>
-                              </TooltipTrigger>
-                              {schedule._expedition_dish_days && (
-                                <TooltipContent side="top" className="max-w-xs">
-                                  <div className="text-xs space-y-1">
-                                    <p className="font-semibold">{schedule._expedition_dish_days.dishteam?.replace('Dish Team ', 'Dish ')}</p>
-                                    <p>
-                                      <span className="text-gray-500">Wash:</span>{' '}
-                                      {schedule._expedition_dish_days.wash?.filter((s: any) => s)?.length > 0
-                                        ? schedule._expedition_dish_days.wash.filter((s: any) => s).map((s: any) => `${s.firstName || ''} ${s.lastName || ''}`.trim() || 'Unknown').join(', ')
-                                        : <span className="text-gray-400">Not Assigned</span>}
-                                    </p>
-                                    <p>
-                                      <span className="text-gray-500">Dry:</span>{' '}
-                                      {schedule._expedition_dish_days.dry?.filter((s: any) => s)?.length > 0
-                                        ? schedule._expedition_dish_days.dry.filter((s: any) => s).map((s: any) => `${s.firstName || ''} ${s.lastName || ''}`.trim() || 'Unknown').join(', ')
-                                        : <span className="text-gray-400">Not Assigned</span>}
-                                    </p>
-                                    {schedule._expedition_dish_days.support_staff_dishes?.name && (
-                                      <p>
-                                        <span className="text-gray-500">Support:</span>{' '}
-                                        {schedule._expedition_dish_days.support_staff_dishes.name}
-                                      </p>
-                                    )}
-                                    {schedule._expedition_dish_days.supervisor_staff_dishes?.name && (
-                                      <p>
-                                        <span className="text-gray-500">Supervisor:</span>{' '}
-                                        {schedule._expedition_dish_days.supervisor_staff_dishes.name}
-                                      </p>
-                                    )}
-                                  </div>
-                                </TooltipContent>
+                          <div className="flex items-center gap-0.5">
+                            <div className="flex items-center relative">
+                              <Select
+                                value={dishValue}
+                                onValueChange={(value) => handleScheduleFieldChange(schedule.id, "expedition_dish_days_id", value)}
+                                disabled={isUpdatingDish}
+                              >
+                                <SelectTrigger className={cn("h-5 w-auto min-w-[55px] text-[9px] px-1.5 py-0 border-blue-200 bg-blue-50 text-blue-700 cursor-pointer", isUpdatingDish && "pr-5")}>
+                                  <SelectValue placeholder="Dish" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="none" className="text-xs text-gray-500">None</SelectItem>
+                                  {dishDays?.sort((a: any, b: any) => {
+                                    const dayOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+                                    return dayOrder.indexOf(a.day_of_week) - dayOrder.indexOf(b.day_of_week)
+                                  }).map((dish: any) => (
+                                    <SelectItem key={dish.id} value={String(dish.id)} className="text-xs">
+                                      {dish.dishteam?.replace('Dish Team ', 'Dish ') || `Dish ${dish.id}`}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              {isUpdatingDish && (
+                                <Spinner className="h-3 w-3 absolute right-1 top-1/2 -translate-y-1/2" />
                               )}
-                            </Tooltip>
-                          </TooltipProvider>
+                            </div>
+                            {/* Who is on the team: a tap-to-open popover (a hover tooltip never shows on touch) */}
+                            {schedule._expedition_dish_days && (
+                              <TeamRosterPopover label={`${schedule._expedition_dish_days.dishteam?.replace('Dish Team ', 'Dish ') || 'Dish team'} roster`} tone="blue">
+                                <p className="font-semibold">{schedule._expedition_dish_days.dishteam?.replace('Dish Team ', 'Dish ')}</p>
+                                <p>
+                                  <span className="text-gray-500">Wash:</span>{' '}
+                                  {schedule._expedition_dish_days.wash?.filter((s: any) => s)?.length > 0
+                                    ? schedule._expedition_dish_days.wash.filter((s: any) => s).map((s: any) => `${s.firstName || ''} ${s.lastName || ''}`.trim() || 'Unknown').join(', ')
+                                    : <span className="text-gray-400">Not Assigned</span>}
+                                </p>
+                                <p>
+                                  <span className="text-gray-500">Dry:</span>{' '}
+                                  {schedule._expedition_dish_days.dry?.filter((s: any) => s)?.length > 0
+                                    ? schedule._expedition_dish_days.dry.filter((s: any) => s).map((s: any) => `${s.firstName || ''} ${s.lastName || ''}`.trim() || 'Unknown').join(', ')
+                                    : <span className="text-gray-400">Not Assigned</span>}
+                                </p>
+                                {schedule._expedition_dish_days.support_staff_dishes?.name && (
+                                  <p>
+                                    <span className="text-gray-500">Support:</span>{' '}
+                                    {schedule._expedition_dish_days.support_staff_dishes.name}
+                                  </p>
+                                )}
+                                {schedule._expedition_dish_days.supervisor_staff_dishes?.name && (
+                                  <p>
+                                    <span className="text-gray-500">Supervisor:</span>{' '}
+                                    {schedule._expedition_dish_days.supervisor_staff_dishes.name}
+                                  </p>
+                                )}
+                              </TeamRosterPopover>
+                            )}
+                          </div>
                         )})()}
                         {/* Galley Team Select - inline with day type */}
                         {schedule && isWithinRange && (() => {
@@ -1537,87 +1566,77 @@ function PlannerPageContent() {
                           const galleyValue = optimisticValues[galleyUpdateKey] ?? (schedule.expeditions_galley_team_id ? String(schedule.expeditions_galley_team_id) : "none")
                           const isUpdatingGalley = updatingScheduleField === galleyUpdateKey
                           return (
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <div className="flex items-center relative">
-                                  <Select
-                                    value={galleyValue}
-                                    onValueChange={(value) => handleScheduleFieldChange(schedule.id, "expeditions_galley_team_id", value)}
-                                    disabled={isUpdatingGalley}
-                                  >
-                                    <SelectTrigger className={cn("h-5 w-auto min-w-[60px] text-[9px] px-1.5 py-0 border-green-200 bg-green-50 text-green-700 cursor-pointer", isUpdatingGalley && "pr-5")}>
-                                      <SelectValue placeholder="Galley" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="none" className="text-xs text-gray-500">None</SelectItem>
-                                      {galleyTeams?.sort((a: any, b: any) => (a.name || "").localeCompare(b.name || "")).map((team: any) => (
-                                        <SelectItem key={team.id} value={String(team.id)} className="text-xs">
-                                          {team.name?.replace('Galley Team ', 'Galley ') || `Galley ${team.id}`}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                  {isUpdatingGalley && (
-                                    <Spinner className="h-3 w-3 absolute right-1 top-1/2 -translate-y-1/2" />
-                                  )}
-                                </div>
-                              </TooltipTrigger>
-                              {schedule._expeditions_galley_team && (
-                                <TooltipContent side="top" className="max-w-xs">
-                                  <div className="text-xs space-y-1">
-                                    <p className="font-semibold">{schedule._expeditions_galley_team.name?.replace('Galley Team ', 'Galley ')}</p>
-                                    <p>
-                                      <span className="text-gray-500">Students:</span>{' '}
-                                      {schedule._expeditions_galley_team.students_id?.filter((s: any) => s)?.length > 0
-                                        ? schedule._expeditions_galley_team.students_id.filter((s: any) => s).map((s: any) => `${s.firstName || ''} ${s.lastName || ''}`.trim() || 'Unknown').join(', ')
-                                        : <span className="text-gray-400">Not Assigned</span>}
-                                    </p>
-                                    {schedule._expeditions_galley_team._galley_supervisor?.name && (
-                                      <p>
-                                        <span className="text-gray-500">Supervisor:</span>{' '}
-                                        {schedule._expeditions_galley_team._galley_supervisor.name}
-                                      </p>
-                                    )}
-                                  </div>
-                                </TooltipContent>
+                          <div className="flex items-center gap-0.5">
+                            <div className="flex items-center relative">
+                              <Select
+                                value={galleyValue}
+                                onValueChange={(value) => handleScheduleFieldChange(schedule.id, "expeditions_galley_team_id", value)}
+                                disabled={isUpdatingGalley}
+                              >
+                                <SelectTrigger className={cn("h-5 w-auto min-w-[60px] text-[9px] px-1.5 py-0 border-green-200 bg-green-50 text-green-700 cursor-pointer", isUpdatingGalley && "pr-5")}>
+                                  <SelectValue placeholder="Galley" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="none" className="text-xs text-gray-500">None</SelectItem>
+                                  {galleyTeams?.sort((a: any, b: any) => (a.name || "").localeCompare(b.name || "")).map((team: any) => (
+                                    <SelectItem key={team.id} value={String(team.id)} className="text-xs">
+                                      {team.name?.replace('Galley Team ', 'Galley ') || `Galley ${team.id}`}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              {isUpdatingGalley && (
+                                <Spinner className="h-3 w-3 absolute right-1 top-1/2 -translate-y-1/2" />
                               )}
-                            </Tooltip>
-                          </TooltipProvider>
-                        )})()}
-                        {staffOff && (
-                          <div className="flex items-center -space-x-1.5">
-                            {staffOff.split(', ').slice(0, 3).map((name: string, idx: number) => (
-                              <TooltipProvider key={idx}>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <div
-                                      className="h-5 w-5 rounded-full bg-orange-50 border border-orange-200 flex items-center justify-center text-[8px] font-medium text-orange-700 cursor-default"
-                                    >
-                                      {name.split(' ').map((n: string) => n[0]).join('')}
-                                    </div>
-                                  </TooltipTrigger>
-                                  <TooltipContent side="top" className="text-xs">
-                                    {name} (Off)
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            ))}
-                            {staffOff.split(', ').length > 3 && (
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <div className="h-5 w-5 rounded-full bg-orange-100 border border-orange-200 flex items-center justify-center text-[8px] font-medium text-orange-700 cursor-default">
-                                      +{staffOff.split(', ').length - 3}
-                                    </div>
-                                  </TooltipTrigger>
-                                  <TooltipContent side="top" className="text-xs">
-                                    {staffOff.split(', ').slice(3).join(', ')} (Off)
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
+                            </div>
+                            {schedule._expeditions_galley_team && (
+                              <TeamRosterPopover label={`${schedule._expeditions_galley_team.name?.replace('Galley Team ', 'Galley ') || 'Galley team'} roster`} tone="green">
+                                <p className="font-semibold">{schedule._expeditions_galley_team.name?.replace('Galley Team ', 'Galley ')}</p>
+                                <p>
+                                  <span className="text-gray-500">Students:</span>{' '}
+                                  {schedule._expeditions_galley_team.students_id?.filter((s: any) => s)?.length > 0
+                                    ? schedule._expeditions_galley_team.students_id.filter((s: any) => s).map((s: any) => `${s.firstName || ''} ${s.lastName || ''}`.trim() || 'Unknown').join(', ')
+                                    : <span className="text-gray-400">Not Assigned</span>}
+                                </p>
+                                {schedule._expeditions_galley_team._galley_supervisor?.name && (
+                                  <p>
+                                    <span className="text-gray-500">Supervisor:</span>{' '}
+                                    {schedule._expeditions_galley_team._galley_supervisor.name}
+                                  </p>
+                                )}
+                              </TeamRosterPopover>
                             )}
                           </div>
+                        )})()}
+                        {staffOff && (
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <button
+                                type="button"
+                                aria-label={`Staff off: ${staffOff}`}
+                                title="Staff off"
+                                className="flex items-center -space-x-1.5 rounded-full cursor-pointer"
+                              >
+                                {staffOff.split(', ').slice(0, 3).map((name: string, idx: number) => (
+                                  <span
+                                    key={idx}
+                                    className="h-5 w-5 rounded-full bg-orange-50 border border-orange-200 flex items-center justify-center text-[8px] font-medium text-orange-700"
+                                  >
+                                    {name.split(' ').map((n: string) => n[0]).join('')}
+                                  </span>
+                                ))}
+                                {staffOff.split(', ').length > 3 && (
+                                  <span className="h-5 w-5 rounded-full bg-orange-100 border border-orange-200 flex items-center justify-center text-[8px] font-medium text-orange-700">
+                                    +{staffOff.split(', ').length - 3}
+                                  </span>
+                                )}
+                              </button>
+                            </PopoverTrigger>
+                            <PopoverContent side="bottom" align="start" className="w-auto max-w-xs p-3 text-xs">
+                              <p className="font-semibold text-orange-700 mb-1">Staff off</p>
+                              <p className="text-gray-700">{staffOff}</p>
+                            </PopoverContent>
+                          </Popover>
                         )}
                       </div>
                 </div>
@@ -1643,6 +1662,10 @@ function PlannerPageContent() {
                         <Skeleton key={i} className="h-14 w-full rounded-lg" />
                       ))}
                     </div>
+                  ) : weekError ? (
+                    // A failed fetch must not look like an empty day: the template
+                    // picker below would add a template on top of existing activities.
+                    <LoadError variant="inline" error={weekError} what="this day" onRetry={() => refetchWeek()} />
                   ) : sortedItems.length === 0 ? (
                     <div className="text-center py-4 px-3 space-y-3">
                       <p className="text-gray-400 text-xs mb-3">No activities</p>
@@ -1705,21 +1728,26 @@ function PlannerPageContent() {
                           )} />
                           <div className="flex-1 min-w-0">
                             <div className="flex items-start justify-between gap-1">
-                              <h4 className="font-medium text-sm text-gray-900 truncate flex-1">
+                              <h4 className="font-medium text-sm text-gray-900 line-clamp-2 flex-1 leading-snug">
                                 {item.name}
                               </h4>
-                              <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                              {/* Hidden until hover only where hover exists; always visible on touch */}
+                              <div className="flex items-center -my-1.5 -mr-1.5 pointer-fine:opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity flex-shrink-0">
                                 <button
-                                  className="h-5 w-5 rounded hover:bg-gray-100 flex items-center justify-center cursor-pointer"
+                                  type="button"
+                                  aria-label="Edit activity"
+                                  className="h-8 w-8 rounded hover:bg-gray-100 flex items-center justify-center cursor-pointer"
                                   onClick={(e) => handleEditItem(item, dateStrings[index], e)}
                                 >
-                                  <Pencil className="h-3 w-3 text-gray-400" />
+                                  <Pencil className="h-3.5 w-3.5 text-gray-400" />
                                 </button>
                                 <button
-                                  className="h-5 w-5 rounded hover:bg-gray-100 flex items-center justify-center cursor-pointer"
+                                  type="button"
+                                  aria-label="Delete activity"
+                                  className="h-8 w-8 rounded hover:bg-gray-100 flex items-center justify-center cursor-pointer"
                                   onClick={(e) => handleDeleteClick(item, e)}
                                 >
-                                  <Trash2 className="h-3 w-3 text-gray-400" />
+                                  <Trash2 className="h-3.5 w-3.5 text-gray-400" />
                                 </button>
                               </div>
                             </div>

@@ -4,7 +4,7 @@ import { Suspense, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import useSWR from "swr"
-import { BookMarked, RefreshCw } from "lucide-react"
+import { BookMarked, ExternalLink, RefreshCw } from "lucide-react"
 import { toast } from "sonner"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -19,6 +19,7 @@ import {
   asOfLabel, fmtGpa, gpaOf, meanOf, periodOptions, pickDefaultPeriod,
   type PeriodOption, type TermGradeRow,
 } from "@/lib/grades"
+import { toddleClassUrl } from "@/lib/toddle-links"
 import { cn } from "@/lib/utils"
 
 // ---------------------------------------------------------------------------
@@ -46,6 +47,8 @@ interface StudentRow {
 interface CourseColumn {
   id: string
   title: string
+  /** The class's classroom page in Toddle, or null when the rows carry no section id. */
+  toddleUrl: string | null
 }
 
 function studentName(s: any): string {
@@ -185,14 +188,29 @@ function GradesPageContent() {
   const columns = useMemo<CourseColumn[]>(() => {
     if (!payload || !selectedPeriod) return []
     const titles = new Map<string, string>()
+    // A course can run as more than one class section; the header links to
+    // the section most of this roster sits in.
+    const sections = new Map<string, Map<string, number>>()
     const onRoster = new Set(toddleIds)
     for (const r of payload.grades) {
       if (r.grading_period_id !== selectedPeriod.id || r.score == null) continue
       if (!onRoster.has(r.student_toddle_id)) continue
       titles.set(r.teacher_course_id, r.teacher_course_title)
+      if (r.course_toddle_id) {
+        const counts = sections.get(r.teacher_course_id) ?? new Map<string, number>()
+        counts.set(r.course_toddle_id, (counts.get(r.course_toddle_id) ?? 0) + 1)
+        sections.set(r.teacher_course_id, counts)
+      }
     }
     return Array.from(titles.entries())
-      .map(([id, title]) => ({ id, title }))
+      .map(([id, title]) => {
+        let classId: string | null = null
+        let best = 0
+        for (const [sectionId, n] of sections.get(id) ?? []) {
+          if (n > best) { best = n; classId = sectionId }
+        }
+        return { id, title, toddleUrl: toddleClassUrl(id, classId) }
+      })
       .sort((a, b) => a.title.localeCompare(b.title, undefined, { numeric: true }))
   }, [payload, selectedPeriod, toddleIds])
 
@@ -311,8 +329,21 @@ function GradesPageContent() {
                   <TableHead className="h-10 w-[70px] px-3 text-right text-xs font-semibold text-gray-600">GPA</TableHead>
                   <TableHead className="h-10 w-[100px] px-3 text-center text-xs font-semibold text-gray-600">Average</TableHead>
                   {columns.map((c) => (
-                    <TableHead key={c.id} className="h-10 min-w-[120px] whitespace-nowrap px-3 text-center text-xs font-semibold text-gray-600" title={c.title}>
-                      {c.title}
+                    <TableHead key={c.id} className="h-10 min-w-[120px] whitespace-nowrap px-3 text-center text-xs font-semibold text-gray-600">
+                      {c.toddleUrl ? (
+                        <a
+                          href={c.toddleUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title={`Open ${c.title} in Toddle`}
+                          className="group inline-flex items-center gap-1 rounded hover:text-gray-900 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                          {c.title}
+                          <ExternalLink className="h-3 w-3 shrink-0 text-gray-400 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100" aria-hidden />
+                        </a>
+                      ) : (
+                        <span title={c.title}>{c.title}</span>
+                      )}
                     </TableHead>
                   ))}
                 </TableRow>

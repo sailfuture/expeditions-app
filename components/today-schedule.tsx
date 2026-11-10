@@ -3,7 +3,7 @@
 import { Fragment, useMemo, useState } from "react"
 import Link from "next/link"
 import { Anchor, ArrowRight, Calendar, CalendarX, Clock, MapPin, Ship, Users, Wrench, X } from "lucide-react"
-import { NowDivider, ScheduleRow, formatMilitaryTime, scheduleItemColor as itemColor } from "@/components/schedule-row"
+import { NowDivider, ScheduleRow, formatMilitaryTime, nowDividerIndex, scheduleItemColor as itemColor } from "@/components/schedule-row"
 import { ResponsiveSheet, ResponsiveSheetContent } from "@/components/responsive-sheet"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -71,13 +71,9 @@ export function TodaySchedule({ expeditionId, date, isToday, nowMilitary = null,
   }, [data])
 
   const location = schedule?._expedition_locations || schedule?._expedition_current_location
-  // The divider goes above the first timed item that has not ended yet (or after the last one).
+  // The divider goes just after the last timed item that has ended.
   const now = isToday ? nowMilitary : null
-  const nowIndex = useMemo(() => {
-    if (now === null) return -1
-    const idx = timed.findIndex((item) => item.time_out > now)
-    return idx === -1 ? timed.length : idx
-  }, [timed, now])
+  const nowIndex = useMemo(() => nowDividerIndex(timed, now), [timed, now])
   const dayKind = schedule?.isOffshore ? "offshore" : schedule?.isService ? "service" : schedule ? "anchored" : null
   const dailyViewHref = expeditionId && date ? `/schedule/${date}?expedition=${expeditionId}` : null
   const [sheetOpen, setSheetOpen] = useState(false)

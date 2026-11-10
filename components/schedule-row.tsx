@@ -112,6 +112,21 @@ export function ScheduleRow({ item, time, onClick, past = false, className }: Sc
 }
 
 /**
+ * Where the "Now" divider goes in a day's timed items (sorted by start time): just after the
+ * last item that has ended, so nothing finished ever sits below it. An item still running from
+ * earlier in the day (a watch that lasts until midnight, say) stays above the line, undimmed,
+ * and does not hold the line back at its own start time. Returns -1 when there is no "now".
+ */
+export function nowDividerIndex(timedItems: { time_out: number }[], nowMilitary: number | null): number {
+  if (nowMilitary === null) return -1
+  let index = 0
+  timedItems.forEach((item, i) => {
+    if (item.time_out <= nowMilitary) index = i + 1
+  })
+  return index
+}
+
+/**
  * "Now" marker between the past and the upcoming rows of a day list. The
  * Daily View scrolls it into view on mount when the date is today.
  */

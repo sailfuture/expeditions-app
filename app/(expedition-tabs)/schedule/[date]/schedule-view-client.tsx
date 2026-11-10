@@ -60,7 +60,7 @@ import { DateNavigation } from "@/components/date-navigation"
 import { AddScheduleItemSheet } from "@/components/add-schedule-item-sheet"
 import { DraggableScheduleItem } from "@/components/draggable-schedule-item"
 import { ScheduleDragContext } from "@/components/schedule-drag-context"
-import { ScheduleRow, NowDivider } from "@/components/schedule-row"
+import { ScheduleRow, NowDivider, nowDividerIndex } from "@/components/schedule-row"
 import { ResponsiveSheet, ResponsiveSheetContent } from "@/components/responsive-sheet"
 import {
   useExpeditionSchedules,
@@ -398,12 +398,8 @@ export function ScheduleViewClient({ date, expeditionId }: ScheduleViewClientPro
   const { clock: boatNow } = useBoatClock(effectiveExpeditionId ?? null)
   const isToday = date === boatNow.date
   const nowMilitary = isToday ? boatNow.military : null
-  // Index of the first timed item that has not ended yet; the divider goes just above it.
-  const nowIndex = useMemo(() => {
-    if (nowMilitary === null) return -1
-    const idx = scheduledItems.findIndex((item: any) => item.time_out > nowMilitary)
-    return idx === -1 ? scheduledItems.length : idx
-  }, [scheduledItems, nowMilitary])
+  // The divider goes just after the last timed item that has ended.
+  const nowIndex = useMemo(() => nowDividerIndex(scheduledItems, nowMilitary), [scheduledItems, nowMilitary])
   // Scroll the divider into view once per day, after the items have loaded.
   const nowDividerRef = useRef<HTMLLIElement>(null)
   const scrolledToNowFor = useRef<string | null>(null)

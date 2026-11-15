@@ -27,7 +27,7 @@ import { Button } from "@/components/ui/button"
 // until someone asks for a PDF.
 const generatePerformanceReviewPDF = async (reviewId: number) =>
   (await import("@/lib/pdf-generator")).generatePerformanceReviewPDF(reviewId)
-import { DayReasons, ReasonsSummary } from "@/components/score-reasons"
+import { ReasonsSummary } from "@/components/score-reasons"
 import { toast } from "sonner"
 import { getProfessionalismByStudentAndDate, updatePerformanceReviewNotes, getPerformanceReviewById, deletePerformanceReview, getEvaluationByStudent, getStudentById, getExpeditionPerformanceReviews } from "@/lib/xano"
 import { Spinner } from "@/components/ui/spinner"
@@ -596,7 +596,6 @@ function PreviewModal({
                         <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600 text-center">Crew</TableHead>
                         <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600 text-center">Serv</TableHead>
                         <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600 text-center">Jrnl</TableHead>
-                        <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600">Reasons</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -635,9 +634,6 @@ function PreviewModal({
                             return ''
                           })()}`}>
                             {score.journaling || score.note || score._expedition_journal_status?.name || '—'}
-                          </TableCell>
-                          <TableCell className="min-w-[14rem] px-2 py-2 align-top">
-                            <DayReasons row={score} empty={<span className="text-sm text-gray-300">—</span>} />
                           </TableCell>
                         </TableRow>
                       ))}

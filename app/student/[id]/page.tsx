@@ -61,7 +61,7 @@ import { toast } from "sonner"
 import { mutate } from "swr"
 import { Spinner } from "@/components/ui/spinner"
 import { useExpeditions, useEvaluationByStudent, useProfessionalismByStudent, useExpeditionPerformanceReviews } from "@/lib/hooks/use-expeditions"
-import { DayReasons, ReasonsSummary } from "@/components/score-reasons"
+import { ReasonsSummary } from "@/components/score-reasons"
 import { useCurrentUser } from "@/lib/contexts/user-context"
 import { formatDistanceToNow } from "date-fns"
 import { Eye } from "lucide-react"
@@ -2490,7 +2490,6 @@ export default function StudentDetailPage() {
                               <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600 text-center">Crew</TableHead>
                               <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600 text-center">Serv</TableHead>
                               <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600 text-center">Jrnl</TableHead>
-                              <TableHead className="h-10 px-2 text-xs font-semibold text-gray-600">Reasons</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
@@ -2518,9 +2517,6 @@ export default function StudentDetailPage() {
                                 </TableCell>
                                 <TableCell className={`px-2 py-2 text-center text-sm ${(score.journaling || score.note || score._expedition_journal_status?.name) ? getJournalStringColor(score.journaling || score.note || score._expedition_journal_status?.name) : ''}`}>
                                   {score.journaling || score.note || score._expedition_journal_status?.name || '—'}
-                                </TableCell>
-                                <TableCell className="min-w-[14rem] px-2 py-2 align-top">
-                                  <DayReasons row={score} empty={<span className="text-sm text-gray-300">—</span>} />
                                 </TableCell>
                               </TableRow>
                             ))}

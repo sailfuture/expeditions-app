@@ -8,10 +8,7 @@ query review_periods verb=GET {
   }
 
   stack {
-    function.run expedition_app_guard {
-      input = {}
-    } as $app_guard
-
+    function.run expedition_app_guard as $app_guard
     db.query expedition_review_periods {
       where = $db.expedition_review_periods.expeditions_id == $input.expeditions_id
       sort = {expedition_review_periods.startDate: "asc"}
@@ -31,31 +28,35 @@ query review_periods verb=GET {
       ]
     } as $reviews
 
-    db.query students {
-      where = `$input.expeditions_id` in $db.students.expeditions_id && $db.students.isArchived == false
-      return = {type: "list"}
-      output = ["id"]
-    } as $students
+    // Active students only: not archived, and no archived assignment on this expedition.
+    function.run expedition_student_roster {
+      input = {expeditions_id: $input.expeditions_id}
+    } as $roster
+
+    var $students {
+      value = $roster.active
+    }
 
     api.lambda {
       code = """
-        const reviews = $var.reviews || [];
-        const active = new Set(($var.students || []).map((s) => s.id));
-        return ($var.periods || []).map((p) => {
-          const mine = reviews.filter((r) => r.expedition_review_periods_id === p.id);
-          const reviewed = new Set(mine.map((r) => r.students_id));
-          const missing = [...active].filter((id) => !reviewed.has(id));
-          const awardTotal = mine.reduce((sum, r) => sum + (Number(r.award_total) || 0), 0);
-          return {
-            ...p,
-            review_count: mine.length,
-            with_notes: mine.filter((r) => typeof r.notes === "string" && r.notes.trim() !== "").length,
-            with_reviewer: mine.filter((r) => r.expedition_staff_id).length,
-            missing_students: missing,
-            award_total: Math.round(awardTotal * 100) / 100
-          };
-        });
-      """
+          const reviews = $var.reviews || [];
+          const active = new Set(($var.students || []).map((s) => s.id));
+          return ($var.periods || []).map((p) => {
+            // An archived student's old reviews stay in the table but are not counted.
+          const mine = reviews.filter((r) => r.expedition_review_periods_id === p.id && active.has(r.students_id));
+            const reviewed = new Set(mine.map((r) => r.students_id));
+            const missing = [...active].filter((id) => !reviewed.has(id));
+            const awardTotal = mine.reduce((sum, r) => sum + (Number(r.award_total) || 0), 0);
+            return {
+              ...p,
+              review_count: mine.length,
+              with_notes: mine.filter((r) => typeof r.notes === "string" && r.notes.trim() !== "").length,
+              with_reviewer: mine.filter((r) => r.expedition_staff_id).length,
+              missing_students: missing,
+              award_total: Math.round(awardTotal * 100) / 100
+            };
+          });
+        """
       timeout = 10
     } as $result
   }
@@ -65,5 +66,6 @@ query review_periods verb=GET {
     active_students : $students|count
     unassigned_count: ($reviews|filter:$$.expedition_review_periods_id == null)|count
   }
+
   guid = "11TgZvV_r1VJw2METLZeajydS9I"
 }

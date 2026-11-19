@@ -17,6 +17,7 @@ import {
 import { ExternalLink, User, Users, Link2, Link2Off, RefreshCw, UserPlus } from "lucide-react"
 import { LoginSecret } from "@/components/login-secret"
 import { useStudentsByExpedition, useStudents as useAllStudents } from "@/lib/hooks/use-expeditions"
+import { isArchivedOnExpedition } from "@/lib/expedition-roster"
 import { useCurrentUser } from "@/lib/contexts/user-context"
 import { useExpeditionContext } from "@/lib/contexts/expedition-context"
 import { Button } from "@/components/ui/button"
@@ -140,8 +141,10 @@ function StudentsPageContent() {
   }, [expeditionIdFromUrl, allExpeditionsData, userExpeditions, activeExpedition])
   
   // Conditionally fetch data based on whether expedition-specific or all students
+  // This is a roster screen, so archived students stay listed (under Archived)
   const { data: expeditionStudents, isLoading: loadingExpeditionStudents } = useStudentsByExpedition(
-    expeditionIdFromUrl ? (effectiveExpeditionId ?? null) : null
+    expeditionIdFromUrl ? (effectiveExpeditionId ?? null) : null,
+    { includeArchived: true }
   )
   const { data: allStudents, isLoading: loadingAllStudents } = useAllStudents()
   
@@ -153,8 +156,9 @@ function StudentsPageContent() {
   const { activeStudents, archivedStudents} = useMemo(() => {
     if (!students) return { activeStudents: [], archivedStudents: [] }
     
-    const active = students.filter((s: any) => !s.isArchived)
-    const archived = students.filter((s: any) => s.isArchived)
+    // On an expedition's list, "archived" also covers students switched off for that expedition
+    const active = students.filter((s: any) => !isArchivedOnExpedition(s))
+    const archived = students.filter((s: any) => isArchivedOnExpedition(s))
     
     // Sort both groups alphabetically
     const sortAlphabetically = (a: any, b: any) => {
@@ -173,7 +177,7 @@ function StudentsPageContent() {
   const studentsByYearGroup = useMemo(() => {
     if (!students) return []
     
-    const filtered = students.filter((student: any) => showArchived || !student.isArchived)
+    const filtered = students.filter((student: any) => showArchived || !isArchivedOnExpedition(student))
     
     // Group by yearGroup
     const grouped = filtered.reduce((acc: any, student: any) => {
@@ -808,7 +812,7 @@ function StudentsPageContent() {
                             )}
                           </TableCell>
                           <TableCell className="h-14 px-4 w-[100px]">
-                            {student.isArchived ? (
+                            {isArchivedOnExpedition(student) ? (
                               <Badge variant="outline" className="bg-gray-100 border-gray-300 text-gray-600 text-xs whitespace-nowrap">
                                 Archived
                               </Badge>

@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
-import { useExpeditions, useExpeditionPerformanceReviews, useTeachersByExpedition, useExpeditionSchedules, useExpeditionLocations, useStudentsByExpedition } from "@/lib/hooks/use-expeditions"
+import { useExpeditions, useExpeditionPerformanceReviews, useTeachersByExpedition, useExpeditionSchedules, useExpeditionLocations, useStudentsByExpedition, useArchivedStudentIds } from "@/lib/hooks/use-expeditions"
 import { ReviewPeriodsPanel, useReviewPeriods } from "@/components/review-periods-panel"
 import type { ReviewPeriod } from "@/lib/types"
 import { calculateRouteDistance } from "@/lib/haversine"
@@ -733,7 +733,13 @@ function PerformanceReviewsContent() {
   const expeditionId = searchParams.get('expedition') ? parseInt(searchParams.get('expedition')!) : null
 
   const { data: allExpeditions } = useExpeditions()
-  const { data: performanceReviews, isLoading } = useExpeditionPerformanceReviews(expeditionId)
+  const { data: allPerformanceReviews, isLoading } = useExpeditionPerformanceReviews(expeditionId)
+  // Reviews of students archived on this expedition are kept in Xano but not listed here
+  const archivedStudentIds = useArchivedStudentIds(expeditionId)
+  const performanceReviews = useMemo(
+    () => allPerformanceReviews?.filter((r: any) => !archivedStudentIds.has(r.students_id)),
+    [allPerformanceReviews, archivedStudentIds]
+  )
   // The expedition whose reviews are shown; its date range bounds every date picker below
   const expedition = useMemo(
     () => (allExpeditions && expeditionId ? allExpeditions.find((e: any) => e.id === expeditionId) : null),

@@ -40,7 +40,7 @@ import { StudentCard } from "@/components/student-card"
 import { useExpeditionContext } from "@/lib/contexts/expedition-context"
 import {
   useExpeditionSchedules,
-  useStudents,
+  useStudentsByExpedition,
   useExpeditionsProfessionalismByDate,
   useExpeditionBonus,
   useExpeditionPenalty,
@@ -109,7 +109,8 @@ export function EvaluateClient({ date, expeditionId }: EvaluateClientProps) {
   }, [expeditionId, allExpeditionsData, userExpeditions, activeExpedition])
 
   const { data: schedules, isLoading: loadingSchedule } = useExpeditionSchedules(effectiveExpeditionId || undefined)
-  const { data: students, isLoading: loadingStudents } = useStudents()
+  // The expedition's active roster: archived students are not scored
+  const { data: students, isLoading: loadingStudents } = useStudentsByExpedition(effectiveExpeditionId)
   const { data: allProfessionalism, isLoading: loadingProfessionalism } = useExpeditionsProfessionalismByDate(date, effectiveExpeditionId)
   const { data: bonusOptions = [], isLoading: loadingBonus } = useExpeditionBonus()
   const { data: penaltyOptions = [], isLoading: loadingPenalty } = useExpeditionPenalty()

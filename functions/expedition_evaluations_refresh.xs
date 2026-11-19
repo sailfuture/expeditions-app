@@ -9,11 +9,14 @@ function expedition_evaluations_refresh {
   }
 
   stack {
-    db.query students {
-      where = `$input.expeditions_id` in $db.students.expeditions_id && $db.students.isArchived == false
-      return = {type: "list"}
-      output = ["id"]
-    } as $students
+    // Active students only: not archived, and no archived assignment on this expedition.
+    function.run expedition_student_roster {
+      input = {expeditions_id: $input.expeditions_id}
+    } as $roster
+
+    var $students {
+      value = $roster.active
+    }
 
     db.query expeditions_professionalism {
       where = $db.expeditions_professionalism.expeditions_id == $input.expeditions_id
@@ -46,75 +49,86 @@ function expedition_evaluations_refresh {
 
     api.lambda {
       code = """
-        const scores = $var.scores || [];
-        const journalMap = {};
-        ($var.journal_statuses || []).forEach((s) => { if (s.name) journalMap[s.name] = s.value; });
-        const categories = ['academics', 'citizenship', 'job', 'crew', 'service'];
-        const FIELDS = ['total', 'total_evaluation', 'crew', 'crew_evaluation', 'service', 'service_evaluation',
-          'job', 'job_evaluation', 'academics', 'academics_evaluation', 'citizenship', 'citizenship_evaluation',
-          'journal', 'journal_evaluation'];
+          const scores = $var.scores || [];
+          const journalMap = {};
+          ($var.journal_statuses || []).forEach((s) => { if (s.name) journalMap[s.name] = s.value; });
+          const categories = ['academics', 'citizenship', 'job', 'crew', 'service'];
+          const FIELDS = ['total', 'total_evaluation', 'crew', 'crew_evaluation', 'service', 'service_evaluation',
+            'job', 'job_evaluation', 'academics', 'academics_evaluation', 'citizenship', 'citizenship_evaluation',
+            'journal', 'journal_evaluation'];
 
-        function getCategory(val) {
-          if (val === null || val === undefined) return null;
-          if (val >= 3.21) return 'Exceeded Expectations';
-          if (val >= 2.751) return 'Met Expectations';
-          if (val >= 2.251) return 'Developing';
-          if (val >= 1.1) return 'Needs Improvement';
-          return 'Critical Intervention';
-        }
+          function getCategory(val) {
+            if (val === null || val === undefined) return null;
+            if (val >= 3.21) return 'Exceeded Expectations';
+            if (val >= 2.751) return 'Met Expectations';
+            if (val >= 2.251) return 'Developing';
+            if (val >= 1.1) return 'Needs Improvement';
+            return 'Critical Intervention';
+          }
 
-        // Same rules as the professionalism_averages function.
-        function averages(rows) {
-          const out = {};
-          let grandSum = 0, grandCount = 0;
-          categories.forEach((cat) => {
-            const usedKey = 'is' + cat.charAt(0).toUpperCase() + cat.slice(1) + 'Used';
-            let sum = 0, count = 0;
-            rows.forEach((r) => {
-              if (r[usedKey] !== true && r[cat] !== null && r[cat] !== undefined) { sum += Number(r[cat]); count++; }
+          // Same rules as the professionalism_averages function.
+          function averages(rows) {
+            const out = {};
+            let grandSum = 0, grandCount = 0;
+            categories.forEach((cat) => {
+              const usedKey = 'is' + cat.charAt(0).toUpperCase() + cat.slice(1) + 'Used';
+              let sum = 0, count = 0;
+              rows.forEach((r) => {
+                if (r[usedKey] !== true && r[cat] !== null && r[cat] !== undefined) { sum += Number(r[cat]); count++; }
+              });
+              const avg = count > 0 ? sum / count : null;
+              out[cat] = avg;
+              out[cat + '_evaluation'] = getCategory(avg);
+              if (avg !== null) { grandSum += avg; grandCount++; }
             });
-            const avg = count > 0 ? sum / count : null;
-            out[cat] = avg;
-            out[cat + '_evaluation'] = getCategory(avg);
-            if (avg !== null) { grandSum += avg; grandCount++; }
+            let jSum = 0, jCount = 0;
+            rows.forEach((r) => {
+              const name = r.journaling;
+              if (name && Object.prototype.hasOwnProperty.call(journalMap, name)) {
+                const v = journalMap[name];
+                if (v !== null && v !== undefined) { jSum += Number(v); jCount++; }
+              }
+            });
+            const jAvg = jCount > 0 ? jSum / jCount : null;
+            out.journal = jAvg;
+            out.journal_evaluation = jAvg === null ? null : (jAvg * 100 > 90 ? 'Strong Satisfactory' : jAvg * 100 >= 70 ? 'Satisfactory' : 'Unsatisfactory');
+            const total = grandCount > 0 ? grandSum / grandCount : null;
+            out.total = total;
+            out.total_evaluation = getCategory(total);
+            return out;
+          }
+
+          // The table stores an unscored average as 0 and an empty label as "",
+          // so null, undefined, "" and 0 all mean "nothing" when comparing.
+          const empty = (v) => v === null || v === undefined || v === '' || v === 0;
+          const same = (a, b) => {
+            if (empty(a) && empty(b)) return true;
+            if (typeof a === 'number' || typeof b === 'number') return Math.abs(Number(a) - Number(b)) < 1e-6;
+            return a === b;
+          };
+
+          // Newest existing row per student (the list is sorted newest first).
+          const latest = {};
+          ($var.existing || []).forEach((row) => { if (!latest[row.students_id]) latest[row.students_id] = row; });
+
+          // db.edit skips null fields, so an unscored value is written as 0 / ""
+          // (otherwise a category that loses its scores keeps its old average).
+          const stored = (avg) => {
+            const out = {};
+            FIELDS.forEach((f) => {
+              const v = avg[f];
+              out[f] = v !== null && v !== undefined ? v : (f.endsWith('_evaluation') ? '' : 0);
+            });
+            return out;
+          };
+
+          return ($var.students || []).map((s) => {
+            const data = stored(averages(scores.filter((r) => r.students_id === s.id)));
+            const current = latest[s.id] || null;
+            const changed = !current || FIELDS.some((f) => !same(current[f], data[f]));
+            return { students_id: s.id, existing_id: current ? current.id : null, changed, data };
           });
-          let jSum = 0, jCount = 0;
-          rows.forEach((r) => {
-            const name = r.journaling;
-            if (name && Object.prototype.hasOwnProperty.call(journalMap, name)) {
-              const v = journalMap[name];
-              if (v !== null && v !== undefined) { jSum += Number(v); jCount++; }
-            }
-          });
-          const jAvg = jCount > 0 ? jSum / jCount : null;
-          out.journal = jAvg;
-          out.journal_evaluation = jAvg === null ? null : (jAvg * 100 > 90 ? 'Strong Satisfactory' : jAvg * 100 >= 70 ? 'Satisfactory' : 'Unsatisfactory');
-          const total = grandCount > 0 ? grandSum / grandCount : null;
-          out.total = total;
-          out.total_evaluation = getCategory(total);
-          return out;
-        }
-
-        // The table stores an unscored average as 0 and an empty label as "",
-        // so null, undefined, "" and 0 all mean "nothing" when comparing.
-        const empty = (v) => v === null || v === undefined || v === '' || v === 0;
-        const same = (a, b) => {
-          if (empty(a) && empty(b)) return true;
-          if (typeof a === 'number' || typeof b === 'number') return Math.abs(Number(a) - Number(b)) < 1e-6;
-          return a === b;
-        };
-
-        // Newest existing row per student (the list is sorted newest first).
-        const latest = {};
-        ($var.existing || []).forEach((row) => { if (!latest[row.students_id]) latest[row.students_id] = row; });
-
-        return ($var.students || []).map((s) => {
-          const data = averages(scores.filter((r) => r.students_id === s.id));
-          const current = latest[s.id] || null;
-          const changed = !current || FIELDS.some((f) => !same(current[f], data[f]));
-          return { students_id: s.id, existing_id: current ? current.id : null, changed, data };
-        });
-      """
+        """
       timeout = 20
     } as $plan
 
@@ -195,5 +209,6 @@ function expedition_evaluations_refresh {
     updated  : $updated
     unchanged: ($plan|count) - $created - $updated
   }
+
   guid = "8SjuoCgYsrq0BDzTIOZr_LmFxQk"
 }

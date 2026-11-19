@@ -1,6 +1,8 @@
 "use client"
 
+import { useMemo } from "react"
 import useSWR, { mutate } from "swr"
+import { archivedStudentIds, isArchivedOnExpedition } from "@/lib/expedition-roster"
 import {
   getExpeditions,
   getActiveExpedition,
@@ -153,11 +155,35 @@ export function useTeachersByExpedition(expeditionsId: number | null) {
   )
 }
 
-export function useStudentsByExpedition(expeditionsId: number | null) {
+function useExpeditionRoster(expeditionsId: number | null) {
   return useSWR(
     expeditionsId ? `students_by_expedition_${expeditionsId}` : null,
     expeditionsId ? () => getStudentsByExpedition(expeditionsId) : null
   )
+}
+
+/**
+ * The students on an expedition. Archived students (see lib/expedition-roster.ts) are left
+ * out, so every expedition view gets the active roster without filtering it again. Only the
+ * roster screens, where staff archive and restore students, pass `includeArchived`.
+ */
+export function useStudentsByExpedition(expeditionsId: number | null, options?: { includeArchived?: boolean }) {
+  const { data: roster, error, isLoading, isValidating, mutate: refetch } = useExpeditionRoster(expeditionsId)
+  const includeArchived = options?.includeArchived === true
+  const data = useMemo(
+    () => (roster && !includeArchived ? roster.filter((s: any) => !isArchivedOnExpedition(s)) : roster),
+    [roster, includeArchived]
+  )
+  return { data, error, isLoading, isValidating, mutate: refetch }
+}
+
+/**
+ * Ids of the students archived on an expedition, for lists that come from another table
+ * (reviews, discipline records, team members) and name a student by id.
+ */
+export function useArchivedStudentIds(expeditionsId: number | null): Set<number> {
+  const { data: roster } = useExpeditionRoster(expeditionsId)
+  return useMemo(() => archivedStudentIds(roster), [roster])
 }
 
 export function useSchoolTerms() {

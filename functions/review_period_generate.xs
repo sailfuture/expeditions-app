@@ -22,11 +22,14 @@ function review_period_generate {
       error = "This review period is finalized. Reopen it before changing its reviews."
     }
 
-    db.query students {
-      where = `$period.expeditions_id` in $db.students.expeditions_id && $db.students.isArchived == false
-      return = {type: "list"}
-      output = ["id"]
-    } as $students
+    // Active students only: not archived, and no archived assignment on this expedition.
+    function.run expedition_student_roster {
+      input = {expeditions_id: $period.expeditions_id}
+    } as $roster
+
+    var $students {
+      value = $roster.active
+    }
 
     db.query expedition_performance_reviews {
       where = $db.expedition_performance_reviews.expedition_review_periods_id == $period.id
@@ -133,5 +136,6 @@ function review_period_generate {
     created          : $created
     updated          : $updated
   }
+
   guid = "wTOXl8O4VSvSNiBQpP3qnbwqesw"
 }

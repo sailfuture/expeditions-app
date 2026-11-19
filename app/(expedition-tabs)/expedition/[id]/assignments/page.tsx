@@ -57,6 +57,7 @@ import {
 import { cn } from "@/lib/utils"
 import { getExpeditionAssignmentsByExpedition, updateExpeditionAssignment, getExpeditionLaptops, getExpeditionsRooms, getExpeditionDishDays, updateExpeditionDishDay, createExpeditionDishDay, deleteExpeditionDishDay, getExpeditionsGalleyTeam, updateExpeditionsGalleyTeam, createExpeditionsGalleyTeam, deleteExpeditionsGalleyTeam, getExpeditionDepartments } from "@/lib/xano"
 import { useExpeditions } from "@/lib/hooks/use-expeditions"
+import { isArchivedStudentAssignment } from "@/lib/expedition-roster"
 import { useCurrentUser } from "@/lib/contexts/user-context"
 import { mutate } from "swr"
 import { toast } from "sonner"
@@ -389,7 +390,7 @@ export default function AssignmentsPage({ params }: PageProps) {
     }))
     .sort((a, b) => (a.name || "").localeCompare(b.name || ""))
 
-  const studentAssignments = (assignments || [])
+  const allStudentAssignments = (assignments || [])
     .filter((a: any) => a.students_id > 0 && a._students)
     .map((a: any) => ({
       ...a,
@@ -399,6 +400,13 @@ export default function AssignmentsPage({ params }: PageProps) {
       profileImage: a._students?.profileImage || "",
     }))
     .sort((a, b) => (a.name || "").localeCompare(b.name || ""))
+
+  // Archived students hold no bunk, department or team place: they are listed once, at the
+  // foot of the table, where the Active switch brings them back. Their saved team places are
+  // kept in Xano (the ids stay in the team's list), so they return with them.
+  const studentAssignments = allStudentAssignments.filter((a: any) => !isArchivedStudentAssignment(a))
+  const archivedStudentAssignments = allStudentAssignments.filter((a: any) => isArchivedStudentAssignment(a))
+  const activeStudentIds = new Set<number>(studentAssignments.map((a: any) => a.personId))
 
   // Group students by the parent area their bunk falls under, for visual
   // section headers. Areas are rendered in BUNK_AREA_ORDER; empty areas skipped.
@@ -661,11 +669,20 @@ export default function AssignmentsPage({ params }: PageProps) {
           </div>
         </TableCell>
         <TableCell className="h-16 px-6" onClick={(e) => e.stopPropagation()}>
-          <Switch
-            checked={!assignment.isArchived}
-            onCheckedChange={(checked) => handleArchiveToggle(assignment.id, !checked)}
-            disabled={updatingId === `${assignment.id}-isArchived`}
-          />
+          {isStudent && assignment._students?.isArchived === true ? (
+            <span
+              className="text-xs text-gray-500"
+              title="Archived on the Students page. Restore the student there to bring them back."
+            >
+              Archived
+            </span>
+          ) : (
+            <Switch
+              checked={!assignment.isArchived}
+              onCheckedChange={(checked) => handleArchiveToggle(assignment.id, !checked)}
+              disabled={updatingId === `${assignment.id}-isArchived`}
+            />
+          )}
         </TableCell>
         <TableCell className="h-16 px-6 w-[300px] min-w-[300px] max-w-[300px]" onClick={(e) => e.stopPropagation()}>
           <div className="flex items-center gap-2 w-full">
@@ -879,7 +896,7 @@ export default function AssignmentsPage({ params }: PageProps) {
                 ))}
               </TableBody>
             </Table>
-          ) : staffAssignments.length === 0 && studentAssignments.length === 0 ? (
+          ) : staffAssignments.length === 0 && allStudentAssignments.length === 0 ? (
             <div className="p-12 text-center text-muted-foreground">
               <p className="text-lg font-medium text-gray-600">No assignments found</p>
               <p className="text-sm text-gray-500 mt-1">
@@ -934,6 +951,20 @@ export default function AssignmentsPage({ params }: PageProps) {
                       </TableCell>
                     </TableRow>
                     {staffAssignments.map((assignment: any) => renderAssignmentRow(assignment))}
+                  </>
+                )}
+
+                {/* Archived students: out of every list above and of the teams below */}
+                {archivedStudentAssignments.length > 0 && (
+                  <>
+                    <TableRow className="bg-gray-100/50">
+                      <TableCell colSpan={5} className="h-10 px-6">
+                        <span className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                          Archived students ({archivedStudentAssignments.length})
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                    {archivedStudentAssignments.map((assignment: any) => renderAssignmentRow(assignment))}
                   </>
                 )}
               </TableBody>
@@ -992,6 +1023,13 @@ export default function AssignmentsPage({ params }: PageProps) {
                   const dryUpdateKey = `dishteam-${team.id}-dry`
                   const supportUpdateKey = `dishteam-${team.id}-support`
                   const supervisorUpdateKey = `dishteam-${team.id}-supervisor`
+                  // Active students only: an archived student keeps their place in Xano but is not shown
+                  const namesOf = (ids: number[] | undefined) =>
+                    (ids || [])
+                      .map((studentId) => studentAssignments.find((s: any) => s.personId === studentId)?.name || '')
+                      .filter(Boolean)
+                  const washNames = namesOf(team.wash)
+                  const dryNames = namesOf(team.dry)
                   
                   return (
                     <TableRow key={team.id} className="hover:bg-gray-50/50">
@@ -1020,11 +1058,8 @@ export default function AssignmentsPage({ params }: PageProps) {
                                 disabled={updatingId === washUpdateKey}
                               >
                                 <span className="truncate text-left flex-1">
-                                  {team.wash && team.wash.length > 0 ? (
-                                    team.wash.map((studentId: number) => {
-                                      const student = studentAssignments.find((s: any) => s.personId === studentId)
-                                      return student?.name || ''
-                                    }).filter(Boolean).join(', ')
+                                  {washNames.length > 0 ? (
+                                    washNames.join(', ')
                                   ) : (
                                     <span className="text-gray-600">None</span>
                                   )}
@@ -1096,11 +1131,8 @@ export default function AssignmentsPage({ params }: PageProps) {
                                 disabled={updatingId === dryUpdateKey}
                               >
                                 <span className="truncate text-left flex-1">
-                                  {team.dry && team.dry.length > 0 ? (
-                                    team.dry.map((studentId: number) => {
-                                      const student = studentAssignments.find((s: any) => s.personId === studentId)
-                                      return student?.name || ''
-                                    }).filter(Boolean).join(', ')
+                                  {dryNames.length > 0 ? (
+                                    dryNames.join(', ')
                                   ) : (
                                     <span className="text-gray-600">None</span>
                                   )}
@@ -1298,6 +1330,8 @@ export default function AssignmentsPage({ params }: PageProps) {
                   .map((team: any) => {
                   const studentsUpdateKey = `galleyteam-${team.id}-students`
                   const staffUpdateKey = `galleyteam-${team.id}-staff`
+                  // Active students only: an archived student keeps their place in Xano but is not shown
+                  const teamStudentIds: number[] = (team.students_id || []).filter((id: number) => activeStudentIds.has(id))
                   
                   return (
                     <TableRow key={team.id} className="hover:bg-gray-50/50">
@@ -1323,9 +1357,9 @@ export default function AssignmentsPage({ params }: PageProps) {
                                 disabled={updatingId === studentsUpdateKey}
                               >
                                 <div className="flex items-center gap-2 flex-1 min-w-0 overflow-hidden">
-                                  {team.students_id && team.students_id.length > 0 ? (
+                                  {teamStudentIds.length > 0 ? (
                                     <>
-                                      {team.students_id.slice(0, 3).map((studentId: number) => {
+                                      {teamStudentIds.slice(0, 3).map((studentId: number) => {
                                         const student = studentAssignments.find((s: any) => s.personId === studentId)
                                         if (!student) return null
                                         return (
@@ -1342,9 +1376,9 @@ export default function AssignmentsPage({ params }: PageProps) {
                                           </div>
                                         )
                                       })}
-                                      {team.students_id.length > 1 && (
+                                      {teamStudentIds.length > 1 && (
                                         <div className="flex items-center justify-center h-6 w-6 rounded-full bg-gray-900 text-white text-xs font-semibold shrink-0">
-                                          {team.students_id.length}
+                                          {teamStudentIds.length}
                                         </div>
                                       )}
                                     </>

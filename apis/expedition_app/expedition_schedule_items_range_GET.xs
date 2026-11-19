@@ -8,13 +8,13 @@ query expedition_schedule_items_range verb=GET {
     int expeditions_id? {
       table = "expeditions"
     }
+
     date start_date
     date end_date
   }
 
   stack {
     function.run expedition_app_guard as $app_guard
-
     db.query expedition_schedule {
       where = $db.expedition_schedule.expeditions_id ==? $input.expeditions_id && $db.expedition_schedule.date >= $input.start_date && $db.expedition_schedule.date <= $input.end_date
       sort = {expedition_schedule.date: "asc"}
@@ -26,13 +26,13 @@ query expedition_schedule_items_range verb=GET {
           addon: [
             {
               name  : "students"
-              output: ["firstName", "lastName", "profileImage"]
+              output: ["id", "firstName", "lastName", "profileImage"]
               input : {students_id: $output.$this}
               as    : "wash"
             }
             {
               name  : "students"
-              output: ["firstName", "lastName", "profileImage"]
+              output: ["id", "firstName", "lastName", "profileImage"]
               input : {students_id: $output.$this}
               as    : "dry"
             }
@@ -59,7 +59,7 @@ query expedition_schedule_items_range verb=GET {
           addon: [
             {
               name  : "students"
-              output: ["firstName", "lastName", "profileImage"]
+              output: ["id", "firstName", "lastName", "profileImage"]
               input : {students_id: $output.$this}
               as    : "students_id"
             }
@@ -85,10 +85,10 @@ query expedition_schedule_items_range verb=GET {
       join = {
         expedition_schedule: {
           table: "expedition_schedule"
-          type : "inner"
           where: $db.expedition_schedule_items.expedition_schedule_id == $db.expedition_schedule.id
         }
       }
+
       where = $db.expedition_schedule.expeditions_id ==? $input.expeditions_id && $db.expedition_schedule.date >= $input.start_date && $db.expedition_schedule.date <= $input.end_date
       return = {type: "list"}
       addon = [
@@ -113,7 +113,7 @@ query expedition_schedule_items_range verb=GET {
         }
         {
           name  : "students"
-          output: ["firstName", "lastName", "profileImage"]
+          output: ["id", "firstName", "lastName", "profileImage"]
           input : {students_id: $output.$this}
           as    : "students_id"
         }
@@ -125,18 +125,31 @@ query expedition_schedule_items_range verb=GET {
       ]
     } as $items
 
+    // Archived students are left out of the dish team, galley team and item participants.
+    function.run schedule_hide_archived_students {
+      input = {schedules: $schedules, items: $items}
+    } as $visible
+
+    var $visible_schedules {
+      value = $visible.schedules
+    }
+
+    var $visible_items {
+      value = $visible.items
+    }
+
     var $days {
       value = []
     }
 
-    foreach ($schedules) {
+    foreach ($visible_schedules) {
       each as $schedule {
         var $schedule_id {
           value = $schedule.id
         }
 
         var $day_items {
-          value = $items|filter:$$.expedition_schedule_id == $schedule_id
+          value = $visible_items|filter:$$.expedition_schedule_id == $schedule_id
         }
 
         array.push $days {
@@ -155,5 +168,6 @@ query expedition_schedule_items_range verb=GET {
     end_date  : $input.end_date
     days      : $days
   }
+
   guid = "eJYNodbF1VlzyOgLxrZs_wFel4U"
 }

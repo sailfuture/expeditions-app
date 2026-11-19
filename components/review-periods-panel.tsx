@@ -317,8 +317,10 @@ function FinalizeDialog({
   if (!period) return null
   const missing = (period.missing_students ?? []).map((id) => students.find((s) => s.id === id)).filter(Boolean)
   const withoutNotes = Math.max(0, (period.review_count ?? 0) - (period.with_notes ?? 0))
+  // `students` is the active roster, so a student archived since they were scored is left out
   const previewRows = (preview?.students ?? [])
     .map((s) => ({ ...s, student: students.find((x) => x.id === s.students_id) }))
+    .filter((r) => r.student)
     .sort((a, b) => b.total - a.total)
   const previewTotal = previewRows.reduce((sum, r) => sum + r.total, 0)
 

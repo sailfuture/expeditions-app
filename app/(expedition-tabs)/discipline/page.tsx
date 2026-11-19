@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
-import { useExpeditions, useStudentsByExpedition, useTeachersByExpedition } from "@/lib/hooks/use-expeditions"
+import { useExpeditions, useStudentsByExpedition, useTeachersByExpedition, useArchivedStudentIds } from "@/lib/hooks/use-expeditions"
 import { AlertTriangle, Download, Plus, Eye, Pencil, Trash2, FileWarning, Calendar } from "lucide-react"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
@@ -186,6 +186,8 @@ function DisciplinePageContent() {
   // Data hooks
   const { data: expeditions, isLoading: loadingExpeditions } = useExpeditions()
   const { data: students } = useStudentsByExpedition(expeditionId ? parseInt(expeditionId) : null)
+  // Records of students archived on this expedition are kept in Xano but not listed here
+  const archivedStudentIds = useArchivedStudentIds(expeditionId ? parseInt(expeditionId) : null)
   const { data: staff } = useTeachersByExpedition(expeditionId ? parseInt(expeditionId) : null)
 
   const expedition = useMemo(() => {
@@ -365,12 +367,14 @@ function DisciplinePageContent() {
   // Sort records by date (newest first)
   const sortedRecords = useMemo(() => {
     if (!disciplineRecords) return []
-    return [...disciplineRecords].sort((a, b) => {
-      const dateA = new Date(a.date).getTime()
-      const dateB = new Date(b.date).getTime()
-      return dateB - dateA
-    })
-  }, [disciplineRecords])
+    return disciplineRecords
+      .filter((r: any) => !archivedStudentIds.has(r.students_id))
+      .sort((a: any, b: any) => {
+        const dateA = new Date(a.date).getTime()
+        const dateB = new Date(b.date).getTime()
+        return dateB - dateA
+      })
+  }, [disciplineRecords, archivedStudentIds])
 
   return (
     <div className="min-h-screen bg-gray-50/50">

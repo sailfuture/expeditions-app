@@ -86,6 +86,7 @@ import {
   useStudentsByExpedition, 
   useTeachersByExpedition,
 } from "@/lib/hooks/use-expeditions"
+import { isArchivedStudentAssignment } from "@/lib/expedition-roster"
 import { getProfessionalismByStudent, calculateStudentEvaluation, getExpeditionLocations, createExpeditionLocation, updateExpeditionLocation, deleteExpeditionLocation, getExpeditionAssignmentsByExpedition, getExpeditionDepartments } from "@/lib/xano"
 import { useCurrentUser } from "@/lib/contexts/user-context"
 import { ExpeditionStatsCards } from "@/components/expedition-stats-cards"
@@ -447,11 +448,14 @@ export default function ExpeditionDetailPage({ params }: PageProps) {
                     Array.isArray(a.expedition_departments_id) && 
                     a.expedition_departments_id.some((d: any) => (d.id || d) === dept.id)
                   )
-                  const students = deptAssignments.filter((a: any) => a.students_id > 0 && a._students)
+                  // Archived students hold no department place
+                  const students = deptAssignments.filter(
+                    (a: any) => a.students_id > 0 && a._students && !isArchivedStudentAssignment(a)
+                  )
                   const staff = deptAssignments.filter((a: any) => a.expedition_staff_id > 0 && a._expedition_staff)
                   
                   // Skip if no assignments
-                  if (deptAssignments.length === 0) return null
+                  if (students.length === 0 && staff.length === 0) return null
                   
                   return (
                     <TableRow key={dept.id} className="hover:bg-gray-50/50">

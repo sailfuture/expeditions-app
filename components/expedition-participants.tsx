@@ -37,6 +37,7 @@ import {
   useStudentsByExpedition,
   useTeachersByExpedition,
 } from "@/lib/hooks/use-expeditions"
+import { isArchivedOnExpedition } from "@/lib/expedition-roster"
 import {
   updateStudent,
   updateTeacher,
@@ -173,8 +174,9 @@ export function ExpeditionParticipants({
 }: ExpeditionParticipantsProps) {
   const router = useRouter()
 
+  // The roster itself: archived students stay listed, with an Archived badge.
   const { data: expeditionStudents, isLoading: studentsLoading } =
-    useStudentsByExpedition(expeditionId)
+    useStudentsByExpedition(expeditionId, { includeArchived: true })
   const { data: expeditionTeachers, isLoading: teachersLoading } =
     useTeachersByExpedition(expeditionId)
   // Full lists are only needed by admins for the add pickers.
@@ -201,7 +203,7 @@ export function ExpeditionParticipants({
   const studentRows = useMemo(() => {
     if (!expeditionStudents) return []
     const isArchived = (s: any) =>
-      s.isArchived === true ||
+      isArchivedOnExpedition(s) ||
       (assignments || []).some((a: any) => a.students_id === s.id && a.isArchived === true)
     return [...expeditionStudents].sort((a: any, b: any) => {
       const byStatus = Number(isArchived(a)) - Number(isArchived(b))
@@ -494,7 +496,7 @@ export function ExpeditionParticipants({
               const a = assignmentFor("student", s.id)
               const depts = departmentNames(a)
               const name = `${s.firstName || ""} ${s.lastName || ""}`.trim()
-              const archived = s.isArchived === true || a?.isArchived === true
+              const archived = isArchivedOnExpedition(s) || a?.isArchived === true
               return (
                 <TableRow
                   key={`student-${s.id}`}
